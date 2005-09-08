@@ -1,4 +1,4 @@
-#	$Csoft: Makefile,v 1.7 2004/11/23 02:33:09 vedge Exp $
+#	$Csoft: Makefile,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $
 
 TOP=	.
 include ${TOP}/Makefile.config
@@ -7,8 +7,8 @@ SUBDIR=	tools \
 	component \
 	circuit
 
-PROG=	agar-eda
-SRCS=	agar-eda.c tools.c
+PROG=	aeda
+SRCS=	aeda.c tools.c
 
 CFLAGS+=${AGAR_CFLAGS}
 LIBS+=	tools/libtools.a \

@@ -1,4 +1,4 @@
-/*	$Csoft: morbgate.c,v 1.7 2005/05/25 07:03:54 vedge Exp $	*/
+/*	$Csoft: agar-eda.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 
 /*
  * Copyright (c) 2003, 2004, 2005 Winds Triton Engineering, Inc.
@@ -137,7 +137,7 @@ main(int argc, char *argv[])
 	int c, i, fps = 17;
 	char *s;
 
-	if (engine_preinit("agar-eda") == -1) {
+	if (engine_preinit("aeda") == -1) {
 		fprintf(stderr, "%s\n", error_get());
 		return (1);
 	}
