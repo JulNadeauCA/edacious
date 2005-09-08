@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.h,v 1.5 2004/08/26 06:51:12 vedge Exp $	*/
+/*	$Csoft: circuit.h,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _CIRCUIT_CIRCUIT_H_
@@ -6,7 +6,7 @@
 
 #include <engine/vg/vg.h>
 #include <component/component.h>
-#include <circuit/analysis.h>
+#include <circuit/sim.h>
 #include <mat/mat.h>
 
 #include "begin_code.h"
@@ -47,7 +47,7 @@ struct circuit {
 	struct object obj;
 	char descr[CIRCUIT_DESCR_MAX];	/* Short description */
 	struct vg *vg;			/* Schematics drawing */
-	struct analysis *analysis;	/* Current analysis mode */
+	struct sim *sim;		/* Current simulation mode */
 
 	pthread_mutex_t lock;
 	int dis_nodes;			/* Display node indications */
@@ -82,12 +82,7 @@ __inline__ struct cktbranch *circuit_get_branch(struct circuit *,
 		                                struct cktnode *,
 						struct pin *);
 
-struct analysis	*circuit_set_analysis(struct circuit *,
-		                      const struct analysis_ops *);
-void		 circuit_unset_analysis(struct circuit *);
-int		 circuit_start_analysis(struct circuit *);
-int		 circuit_stop_analysis(struct circuit *);
-
+struct sim	*circuit_set_sim(struct circuit *, const struct sim_ops *);
 void		 circuit_modified(struct circuit *);
 void		 circuit_compose_Rmat(struct circuit *);
 int		 circuit_solve_currents(struct circuit *);

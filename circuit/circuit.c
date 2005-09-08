@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.c,v 1.23 2005/09/07 03:00:40 vedge Exp $	*/
+/*	$Csoft: circuit.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004 Winds Triton Engineering, Inc.
@@ -77,23 +77,14 @@ const struct object_ops circuit_ops = {
 };
 
 static void
-circuit_attached(int argc, union evarg *argv)
-{
-	extern const struct analysis_ops kvl_ops;
-	struct circuit *ckt = argv[0].p;
-	struct component *com;
-
-	circuit_set_analysis(ckt, &kvl_ops);
-}
-
-static void
 circuit_detached(int argc, union evarg *argv)
 {
 	struct circuit *ckt = argv[0].p;
-	struct component *com;
 
-	circuit_stop_analysis(ckt);
-	circuit_unset_analysis(ckt);
+	if (ckt->sim != NULL) {
+		sim_destroy(ckt->sim);
+		ckt->sim = NULL;
+	}
 }
 
 static void
@@ -116,8 +107,11 @@ circuit_closed(int argc, union evarg *argv)
 {
 	struct circuit *ckt = argv[0].p;
 	struct component *com;
-	
-	circuit_stop_analysis(ckt);
+
+	if (ckt->sim != NULL) {
+		sim_destroy(ckt->sim);
+		ckt->sim = NULL;
+	}
 
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
 		if (OBJECT_TYPE(com, "map")) {
@@ -174,10 +168,9 @@ circuit_modified(struct circuit *ckt)
 		}
 	}
 
-	if (ckt->analysis != NULL &&
-	    ckt->analysis->ops->cktmod != NULL) {
-		ckt->analysis->ops->cktmod(ckt);
-	}
+	if (ckt->sim != NULL &&
+	    ckt->sim->ops->cktmod != NULL)
+		ckt->sim->ops->cktmod(ckt->sim, ckt);
 }
 
 void
@@ -188,7 +181,7 @@ circuit_init(void *p, const char *name)
 	struct vg *vg;
 
 	object_init(ckt, "circuit", name, &circuit_ops);
-	ckt->analysis = NULL;
+	ckt->sim = NULL;
 	ckt->dis_nodes = 1;
 	ckt->dis_node_names = 1;
 	TAILQ_INIT(&ckt->nodes);
@@ -197,7 +190,7 @@ circuit_init(void *p, const char *name)
 	ckt->nloops = 0;
 	pthread_mutex_init(&ckt->lock, &recursive_mutexattr);
 
-	vg = ckt->vg = vg_new(ckt, VG_VISORIGIN|VG_VISGRID);
+	vg = ckt->vg = vg_new(ckt, VG_VISGRID);
 	strlcpy(vg->layers[0].name, _("Schematic"), sizeof(vg->layers[0].name));
 	vg_scale(vg, 11.0, 8.5, 2.0);
 	vg_default_scale(vg, 2.0);
@@ -213,7 +206,6 @@ circuit_init(void *p, const char *name)
 	vgs = vg_create_style(vg, VG_TEXT_STYLE, "node-name");
 	vgs->vg_text_st.size = 8;
 	
-	event_new(ckt, "attached", circuit_attached, NULL);
 	event_new(ckt, "edit-open", circuit_opened, NULL);
 	event_new(ckt, "edit-close", circuit_closed, NULL);
 }
@@ -224,9 +216,11 @@ circuit_reinit(void *p)
 	struct circuit *ckt = p;
 	struct component *com;
 	int i;
-
-	circuit_stop_analysis(ckt);
-	circuit_unset_analysis(ckt);
+	
+	if (ckt->sim != NULL) {
+		sim_destroy(ckt->sim);
+		ckt->sim = NULL;
+	}
 	circuit_free_nodes(ckt);
 
 	Free(ckt->loops, M_EDA);
@@ -574,80 +568,32 @@ circuit_destroy(void *p)
 	pthread_mutex_destroy(&ckt->lock);
 }
 
-/* Unset the current circuit analysis mode if there is one. */
-void
-circuit_unset_analysis(struct circuit *ckt)
+/* Select the simulation mode. */
+struct sim *
+circuit_set_sim(struct circuit *ckt, const struct sim_ops *sops)
 {
-	if (ckt->analysis != NULL) {
-		if (ckt->analysis->ops->destroy != NULL) {
-			ckt->analysis->ops->destroy(ckt->analysis);
-		}
-		Free(ckt->analysis, M_EDA);
-		ckt->analysis = NULL;
+	struct sim *sim;
+
+	if (ckt->sim != NULL) {
+		sim_destroy(ckt->sim);
+		ckt->sim = NULL;
 	}
-}
+	ckt->sim = sim = Malloc(sops->size, M_EDA);
+	sim->ckt = ckt;
+	sim->ops = sops;
+	sim->running = 0;
 
-/* Select the analysis mode. */
-struct analysis *
-circuit_set_analysis(struct circuit *ckt, const struct analysis_ops *sops)
-{
-	struct analysis *ana;
-
-	if (ckt->analysis != NULL)
-		circuit_unset_analysis(ckt);
-
-	ckt->analysis = ana = Malloc(sops->size, M_EDA);
-	ana->ckt = ckt;
-	ana->ops = sops;
-	ana->running = 0;
-
-	if (ana->ops->init != NULL) {
-		ana->ops->init(ana);
+	if (sim->ops->init != NULL) {
+		sim->ops->init(sim);
 	}
-	return (ana);
-}
-
-int
-circuit_start_analysis(struct circuit *ckt)
-{
-	struct analysis *ana = ckt->analysis;
-
-	if (ana == NULL) {
-		error_set(_("No simulation mode is set."));
-		return (-1);
+	if (sim->ops->edit != NULL &&
+	   (sim->win = sim->ops->edit(sim, ckt)) != NULL) {
+		window_set_caption(sim->win, "%s: %s", OBJECT(ckt)->name,
+		    _(sim->ops->name));
+		window_set_position(sim->win, WINDOW_LOWER_LEFT, 0);
+		window_show(sim->win);
 	}
-	if (ana->running) {
-		error_set(_("Simulation is already running."));
-		return (-1);
-	}
-	if (ana->ops->start != NULL) {
-		ana->ops->start(ana);
-	}
-	ana->running = 1;
-
-	dprintf("%s start\n", OBJECT(ckt)->name);
-	return (0);
-}
-
-/* Interrupt the analysis. */
-int
-circuit_stop_analysis(struct circuit *ckt)
-{
-	struct analysis *ana = ckt->analysis;
-
-	if (ana == NULL) {
-		error_set(_("No simulation mode selected."));
-		return (-1);
-	}
-	if (!ana->running) {
-		error_set(_("Simulation is not running."));
-		return (-1);
-	}
-	if (ana->ops->stop != NULL) {
-		ana->ops->stop(ana);
-	}
-	ana->running = 0;
-	return (0);
+	return (sim);
 }
 
 #ifdef EDITION
@@ -747,7 +693,30 @@ save_circuit(int argc, union evarg *argv)
 }
 
 static void
-circuit_settings(int argc, union evarg *argv)
+show_loops(int argc, union evarg *argv)
+{
+	struct window *pwin = argv[1].p;
+	struct circuit *ckt = argv[2].p;
+	struct window *win;
+	struct tlist *tl;
+	
+	if ((win = window_new(0, "%s-loops", OBJECT(ckt)->name)) == NULL) {
+		return;
+	}
+	window_set_caption(win, _("%s: Closed Loops"), OBJECT(ckt)->name);
+	window_set_position(win, WINDOW_LOWER_RIGHT, 0);
+	
+	tl = tlist_new(win, TLIST_POLL);
+	WIDGET(tl)->flags &= ~(WIDGET_HFILL);
+	tlist_prescale(tl, "XXXXXXXXXXXXXX", 8);
+	event_new(tl, "tlist-poll", poll_loops, "%p", ckt);
+
+	window_attach(pwin, win);
+	window_show(win);
+}
+
+static void
+layout_settings(int argc, union evarg *argv)
 {
 	char path[OBJECT_PATH_MAX];
 	struct window *pwin = argv[1].p;
@@ -757,7 +726,6 @@ circuit_settings(int argc, union evarg *argv)
 	struct mfspinbutton *mfsu;
 	struct fspinbutton *fsu;
 	struct palette *pal;
-	struct tlist *tl;
 	struct textbox *tb;
 	struct checkbox *cb;
 	
@@ -799,7 +767,7 @@ circuit_settings(int argc, union evarg *argv)
 
 	cb = checkbox_new(win, _("Display node names"));
 	widget_bind(cb, "state", WIDGET_INT, &ckt->dis_node_names);
-#if 0
+	
 	label_new(win, LABEL_STATIC, _("Background color: "));
 	pal = palette_new(win, PALETTE_RGB);
 	widget_bind(pal, "color", WIDGET_UINT32, &vg->fill_color);
@@ -810,46 +778,15 @@ circuit_settings(int argc, union evarg *argv)
 	widget_bind(pal, "color", WIDGET_UINT32, &vg->grid_color);
 	event_new(pal, "palette-changed", vg_changed, "%p", vg);
 	
-	label_new(win, LABEL_STATIC, _("Topology:"));
+#if 0
+	label_new(win, LABEL_STATIC, _("Nodes:"));
 	tl = tlist_new(win, TLIST_POLL|TLIST_TREE);
 	WIDGET(tl)->flags &= ~(WIDGET_HFILL);
 	event_new(tl, "tlist-poll", poll_nodes, "%p", ckt);
 #endif	
 
-	label_new(win, LABEL_STATIC, _("Loop currents:"));
-	tl = tlist_new(win, TLIST_POLL);
-	WIDGET(tl)->flags &= ~(WIDGET_HFILL);
-	tlist_prescale(tl, "XXXXXXXXXXXXXX", 8);
-	event_new(tl, "tlist-poll", poll_loops, "%p", ckt);
-	
 	window_attach(pwin, win);
 	window_show(win);
-}
-
-static void
-start_simulation(int argc, union evarg *argv)
-{
-	struct circuit *ckt = argv[1].p;
-
-	if (circuit_start_analysis(ckt) == -1) {
-		text_tmsg(MSG_ERROR, 1000, "%s: %s", OBJECT(ckt)->name,
-		    error_get());
-		return;
-	}
-	text_tmsg(MSG_INFO, 500, _("Simulation started."));
-}
-
-static void
-stop_simulation(int argc, union evarg *argv)
-{
-	struct circuit *ckt = argv[1].p;
-	
-	if (circuit_stop_analysis(ckt) == -1) {
-		text_tmsg(MSG_ERROR, 1000, "%s: %s", OBJECT(ckt)->name,
-		     error_get());
-		return;
-	}
-	text_tmsg(MSG_INFO, 500, _("Simulation stopped."));
 }
 
 static void
@@ -907,12 +844,16 @@ double_click(int argc, union evarg *argv)
 }
 
 static void
-select_simulation_mode(int argc, union evarg *argv)
+select_sim(int argc, union evarg *argv)
 {
 	struct circuit *ckt = argv[1].p;
-	struct analysis_ops *sops = argv[2].p;
+	struct sim_ops *sops = argv[2].p;
+	struct window *pwin = argv[3].p;
+	struct sim *sim;
 
-	circuit_set_analysis(ckt, sops);
+	sim = circuit_set_sim(ckt, sops);
+	if (sim->win != NULL)
+		window_attach(pwin, sim->win);
 }
 
 static void
@@ -1118,56 +1059,57 @@ circuit_edit(void *p)
 	}
 	pitem = menu_add_item(menu, _("Edit"));
 	{
-		menu_action(pitem, _("Circuit settings..."), SETTINGS_ICON,
-		    circuit_settings, "%p,%p", win, ckt);
+		/* TODO */
+		menu_action(pitem, _("Undo"), NULL, NULL, NULL);
+		menu_action(pitem, _("Redo"), NULL, NULL, NULL);
+
+		menu_separator(pitem);
+
+		menu_action(pitem, _("Edit layout settings..."), SETTINGS_ICON,
+		    layout_settings, "%p,%p", win, ckt);
+
+		subitem = menu_action(pitem, _("Drawing"), DRAWING_ICON,
+		    NULL, NULL);
+		vg_reg_menu(menu, subitem, ckt->vg, mv);
 	}
+
 	pitem = menu_add_item(menu, _("View"));
 	{
-		menu_action(pitem, _("Create view..."), NEW_VIEW_ICON,
-		    create_view, "%p,%p,%p", mv, win, ckt);
-		
+		menu_action(pitem, _("Closed loops..."), EDA_MESH_ICON,
+		    show_loops, "%p,%p", win, ckt);
+
 		menu_separator(pitem);
-		
+
 		menu_int_flags(pitem, _("Show origin"), VGORIGIN_ICON,
 		    &ckt->vg->flags, VG_VISORIGIN, 0);
 		menu_int_flags(pitem, _("Show grid"), GRID_ICON,
 		    &ckt->vg->flags, VG_VISGRID, 0);
 		menu_int_flags(pitem, _("Show extents"), VGBLOCK_ICON,
 		    &ckt->vg->flags, VG_VISBBOXES, 0);
-	}
-	pitem = menu_add_item(menu, _("Analysis"));
-	{
-		extern const struct analysis_ops *analysis_ops[];
-		const struct analysis_ops **ops;
-
-		menu_action_kb(pitem, _("Start simulation"),
-		    EDA_START_SIM_ICON, SDLK_s, KMOD_CTRL,
-		    start_simulation, "%p", ckt);
-		menu_action_kb(pitem, _("Stop simulation"),
-		    EDA_STOP_SIM_ICON, SDLK_s, KMOD_CTRL|KMOD_SHIFT,
-		    stop_simulation, "%p", ckt);
-
-		subitem = menu_action(pitem, _("Analysis modes"),
-		    SETTINGS_ICON, NULL, NULL);
-		for (ops = &analysis_ops[0]; *ops != NULL; ops++) {
-			menu_action(subitem, _((*ops)->name),
-			    EDA_START_SIM_ICON,
-			    select_simulation_mode, "%p,%p", ckt, *ops);
-		}
 		
-		menu_action(pitem, _("Analysis settings"), SETTINGS_ICON,
-		    analysis_configure, "%p,%p", ckt, win);
-//		if (ckt->analysis != NULL && *ops == ckt->analysis->ops)
-//			select item...
+		menu_separator(pitem);
+		
+		menu_action(pitem, _("Create view..."), NEW_VIEW_ICON,
+		    create_view, "%p,%p,%p", mv, win, ckt);
 	}
+
+	pitem = menu_add_item(menu, _("Simulation"));
+	{
+		extern const struct sim_ops *sim_ops[];
+		const struct sim_ops **ops;
+
+		for (ops = &sim_ops[0]; *ops != NULL; ops++) {
+			menu_tool(pitem, toolbar, _((*ops)->name),
+			    (*ops)->icon, 0, 0,
+			    select_sim, "%p,%p,%p", ckt, *ops, win);
+		}
+	}
+#if 0
 	pitem = menu_add_item(menu, _("Component"));
 	{
 		component_reg_menu(menu, pitem, ckt, mv);
 	}
-	pitem = menu_add_item(menu, _("Drawing"));
-	{
-		vg_reg_menu(menu, pitem, ckt->vg, mv);
-	}
+#endif
 
 	pane = hpane_new(win, HPANE_WFILL|HPANE_HFILL);
 	div = hpane_add_div(pane,
@@ -1290,6 +1232,7 @@ circuit_edit(void *p)
 
 		event_new(mv, "mapview-dblclick", double_click, "%p", ckt);
 	}
+
 	object_attach(win, statbar);
 	window_scale(win, -1, -1);
 	window_set_geometry(win,

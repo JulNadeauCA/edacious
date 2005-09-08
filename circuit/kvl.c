@@ -1,4 +1,4 @@
-/*	$Csoft: dc.c,v 1.2 2004/10/01 03:10:34 vedge Exp $	*/
+/*	$Csoft: kvl.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 Winds Triton Engineering, Inc.
@@ -27,24 +27,21 @@
  */
 
 #include <engine/engine.h>
-#ifdef EDITION
-#include <engine/widget/window.h>
-#include <engine/widget/spinbutton.h>
-#include <engine/widget/fspinbutton.h>
-#include <engine/widget/tlist.h>
-#include <engine/widget/label.h>
-#endif
+#include <engine/widget/gui.h>
+
 #include <circuit/circuit.h>
+
 #include <component/component.h>
 #include <component/vsource.h>
+
 #include <mat/mat.h>
 
-#include "analysis.h"
+#include "sim.h"
 
-const struct analysis_ops kvl_ops;
+const struct sim_ops kvl_ops;
 
 struct kvl {
-	struct analysis an;
+	struct sim sim;
 	Uint32 Telapsed;		/* Simulated time elapsed (ns) */
 	int speed;			/* Simulation speed (updates/sec) */
 	struct timeout update_to;	/* Timer for simulation updates */
@@ -61,7 +58,7 @@ static Uint32
 kvl_tick(void *obj, Uint32 ival, void *arg)
 {
 	struct circuit *ckt = obj;
-	struct analysis *an = arg;
+	struct sim *sim = arg;
 	struct kvl *kvl = arg;
 	struct component *com;
 
@@ -96,66 +93,61 @@ static void
 kvl_init(void *p)
 {
 	struct kvl *kvl = p;
-	struct analysis *an = p;
 
-	analysis_init(kvl, &kvl_ops);
+	sim_init(kvl, &kvl_ops);
 	kvl->Telapsed = 0;
 	kvl->speed = 4;
 	kvl->Rmat = mat_new(0, 0);
 	kvl->Vvec = vec_new(0);
 	kvl->Ivec = vec_new(0);
-	timeout_set(&kvl->update_to, kvl_tick, an, TIMEOUT_LOADABLE);
+	timeout_set(&kvl->update_to, kvl_tick, kvl, TIMEOUT_LOADABLE);
+}
+
+static void
+kvl_start(struct kvl *kvl)
+{
+	struct circuit *ckt = SIM(kvl)->ckt;
+
+	lock_timeout(ckt);
+	if (timeout_scheduled(ckt, &kvl->update_to)) {
+		timeout_del(ckt, &kvl->update_to);
+	}
+	timeout_add(ckt, &kvl->update_to, 1000/kvl->speed);
+	unlock_timeout(ckt);
+
+	kvl->Telapsed = 0;
+}
+
+static void
+kvl_stop(struct kvl *kvl)
+{
+	struct circuit *ckt = SIM(kvl)->ckt;
+
+	lock_timeout(ckt);
+	if (timeout_scheduled(ckt, &kvl->update_to)) {
+		timeout_del(ckt, &kvl->update_to);
+	}
+	unlock_timeout(ckt);
 }
 
 static void
 kvl_destroy(void *p)
 {
 	struct kvl *kvl = p;
-	struct analysis *an = p;
-	struct circuit *ckt = an->ckt;
+	
+	kvl_stop(kvl);
 
 	mat_free(kvl->Rmat);
 	vec_free(kvl->Vvec);
 	vec_free(kvl->Ivec);
 
-	analysis_destroy(kvl);
+	sim_destroy(kvl);
 }
 
 static void
-kvl_start(void *p)
+kvl_cktmod(void *p, struct circuit *ckt)
 {
 	struct kvl *kvl = p;
-	struct analysis *an = p;
-
-	lock_timeout(an->ckt);
-	if (timeout_scheduled(an->ckt, &kvl->update_to)) {
-		timeout_del(an->ckt, &kvl->update_to);
-	}
-	timeout_add(an->ckt, &kvl->update_to, 1000/kvl->speed);
-	unlock_timeout(an->ckt);
-
-	kvl->Telapsed = 0;
-}
-
-static void
-kvl_stop(void *p)
-{
-	struct kvl *kvl = p;
-	struct analysis *an = p;
-
-	lock_timeout(an->ckt);
-	if (timeout_scheduled(an->ckt, &kvl->update_to)) {
-		timeout_del(an->ckt, &kvl->update_to);
-	}
-	unlock_timeout(an->ckt);
-}
-
-static void
-kvl_cktmod(void *p)
-{
-	struct kvl *kvl = p;
-	struct analysis *an = p;
-	struct circuit *ckt = an->ckt;
 
 	mat_resize(kvl->Rmat, ckt->nloops, ckt->nloops);
 	vec_resize(kvl->Vvec, ckt->nloops);
@@ -255,8 +247,8 @@ poll_Rmat(int argc, union evarg *argv)
 	char text[TLIST_LABEL_MAX];
 	struct tlist *tl = argv[0].p;
 	struct kvl *kvl = argv[1].p;
-	struct analysis *an = argv[1].p;
-	struct circuit *ckt = an->ckt;
+	struct sim *sim = argv[1].p;
+	struct circuit *ckt = sim->ckt;
 	unsigned int i, j;
 
 	if (kvl->Rmat->mat == NULL)
@@ -278,46 +270,71 @@ poll_Rmat(int argc, union evarg *argv)
 	tlist_restore_selections(tl);
 }
 
-static struct window *
-kvl_edit(void *p)
+static void
+cont_run(int argc, union evarg *argv)
 {
-	char path[OBJECT_PATH_MAX];
-	struct analysis *an = p;
+	struct button *bu = argv[0].p;
+	struct kvl *kvl = argv[1].p;
+	struct sim *sim = argv[1].p;
+	int state = argv[2].i;
+
+	if (state) {
+		kvl_cktmod(kvl, sim->ckt);
+		kvl_start(kvl);
+		sim->running = 1;
+		text_tmsg(MSG_INFO, 500, _("Simulation started."));
+	} else {
+		kvl_stop(kvl);
+		sim->running = 0;
+		text_tmsg(MSG_INFO, 500, _("Simulation stopped."));
+	}
+}
+
+static struct window *
+kvl_edit(void *p, struct circuit *ckt)
+{
 	struct kvl *kvl = p;
-	struct circuit *ckt = an->ckt;
 	struct window *win;
 	struct spinbutton *sbu;
 	struct fspinbutton *fsu;
 	struct tlist *tl;
+	struct notebook *nb;
+	struct notebook_tab *ntab;
+	struct button *bu;
 
-	object_copy_name(ckt, path, sizeof(path));
-	if ((win = window_new(0, "kvl-settings-%s", path)) == NULL) {
-		return (NULL);
-	}
-	window_set_caption(win, _("KVL analysis: %s"), OBJECT(ckt)->name);
-	window_set_position(win, WINDOW_LOWER_CENTER, 0);
+	win = window_new(0, NULL);
 
-	label_new(win, LABEL_POLLED, _("Elapsed time: %[u32]ns"),
-	    &kvl->Telapsed);
-
-	sbu = spinbutton_new(win, _("Speed (updates/sec): "));
-	widget_bind(sbu, "value", WIDGET_UINT32, &kvl->speed);
-	spinbutton_set_range(sbu, 1, 1000);
+	nb = notebook_new(win, NOTEBOOK_WFILL|NOTEBOOK_HFILL);
+	ntab = notebook_add_tab(nb, _("Continuous mode"), BOX_VERT);
+	{
+		bu = button_new(ntab, _("Run simulation"));
+		button_set_sticky(bu, 1);
+		WIDGET(bu)->flags |= WIDGET_WFILL;
+		event_new(bu, "button-pushed", cont_run, "%p", kvl);
 	
-	label_new(win, LABEL_STATIC, _("Resistances:"));
-	tl = tlist_new(win, TLIST_POLL);
-	event_new(tl, "tlist-poll", poll_Rmat, "%p", kvl);
+		separator_new(ntab, SEPARATOR_HORIZ);
 
+		sbu = spinbutton_new(ntab, _("Speed (updates/sec): "));
+		widget_bind(sbu, "value", WIDGET_UINT32, &kvl->speed);
+		spinbutton_set_range(sbu, 1, 1000);
+		
+		label_new(ntab, LABEL_POLLED, _("Elapsed time: %[u32]ns"),
+		    &kvl->Telapsed);
+	}
+	ntab = notebook_add_tab(nb, _("R-matrix"), BOX_VERT);
+	{
+		tl = tlist_new(ntab, TLIST_POLL);
+		event_new(tl, "tlist-poll", poll_Rmat, "%p", kvl);
+	}
 	return (win);
 }
 
-const struct analysis_ops kvl_ops = {
-	N_("KVL analysis"),
+const struct sim_ops kvl_ops = {
+	N_("KVL Analysis"),
+	EDA_MESH_ICON,
 	sizeof(struct kvl),
 	kvl_init,
 	kvl_destroy,
-	kvl_start,
-	kvl_stop,
 	kvl_cktmod,
 	kvl_edit
 };

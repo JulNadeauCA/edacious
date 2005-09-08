@@ -1,4 +1,4 @@
-/*	$Csoft: analysis.c,v 1.4 2005/05/25 07:03:56 vedge Exp $	*/
+/*	$Csoft: sim.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 Winds Triton Engineering, Inc.
@@ -37,41 +37,52 @@
 
 #include <circuit/circuit.h>
 
-extern const struct analysis_ops kvl_ops;
+extern const struct sim_ops kvl_ops;
 
-const struct analysis_ops *analysis_ops[] = {
+const struct sim_ops *sim_ops[] = {
 	&kvl_ops,
 	NULL
 };
 
 void
-analysis_init(void *p, const struct analysis_ops *ops)
+sim_init(void *p, const struct sim_ops *ops)
 {
-	struct analysis *ana = p;
+	struct sim *sim = p;
 
-	ana->ops = ops;
-	ana->running = 0;
+	sim->ops = ops;
+	sim->running = 0;
+	sim->win = NULL;
 }
 
 void
-analysis_destroy(void *p)
+sim_destroy(void *p)
 {
+	struct sim *sim = p;
+
+	if (sim->win != NULL) {
+		view_detach(sim->win);
+	}
+	if (sim->ops->destroy != NULL) {
+		sim->ops->destroy(sim);
+	}
+	Free(sim, M_EDA);
 }
 
 void
-analysis_configure(int argc, union evarg *argv)
+sim_edit(int argc, union evarg *argv)
 {
 	struct circuit *ckt = argv[1].p;
 	struct window *pwin = argv[2].p;
-	struct analysis *ana = ckt->analysis;
+	struct sim *sim = ckt->sim;
 	struct window *win;
 
-	if (ana == NULL) {
-		error_set(_("No analysis mode selected."));
+	if (sim == NULL) {
+		error_set(_("No sim mode selected."));
 		return;
 	}
-	if (ana->ops->settings != NULL &&
-	    (win = ana->ops->settings(ana)) != NULL) {
+	if (sim->ops->edit != NULL &&
+	    (win = sim->ops->edit(sim, ckt)) != NULL) {
+		sim->win = win;
 		window_attach(pwin, win);
 		window_show(win);
 	}
