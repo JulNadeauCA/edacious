@@ -1,0 +1,447 @@
+# $Csoft: fr.po,v 1.1 2004/09/24 04:22:24 vedge Exp $
+#
+# Copyright (c) 2004 CubeSoft Communications, Inc.
+# <http://www.csoft.org>
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+# USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: agar 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2004-09-24 00:13-0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: Wilbern Cobb <vedge@csoft.org>\n"
+"Language-Team: French <fr@csoft.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "No analysis mode selected."
+msgstr "Aucun mode d'analyse sélectionné."
+
+#, c-format
+msgid "%s analysis mode"
+msgstr "analyse %s"
+
+msgid "Start"
+msgstr "Démarrer"
+
+msgid "Stop"
+msgstr "Arrêter"
+
+msgid "Configure"
+msgstr "Configurer"
+
+msgid "Schematic"
+msgstr "Schéma"
+
+msgid "No analysis mode is set."
+msgstr "Aucun mode d'analyse n'est sélectionné."
+
+msgid "Analysis is already running."
+msgstr "L'analyse est déjà en cours d'exécution."
+
+msgid "Analysis is not running."
+msgstr "L'analyse n'est pas en cours d'exécution."
+
+#, c-format
+msgid "Circuit `%s' reverted successfully."
+msgstr "La lecture de «%s» est complète."
+
+#, c-format
+msgid "Circuit `%s' saved successfully."
+msgstr "La sauvegarde de «%s» est complète."
+
+#, c-format
+msgid "Circuit layout: %s"
+msgstr "Affichage du circuit: %s"
+
+msgid "Description: "
+msgstr "Description: "
+
+msgid "Bounding box: "
+msgstr "Boîte: "
+
+msgid "Grid interval: "
+msgstr "Interval de grille: "
+
+msgid "Scaling factor: "
+msgstr "Facteur de zoom: "
+
+msgid "Display node indicators"
+msgstr "Indiquer la présence des noeuds"
+
+msgid "Display node names"
+msgstr "Afficher les noms des noeuds"
+
+msgid "Background color: "
+msgstr "Couleur de fond: "
+
+msgid "Grid color: "
+msgstr "Couleur de grille: "
+
+msgid "Topology:"
+msgstr "Topologie:"
+
+msgid "Loop currents:"
+msgstr "Courants des lemmes:"
+
+msgid "Resistances:"
+msgstr "Résistances:"
+
+msgid "Simulation started."
+msgstr "Simulation démarrée."
+
+msgid "Simulation stopped."
+msgstr "Simulation interrompue."
+
+msgid "File"
+msgstr "Fichier"
+
+msgid "Revert"
+msgstr "Restaurer"
+
+msgid "Save"
+msgstr "Sauvegarder"
+
+msgid "Simulation"
+msgstr "Simulation"
+
+msgid "Start simulation"
+msgstr "Démarrer la simulation"
+
+msgid "Stop simulation"
+msgstr "Interrompre la simulation"
+
+msgid "Simulation mode"
+msgstr "Mode de simulation"
+
+msgid "DC operating point analysis"
+msgstr "Analyse opérationnelle CC"
+
+#, c-format
+msgid "DC operating point analysis: %s"
+msgstr "Analyse opérationnelle CC: %s"
+
+msgid "Elapsed time: %[u32]s"
+msgstr "Temps écoulé: %[u32]s"
+
+msgid "Speed (updates/sec): "
+msgstr "Vitesse (mises à jour seconde): "
+
+#, c-format
+msgid "`%s' was successfully exported to `%s' (%u cards)"
+msgstr "L'export de «%s» vers «%s» est complet (%u cartes)"
+
+#, c-format
+msgid "Component: %s"
+msgstr "Composante: %s"
+
+msgid "Reference temp.: "
+msgstr "Température de référence: "
+
+msgid "Instance temp.: "
+msgstr "Température spécifique: "
+
+msgid "Pinout:"
+msgstr "Brochage:"
+
+msgid "Dipoles:"
+msgstr "Dipoles:"
+
+msgid "No component type is selected."
+msgstr "Aucun type de composante n'est sélectionné."
+
+msgid "Insert component"
+msgstr "Insérer la composante"
+
+msgid "Specify the type of component to create."
+msgstr "Spécifiez le type de composante à créer."
+
+#, c-format
+msgid "Connect %s (%d connections)"
+msgstr "Connecter %s (%d broches)"
+
+msgid "Insert new components into the circuit."
+msgstr "Insérer de nouvelles composantes dans le circuit."
+
+msgid "Select component"
+msgstr "Sélectionner la composante"
+
+msgid "Select one or more component in the circuit."
+msgstr "Sélectionnez une ou plusieurs composantes du circuit."
+
+msgid "Conductor"
+msgstr "Conducteur"
+
+msgid "Insert an ideal conductor between two nodes."
+msgstr "Insérer un conducteur idéal entre deux noeuds."
+
+msgid "Inverter"
+msgstr "Inverseur"
+
+msgid "Resistor"
+msgstr "Résistance"
+
+#, c-format
+msgid "Enter %s's resistance: "
+msgstr "Saisissez la résistance de %s: "
+
+msgid "Resistance: "
+msgstr "Résistance: "
+
+#, c-format
+msgid "Tolerance (%%): "
+msgstr "Tolérance (%%): "
+
+msgid "Power rating: "
+msgstr "Puissance limite: "
+
+msgid "First order temperature coefficient: "
+msgstr "Coefficient thermique de premier ordre: "
+
+msgid "Second order temperature coefficient: "
+msgstr "Coefficient thermique de deuxième ordre: "
+
+msgid "Semiconductor resistor"
+msgstr "Résistance de semiconducteur"
+
+msgid "Geometry (LxW): "
+msgstr "Dimensions (LxÉ): "
+
+msgid "Sheet resistance/sq: "
+msgstr "Résistance carée: "
+
+msgid "Narrowing due to side etching: "
+msgstr "Érosion du à la gravure: "
+
+msgid "SPDT switch"
+msgstr "Interrupteur SPDT"
+
+msgid "ON resistance: "
+msgstr "Résistance ON: "
+
+msgid "OFF resistance: "
+msgstr "Résistance OFF: "
+
+msgid "Toggle state"
+msgstr "Inverser l'état"
+
+msgid "SPST switch"
+msgstr "Interrupteur SPST"
+
+msgid "Independent voltage source"
+msgstr "Source de voltage indépendante"
+
+#, c-format
+msgid "Enter %s's voltage: "
+msgstr "Saississez la tension de %s: "
+
+msgid " (redundant)"
+msgstr " (redondant)"
+
+msgid "Voltage: "
+msgstr "Tension: "
+
+msgid "Internal DC resistance: "
+msgstr "Résistance CC interne: "
+
+msgid "Loops:"
+msgstr "Lemmes:"
+
+msgid "EDA Tools"
+msgstr "Outils EDA"
+
+msgid "Adjustable Voltage Regulator Tool"
+msgstr "Ajustement de régulateur de voltage"
+
+msgid "Model: "
+msgstr "Modèle: "
+
+msgid "Material capacitance"
+msgstr "Capacitance de matériel"
+
+msgid "Vacuum"
+msgstr "Vide"
+
+msgid "Air (1 atm)"
+msgstr "Air (1 atm)"
+
+msgid "Air (100 atm)"
+msgstr "Air (100 atm)"
+
+msgid "Glass"
+msgstr "Verre"
+
+msgid "Mica"
+msgstr "Mica"
+
+msgid "Mylar"
+msgstr "Mylar"
+
+msgid "Neoprene"
+msgstr "Néoprène"
+
+msgid "Plexiglas"
+msgstr "Plexiglas"
+
+msgid "Polyethylene"
+msgstr "Polyéthylène"
+
+msgid "Polyvinyl chloride"
+msgstr "Chlorure de polyvinyl"
+
+msgid "Teflon"
+msgstr "Teflon"
+
+msgid "Germanium"
+msgstr "Germanium"
+
+msgid "Strontium titanate"
+msgstr "Titanate de strontium"
+
+msgid "Water"
+msgstr "Eau"
+
+msgid "Glycerin"
+msgstr "Glycérine"
+
+msgid "Benzene"
+msgstr "Benzène"
+
+msgid "Silicium"
+msgstr "Silice"
+
+msgid "Min: "
+msgstr "Min: "
+
+msgid "Max: "
+msgstr "Max: "
+
+msgid "Dielectric: "
+msgstr "Diélectrique: "
+
+msgid "Area: "
+msgstr "Aire: "
+
+msgid "Thickness: "
+msgstr "Épaisseur: "
+
+msgid "Temperature: "
+msgstr "Température: "
+
+msgid "Current Calculation"
+msgstr "Calcul de courant"
+
+msgid "Current: "
+msgstr "Courant: "
+
+msgid "Impedance"
+msgstr "Impédance"
+
+msgid "Capacitive reactance: "
+msgstr "Réactance capacitive: "
+
+msgid "Inductive reactance: "
+msgstr "Réactance inductive: "
+
+msgid "Impedance: "
+msgstr "Impédance: "
+
+msgid "Frequency: "
+msgstr "Fréquence: "
+
+msgid "Capacitance: "
+msgstr "Capacitance: "
+
+msgid "Inductance: "
+msgstr "Inductance: "
+
+msgid "Length Equivalence"
+msgstr "Équivalence de distance"
+
+msgid "Length: "
+msgstr "Distance: "
+
+msgid "LM555 Timer Adjustement Tool"
+msgstr "Ajustement de minuterie LM555"
+
+msgid "Power Calculation"
+msgstr "Calcul de puissance"
+
+msgid "Power: "
+msgstr "Puissance: "
+
+msgid "Pressure Equivalence"
+msgstr "Équivalence de pression"
+
+msgid "Pressure: "
+msgstr "Pression: "
+
+msgid "Resistance Calculation"
+msgstr "Calcul de résistance"
+
+msgid "Resistivity of Conductor Materials"
+msgstr "Résistivité de matériel conducteur"
+
+msgid "Material: "
+msgstr "Matériel: "
+
+msgid "Resistivity: "
+msgstr "Résistivité: "
+
+msgid "RMS Voltage"
+msgstr "Voltage RMS"
+
+msgid "RMS: "
+msgstr "RMS: "
+
+msgid "Peak: "
+msgstr "Sommet: "
+
+msgid "Average: "
+msgstr "Moyenne: "
+
+msgid "Time Equivalence"
+msgstr "Équivalence de temps"
+
+msgid "Time: "
+msgstr "Temps: "
+
+msgid "Voltage Calculation"
+msgstr "Calcul de voltage"
+
+msgid "Waveform Combination"
+msgstr "Combinaison d'onde"
+
+msgid "Waveform 1"
+msgstr "Onde 1"
+
+msgid "Amplitude"
+msgstr "Amplitude"
+
+msgid "Weight Equivalence"
+msgstr "Équivalence de masse"
+
+msgid "Weight: "
+msgstr "Masse: "

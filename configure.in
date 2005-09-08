@@ -1,0 +1,36 @@
+# $Csoft: configure.in,v 1.3 2005/01/16 10:16:29 vedge Exp $
+# Public domain
+
+REGISTER("--enable-static",	"Produce a static binary [default: no]")
+REGISTER("--enable-capture",	"Enable schematic capture [default: yes]")
+REGISTER("--enable-warnings",	"Enable compiler warnings [default: no]")
+
+HDEFINE(VERSION, "\"1.0-alpha\"")
+
+MDEFINE(SHAREDIR, "$PREFIX/share/agar-eda")
+HDEFINE(SHAREDIR, "\"$PREFIX/share/agar-eda\"")
+MDEFINE(TTFDIR, "$PREFIX/share/agar-eda/fonts")
+HDEFINE(TTFDIR, "\"$PREFIX/share/agar-eda/fonts\"")
+MDEFINE(LIBDIR, "$PREFIX/lib/agar-eda")
+HDEFINE(LIBDIR, "\"$PREFIX/lib/agar-eda\"")
+MDEFINE(INCLDIR, "$PREFIX/include/agar-eda")
+HDEFINE(INCLDIR, "\"$PREFIX/include/agar-eda\"")
+
+CHECK(cc)
+REQUIRE(agar, 1.0)
+
+MDEFINE(CFLAGS, "$CFLAGS -I$SRC")
+if [ "${enable_warnings}" != "no" ]; then
+	MDEFINE(CFLAGS, "$CFLAGS -Wall -Werror -Wmissing-prototypes")
+	MDEFINE(CFLAGS, "$CFLAGS -Wno-unused")
+fi
+
+if [ "${enable_capture}" != "no" ]; then
+	HDEFINE(EDITION, 1)
+else
+	HUNDEF(EDITION)
+fi
+
+if [ "${enable_static}" = "yes" ]; then
+	MDEFINE(LDFLAGS, "-static")
+fi
