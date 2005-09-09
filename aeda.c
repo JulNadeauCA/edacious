@@ -1,7 +1,7 @@
-/*	$Csoft: aeda.c,v 1.1 2005/09/08 09:48:56 vedge Exp $	*/
+/*	$Csoft: aeda.c,v 1.2 2005/09/09 02:16:12 vedge Exp $	*/
 
 /*
- * Copyright (c) 2003, 2004, 2005 Winds Triton Engineering, Inc.
+ * Copyright (c) 2003, 2004, 2005 CubeSoft Communications, Inc.
  * <http://www.winds-triton.com>
  * All rights reserved.
  *

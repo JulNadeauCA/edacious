@@ -1,7 +1,7 @@
-/*	$Csoft: wavecomb.c,v 1.2 2004/09/12 05:58:08 vedge Exp $	*/
+/*	$Csoft: wavecomb.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 
 /*
- * Copyright (c) 2003, 2004 Winds Triton Engineering, Inc.
+ * Copyright (c) 2003, 2004, 2005 CubeSoft Communications, Inc.
  * <http://www.winds-triton.com>
  * All rights reserved.
  *

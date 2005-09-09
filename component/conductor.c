@@ -1,7 +1,7 @@
-/*	$Csoft: conductor.c,v 1.11 2005/09/04 06:22:08 vedge Exp $	*/
+/*	$Csoft: conductor.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 
 /*
- * Copyright (c) 2004 Winds Triton Engineering, Inc.
+ * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
  * <http://www.winds-triton.com>
  * All rights reserved.
  *

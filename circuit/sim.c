@@ -1,7 +1,7 @@
-/*	$Csoft: sim.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: sim.c,v 1.1 2005/09/08 09:46:01 vedge Exp $	*/
 
 /*
- * Copyright (c) 2004, 2005 Winds Triton Engineering, Inc.
+ * Copyright (c) 2004, 2005 CubeSoft Communications Inc
  * <http://www.winds-triton.com>
  * All rights reserved.
  *

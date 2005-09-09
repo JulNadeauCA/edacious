@@ -1,7 +1,7 @@
-/*	$Csoft: vsource.c,v 1.16 2005/05/25 07:03:57 vedge Exp $	*/
+/*	$Csoft: vsource.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 
 /*
- * Copyright (c) 2004 Winds Triton Engineering, Inc.
+ * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
  * <http://www.winds-triton.com>
  * All rights reserved.
  *

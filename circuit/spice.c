@@ -1,7 +1,7 @@
-/*	$Csoft: spice.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: spice.c,v 1.2 2005/09/09 02:16:13 vedge Exp $	*/
 
 /*
- * Copyright (c) 2004 Winds Triton Engineering, Inc.
+ * Copyright (c) 2004 CubeSoft Communications, Inc.
  * <http://www.winds-triton.com>
  * All rights reserved.
  *

@@ -1,7 +1,7 @@
-/*	$Csoft: kvl.c,v 1.2 2005/09/08 09:46:01 vedge Exp $	*/
+/*	$Csoft: kvl.c,v 1.3 2005/09/09 02:16:13 vedge Exp $	*/
 
 /*
- * Copyright (c) 2005 Winds Triton Engineering, Inc.
+ * Copyright (c) 2005 CubeSoft Communications, Inc.
  * <http://www.winds-triton.com>
  * All rights reserved.
  *

@@ -1,7 +1,7 @@
-/*	$Csoft: circuit.c,v 1.3 2005/09/09 02:16:13 vedge Exp $	*/
+/*	$Csoft: circuit.c,v 1.4 2005/09/09 02:36:29 vedge Exp $	*/
 
 /*
- * Copyright (c) 2004 Winds Triton Engineering, Inc.
+ * Copyright (c) 2004, 2005 CubeSoft Communications Inc
  * <http://www.winds-triton.com>
  * All rights reserved.
  *
