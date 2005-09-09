@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.c,v 1.2 2005/09/08 09:46:01 vedge Exp $	*/
+/*	$Csoft: circuit.c,v 1.3 2005/09/09 02:16:13 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004 Winds Triton Engineering, Inc.
@@ -32,26 +32,9 @@
 #include <engine/map/map.h>
 
 #ifdef EDITION
-#include <engine/widget/window.h>
-#include <engine/widget/box.h>
-#include <engine/widget/tlist.h>
-#include <engine/widget/textbox.h>
-#include <engine/widget/fspinbutton.h>
-#include <engine/widget/mfspinbutton.h>
-#include <engine/widget/palette.h>
-#include <engine/widget/toolbar.h>
-#include <engine/widget/statusbar.h>
-#include <engine/widget/label.h>
-#include <engine/widget/checkbox.h>
-#include <engine/widget/units.h>
-#include <engine/widget/menu.h>
-#include <engine/widget/notebook.h>
-#include <engine/widget/hpane.h>
-#include <engine/widget/separator.h>
-
-#include <engine/objmgr.h>
-
+#include <engine/widget/gui.h>
 #include <engine/map/mapview.h>
+#include <engine/objmgr.h>
 #endif
 
 #include <math.h>
@@ -704,7 +687,7 @@ show_loops(int argc, union evarg *argv)
 		return;
 	}
 	window_set_caption(win, _("%s: Closed Loops"), OBJECT(ckt)->name);
-	window_set_position(win, WINDOW_LOWER_RIGHT, 0);
+	window_set_position(win, WINDOW_UPPER_RIGHT, 0);
 	
 	tl = tlist_new(win, TLIST_POLL);
 	WIDGET(tl)->flags &= ~(WIDGET_HFILL);
@@ -725,7 +708,6 @@ layout_settings(int argc, union evarg *argv)
 	struct window *win;
 	struct mfspinbutton *mfsu;
 	struct fspinbutton *fsu;
-	struct palette *pal;
 	struct textbox *tb;
 	struct checkbox *cb;
 	
@@ -767,16 +749,6 @@ layout_settings(int argc, union evarg *argv)
 
 	cb = checkbox_new(win, _("Display node names"));
 	widget_bind(cb, "state", WIDGET_INT, &ckt->dis_node_names);
-	
-	label_new(win, LABEL_STATIC, _("Background color: "));
-	pal = palette_new(win, PALETTE_RGB);
-	widget_bind(pal, "color", WIDGET_UINT32, &vg->fill_color);
-	event_new(pal, "palette-changed", vg_changed, "%p", vg);
-	
-	label_new(win, LABEL_STATIC, _("Grid color: "));
-	pal = palette_new(win, PALETTE_RGB);
-	widget_bind(pal, "color", WIDGET_UINT32, &vg->grid_color);
-	event_new(pal, "palette-changed", vg_changed, "%p", vg);
 	
 #if 0
 	label_new(win, LABEL_STATIC, _("Nodes:"));
@@ -1027,7 +999,7 @@ circuit_edit(void *p)
 	struct hpane *pane;
 	struct hpane_div *div;
 	struct scrollbar *hbar, *vbar;
-	
+
 	win = window_new(0, NULL);
 	window_set_caption(win, "%s", OBJECT(ckt)->name);
 
@@ -1038,7 +1010,7 @@ circuit_edit(void *p)
 	mv = Malloc(sizeof(struct mapview), M_OBJECT);
 	mapview_init(mv, ckt->vg->map, MAPVIEW_NO_BMPZOOM|MAPVIEW_NO_NODESEL|
 	                               MAPVIEW_EDIT, toolbar, statbar);
-
+	
 	menu = menu_new(win);
 	pitem = menu_add_item(menu, _("File"));
 	{
@@ -1060,18 +1032,17 @@ circuit_edit(void *p)
 	pitem = menu_add_item(menu, _("Edit"));
 	{
 		/* TODO */
-		menu_action(pitem, _("Undo"), NULL, NULL, NULL);
-		menu_action(pitem, _("Redo"), NULL, NULL, NULL);
+		menu_action(pitem, _("Undo"), -1, NULL, NULL);
+		menu_action(pitem, _("Redo"), -1, NULL, NULL);
 
 		menu_separator(pitem);
 
-		menu_action(pitem, _("Edit layout settings..."), SETTINGS_ICON,
+		menu_action(pitem, _("Layout preferences..."), SETTINGS_ICON,
 		    layout_settings, "%p,%p", win, ckt);
-
-		subitem = menu_action(pitem, _("Drawing"), DRAWING_ICON,
-		    NULL, NULL);
-		vg_reg_menu(menu, subitem, ckt->vg, mv);
 	}
+
+	pitem = menu_add_item(menu, _("Drawing"));
+	vg_reg_menu(menu, pitem, ckt->vg, mv);
 
 	pitem = menu_add_item(menu, _("View"));
 	{
@@ -1106,9 +1077,7 @@ circuit_edit(void *p)
 	}
 #if 0
 	pitem = menu_add_item(menu, _("Component"));
-	{
-		component_reg_menu(menu, pitem, ckt, mv);
-	}
+	component_reg_menu(menu, pitem, ckt, mv);
 #endif
 
 	pane = hpane_new(win, HPANE_WFILL|HPANE_HFILL);
@@ -1159,7 +1128,7 @@ circuit_edit(void *p)
 				}
 			}
 		}
-		
+
 		ntab = notebook_add_tab(nb, _("Objects"), BOX_VERT);
 		{
 			tl = tlist_new(ntab, TLIST_POLL|TLIST_TREE);
@@ -1167,7 +1136,7 @@ circuit_edit(void *p)
 			mv->objs_tl = tl;
 			WIDGET(tl)->flags &= ~(WIDGET_FOCUSABLE);
 		}
-		
+
 		ntab = notebook_add_tab(nb, _("Component"), BOX_VERT);
 		{
 #if 0
@@ -1209,6 +1178,7 @@ circuit_edit(void *p)
 		}
 		object_attach(div->box2, toolbar);
 	}
+
 	{
 		extern struct tool_ops component_ins_tool;
 		extern struct tool_ops component_sel_tool;
