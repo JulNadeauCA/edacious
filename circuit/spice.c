@@ -1,4 +1,4 @@
-/*	$Csoft: spice.c,v 1.5 2004/08/27 03:16:09 vedge Exp $	*/
+/*	$Csoft: spice.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004 Winds Triton Engineering, Inc.
@@ -64,7 +64,7 @@ circuit_export_spice3(struct circuit *ckt, const char *path)
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
 		int i;
 
-		if (OBJECT_TYPE(com, "map"))
+		if (!OBJECT_SUBCLASS(com, "component"))
 			continue;
 
 		if (com->ops->export_model != NULL) {

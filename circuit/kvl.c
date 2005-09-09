@@ -1,4 +1,4 @@
-/*	$Csoft: kvl.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: kvl.c,v 1.2 2005/09/08 09:46:01 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 Winds Triton Engineering, Inc.
@@ -64,7 +64,7 @@ kvl_tick(void *obj, Uint32 ival, void *arg)
 
 	/* Effect the independent voltage sources. */
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_TYPE(com, "vsource")) {
+		if (!OBJECT_SUBCLASS(com, "component.vsource")) {
 			continue;
 		}
 		if (com->ops->tick != NULL)
@@ -73,7 +73,7 @@ kvl_tick(void *obj, Uint32 ival, void *arg)
 
 	/* Update model states. */
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (OBJECT_TYPE(com, "map")) {
+		if (!OBJECT_SUBCLASS(com, "component")) {
 			continue;
 		}
 		if (com->ops->tick != NULL)

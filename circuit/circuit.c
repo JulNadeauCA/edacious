@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: circuit.c,v 1.2 2005/09/08 09:46:01 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004 Winds Triton Engineering, Inc.
@@ -94,9 +94,9 @@ circuit_opened(int argc, union evarg *argv)
 	struct component *com;
 
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (OBJECT_TYPE(com, "map")) {
+		if (!OBJECT_SUBCLASS(com, "component"))
 			continue;
-		}
+
 		event_post(ckt, com, "circuit-shown", NULL);
 		object_page_in(com, OBJECT_DATA);
 	}
@@ -114,9 +114,9 @@ circuit_closed(int argc, union evarg *argv)
 	}
 
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (OBJECT_TYPE(com, "map")) {
+		if (!OBJECT_SUBCLASS(com, "component"))
 			continue;
-		}
+
 		event_post(ckt, com, "circuit-hidden", NULL);
 		object_page_out(com, OBJECT_DATA);
 	}
@@ -133,14 +133,14 @@ circuit_modified(struct circuit *ckt)
 
 	/* Regenerate loop and dipole information. */
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (OBJECT_TYPE(com, "map")) {
+		if (!OBJECT_SUBCLASS(com, "component"))
 			continue;
-		}
+
 		for (i = 0; i < com->ndipoles; i++)
 			com->dipoles[i].nloops = 0;
 	}
 	OBJECT_FOREACH_CHILD(vs, ckt, vsource) {
-		if (!OBJECT_TYPE(vs, "vsource") ||
+		if (!OBJECT_SUBCLASS(vs, "component.vsource") ||
 		    PIN(vs,1)->node == NULL ||
 		    PIN(vs,2)->node == NULL) {
 			continue;
@@ -157,7 +157,7 @@ circuit_modified(struct circuit *ckt)
 	}
 	ckt->nloops = 0;
 	OBJECT_FOREACH_CHILD(vs, ckt, vsource) {
-		if (!OBJECT_TYPE(vs, "vsource")) {
+		if (!OBJECT_SUBCLASS(vs, "component.vsource")) {
 			continue;
 		}
 		TAILQ_FOREACH(loop, &vs->loops, loops) {
@@ -228,7 +228,7 @@ circuit_reinit(void *p)
 	ckt->nloops = 0;
 
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (OBJECT_TYPE(com, "map")) {
+		if (!OBJECT_SUBCLASS(com, "component")) {
 			continue;
 		}
 		for (i = 1; i <= com->npins; i++) {
@@ -312,7 +312,7 @@ circuit_load(void *p, struct netbuf *buf)
 		/* Lookup the component. */
 		copy_string(name, buf, sizeof(name));
 		OBJECT_FOREACH_CHILD(com, ckt, component) {
-			if (!OBJECT_TYPE(com, "map") &&
+			if (OBJECT_SUBCLASS(com, "component") &&
 			    strcmp(OBJECT(com)->name, name) == 0)
 				break;
 		}
@@ -397,7 +397,7 @@ circuit_save(void *p, struct netbuf *buf)
 	ncoms_offs = netbuf_tell(buf);
 	write_uint32(buf, 0);
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (OBJECT_TYPE(com, "map")) {
+		if (!OBJECT_SUBCLASS(com, "component")) {
 			continue;
 		}
 		dprintf("save component %s (%u pins)\n", OBJECT(com)->name,
@@ -548,7 +548,7 @@ circuit_free_components(struct circuit *ckt)
 	struct component *com, *ncom;
 
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (OBJECT_TYPE(com, "map")) {
+		if (!OBJECT_SUBCLASS(com, "component")) {
 			continue;
 		}
 		object_detach(com);
@@ -818,7 +818,7 @@ double_click(int argc, union evarg *argv)
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
 		struct vg_rect rext;
 
-		if (OBJECT_TYPE(com, "map"))
+		if (!OBJECT_SUBCLASS(com, "component"))
 			continue;
 
 		vg_block_extent(ckt->vg, com->block, &rext);
@@ -934,7 +934,7 @@ poll_component_pins(int argc, union evarg *argv)
 	tlist_clear_items(tl);
 	
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_TYPE(com, "map") && com->selected)
+		if (OBJECT_SUBCLASS(com, "component") && com->selected)
 			break;
 	}
 	if (com == NULL)
@@ -968,7 +968,7 @@ poll_component_dipoles(int argc, union evarg *argv)
 	tlist_clear_items(tl);
 	
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_TYPE(com, "map") && com->selected)
+		if (OBJECT_SUBCLASS(com, "component") && com->selected)
 			break;
 	}
 	if (com == NULL)
@@ -1124,6 +1124,7 @@ circuit_edit(void *p)
 		nb = notebook_new(div->box1, NOTEBOOK_HFILL|NOTEBOOK_WFILL);
 		ntab = notebook_add_tab(nb, _("Models"), BOX_VERT);
 		{
+			char tname[OBJECT_TYPE_MAX];
 			extern const struct eda_type eda_models[];
 			const struct eda_type *ty;
 			struct button *btn;
@@ -1141,8 +1142,10 @@ circuit_edit(void *p)
 
 			for (ty = &eda_models[0]; ty->name != NULL; ty++) {
 				for (i = 0; i < ntypesw; i++) {
-					if (strcmp(typesw[i].type, ty->name)
-					    == 0)
+					strlcpy(tname, "component.",
+					    sizeof(tname));
+					strlcat(tname, ty->name, sizeof(tname));
+					if (strcmp(typesw[i].type, tname) == 0)
 						break;
 				}
 				if (i < ntypesw) {

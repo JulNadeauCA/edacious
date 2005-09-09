@@ -1,4 +1,4 @@
-/*	$Csoft: component.c,v 1.24 2005/09/07 02:36:30 vedge Exp $	*/
+/*	$Csoft: component.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004 Winds Triton Engineering Inc
@@ -104,7 +104,7 @@ unselect_all_components(struct circuit *ckt)
 	struct component *com;
 
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (OBJECT_TYPE(com, "map")) {
+		if (!OBJECT_SUBCLASS(com, "component")) {
 			continue;
 		}
 		unselect_component(com);
@@ -131,7 +131,7 @@ attached(int argc, union evarg *argv)
 	struct vg *vg = ckt->vg;
 	struct vg_block *block;
 
-	if (!OBJECT_TYPE(ckt, "circuit")) {
+	if (!OBJECT_SUBCLASS(ckt, "circuit")) {
 		return;
 	}
 	com->ckt = ckt;
@@ -155,7 +155,7 @@ detached(int argc, union evarg *argv)
 	struct circuit *ckt = argv[argc].p;
 	int i;
 
-	if (!OBJECT_TYPE(ckt, "circuit"))
+	if (!OBJECT_SUBCLASS(ckt, "circuit"))
 		return;
 	
 	for (i = 1; i <= com->npins; i++) {
@@ -290,12 +290,15 @@ void
 component_init(void *obj, const char *tname, const char *name, const void *ops,
     const struct pin *pinout)
 {
+	char cname[OBJECT_NAME_MAX];
 	struct component *com = obj;
 	const struct pin *pinoutp;
 	struct dipole *dip;
 	int i, j, k;
 
-	object_init(com, tname, name, ops);
+	strlcpy(cname, "component.", sizeof(cname));
+	strlcat(cname, tname, sizeof(cname));
+	object_init(com, cname, name, ops);
 	com->ops = ops;
 	com->ckt = NULL;
 	com->block = NULL;
@@ -540,11 +543,11 @@ remove_component(struct tool *t, SDLKey key, int state, void *arg)
 	lock_linkage();
 scan:
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (OBJECT_TYPE(com, "map") ||
+		if (!OBJECT_SUBCLASS(com, "component") ||
 		    !com->selected) {
 			continue;
 		}
-		if (OBJECT_TYPE(com, "conductor")) {
+		if (OBJECT_SUBCLASS(com, "component.conductor")) {
 			conductor_tool_reinit();
 		}
 		objmgr_close_data(com);
@@ -624,7 +627,7 @@ component_pin_overlap(struct circuit *ckt, struct component *ncom, double x,
 	
 	/* XXX use bounding boxes */
 	OBJECT_FOREACH_CHILD(ocom, ckt, component) {
-		if (OBJECT_TYPE(ocom, "map") ||
+		if (!OBJECT_SUBCLASS(ocom, "component") ||
 		    ocom == ncom) {
 			continue;
 		}
@@ -798,7 +801,7 @@ sel_tool_mousebuttondown(void *p, int xmap, int ymap, int b)
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
 		struct vg_rect rext;
 
-		if (OBJECT_TYPE(com, "map")) {
+		if (!OBJECT_SUBCLASS(com, "component")) {
 			continue;
 		}
 		vg_block_extent(vg, com->block, &rext);
@@ -844,7 +847,7 @@ sel_tool_leftbutton(struct tool *t, int button, int state, int rx, int ry,
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
 		struct vg_rect rext;
 
-		if (OBJECT_TYPE(com, "map")) {
+		if (!OBJECT_SUBCLASS(com, "component")) {
 			continue;
 		}
 		vg_block_extent(vg, com->block, &rext);
@@ -917,7 +920,7 @@ sel_tool_mousemotion(void *p, int xmap, int ymap, int xrel, int yrel, int b)
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
 		struct vg_rect rext;
 
-		if (OBJECT_TYPE(com, "map"))
+		if (!OBJECT_SUBCLASS(com, "component"))
 			continue;
 
 		vg_block_extent(vg, com->block, &rext);

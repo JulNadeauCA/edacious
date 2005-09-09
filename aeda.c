@@ -1,4 +1,4 @@
-/*	$Csoft: agar-eda.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: aeda.c,v 1.1 2005/09/08 09:48:56 vedge Exp $	*/
 
 /*
  * Copyright (c) 2003, 2004, 2005 Winds Triton Engineering, Inc.
@@ -182,8 +182,11 @@ main(int argc, char *argv[])
 	}
 
 	for (ty = &eda_models[0]; ty->name != NULL; ty++) {
-		typesw_register(ty->name, ty->size, ty->ops,
-		    EDA_COMPONENT_ICON);
+		char tname[OBJECT_NAME_MAX];
+	
+		strlcpy(tname, "component.", sizeof(tname));
+		strlcat(tname, ty->name, sizeof(tname));
+		typesw_register(tname, ty->size, ty->ops, EDA_COMPONENT_ICON);
 	}
 	typesw_register("circuit", sizeof(struct circuit), &circuit_ops,
 	    EDA_CIRCUIT_ICON);
