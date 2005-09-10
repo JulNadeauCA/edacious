@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.c,v 1.4 2005/09/09 02:36:29 vedge Exp $	*/
+/*	$Csoft: circuit.c,v 1.5 2005/09/09 02:50:14 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications Inc
@@ -116,7 +116,8 @@ circuit_modified(struct circuit *ckt)
 
 	/* Regenerate loop and dipole information. */
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component"))
+		if (!OBJECT_SUBCLASS(com, "component") ||
+		    com->flags & COMPONENT_FLOATING)
 			continue;
 
 		for (i = 0; i < com->ndipoles; i++)
@@ -124,6 +125,7 @@ circuit_modified(struct circuit *ckt)
 	}
 	OBJECT_FOREACH_CHILD(vs, ckt, vsource) {
 		if (!OBJECT_SUBCLASS(vs, "component.vsource") ||
+		    COM(vs)->flags & COMPONENT_FLOATING ||
 		    PIN(vs,1)->node == NULL ||
 		    PIN(vs,2)->node == NULL) {
 			continue;
@@ -138,16 +140,17 @@ circuit_modified(struct circuit *ckt)
 	if (ckt->loops == NULL) {
 		ckt->loops = Malloc(sizeof(struct cktloop *), M_EDA);
 	}
-	ckt->nloops = 0;
+	ckt->l = 0;
 	OBJECT_FOREACH_CHILD(vs, ckt, vsource) {
-		if (!OBJECT_SUBCLASS(vs, "component.vsource")) {
+		if (!OBJECT_SUBCLASS(vs, "component.vsource") ||
+		    COM(vs)->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		TAILQ_FOREACH(loop, &vs->loops, loops) {
 			ckt->loops = Realloc(ckt->loops,
-			    (ckt->nloops+1)*sizeof(struct cktloop *));
-			ckt->loops[ckt->nloops++] = loop;
-			loop->name = ckt->nloops;
+			    (ckt->l+1)*sizeof(struct cktloop *));
+			ckt->loops[ckt->l++] = loop;
+			loop->name = ckt->l;
 		}
 	}
 
@@ -167,10 +170,13 @@ circuit_init(void *p, const char *name)
 	ckt->sim = NULL;
 	ckt->dis_nodes = 1;
 	ckt->dis_node_names = 1;
-	TAILQ_INIT(&ckt->nodes);
-	ckt->nnodes = 0;
+
+	ckt->nodes = NULL;
 	ckt->loops = NULL;
-	ckt->nloops = 0;
+	ckt->vsrcs = NULL;
+	ckt->n = 0;
+	ckt->m = 0;
+	ckt->n = 0;
 	pthread_mutex_init(&ckt->lock, &recursive_mutexattr);
 
 	vg = ckt->vg = vg_new(ckt, VG_VISGRID);
@@ -204,14 +210,26 @@ circuit_reinit(void *p)
 		sim_destroy(ckt->sim);
 		ckt->sim = NULL;
 	}
-	circuit_free_nodes(ckt);
 
 	Free(ckt->loops, M_EDA);
 	ckt->loops = NULL;
-	ckt->nloops = 0;
+	ckt->l = 0;
+
+	Free(ckt->vsrcs, M_EDA);
+	ckt->vsrcs = NULL;
+	ckt->m = 0;
+	
+	for (i = 0; i < ckt->n; i++) {
+		circuit_destroy_node(ckt->nodes[i]);
+		Free(ckt->nodes[i], M_EDA);
+	}
+	Free(ckt->nodes, M_EDA);
+	ckt->nodes = NULL;
+	ckt->n = 0;
 
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component")) {
+		if (!OBJECT_SUBCLASS(com, "component") ||
+		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		for (i = 1; i <= com->npins; i++) {
@@ -232,8 +250,7 @@ int
 circuit_load(void *p, struct netbuf *buf)
 {
 	struct circuit *ckt = p;
-	struct cktnode *node;
-	Uint32 i, nnodes, ncoms;
+	Uint32 i, ncoms, nnodes;
 	int j;
 
 	if (version_read(buf, &circuit_ver, NULL) != 0) {
@@ -245,15 +262,13 @@ circuit_load(void *p, struct netbuf *buf)
 	/* Load the circuit nodes. */
 	nnodes = read_uint32(buf);
 	for (i = 0; i < nnodes; i++) {
-		int nbranches;
-		int flags;
-		int name;
+		int nbranches, flags, name;
 
-		name = (int)read_uint32(buf);
 		flags = (int)read_uint32(buf);
-
-		node = circuit_add_node(ckt, name, flags & ~(CKTNODE_EXAM));
 		nbranches = (int)read_uint32(buf);
+		name = circuit_add_node(ckt, flags & ~(CKTNODE_EXAM));
+		dprintf("node %d/%d: flags=0x%x, branches=%d\n", i, ckt->n,
+		    flags, nbranches);
 		for (j = 0; j < nbranches; j++) {
 			char ppath[OBJECT_PATH_MAX];
 			struct component *pcom;
@@ -265,17 +280,15 @@ circuit_load(void *p, struct netbuf *buf)
 			ppin = (int)read_uint32(buf);
 			if ((pcom = object_find(ppath)) == NULL) {
 				error_set("%s", error_get());
-				Free(node, M_EDA);
 				return (-1);
 			}
 			if (ppin > pcom->npins) {
 				error_set("%s: pin #%d > %d", ppath, ppin,
 				    pcom->npins);
-				Free(node, M_EDA);
 				return (-1);
 			}
-			br = circuit_add_branch(ckt, node, &pcom->pin[ppin]);
-			pcom->pin[ppin].node = node;
+			br = circuit_add_branch(ckt, name, &pcom->pin[ppin]);
+			pcom->pin[ppin].node = name;
 			pcom->pin[ppin].branch = br;
 		}
 	}
@@ -313,20 +326,16 @@ circuit_load(void *p, struct netbuf *buf)
 			struct pin *pin = &com->pin[j];
 			struct vg_block *block_save;
 			struct cktbranch *br;
-			int nodeno;
+			struct cktnode *node;
 
 			pin->n = (int)read_uint32(buf);
 			copy_string(pin->name, buf, sizeof(pin->name));
 			pin->x = read_double(buf);
 			pin->y = read_double(buf);
+			pin->node = (int)read_uint32(buf);
+			node = ckt->nodes[pin->node];
 
-				
-			nodeno = (int)read_uint32(buf);
-			pin->node = circuit_get_node(ckt, nodeno);
-			if (pin->node == NULL)
-				fatal("no such node: n%u", nodeno);
-
-			TAILQ_FOREACH(br, &pin->node->branches, branches) {
+			TAILQ_FOREACH(br, &node->branches, branches) {
 				if (br->pin->com == com &&
 				    br->pin->n == pin->n)
 					break;
@@ -357,20 +366,30 @@ circuit_save(void *p, struct netbuf *buf)
 	version_write(buf, &circuit_ver);
 	write_string(buf, ckt->descr);
 	write_uint32(buf, 0);					/* Pad */
-	write_uint32(buf, ckt->nnodes);
-	TAILQ_FOREACH(node, &ckt->nodes, nodes) {
-		dprintf("save node %u (%u branches)\n", node->name,
-		    node->nbranches);
-		write_uint32(buf, (Uint32)node->name);
+	write_uint32(buf, ckt->n);
+	for (i = 0; i < ckt->n; i++) {
+		struct cktnode *node = ckt->nodes[i];
+		off_t nbranches_offs;
+		Uint32 nbranches = 0;
+
+		dprintf("save node %d/%d\n", i, ckt->n);
 		write_uint32(buf, (Uint32)node->flags);
-		write_uint32(buf, (Uint32)node->nbranches);
+		nbranches_offs = netbuf_tell(buf);
+		write_uint32(buf, 0);
 		TAILQ_FOREACH(br, &node->branches, branches) {
+			if (br->pin == NULL || br->pin->com == NULL ||
+			    br->pin->com->flags & COMPONENT_FLOATING) {
+				continue;
+			}
 			object_copy_name(br->pin->com, path, sizeof(path));
-			dprintf("save branch to %s:%u\n", path, br->pin->n);
 			write_string(buf, path);
 			write_uint32(buf, 0);			/* Pad */
 			write_uint32(buf, (Uint32)br->pin->n);
+			dprintf("save branch %d (%s:%u)\n", nbranches, path,
+			    br->pin->n);
+			nbranches++;
 		}
+		pwrite_uint32(buf, nbranches, nbranches_offs);
 	}
 	
 	/* Save the schematics. */
@@ -380,7 +399,8 @@ circuit_save(void *p, struct netbuf *buf)
 	ncoms_offs = netbuf_tell(buf);
 	write_uint32(buf, 0);
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component")) {
+		if (!OBJECT_SUBCLASS(com, "component") ||
+		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		dprintf("save component %s (%u pins)\n", OBJECT(com)->name,
@@ -394,12 +414,11 @@ circuit_save(void *p, struct netbuf *buf)
 			write_string(buf, pin->name);
 			write_double(buf, pin->x);
 			write_double(buf, pin->y);
-
-			if (pin->node == NULL) {
-				fatal("%s: unconnected pin %d",
-				    OBJECT(com)->name, i);
-			}
-			write_uint32(buf, (Uint32)pin->node->name);
+#ifdef DEBUG
+			if (pin->node == -1)
+				fatal("%s: bad pin %d", OBJECT(com)->name, i);
+#endif
+			write_uint32(buf, (Uint32)pin->node);
 		}
 		ncoms++;
 	}
@@ -407,52 +426,39 @@ circuit_save(void *p, struct netbuf *buf)
 	return (0);
 }
 
-/* Look up a circuit node by name. */
-struct cktnode *
-circuit_get_node(struct circuit *ckt, int name)
-{
-	struct cktnode *node;
-
-	/* XXX */
-	TAILQ_FOREACH(node, &ckt->nodes, nodes) {
-		if (node->name == name)
-			break;
-	}
-	return (node);
-}
-
-/* Create a new circuit node. */
-struct cktnode *
-circuit_add_node(struct circuit *ckt, int name, int flags)
-{
-	struct cktnode *node;
-
-	node = Malloc(sizeof(struct cktnode), M_EDA);
-	node->flags = flags;
-	TAILQ_INIT(&node->branches);
-	node->nbranches = 0;
-
-	if (name >= 0) {
-		node->name = name;
-	} else {
-		int n;
-
-		for (n = 0; n < CIRCUIT_MAX_NODES; n++) {
-			if (circuit_get_node(ckt, n) == NULL)
-				break;
-		}
-		if (n == CIRCUIT_MAX_NODES) {
-			fatal("too many nodes");
-		}
-		node->name = n;
-	}
-
-	TAILQ_INSERT_TAIL(&ckt->nodes, node, nodes);
-	ckt->nnodes++;
-	return (node);
-}
-
 static void
+circuit_node_init(struct cktnode *node, u_int flags)
+{
+	node->flags = flags;
+	node->nbranches = 0;
+	TAILQ_INIT(&node->branches);
+}
+
+int
+circuit_add_node(struct circuit *ckt, u_int flags)
+{
+	struct cktnode *node;
+
+	ckt->nodes = Realloc(ckt->nodes, (ckt->n+1)*sizeof(struct cktnode *));
+	ckt->nodes[ckt->n] = Malloc(sizeof(struct cktnode), M_EDA);
+	circuit_node_init(ckt->nodes[ckt->n], flags);
+	return (ckt->n++);
+}
+
+int
+circuit_gnd_node(struct circuit *ckt, int n)
+{
+	struct cktbranch *br;
+
+	TAILQ_FOREACH(br, &ckt->nodes[n]->branches, branches) {
+		if (br->pin != NULL && br->pin->com != NULL &&
+		    OBJECT_SUBCLASS(br->pin->com, "component.ground"))
+			return (1);
+	}
+	return (0);
+}
+
+void
 circuit_destroy_node(struct cktnode *node)
 {
 	struct cktbranch *br, *nbr;
@@ -467,17 +473,37 @@ circuit_destroy_node(struct cktnode *node)
 }
 
 void
-circuit_del_node(struct circuit *ckt, struct cktnode *node)
+circuit_del_node(struct circuit *ckt, int n)
 {
-	ckt->nnodes--;
-	TAILQ_REMOVE(&ckt->nodes, node, nodes);
+	struct cktnode *node;
+	struct cktbranch *br;
+	int i;
+
+	if (n < 0 || n >= ckt->n) {
+		dprintf("no such node: n%d\n", n);
+		return;
+	}
+	node = ckt->nodes[n];
 	circuit_destroy_node(node);
 	Free(node, M_EDA);
+
+	if (n < --ckt->n) {
+		for (i = n; i < ckt->n; i++) {
+			ckt->nodes[i] = ckt->nodes[i+1];
+
+			/* Update the branch node references. */
+			TAILQ_FOREACH(br, &ckt->nodes[i]->branches, branches) {
+				if (br->pin != NULL && br->pin->com != NULL)
+					br->pin->node = i;
+			}
+		}
+	}
 }
 
 struct cktbranch *
-circuit_add_branch(struct circuit *ckt, struct cktnode *node, struct pin *pin)
+circuit_add_branch(struct circuit *ckt, int n, struct pin *pin)
 {
+	struct cktnode *node = ckt->nodes[n];
 	struct cktbranch *br;
 
 	br = Malloc(sizeof(struct cktbranch), M_EDA);
@@ -488,8 +514,9 @@ circuit_add_branch(struct circuit *ckt, struct cktnode *node, struct pin *pin)
 }
 
 struct cktbranch *
-circuit_get_branch(struct circuit *ckt, struct cktnode *node, struct pin *pin)
+circuit_get_branch(struct circuit *ckt, int n, struct pin *pin)
 {
+	struct cktnode *node = ckt->nodes[n];
 	struct cktbranch *br;
 
 	TAILQ_FOREACH(br, &node->branches, branches) {
@@ -500,29 +527,17 @@ circuit_get_branch(struct circuit *ckt, struct cktnode *node, struct pin *pin)
 }
 
 void
-circuit_del_branch(struct circuit *ckt, struct cktnode *node,
-    struct cktbranch *br)
+circuit_del_branch(struct circuit *ckt, int n, struct cktbranch *br)
 {
+	struct cktnode *node = ckt->nodes[n];
+
 	TAILQ_REMOVE(&node->branches, br, branches);
 	Free(br, M_EDA);
-	if (--node->nbranches == 0)
-		circuit_del_node(ckt, node);
-}
 
-void
-circuit_free_nodes(struct circuit *ckt)
-{
-	struct cktnode *node, *nnode;
-
-	for (node = TAILQ_FIRST(&ckt->nodes);
-	     node != TAILQ_END(&ckt->nodes);
-	     node = nnode) {
-		nnode = TAILQ_NEXT(node, nodes);
-		circuit_destroy_node(node);
-		Free(node, M_EDA);
+	if (--node->nbranches == 0) {
+		dprintf("removing node %d (tot %d)\n", n, ckt->n);
+		circuit_del_node(ckt, n);
 	}
-	TAILQ_INIT(&ckt->nodes);
-	ckt->nnodes = 0;
 }
 
 void
@@ -546,8 +561,6 @@ circuit_destroy(void *p)
 	struct circuit *ckt = p;
 	
 	vg_destroy(ckt->vg);
-	circuit_free_nodes(ckt);
-	Free(ckt->loops, M_EDA);
 	pthread_mutex_destroy(&ckt->lock);
 }
 
@@ -593,35 +606,6 @@ rasterize_circuit(struct mapview *mv, void *p)
 	vg_rasterize(vg);
 }
 
-#if 0
-static void
-poll_nodes(int argc, union evarg *argv)
-{
-	char text[TLIST_LABEL_MAX];
-	struct tlist *tl = argv[0].p;
-	struct circuit *ckt = argv[1].p;
-	struct cktnode *node;
-	struct tlist_item *it;
-	struct cktbranch *br;
-
-	tlist_clear_items(tl);
-	TAILQ_FOREACH(node, &ckt->nodes, nodes) {
-		snprintf(text, sizeof(text), "n%u (%d branches)", node->name,
-		    node->nbranches);
-		it = tlist_insert_item(tl, EDA_NODE_ICON, text, node);
-		it->depth = 0;
-		TAILQ_FOREACH(br, &node->branches, branches) {
-			snprintf(text, sizeof(text), "%s:%d",
-			    OBJECT(br->com)->name, br->pin);
-			it = tlist_insert_item(tl,
-			    EDA_BRANCH_TO_COMPONENT_ICON, text, br);
-			it->depth = 1;
-		}
-	}
-	tlist_restore_selections(tl);
-}
-#endif
-
 static void
 poll_loops(int argc, union evarg *argv)
 {
@@ -630,7 +614,7 @@ poll_loops(int argc, union evarg *argv)
 	int i;
 
 	tlist_clear_items(tl);
-	for (i = 0; i < ckt->nloops; i++) {
+	for (i = 0; i < ckt->l; i++) {
 		char voltage[32];
 		struct cktloop *loop = ckt->loops[i];
 		struct vsource *vs = (struct vsource *)loop->origin;
@@ -640,6 +624,53 @@ poll_loops(int argc, union evarg *argv)
 		it = tlist_insert(tl, NULL, "%s:L%u (%s)", OBJECT(vs)->name,
 		    loop->name, voltage);
 		it->p1 = loop;
+	}
+	tlist_restore_selections(tl);
+}
+
+static void
+poll_nodes(int argc, union evarg *argv)
+{
+	struct tlist *tl = argv[0].p;
+	struct circuit *ckt = argv[1].p;
+	int i;
+
+	tlist_clear_items(tl);
+	for (i = 0; i < ckt->n; i++) {
+		struct cktnode *node = ckt->nodes[i];
+		struct cktbranch *br;
+		struct tlist_item *it, *it2;
+
+		it = tlist_insert(tl, NULL, "n%d (0x%x, %d branches)", i,
+		    node->flags, node->nbranches);
+		it->p1 = node;
+		it->depth = 0;
+		TAILQ_FOREACH(br, &node->branches, branches) {
+			it = tlist_insert(tl, NULL, "%s:%s(%d)",
+			    (br->pin != NULL && br->pin->com != NULL) ?
+			    OBJECT(br->pin->com)->name : "(null)",
+			    br->pin->name, br->pin->n);
+			it->p1 = br;
+			it->depth = 1;
+		}
+	}
+	tlist_restore_selections(tl);
+}
+
+static void
+poll_sources(int argc, union evarg *argv)
+{
+	struct tlist *tl = argv[0].p;
+	struct circuit *ckt = argv[1].p;
+	int i;
+
+	tlist_clear_items(tl);
+	for (i = 0; i < ckt->m; i++) {
+		struct vsource *vs = ckt->vsrcs[i];
+		struct tlist_item *it;
+
+		it = tlist_insert(tl, NULL, "%s", OBJECT(vs)->name);
+		it->p1 = vs;
 	}
 	tlist_restore_selections(tl);
 }
@@ -676,23 +707,40 @@ save_circuit(int argc, union evarg *argv)
 }
 
 static void
-show_loops(int argc, union evarg *argv)
+show_interconnects(int argc, union evarg *argv)
 {
 	struct window *pwin = argv[1].p;
 	struct circuit *ckt = argv[2].p;
 	struct window *win;
+	struct notebook *nb;
+	struct notebook_tab *ntab;
 	struct tlist *tl;
 	
-	if ((win = window_new(0, "%s-loops", OBJECT(ckt)->name)) == NULL) {
+	if ((win = window_new(0, "%s-interconnects", OBJECT(ckt)->name))
+	    == NULL) {
 		return;
 	}
-	window_set_caption(win, _("%s: Closed Loops"), OBJECT(ckt)->name);
+	window_set_caption(win, _("%s: Connections"), OBJECT(ckt)->name);
 	window_set_position(win, WINDOW_UPPER_RIGHT, 0);
 	
-	tl = tlist_new(win, TLIST_POLL);
-	WIDGET(tl)->flags &= ~(WIDGET_HFILL);
-	tlist_prescale(tl, "XXXXXXXXXXXXXX", 8);
-	event_new(tl, "tlist-poll", poll_loops, "%p", ckt);
+	nb = notebook_new(win, NOTEBOOK_HFILL|NOTEBOOK_WFILL);
+	ntab = notebook_add_tab(nb, _("Nodes"), BOX_VERT);
+	{
+		tl = tlist_new(ntab, TLIST_POLL|TLIST_TREE);
+		event_new(tl, "tlist-poll", poll_nodes, "%p", ckt);
+	}
+	
+	ntab = notebook_add_tab(nb, _("Loops"), BOX_VERT);
+	{
+		tl = tlist_new(ntab, TLIST_POLL);
+		event_new(tl, "tlist-poll", poll_loops, "%p", ckt);
+	}
+	
+	ntab = notebook_add_tab(nb, _("Sources"), BOX_VERT);
+	{
+		tl = tlist_new(ntab, TLIST_POLL);
+		event_new(tl, "tlist-poll", poll_sources, "%p", ckt);
+	}
 
 	window_attach(pwin, win);
 	window_show(win);
@@ -717,6 +765,10 @@ layout_settings(int argc, union evarg *argv)
 	}
 	window_set_caption(win, _("Circuit layout: %s"), OBJECT(ckt)->name);
 	window_set_position(win, WINDOW_UPPER_RIGHT, 0);
+
+	label_new(win, LABEL_POLLED, _("Loops: %u"), &ckt->l);
+	label_new(win, LABEL_POLLED, _("Voltage sources: %u"), &ckt->m);
+	label_new(win, LABEL_POLLED, _("Nodes: %u"), &ckt->n);
 
 	tb = textbox_new(win, _("Description: "));
 	widget_bind(tb, "string", WIDGET_STRING, &ckt->descr,
@@ -919,8 +971,7 @@ poll_component_pins(int argc, union evarg *argv)
 
 		snprintf(text, sizeof(text),
 		    "%d (%s) (U=%.2f, \xce\x94U=%.2f) -> n%d\n",
-		    pin->n, pin->name, pin->u, pin->du,
-		    pin->node != NULL ? pin->node->name : -1);
+		    pin->n, pin->name, pin->u, pin->du, pin->node);
 		tlist_insert_item(tl, ICON(EDA_BRANCH_TO_COMPONENT_ICON),
 		    text, pin);
 	}
@@ -1046,8 +1097,8 @@ circuit_edit(void *p)
 
 	pitem = menu_add_item(menu, _("View"));
 	{
-		menu_action(pitem, _("Closed loops..."), EDA_MESH_ICON,
-		    show_loops, "%p,%p", win, ckt);
+		menu_action(pitem, _("Show interconnects..."), EDA_MESH_ICON,
+		    show_interconnects, "%p,%p", win, ckt);
 
 		menu_separator(pitem);
 

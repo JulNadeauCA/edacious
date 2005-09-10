@@ -1,4 +1,4 @@
-/*	$Csoft: component.h,v 1.11 2005/06/17 08:28:54 vedge Exp $	*/
+/*	$Csoft: component.h,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_COMPONENT_H_
@@ -26,7 +26,7 @@ struct pin {
 	double	x, y;				/* Position in drawing */
 
 	struct component *com;		/* Back pointer to component */
-	struct cktnode	 *node;		/* Node connection */
+	int		  node;		/* Node connection (or -1) */
 	struct cktbranch *branch;	/* Branch into node */
 
 	int	selected;		/* Pin selected for edition */
@@ -67,6 +67,10 @@ struct component {
 	const struct component_ops *ops;
 	struct circuit *ckt;			/* Back pointer to circuit */
 	struct vg_block *block;			/* Schematic block */
+
+	u_int flags;
+#define COMPONENT_FLOATING	0x01		/* Not yet connected */
+
 	int selected;				/* Selected for edition? */
 	int highlighted;			/* Selected for selection? */
 
@@ -85,6 +89,7 @@ struct component {
 
 #define COM(p) ((struct component *)(p))
 #define PIN(p,n) (&COM(p)->pin[n])
+#define PNODE(p,n) (COM(p)->pin[n].node)
 #define U(p,n) (PIN((p),(n))->u)
 
 struct mapview;

@@ -1,4 +1,4 @@
-/*	$Csoft: conductor.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: conductor.c,v 1.2 2005/09/09 02:50:15 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -104,15 +104,14 @@ conductor_export(void *p, enum circuit_format fmt, FILE *f)
 {
 	struct conductor *c = p;
 	
-	if (PIN(c,1)->node == NULL ||
-	    PIN(c,2)->node == NULL)
+	if (PNODE(c,1) == -1 ||
+	    PNODE(c,2) == -1)
 		return (0);
 
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
-		fprintf(f, "V%s %u %u 0\n", OBJECT(c)->name,
-		    PIN(c,1)->node->name,
-		    PIN(c,2)->node->name);
+		fprintf(f, "V%s %d %d 0\n", OBJECT(c)->name,
+		    PNODE(c,1), PNODE(c,2));
 		break;
 	}
 	return (0);

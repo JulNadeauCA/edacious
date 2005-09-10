@@ -1,4 +1,4 @@
-/*	$Csoft: kvl.c,v 1.3 2005/09/09 02:16:13 vedge Exp $	*/
+/*	$Csoft: kvl.c,v 1.4 2005/09/09 02:50:14 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -46,9 +46,9 @@ struct kvl {
 	int speed;			/* Simulation speed (updates/sec) */
 	struct timeout update_to;	/* Timer for simulation updates */
 	
-	struct mat *Rmat;		/* Resistance matrix */
-	struct vec *Vvec;		/* Independent voltages */
-	struct vec *Ivec;		/* Vector of unknown currents */
+	mat_t *Rmat;			/* Resistance matrix */
+	vec_t *Vvec;			/* Independent voltages */
+	vec_t *Ivec;			/* Vector of unknown currents */
 };
 
 static void compose_Rmat(struct kvl *, struct circuit *);
@@ -64,7 +64,8 @@ kvl_tick(void *obj, Uint32 ival, void *arg)
 
 	/* Effect the independent voltage sources. */
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component.vsource")) {
+		if (!OBJECT_SUBCLASS(com, "component.vsource") ||
+		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		if (com->ops->tick != NULL)
@@ -73,7 +74,8 @@ kvl_tick(void *obj, Uint32 ival, void *arg)
 
 	/* Update model states. */
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component")) {
+		if (!OBJECT_SUBCLASS(com, "component") ||
+		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		if (com->ops->tick != NULL)
@@ -149,9 +151,9 @@ kvl_cktmod(void *p, struct circuit *ckt)
 {
 	struct kvl *kvl = p;
 
-	mat_resize(kvl->Rmat, ckt->nloops, ckt->nloops);
-	vec_resize(kvl->Vvec, ckt->nloops);
-	vec_resize(kvl->Ivec, ckt->nloops);
+	mat_resize(kvl->Rmat, ckt->l, ckt->l);
+	vec_resize(kvl->Vvec, ckt->l);
+	vec_resize(kvl->Ivec, ckt->l);
 	
 	mat_set(kvl->Rmat, 0);
 	vec_set(kvl->Vvec, 0);
@@ -163,14 +165,14 @@ compose_Rmat(struct kvl *kvl, struct circuit *ckt)
 {
 	unsigned int m, n, i, j, k;
 
-	for (m = 1; m <= ckt->nloops; m++) {
+	for (m = 1; m <= ckt->l; m++) {
 		struct cktloop *loop = ckt->loops[m-1];
 		struct vsource *vs = (struct vsource *)loop->origin;
 
-		kvl->Vvec->vec[m] = vs->voltage;
-		kvl->Ivec->vec[m] = 0.0;
+		kvl->Vvec->mat[m][0] = vs->voltage;
+		kvl->Ivec->mat[m][0] = 0.0;
 
-		for (n = 1; n <= ckt->nloops; n++)
+		for (n = 1; n <= ckt->l; n++)
 			kvl->Rmat->mat[m][n] = 0.0;
 
 		for (i = 0; i < loop->ndipoles; i++) {
@@ -179,7 +181,7 @@ compose_Rmat(struct kvl *kvl, struct circuit *ckt)
 			for (j = 0; j < dip->nloops; j++) {
 				n = dip->loops[j]->name;
 #ifdef DEBUG
-				if (n > ckt->nloops)
+				if (n > ckt->l)
 					fatal("inconsistent loop info");
 #endif
 				if (n == m) {
@@ -213,16 +215,16 @@ compose_Rmat(struct kvl *kvl, struct circuit *ckt)
 static int
 solve_Ivec(struct kvl *kvl, struct circuit *ckt)
 {
-	struct veci *ivec;
-	struct vec *v;
-	struct mat *R;
+	veci_t *ivec;
+	vec_t *v;
+	mat_t *R;
 	double d;
 
-	ivec = veci_new(ckt->nloops);
-	v = vec_new(ckt->nloops);
+	ivec = veci_new(ckt->l);
+	v = vec_new(ckt->l);
 	vec_copy(kvl->Vvec, v);
 
-	R = mat_new(ckt->nloops, ckt->nloops);
+	R = mat_new(ckt->l, ckt->l);
 	mat_copy(kvl->Rmat, R);
 	if (mat_lu_decompose(R, ivec, &d) == -1) {
 		goto fail;
@@ -257,7 +259,7 @@ poll_Rmat(int argc, union evarg *argv)
 	tlist_clear_items(tl);
 	for (i = 1; i <= kvl->Rmat->m; i++) {
 		text[0] = '\0';
-		snprintf(text, sizeof(text), "%.0fV ", kvl->Vvec->vec[i]);
+		snprintf(text, sizeof(text), "%.0fV ", kvl->Vvec->mat[i][0]);
 		for (j = 1; j <= kvl->Rmat->n; j++) {
 			char tmp[16];
 

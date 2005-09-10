@@ -1,4 +1,4 @@
-/*	$Csoft: sim.c,v 1.1 2005/09/08 09:46:01 vedge Exp $	*/
+/*	$Csoft: sim.c,v 1.2 2005/09/09 02:50:14 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications Inc
@@ -38,9 +38,11 @@
 #include <circuit/circuit.h>
 
 extern const struct sim_ops kvl_ops;
+extern const struct sim_ops mna_ops;
 
 const struct sim_ops *sim_ops[] = {
 	&kvl_ops,
+	&mna_ops,
 	NULL
 };
 

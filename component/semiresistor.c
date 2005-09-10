@@ -1,4 +1,4 @@
-/*	$Csoft: semiresistor.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: semiresistor.c,v 1.2 2005/09/09 02:50:15 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -159,8 +159,8 @@ semiresistor_export(void *p, enum circuit_format fmt, FILE *f)
 	struct semiresistor *r = p;
 	static int nRmod = 1;
 
-	if (PIN(r,1)->node == NULL ||
-	    PIN(r,2)->node == NULL)
+	if (PNODE(r,1) == -1 ||
+	    PNODE(r,2) == -1)
 		return (0);
 	
 	switch (fmt) {
@@ -170,10 +170,8 @@ semiresistor_export(void *p, enum circuit_format fmt, FILE *f)
 			   "tnom=%g)\n",
 		    nRmod, r->Tc1, r->Tc2, r->rsh, r->defw, r->narrow,
 		    COM(r)->Tnom);
-		fprintf(f, "%s %u %u Rmod%u L=%g W=%g TEMP=%g\n",
-		    OBJECT(r)->name,
-		    PIN(r,1)->node->name,
-		    PIN(r,2)->node->name,
+		fprintf(f, "%s %d %d Rmod%u L=%g W=%g TEMP=%g\n",
+		    OBJECT(r)->name, PNODE(r,1), PNODE(r,2),
 		    nRmod, r->l, r->w, COM(r)->Tspec);
 		nRmod++;
 		break;

@@ -1,4 +1,4 @@
-/*	$Csoft: resistor.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: resistor.c,v 1.2 2005/09/09 02:50:15 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -188,16 +188,14 @@ resistor_export(void *p, enum circuit_format fmt, FILE *f)
 {
 	struct resistor *r = p;
 
-	if (PIN(r,1)->node == NULL ||
-	    PIN(r,2)->node == NULL)
+	if (PNODE(r,1) == -1 ||
+	    PNODE(r,2) == -1)
 		return (0);
 	
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
-		fprintf(f, "%s %u %u %g\n", OBJECT(r)->name,
-		    PIN(r,1)->node->name,
-		    PIN(r,2)->node->name,
-		    r->resistance);
+		fprintf(f, "%s %d %d %g\n", OBJECT(r)->name,
+		    PNODE(r,1), PNODE(r,2), r->resistance);
 		break;
 	}
 	return (0);

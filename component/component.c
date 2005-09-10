@@ -1,4 +1,4 @@
-/*	$Csoft: component.c,v 1.2 2005/09/09 02:16:14 vedge Exp $	*/
+/*	$Csoft: component.c,v 1.3 2005/09/09 02:50:15 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -146,6 +146,13 @@ attached(int argc, union evarg *argv)
 	com->block = vg_begin_block(vg, blkname, 0);
 	vg_origin2(vg, 0, com->pin[0].x, com->pin[0].y);
 	vg_end_block(vg);
+
+	if (OBJECT_SUBCLASS(com, "component.vsource")) {
+		ckt->vsrcs = Realloc(ckt->vsrcs,
+		    (ckt->m+1)*sizeof(struct vsource *));
+		ckt->vsrcs[ckt->m] = (struct vsource *)com;
+		ckt->m++;
+	}
 }
 
 static void
@@ -158,13 +165,25 @@ detached(int argc, union evarg *argv)
 	if (!OBJECT_SUBCLASS(ckt, "circuit"))
 		return;
 	
+	if (OBJECT_SUBCLASS(com, "component.vsource")) {
+		for (i = 0; i < ckt->m; i++) {
+			if (ckt->vsrcs[i] == (struct vsource *)com) {
+				if (i < --ckt->m) {
+					for (; i < ckt->m; i++)
+						ckt->vsrcs[i] = ckt->vsrcs[i+1];
+				}
+				break;
+			}
+		}
+	}
+	
 	for (i = 1; i <= com->npins; i++) {
 		struct pin *pin = &com->pin[i];
 
 		if (pin->branch != NULL) {
 			circuit_del_branch(com->ckt, pin->node, pin->branch);
 			pin->branch = NULL;
-			pin->node = NULL;
+			pin->node = -1;
 		}
 		pin->selected = 0;
 	}
@@ -250,13 +269,13 @@ redraw(void *p, Uint32 ival, void *arg)
 			vg_end_element(vg);
 		}
 		if (com->ckt->dis_node_names &&
-		    pin->node != NULL) {
+		    pin->node >= 0) {
 			vg_begin_element(vg, VG_TEXT);
 			vg_vertex2(vg, x, y);
 			vg_style(vg, "node-name");
 			vg_color3(vg, 0, 200, 100);
 			vg_text_align(vg, VG_ALIGN_BR);
-			vg_printf(vg, "n%d", pin->node->name);
+			vg_printf(vg, "n%d", pin->node);
 			vg_end_element(vg);
 		}
 	}
@@ -322,7 +341,7 @@ component_init(void *obj, const char *tname, const char *name, const void *ops,
 		pin->x = pinoutp->x;
 		pin->y = pinoutp->y;
 		pin->com = com;
-		pin->node = NULL;
+		pin->node = -1;
 		pin->branch = NULL;
 		pin->u = 0;
 		pin->du = 0;
@@ -379,6 +398,7 @@ component_load(void *p, struct netbuf *buf)
 	if (version_read(buf, &component_ver, NULL) == -1)
 		return (-1);
 
+	com->flags = (u_int)read_uint32(buf);
 	com->Tnom = read_float(buf);
 	com->Tspec = read_float(buf);
 	return (0);
@@ -390,6 +410,7 @@ component_save(void *p, struct netbuf *buf)
 	struct component *com = p;
 
 	version_write(buf, &component_ver);
+	write_uint32(buf, com->flags);
 	write_float(buf, com->Tnom);
 	write_float(buf, com->Tspec);
 	return (0);
@@ -515,6 +536,7 @@ tryname:
 
 	com = Malloc(comtype->size, M_OBJECT);
 	comtype->ops->init(com, name);
+	com->flags |= COMPONENT_FLOATING;
 	object_attach(ckt, com);
 	object_unlink_datafiles(com);
 	object_page_in(com, OBJECT_DATA);
@@ -544,6 +566,7 @@ remove_component(struct tool *t, SDLKey key, int state, void *arg)
 scan:
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
 		if (!OBJECT_SUBCLASS(com, "component") ||
+		    com->flags & COMPONENT_FLOATING ||
 		    !com->selected) {
 			continue;
 		}
@@ -628,7 +651,8 @@ component_pin_overlap(struct circuit *ckt, struct component *ncom, double x,
 	/* XXX use bounding boxes */
 	OBJECT_FOREACH_CHILD(ocom, ckt, component) {
 		if (!OBJECT_SUBCLASS(ocom, "component") ||
-		    ocom == ncom) {
+		    ocom == ncom ||
+		    ocom->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		for (i = 1; i <= ocom->npins; i++) {
@@ -656,19 +680,21 @@ component_connect(struct circuit *ckt, struct component *com,
 
 		if ((opin = component_pin_overlap(ckt, com, vtx->x+pin->x,
 		    vtx->y+pin->y)) != NULL) {
-			if (pin->node != NULL) {
+			if (pin->node >= 0) {
 				circuit_del_node(ckt, pin->node);
 			}
 			pin->node = opin->node;
 			pin->branch = circuit_add_branch(ckt, opin->node,
 			    &com->pin[i]);
 		} else {
-			pin->node = circuit_add_node(ckt, -1, 0);
+			pin->node = circuit_add_node(ckt, 0);
 			pin->branch = circuit_add_branch(ckt, pin->node,
 			    &com->pin[i]);
 		}
 		pin->selected = 0;
 	}
+	com->flags &= ~(COMPONENT_FLOATING);
+
 	circuit_modified(ckt);
 }
 
@@ -801,7 +827,8 @@ sel_tool_mousebuttondown(void *p, int xmap, int ymap, int b)
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
 		struct vg_rect rext;
 
-		if (!OBJECT_SUBCLASS(com, "component")) {
+		if (!OBJECT_SUBCLASS(com, "component") ||
+		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		vg_block_extent(vg, com->block, &rext);
@@ -847,7 +874,8 @@ sel_tool_leftbutton(struct tool *t, int button, int state, int rx, int ry,
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
 		struct vg_rect rext;
 
-		if (!OBJECT_SUBCLASS(com, "component")) {
+		if (!OBJECT_SUBCLASS(com, "component") ||
+		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		vg_block_extent(vg, com->block, &rext);
@@ -920,7 +948,8 @@ sel_tool_mousemotion(void *p, int xmap, int ymap, int xrel, int yrel, int b)
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
 		struct vg_rect rext;
 
-		if (!OBJECT_SUBCLASS(com, "component"))
+		if (!OBJECT_SUBCLASS(com, "component") ||
+		    com->flags & COMPONENT_FLOATING)
 			continue;
 
 		vg_block_extent(vg, com->block, &rext);

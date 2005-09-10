@@ -1,4 +1,4 @@
-/*	$Csoft: spst.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: spst.c,v 1.2 2005/09/09 02:50:15 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -156,15 +156,14 @@ spst_export(void *p, enum circuit_format fmt, FILE *f)
 {
 	struct spst *sw = p;
 
-	if (PIN(sw,1)->node == NULL ||
-	    PIN(sw,2)->node == NULL)
+	if (PNODE(sw,1) == -1 ||
+	    PNODE(sw,2) == -1)
 		return (0);
 	
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
-		fprintf(f, "R%s %u %u %g\n", OBJECT(sw)->name,
-		    PIN(sw,1)->node->name,
-		    PIN(sw,2)->node->name,
+		fprintf(f, "R%s %d %d %g\n", OBJECT(sw)->name,
+		    PNODE(sw,1), PNODE(sw,2),
 		    spst_resistance(sw, PIN(sw,1), PIN(sw,2)));
 		break;
 	}

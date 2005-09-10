@@ -1,4 +1,4 @@
-/*	$Csoft: aeda.c,v 1.2 2005/09/09 02:16:12 vedge Exp $	*/
+/*	$Csoft: aeda.c,v 1.3 2005/09/09 02:50:13 vedge Exp $	*/
 
 /*
  * Copyright (c) 2003, 2004, 2005 CubeSoft Communications, Inc.
@@ -46,6 +46,7 @@
 
 #include <component/conductor.h>
 #include <component/vsource.h>
+#include <component/ground.h>
 #include <component/resistor.h>
 #include <component/semiresistor.h>
 #include <component/inverter.h>
@@ -54,6 +55,7 @@
 
 extern const struct component_ops conductor_ops;
 extern const struct component_ops vsource_ops;
+extern const struct component_ops ground_ops;
 extern const struct component_ops resistor_ops;
 extern const struct component_ops semiresistor_ops;
 extern const struct component_ops inverter_ops;
@@ -63,6 +65,7 @@ extern const struct component_ops spdt_ops;
 const struct eda_type eda_models[] = {
 	{ "conductor",	sizeof(struct conductor),	&conductor_ops },
 	{ "vsource",	sizeof(struct vsource),		&vsource_ops },
+	{ "ground",	sizeof(struct ground),		&ground_ops },
 	{ "resistor",	sizeof(struct resistor),	&resistor_ops },
 	{ "semiresistor", sizeof(struct semiresistor),	&semiresistor_ops },
 	{ "inverter",	sizeof(struct inverter),	&inverter_ops },

@@ -1,4 +1,4 @@
-/*	$Csoft: spdt.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: spdt.c,v 1.2 2005/09/09 02:50:15 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -167,25 +167,22 @@ spdt_export(void *p, enum circuit_format fmt, FILE *f)
 	
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
-		if (PIN(sw,1)->node != NULL &&
-		    PIN(sw,2)->node != NULL) {
-			fprintf(f, "R%s %u %u %g\n", OBJECT(sw)->name,
-			    PIN(sw,1)->node->name,
-			    PIN(sw,2)->node->name,
+		if (PNODE(sw,1) != -1 &&
+		    PNODE(sw,2) != -1) {
+			fprintf(f, "R%s %d %d %g\n", OBJECT(sw)->name,
+			    PNODE(sw,1), PNODE(sw,2),
 			    spdt_resistance(sw, PIN(sw,1), PIN(sw,2)));
 		}
-		if (PIN(sw,1)->node != NULL &&
-		    PIN(sw,3)->node != NULL) {
-			fprintf(f, "R%s %u %u %g\n", OBJECT(sw)->name,
-			    PIN(sw,1)->node->name,
-			    PIN(sw,3)->node->name,
+		if (PNODE(sw,1) != -1 &&
+		    PNODE(sw,3) != -1) {
+			fprintf(f, "R%s %d %d %g\n", OBJECT(sw)->name,
+			    PNODE(sw,1), PNODE(sw,3),
 			    spdt_resistance(sw, PIN(sw,1), PIN(sw,3)));
 		}
-		if (PIN(sw,2)->node != NULL &&
-		    PIN(sw,3)->node != NULL) {
-			fprintf(f, "%s %u %u %g\n", OBJECT(sw)->name,
-			    PIN(sw,2)->node->name,
-			    PIN(sw,3)->node->name,
+		if (PNODE(sw,2) != -1 &&
+		    PNODE(sw,3) != -1) {
+			fprintf(f, "%s %d %d %g\n", OBJECT(sw)->name,
+			    PNODE(sw,2), PNODE(sw,3),
 			    spdt_resistance(sw, PIN(sw,2), PIN(sw,3)));
 		}
 		break;

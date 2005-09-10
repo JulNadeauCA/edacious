@@ -1,4 +1,4 @@
-/*	$Csoft: vsource.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: vsource.c,v 1.2 2005/09/09 02:50:15 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -160,6 +160,7 @@ contig_dipole(struct pin *pA, struct pin *pB, struct dipole **Rdip,
     int *Rpol)
 {
 	struct component *com = pA->com;
+	struct circuit *ckt = com->ckt;
 	unsigned int i;
 
 	for (i = 0; i < com->ndipoles; i++) {
@@ -173,10 +174,10 @@ contig_dipole(struct pin *pA, struct pin *pB, struct dipole **Rdip,
 		 * determined by the pin number order.
 		 */
 		if (dip->p1 == pA && dip->p2->node != NULL) {
-			node = dip->p2->node;
+			node = ckt->nodes[dip->p2->node];
 			pol = -1;
 		} else if (dip->p2 == pA && dip->p1->node != NULL) {
-			node = dip->p1->node;
+			node = ckt->nodes[dip->p1->node];
 			pol = +1;
 		} else {
 			continue;
@@ -242,15 +243,17 @@ insert_loop(struct vsource *vs)
 static void
 find_loops(struct vsource *vs, struct pin *pcur)
 {
+	struct circuit *ckt = COM(vs)->ckt;
+	struct cktnode *node = ckt->nodes[pcur->node];
 	struct cktbranch *br;
 	unsigned int i;
 
-	pcur->node->flags |= CKTNODE_EXAM;
+	node->flags |= CKTNODE_EXAM;
 
 	vs->lstack = Realloc(vs->lstack, (vs->nlstack+1)*sizeof(struct pin *));
 	vs->lstack[vs->nlstack++] = pcur;
 
-	TAILQ_FOREACH(br, &pcur->node->branches, branches) {
+	TAILQ_FOREACH(br, &node->branches, branches) {
 		if (br->pin == pcur) {
 			continue;
 		}
@@ -266,11 +269,12 @@ find_loops(struct vsource *vs, struct pin *pcur)
 		}
 		for (i = 1; i <= br->pin->com->npins; i++) {
 			struct pin *pnext = &br->pin->com->pin[i];
+			struct cktnode *nnext = ckt->nodes[pnext->node];
 
 			if ((pnext == pcur) ||
 			    (pnext->com == br->pin->com &&
 			     pnext->n == br->pin->n) ||
-			    (pnext->node->flags & CKTNODE_EXAM)) {
+			    (nnext->flags & CKTNODE_EXAM)) {
 				continue;
 			}
 			find_loops(vs, pnext);
@@ -278,7 +282,7 @@ find_loops(struct vsource *vs, struct pin *pcur)
 	}
 
 	vs->nlstack--;
-	pcur->node->flags &= ~(CKTNODE_EXAM);
+	node->flags &= ~(CKTNODE_EXAM);
 }
 
 /* Isolate the loops relative to the given voltage source. */
@@ -299,14 +303,18 @@ void
 vsource_tick(void *p)
 {
 	struct vsource *vs = p;
-	struct component *com;
+	struct cktnode *n1, *n2;
+	struct circuit *ckt = COM(vs)->ckt;
 
-	if (PIN(vs,1)->node == NULL ||
-	    PIN(vs,2)->node == NULL)
+	if (PNODE(vs,1) == -1 ||
+	    PNODE(vs,2) == -1)
 		return;
 
-	if (PIN(vs,1)->node->nbranches >= 2 &&
-	    PIN(vs,2)->node->nbranches >= 2) {
+	n1 = ckt->nodes[PNODE(vs,1)];
+	n2 = ckt->nodes[PNODE(vs,2)];
+
+	/* XXX */
+	if (n1->nbranches >= 2 && n2->nbranches >= 2) {
 		U(vs,1) = vs->voltage;
 		U(vs,2) = 0.0;
 	}
@@ -394,17 +402,14 @@ vsource_export(void *p, enum circuit_format fmt, FILE *f)
 {
 	struct vsource *vs = p;
 
-	if (PIN(vs,1)->node == NULL ||
-	    PIN(vs,2)->node == NULL)
+	if (PNODE(vs,1) == -1 ||
+	    PNODE(vs,2) == -1)
 		return (0);
 
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
-		fprintf(f, "%s %u %u %g\n",
-		    OBJECT(vs)->name,
-		    PIN(vs,1)->node->name,
-		    PIN(vs,2)->node->name,
-		    vs->voltage);
+		fprintf(f, "%s %d %d %g\n", OBJECT(vs)->name,
+		    PNODE(vs,1), PNODE(vs,2), vs->voltage);
 		break;
 	}
 	return (0);

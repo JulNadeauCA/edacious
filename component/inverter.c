@@ -1,4 +1,4 @@
-/*	$Csoft: inverter.c,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: inverter.c,v 1.2 2005/09/09 02:50:15 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -239,8 +239,8 @@ inverter_export(void *p, enum circuit_format fmt, FILE *f)
 {
 	struct inverter *inv = p;
 	
-	if (PIN(inv,1)->node == NULL ||
-	    PIN(inv,2)->node == NULL)
+	if (PNODE(inv,1) == -1 ||
+	    PNODE(inv,2) == -1)
 		return (0);
 	
 	switch (fmt) {
