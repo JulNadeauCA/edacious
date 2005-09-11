@@ -1,4 +1,4 @@
-/*	$Csoft: mna.c,v 1.3 2005/09/09 02:16:13 vedge Exp $	*/
+/*	$Csoft: mna.c,v 1.1 2005/09/10 05:48:20 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -190,8 +190,6 @@ mna_destroy(void *p)
 	vec_free(mna->x);
 	vec_free(mna->v);
 	vec_free(mna->j);
-
-	sim_destroy(mna);
 }
 
 static void
