@@ -1,4 +1,4 @@
-/*	$Csoft: kvl.c,v 1.4 2005/09/09 02:50:14 vedge Exp $	*/
+/*	$Csoft: kvl.c,v 1.5 2005/09/10 05:48:20 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -28,6 +28,7 @@
 
 #include <engine/engine.h>
 #include <engine/widget/gui.h>
+#include <engine/widget/matview.h>
 
 #include <circuit/circuit.h>
 
@@ -142,8 +143,6 @@ kvl_destroy(void *p)
 	mat_free(kvl->Rmat);
 	vec_free(kvl->Vvec);
 	vec_free(kvl->Ivec);
-
-	sim_destroy(kvl);
 }
 
 static void
@@ -244,35 +243,6 @@ fail:
 }
 
 static void
-poll_Rmat(int argc, union evarg *argv)
-{
-	char text[TLIST_LABEL_MAX];
-	struct tlist *tl = argv[0].p;
-	struct kvl *kvl = argv[1].p;
-	struct sim *sim = argv[1].p;
-	struct circuit *ckt = sim->ckt;
-	unsigned int i, j;
-
-	if (kvl->Rmat->mat == NULL)
-		return;
-
-	tlist_clear_items(tl);
-	for (i = 1; i <= kvl->Rmat->m; i++) {
-		text[0] = '\0';
-		snprintf(text, sizeof(text), "%.0fV ", kvl->Vvec->mat[i][0]);
-		for (j = 1; j <= kvl->Rmat->n; j++) {
-			char tmp[16];
-
-			snprintf(tmp, sizeof(tmp), "%.0f ",
-			    kvl->Rmat->mat[i][j]);
-			strlcat(text, tmp, sizeof(text));
-		}
-		tlist_insert_item(tl, NULL, text, &kvl->Rmat->mat[i][j]);
-	}
-	tlist_restore_selections(tl);
-}
-
-static void
 cont_run(int argc, union evarg *argv)
 {
 	struct button *bu = argv[0].p;
@@ -316,7 +286,7 @@ kvl_edit(void *p, struct circuit *ckt)
 	
 		separator_new(ntab, SEPARATOR_HORIZ);
 
-		sbu = spinbutton_new(ntab, _("Speed (updates/sec): "));
+		sbu = spinbutton_new(ntab, _("Updates/sec: "));
 		widget_bind(sbu, "value", WIDGET_UINT32, &kvl->speed);
 		spinbutton_set_range(sbu, 1, 1000);
 		
@@ -325,8 +295,9 @@ kvl_edit(void *p, struct circuit *ckt)
 	}
 	ntab = notebook_add_tab(nb, _("R-matrix"), BOX_VERT);
 	{
-		tl = tlist_new(ntab, TLIST_POLL);
-		event_new(tl, "tlist-poll", poll_Rmat, "%p", kvl);
+		struct matview *mv;
+
+		mv = matview_new(ntab, kvl->Rmat, 0);
 	}
 	return (win);
 }
