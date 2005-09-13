@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.h,v 1.2 2005/09/08 09:46:01 vedge Exp $	*/
+/*	$Csoft: circuit.h,v 1.3 2005/09/10 05:48:20 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _CIRCUIT_CIRCUIT_H_
@@ -81,7 +81,8 @@ void		  circuit_del_branch(struct circuit *, int, struct cktbranch *);
 __inline__ struct cktbranch *circuit_get_branch(struct circuit *, int,
 						struct pin *);
 
-__inline__ int circuit_gnd_node(struct circuit *, int);
+__inline__ int	 cktnode_grounded(struct circuit *, u_int);
+__inline__ int	 cktnode_vsource(struct circuit *, u_int, u_int, int *);
 
 struct sim	*circuit_set_sim(struct circuit *, const struct sim_ops *);
 void		 circuit_modified(struct circuit *);

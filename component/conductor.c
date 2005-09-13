@@ -1,4 +1,4 @@
-/*	$Csoft: conductor.c,v 1.2 2005/09/09 02:50:15 vedge Exp $	*/
+/*	$Csoft: conductor.c,v 1.3 2005/09/10 05:48:21 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -212,7 +212,7 @@ conductor_tool_mousemotion(void *p, int xmap, int ymap, int xrel, int yrel,
 		COM(sel_cd)->pin[2].y = vtx.y - COM(sel_cd)->block->pos.y;
 		component_highlight_pins(ckt, COM(sel_cd));
 	} else {
-		if (component_pin_overlap(ckt, NULL, vtx.x, vtx.y) != NULL) {
+		if (pin_overlap(ckt, NULL, vtx.x, vtx.y) != NULL) {
 			vg->origin[2].x = vtx.x;
 			vg->origin[2].y = vtx.y;
 		}

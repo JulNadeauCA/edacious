@@ -1,4 +1,4 @@
-/*	$Csoft: component.h,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: component.h,v 1.2 2005/09/10 05:48:21 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_COMPONENT_H_
@@ -103,12 +103,13 @@ int		component_save(void *, struct netbuf *);
 struct window  *component_edit(void *);
 void		component_insert(int, union evarg *);
 
-struct pin     *component_pin_overlap(struct circuit *, struct component *,
-		                   double, double);
+struct pin	*pin_overlap(struct circuit *, struct component *, double,
+		             double);
+__inline__ int	 pin_grounded(struct pin *);
+
 void		component_connect(struct circuit *, struct component *,
 		                  struct vg_vertex *);
 int		component_highlight_pins(struct circuit *, struct component *);
-void		component_highlight_pin(struct circuit *, struct pin *, int);
 
 double		dipole_resistance(struct dipole *);
 double		dipole_capacitance(struct dipole *);

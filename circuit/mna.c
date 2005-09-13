@@ -1,4 +1,4 @@
-/*	$Csoft: mna.c,v 1.1 2005/09/10 05:48:20 vedge Exp $	*/
+/*	$Csoft: mna.c,v 1.2 2005/09/11 02:33:05 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -28,6 +28,7 @@
 
 #include <engine/engine.h>
 #include <engine/widget/gui.h>
+#include <engine/widget/matview.h>
 
 #include <circuit/circuit.h>
 
@@ -61,29 +62,127 @@ struct mna {
 	vec_t *j;			/* Unknown currents thru vsources */
 };
 
-static void
+static int
 mna_solve(struct mna *mna, struct circuit *ckt)
 {
 	struct component *com;
-	int i, n;
+	u_int i, n, m;
+	veci_t *iv;
+	double d;
+
+	mat_set(mna->G, 0.0);
+	mat_set(mna->B, 0.0);
+	mat_set(mna->C, 0.0);
+	mat_set(mna->D, 0.0);
+
+	for (n = 1; n <= ckt->n; n++) {
+		struct cktnode *node = ckt->nodes[n-1];
+		struct cktbranch *br;
+		struct component *com;
+		struct dipole *dip;
+
+		mna->G->mat[n][n] = 0.0;
+	
+		/* Load voltage sources into the B and C matrices. */
+		for (m = 1; m <= ckt->m; m++) {
+			int sign;
+
+			if (cktnode_vsource(ckt, n, m, &sign)) {
+				mna->B->mat[n][m] = sign;
+				mna->C->mat[m][n] = sign;
+			}
+		}
+
+		/* Load passive components into the G matrix. */
+		TAILQ_FOREACH(br, &node->branches, branches) {
+			if ((com = br->pin->com) == NULL)
+				continue;
+
+			for (i = 0; i < com->ndipoles; i++) {
+				struct dipole *dip = &com->dipoles[i];
+				int n1, n2;
+				double r;
+			
+				if (dip->p1 != br->pin &&
+				    dip->p2 != br->pin) {
+					continue;
+				}
+				n1 = dip->p1->node+1;
+				n2 = dip->p2->node+1;
+				
+				if (com->ops->resistance != NULL) {
+					r = com->ops->resistance(com,
+					    dip->p1, dip->p2);
+				} else {
+					r = 1000000;
+				}
+
+				/*
+				 * The main diagonal contains the sum of the
+				 * conductances connected to node n.
+				 */
+				if (isinf(1.0/r)) {
+					mna->G->mat[n][n] += 1000000;
+				} else {
+					mna->G->mat[n][n] += 1.0/r;
+				}
+
+				/*
+				 * For ungrounded elements, add the negative
+				 * conductance to elements G(n1,n2) and
+				 * G(n2,n1).
+				 */
+				if (!pin_grounded(dip->p1) &&
+				    !pin_grounded(dip->p2)) {
+					if (isinf(1.0/r)) {
+						mna->G->mat[n1][n2] += 1000000;
+						mna->G->mat[n2][n1] += 1000000;
+					} else {
+						mna->G->mat[n1][n2] += -(1.0/r);
+						mna->G->mat[n2][n1] += -(1.0/r);
+					}
+				}
+			}
+		}
+	}
+
+	/* Load the independent current sources into the i vector. */
+	for (n = 1; n <= ckt->n; n++) {
+		mna->i->mat[n][1] = 0.0;	/* TODO */
+	}
+	
+	/* Load the independent voltage sources into the vector e. */
+	for (m = 1; m <= ckt->m; m++) {
+		mna->e->mat[m][1] = VSOURCE(ckt->vsrcs[m-1])->voltage;
+	}
+
+	/* Compose the supermatrices. */
+	mat_compose22(mna->A, mna->G, mna->B, mna->C, mna->D);
+	mat_compose21(mna->z, mna->i, mna->e);
 
 #if 0
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component") ||
-		    com->flags & COMPONENT_FLOATING) {
-			continue;
-		}
-		for (i = 0; i < com->ndipoles; i++) {
-		}
+	/* Generate the LU decomposition of A. */
+	dprintf("ivec: %d\n", mna->z->m);
+	iv = veci_new(mna->z->m);
+	if (mat_lu_decompose(mna->A, iv, &d) == -1) {
+		error_set("[A]: %s", error_get());
+		goto fail;
 	}
-#endif
+	for (i = 1; i <= iv->n; i++) {
+		dprintf("iv[%d] = %d\n", i, iv->vec[i]);
+	}
 
-	/* Add grounded elements to the main [G] diagonal. */
-	for (n = 1; n <= ckt->n; n++) {
-		if (circuit_gnd_node(ckt, n)) {
-			mna->G->mat[n][n] += 1.0;
-		}
-	}
+	/* Solve the system of equations using backsubstitution. */
+	mat_lu_backsubst(mna->A, iv, mna->z);
+
+	veci_free(iv);
+	return (0);
+fail:
+	veci_free(iv);
+	return (-1);
+#else
+	return (0);
+#endif
 }
 
 static Uint32
@@ -113,7 +212,10 @@ mna_tick(void *obj, Uint32 ival, void *arg)
 			com->ops->tick(com);
 	}
 
-	mna_solve(mna, ckt);
+	if (mna_solve(mna, ckt) == -1) {
+		text_msg(MSG_ERROR, "%s", error_get());
+		return (0);
+	}
 	mna->Telapsed++;
 	return (ival);
 }
@@ -199,9 +301,17 @@ mna_cktmod(void *p, struct circuit *ckt)
 
 	mat_resize(mna->A, ckt->n+ckt->m, ckt->n+ckt->m);
 	mat_resize(mna->G, ckt->n, ckt->n);
-	mat_resize(mna->B, ckt->m, ckt->n);
-	mat_resize(mna->C, ckt->n, ckt->m);
+	mat_resize(mna->B, ckt->n, ckt->m);
+	mat_resize(mna->C, ckt->m, ckt->n);
 	mat_resize(mna->D, ckt->m, ckt->m);
+
+	mat_resize(mna->i, ckt->n, 1);
+	mat_resize(mna->e, ckt->m, 1);
+	mat_resize(mna->z, ckt->n+ckt->m, 1);
+	
+	mat_resize(mna->x, 1, ckt->n);
+	mat_resize(mna->v, 1, ckt->m);
+	mat_resize(mna->j, 1, ckt->n+ckt->m);
 	
 	mat_set(mna->A, 0);
 	mat_set(mna->G, 0);
@@ -215,34 +325,6 @@ mna_cktmod(void *p, struct circuit *ckt)
 	vec_set(mna->x, 0);
 	vec_set(mna->v, 0);
 	vec_set(mna->j, 0);
-}
-
-static void
-poll_Gmat(int argc, union evarg *argv)
-{
-	char text[TLIST_LABEL_MAX];
-	struct tlist *tl = argv[0].p;
-	struct mna *mna = argv[1].p;
-	struct sim *sim = argv[1].p;
-	struct circuit *ckt = sim->ckt;
-	unsigned int i, j;
-
-	if (mna->G->mat == NULL)
-		return;
-
-	tlist_clear_items(tl);
-	for (i = 1; i <= mna->G->m; i++) {
-		text[0] = '\0';
-		for (j = 1; j <= mna->G->n; j++) {
-			char tmp[16];
-
-			snprintf(tmp, sizeof(tmp), "%.0f ",
-			    mna->G->mat[i][j]);
-			strlcat(text, tmp, sizeof(text));
-		}
-		tlist_insert_item(tl, NULL, text, &mna->G->mat[i][j]);
-	}
-	tlist_restore_selections(tl);
 }
 
 static void
@@ -276,6 +358,7 @@ mna_edit(void *p, struct circuit *ckt)
 	struct notebook *nb;
 	struct notebook_tab *ntab;
 	struct button *bu;
+	struct matview *mv;
 
 	win = window_new(0, NULL);
 
@@ -296,11 +379,47 @@ mna_edit(void *p, struct circuit *ckt)
 		label_new(ntab, LABEL_POLLED, _("Elapsed time: %[u32]ns"),
 		    &mna->Telapsed);
 	}
+	
+	ntab = notebook_add_tab(nb, "[A]", BOX_VERT);
+	mv = matview_new(ntab, mna->A, 0);
+	matview_prescale(mv, "-0.000", 10, 5);
+	matview_set_numfmt(mv, "%g");
+
 	ntab = notebook_add_tab(nb, "[G]", BOX_VERT);
-	{
-		tl = tlist_new(ntab, TLIST_POLL);
-		event_new(tl, "tlist-poll", poll_Gmat, "%p", mna);
-	}
+	mv = matview_new(ntab, mna->G, 0);
+	matview_prescale(mv, "-0.000", 10, 5);
+	matview_set_numfmt(mv, "%g");
+	
+	ntab = notebook_add_tab(nb, "[B]", BOX_VERT);
+	mv = matview_new(ntab, mna->B, 0);
+	matview_prescale(mv, "-0.000", 10, 5);
+	matview_set_numfmt(mv, "%g");
+	
+	ntab = notebook_add_tab(nb, "[C]", BOX_VERT);
+	mv = matview_new(ntab, mna->C, 0);
+	matview_prescale(mv, "-0.000", 10, 5);
+	matview_set_numfmt(mv, "%g");
+	
+	ntab = notebook_add_tab(nb, "[D]", BOX_VERT);
+	mv = matview_new(ntab, mna->D, 0);
+	matview_prescale(mv, "-0.000", 10, 5);
+	matview_set_numfmt(mv, "%g");
+	
+	ntab = notebook_add_tab(nb, "[z]", BOX_VERT);
+	mv = matview_new(ntab, mna->z, 0);
+	matview_prescale(mv, "-0.000", 10, 5);
+	matview_set_numfmt(mv, "%g");
+	
+	ntab = notebook_add_tab(nb, "[e]", BOX_VERT);
+	mv = matview_new(ntab, mna->e, 0);
+	matview_prescale(mv, "-0.000", 10, 5);
+	matview_set_numfmt(mv, "%g");
+	
+	ntab = notebook_add_tab(nb, "[x]", BOX_VERT);
+	mv = matview_new(ntab, mna->x, 0);
+	matview_prescale(mv, "-0.000", 10, 5);
+	matview_set_numfmt(mv, "%g");
+	
 	return (win);
 }
 

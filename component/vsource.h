@@ -1,4 +1,4 @@
-/*	$Csoft: vsource.h,v 1.7 2004/08/27 03:16:10 vedge Exp $	*/
+/*	$Csoft: vsource.h,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_VSOURCE_H_
@@ -20,6 +20,8 @@ struct vsource {
 	struct pin	**lstack;	/* Temporary loop stack */
 	unsigned int	 nlstack;
 };
+
+#define VSOURCE(com) ((struct vsource *)(com))
 
 __BEGIN_DECLS
 void		 vsource_init(void *, const char *);

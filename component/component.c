@@ -1,4 +1,4 @@
-/*	$Csoft: component.c,v 1.3 2005/09/09 02:50:15 vedge Exp $	*/
+/*	$Csoft: component.c,v 1.4 2005/09/10 05:48:21 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -275,7 +275,7 @@ redraw(void *p, Uint32 ival, void *arg)
 			vg_style(vg, "node-name");
 			vg_color3(vg, 0, 200, 100);
 			vg_text_align(vg, VG_ALIGN_BR);
-			vg_printf(vg, "n%d", pin->node);
+			vg_printf(vg, "n%d", pin->node+1);
 			vg_end_element(vg);
 		}
 	}
@@ -642,7 +642,7 @@ ins_tool_init(void *p)
  * belong to the given component if specified).
  */
 struct pin *
-component_pin_overlap(struct circuit *ckt, struct component *ncom, double x,
+pin_overlap(struct circuit *ckt, struct component *ncom, double x,
     double y)
 {
 	struct component *ocom;
@@ -666,6 +666,15 @@ component_pin_overlap(struct circuit *ckt, struct component *ncom, double x,
 	return (NULL);
 }
 
+/* Evaluate whether the given pin is connected to the reference point. */
+int
+pin_grounded(struct pin *pin)
+{
+	struct circuit *ckt = pin->com->ckt;
+
+	return (cktnode_grounded(ckt, pin->node));
+}
+
 /* Connect a floating component's pins to overlapping nodes. */
 void
 component_connect(struct circuit *ckt, struct component *com,
@@ -678,8 +687,10 @@ component_connect(struct circuit *ckt, struct component *com,
 	for (i = 1; i <= com->npins; i++) {
 		struct pin *pin = &com->pin[i];
 
-		if ((opin = component_pin_overlap(ckt, com, vtx->x+pin->x,
-		    vtx->y+pin->y)) != NULL) {
+		opin = pin_overlap(ckt, com,
+		    vtx->x + pin->x,
+		    vtx->y + pin->y);
+		if (opin != NULL) {
 			if (pin->node >= 0) {
 				circuit_del_node(ckt, pin->node);
 			}
@@ -711,7 +722,7 @@ component_highlight_pins(struct circuit *ckt, struct component *com)
 	for (i = 1; i <= com->npins; i++) {
 		struct pin *npin = &com->pin[i];
 
-		opin = component_pin_overlap(ckt, com,
+		opin = pin_overlap(ckt, com,
 		    com->block->pos.x + npin->x,
 		    com->block->pos.y + npin->y);
 		if (opin != NULL) {

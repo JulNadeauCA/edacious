@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.c,v 1.5 2005/09/09 02:50:14 vedge Exp $	*/
+/*	$Csoft: circuit.c,v 1.6 2005/09/10 05:48:20 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications Inc
@@ -445,18 +445,53 @@ circuit_add_node(struct circuit *ckt, u_int flags)
 	return (ckt->n++);
 }
 
+/* Evaluate whether node n is at ground potential. */
 int
-circuit_gnd_node(struct circuit *ckt, int n)
+cktnode_grounded(struct circuit *ckt, u_int n)
 {
 	struct cktbranch *br;
 
 	TAILQ_FOREACH(br, &ckt->nodes[n]->branches, branches) {
 		if (br->pin != NULL && br->pin->com != NULL &&
-		    OBJECT_SUBCLASS(br->pin->com, "component.ground"))
+		   (br->pin->com->flags & COMPONENT_FLOATING) == 0 &&
+		   OBJECT_SUBCLASS(br->pin->com, "component.ground"))
 			return (1);
 	}
 	return (0);
 }
+
+/*
+ * Evaluate whether the given node is connected to the given voltage source.
+ * If that is the case, return the polarity of the node.
+ */
+int
+cktnode_vsource(struct circuit *ckt, u_int n, u_int m, int *sign)
+{
+	struct cktnode *node = ckt->nodes[n-1];
+	struct cktbranch *br;
+	struct vsource *vs;
+	u_int i;
+
+	TAILQ_FOREACH(br, &node->branches, branches) {
+		if (br->pin == NULL ||
+		   (vs = VSOURCE(br->pin->com)) == NULL) {
+			continue;
+		}
+		if (COM(vs)->flags & COMPONENT_FLOATING ||
+		   !OBJECT_SUBCLASS(vs, "component.vsource") ||
+		   vs != ckt->vsrcs[m-1]) {
+			continue;
+		}
+		if (br->pin->n == 1) {
+			*sign = +1;
+		} else {
+			*sign = -1;
+		}
+		return (1);
+	}
+	return (0);
+}
+
 
 void
 circuit_destroy_node(struct cktnode *node)
