@@ -1,4 +1,4 @@
-# $Csoft: csoft.prog.mk,v 1.3 2004/09/24 03:12:10 vedge Exp $
+# $Csoft: csoft.prog.mk,v 1.40 2005/08/02 01:57:37 vedge Exp $
 
 # Copyright (c) 2001, 2002, 2003, 2004 CubeSoft Communications, Inc.
 # <http://www.csoft.org>
@@ -214,7 +214,7 @@ cleandir-prog:
 	rm -f core *.core
 
 install-prog:
-	@if [ -e "${BINDIR}" ]; then \
+	@if [ ! -e "${BINDIR}" ]; then \
 	    echo "${INSTALL_PROG_DIR} ${BINDIR}"; \
 	    ${SUDO} ${INSTALL_PROG_DIR} ${BINDIR}; \
 	fi

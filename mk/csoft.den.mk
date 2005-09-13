@@ -1,4 +1,4 @@
-# $Csoft: csoft.den.mk,v 1.3 2004/09/24 03:12:10 vedge Exp $
+# $Csoft: csoft.den.mk,v 1.3 2004/03/18 05:40:36 vedge Exp $
 # ex:syn=make
 
 # Copyright (c) 2004 CubeSoft Communications, Inc.
