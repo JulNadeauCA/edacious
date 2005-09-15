@@ -1,4 +1,4 @@
-/*	$Csoft: vsource.c,v 1.2 2005/09/09 02:50:15 vedge Exp $	*/
+/*	$Csoft: vsource.c,v 1.3 2005/09/10 05:48:21 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -56,10 +56,10 @@ const struct component_ops vsource_ops = {
 	"V",
 	vsource_draw,
 	vsource_edit,
-	vsource_configure,
+	NULL,
 	vsource_export,
 	vsource_tick,
-	vsource_resistance,
+	NULL,			/* resistance */
 	NULL,			/* capacitance */
 	NULL,			/* inductance */
 	NULL			/* isource */
@@ -141,17 +141,6 @@ vsource_draw(void *p, struct vg *vg)
 		vg_end_element(vg);
 		break;
 	}
-}
-
-int
-vsource_configure(void *p)
-{
-	struct vsource *vs = p;
-#if 0
-	text_prompt_float(&vs->voltage, 0, HUGE_VAL, "V",
-	    _("Enter %s's voltage: "), OBJECT(vs)->name);
-#endif
-	return (0);
 }
 
 /* Find the dipole connecting two contiguous pins, and its polarity. */
@@ -327,7 +316,6 @@ vsource_init(void *p, const char *name)
 
 	component_init(vs, "vsource", name, &vsource_ops, vsource_pinout);
 	vs->voltage = 5;
-	vs->resistance = 0;
 	vs->lstack = NULL;
 	vs->nlstack = 0;
 	TAILQ_INIT(&vs->loops);
@@ -423,14 +411,6 @@ vsource_emf(void *p, int pin1, int pin2)
 	return (pin1 == 1 ? vs->voltage : -(vs->voltage));
 }
 
-double
-vsource_resistance(void *p, struct pin *p1, struct pin *p2)
-{
-	struct vsource *vs = p;
-
-	return (vs->resistance);
-}
-
 #ifdef EDITION
 static void
 poll_loops(int argc, union evarg *argv)
@@ -488,10 +468,6 @@ vsource_edit(void *p)
 
 	fsb = fspinbutton_new(win, "V", _("Voltage: "));
 	widget_bind(fsb, "value", WIDGET_DOUBLE, &vs->voltage);
-	
-	fsb = fspinbutton_new(win, "ohms", _("Internal R: "));
-	widget_bind(fsb, "value", WIDGET_DOUBLE, &vs->resistance);
-	fspinbutton_set_min(fsb, 1.0);
 	
 	label_new(win, LABEL_STATIC, _("Loops:"));
 	tl = tlist_new(win, TLIST_POLL|TLIST_TREE);

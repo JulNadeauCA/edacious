@@ -1,4 +1,4 @@
-/*	$Csoft: mna.c,v 1.2 2005/09/11 02:33:05 vedge Exp $	*/
+/*	$Csoft: mna.c,v 1.3 2005/09/13 03:51:41 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -47,17 +47,18 @@ struct mna {
 	int speed;			/* Simulation speed (updates/sec) */
 	struct timeout update_to;	/* Timer for simulation updates */
 	
-	mat_t *A;			/* Supermatrix of [G,B;C,D] */
+	mat_t *A;			/* Block matrix of [G,B;C,D] */
+	mat_t *A_LU;			/* LU-decomposed form of A */
 	mat_t *G;			/* Passive element interconnects */
 	mat_t *B;			/* Voltage sources */
 	mat_t *C;			/* Transpose of [B] */
 	mat_t *D;			/* Dependent sources */
 
-	vec_t *z;			/* Supervector of [i;e] */
+	vec_t *z;			/* Block partitioned vector of [i;e] */
 	vec_t *i;			/* Sum of independent current sources */
 	vec_t *e;			/* Independent voltage sources */
 
-	vec_t *x;			/* Supervector of [v;j] */
+	vec_t *x;			/* Block partitioned vector of [v;j] */
 	vec_t *v;			/* Unknown voltages */
 	vec_t *j;			/* Unknown currents thru vsources */
 };
@@ -76,20 +77,22 @@ mna_solve(struct mna *mna, struct circuit *ckt)
 	mat_set(mna->D, 0.0);
 
 	for (n = 1; n <= ckt->n; n++) {
-		struct cktnode *node = ckt->nodes[n-1];
+		struct cktnode *node = ckt->nodes[n];
 		struct cktbranch *br;
 		struct component *com;
 		struct dipole *dip;
 
 		mna->G->mat[n][n] = 0.0;
-	
-		/* Load voltage sources into the B and C matrices. */
-		for (m = 1; m <= ckt->m; m++) {
-			int sign;
 
-			if (cktnode_vsource(ckt, n, m, &sign)) {
-				mna->B->mat[n][m] = sign;
-				mna->C->mat[m][n] = sign;
+		if (n > 0) {
+			/* Load voltage sources into the B and C matrices. */
+			for (m = 1; m <= ckt->m; m++) {
+				int sign;
+
+				if (cktnode_vsource(ckt, n, m, &sign)) {
+					mna->B->mat[n][m] = sign;
+					mna->C->mat[m][n] = sign;
+				}
 			}
 		}
 
@@ -100,43 +103,47 @@ mna_solve(struct mna *mna, struct circuit *ckt)
 
 			for (i = 0; i < com->ndipoles; i++) {
 				struct dipole *dip = &com->dipoles[i];
-				int n1, n2;
+				int grounded;
 				double r;
 			
 				if (dip->p1 != br->pin &&
 				    dip->p2 != br->pin) {
 					continue;
 				}
-				n1 = dip->p1->node+1;
-				n2 = dip->p2->node+1;
-				
-				if (com->ops->resistance != NULL) {
-					r = com->ops->resistance(com,
-					    dip->p1, dip->p2);
+				if ((dip->p1 == br->pin && dip->p2->node == 0)||
+				    (dip->p2 == br->pin && dip->p1->node == 0)){
+					grounded = 1;
 				} else {
-					r = 1000000;
+					grounded = 0;
 				}
+
+				if (com->ops->resistance == NULL) {
+					continue;
+				}
+				r = com->ops->resistance(com, dip->p1, dip->p2);
 
 				/*
 				 * The main diagonal contains the sum of the
 				 * conductances connected to node n.
 				 */
 				if (isinf(1.0/r)) {
-					mna->G->mat[n][n] += 1000000;
+					mna->G->mat[n][n] += 10000000.0;
 				} else {
 					mna->G->mat[n][n] += 1.0/r;
 				}
 
 				/*
-				 * For ungrounded elements, add the negative
+				 * If the dipole is ungrounded, add its negative
 				 * conductance to elements G(n1,n2) and
 				 * G(n2,n1).
 				 */
-				if (!pin_grounded(dip->p1) &&
-				    !pin_grounded(dip->p2)) {
+				if (!grounded) {
+					u_int n1 = dip->p1->node;
+					u_int n2 = dip->p2->node;
+
 					if (isinf(1.0/r)) {
-						mna->G->mat[n1][n2] += 1000000;
-						mna->G->mat[n2][n1] += 1000000;
+						mna->G->mat[n1][n2]+=10000000.0;
+						mna->G->mat[n2][n1]+=10000000.0;
 					} else {
 						mna->G->mat[n1][n2] += -(1.0/r);
 						mna->G->mat[n2][n1] += -(1.0/r);
@@ -146,43 +153,33 @@ mna_solve(struct mna *mna, struct circuit *ckt)
 		}
 	}
 
-	/* Load the independent current sources into the i vector. */
+	/* Build the vector of current and voltage sources. */
 	for (n = 1; n <= ckt->n; n++) {
 		mna->i->mat[n][1] = 0.0;	/* TODO */
 	}
-	
-	/* Load the independent voltage sources into the vector e. */
 	for (m = 1; m <= ckt->m; m++) {
 		mna->e->mat[m][1] = VSOURCE(ckt->vsrcs[m-1])->voltage;
 	}
-
-	/* Compose the supermatrices. */
-	mat_compose22(mna->A, mna->G, mna->B, mna->C, mna->D);
 	mat_compose21(mna->z, mna->i, mna->e);
 
-#if 0
-	/* Generate the LU decomposition of A. */
-	dprintf("ivec: %d\n", mna->z->m);
+	/*
+	 * Generate the partitioned matrix A with blocks GBCD, compute the
+	 * LU decomposition and solve the system by backsubstitution.
+	 */
+	mat_compose22(mna->A, mna->G, mna->B, mna->C, mna->D);
 	iv = veci_new(mna->z->m);
-	if (mat_lu_decompose(mna->A, iv, &d) == -1) {
-		error_set("[A]: %s", error_get());
+	if ((mat_lu_decompose(mna->A, mna->A_LU, iv, &d)) == NULL) {
+		error_set("A(lu): %s", error_get());
 		goto fail;
 	}
-	for (i = 1; i <= iv->n; i++) {
-		dprintf("iv[%d] = %d\n", i, iv->vec[i]);
-	}
-
-	/* Solve the system of equations using backsubstitution. */
-	mat_lu_backsubst(mna->A, iv, mna->z);
+	vec_copy(mna->z, mna->x);
+	mat_lu_backsubst(mna->A_LU, iv, mna->x);
 
 	veci_free(iv);
 	return (0);
 fail:
 	veci_free(iv);
 	return (-1);
-#else
-	return (0);
-#endif
 }
 
 static Uint32
@@ -231,6 +228,7 @@ mna_init(void *p)
 	timeout_set(&mna->update_to, mna_tick, mna, TIMEOUT_LOADABLE);
 
 	mna->A = mat_new(0, 0);
+	mna->A_LU = mat_new(0, 0);
 	mna->G = mat_new(0, 0);
 	mna->B = mat_new(0, 0);
 	mna->C = mat_new(0, 0);
@@ -280,6 +278,7 @@ mna_destroy(void *p)
 	mna_stop(mna);
 
 	mat_free(mna->A);
+	mat_free(mna->A_LU);
 	mat_free(mna->G);
 	mat_free(mna->B);
 	mat_free(mna->C);
@@ -300,6 +299,7 @@ mna_cktmod(void *p, struct circuit *ckt)
 	struct mna *mna = p;
 
 	mat_resize(mna->A, ckt->n+ckt->m, ckt->n+ckt->m);
+	mat_resize(mna->A_LU, ckt->n+ckt->m, ckt->n+ckt->m);
 	mat_resize(mna->G, ckt->n, ckt->n);
 	mat_resize(mna->B, ckt->n, ckt->m);
 	mat_resize(mna->C, ckt->m, ckt->n);
@@ -309,11 +309,12 @@ mna_cktmod(void *p, struct circuit *ckt)
 	mat_resize(mna->e, ckt->m, 1);
 	mat_resize(mna->z, ckt->n+ckt->m, 1);
 	
-	mat_resize(mna->x, 1, ckt->n);
-	mat_resize(mna->v, 1, ckt->m);
-	mat_resize(mna->j, 1, ckt->n+ckt->m);
+	mat_resize(mna->v, ckt->n, 1);
+	mat_resize(mna->j, ckt->m, 1);
+	mat_resize(mna->x, ckt->n+ckt->m, 1);
 	
 	mat_set(mna->A, 0);
+	mat_set(mna->A_LU, 0);
 	mat_set(mna->G, 0);
 	mat_set(mna->B, 0);
 	mat_set(mna->C, 0);
@@ -383,42 +384,42 @@ mna_edit(void *p, struct circuit *ckt)
 	ntab = notebook_add_tab(nb, "[A]", BOX_VERT);
 	mv = matview_new(ntab, mna->A, 0);
 	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%g");
+	matview_set_numfmt(mv, "%.03f");
+	
+	ntab = notebook_add_tab(nb, "[A]-LU", BOX_VERT);
+	mv = matview_new(ntab, mna->A_LU, 0);
+	matview_prescale(mv, "-0.000", 10, 5);
+	matview_set_numfmt(mv, "%.03f");
 
 	ntab = notebook_add_tab(nb, "[G]", BOX_VERT);
 	mv = matview_new(ntab, mna->G, 0);
 	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%g");
+	matview_set_numfmt(mv, "%.03f");
 	
 	ntab = notebook_add_tab(nb, "[B]", BOX_VERT);
 	mv = matview_new(ntab, mna->B, 0);
 	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%g");
+	matview_set_numfmt(mv, "%.03f");
 	
 	ntab = notebook_add_tab(nb, "[C]", BOX_VERT);
 	mv = matview_new(ntab, mna->C, 0);
 	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%g");
+	matview_set_numfmt(mv, "%.03f");
 	
 	ntab = notebook_add_tab(nb, "[D]", BOX_VERT);
 	mv = matview_new(ntab, mna->D, 0);
 	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%g");
+	matview_set_numfmt(mv, "%.03f");
 	
 	ntab = notebook_add_tab(nb, "[z]", BOX_VERT);
 	mv = matview_new(ntab, mna->z, 0);
-	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%g");
-	
-	ntab = notebook_add_tab(nb, "[e]", BOX_VERT);
-	mv = matview_new(ntab, mna->e, 0);
-	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%g");
+	matview_prescale(mv, "-0000.0000", 10, 5);
+	matview_set_numfmt(mv, "%.03f");
 	
 	ntab = notebook_add_tab(nb, "[x]", BOX_VERT);
 	mv = matview_new(ntab, mna->x, 0);
-	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%g");
+	matview_prescale(mv, "-0000.0000", 10, 5);
+	matview_set_numfmt(mv, "%.03f");
 	
 	return (win);
 }

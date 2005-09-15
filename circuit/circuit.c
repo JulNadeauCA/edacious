@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.c,v 1.6 2005/09/10 05:48:20 vedge Exp $	*/
+/*	$Csoft: circuit.c,v 1.7 2005/09/13 03:51:41 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications Inc
@@ -59,6 +59,9 @@ const struct object_ops circuit_ops = {
 	circuit_edit
 };
 
+static void init_node(struct cktnode *, u_int);
+static void init_ground(struct circuit *);
+
 static void
 circuit_detached(int argc, union evarg *argv)
 {
@@ -112,7 +115,7 @@ circuit_modified(struct circuit *ckt)
 	struct component *com;
 	struct vsource *vs;
 	struct cktloop *loop;
-	unsigned int i;
+	u_int i;
 
 	/* Regenerate loop and dipole information. */
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
@@ -170,14 +173,15 @@ circuit_init(void *p, const char *name)
 	ckt->sim = NULL;
 	ckt->dis_nodes = 1;
 	ckt->dis_node_names = 1;
+	pthread_mutex_init(&ckt->lock, &recursive_mutexattr);
 
-	ckt->nodes = NULL;
 	ckt->loops = NULL;
 	ckt->vsrcs = NULL;
-	ckt->n = 0;
 	ckt->m = 0;
+	
+	ckt->nodes = Malloc(sizeof(struct cktnode *), M_EDA);
 	ckt->n = 0;
-	pthread_mutex_init(&ckt->lock, &recursive_mutexattr);
+	init_ground(ckt);
 
 	vg = ckt->vg = vg_new(ckt, VG_VISGRID);
 	strlcpy(vg->layers[0].name, _("Schematic"), sizeof(vg->layers[0].name));
@@ -204,7 +208,7 @@ circuit_reinit(void *p)
 {
 	struct circuit *ckt = p;
 	struct component *com;
-	int i;
+	u_int i;
 	
 	if (ckt->sim != NULL) {
 		sim_destroy(ckt->sim);
@@ -219,13 +223,13 @@ circuit_reinit(void *p)
 	ckt->vsrcs = NULL;
 	ckt->m = 0;
 	
-	for (i = 0; i < ckt->n; i++) {
+	for (i = 0; i <= ckt->n; i++) {
 		circuit_destroy_node(ckt->nodes[i]);
 		Free(ckt->nodes[i], M_EDA);
 	}
-	Free(ckt->nodes, M_EDA);
-	ckt->nodes = NULL;
+	ckt->nodes = Realloc(ckt->nodes, sizeof(struct cktnode *));
 	ckt->n = 0;
+	init_ground(ckt);
 
 	OBJECT_FOREACH_CHILD(com, ckt, component) {
 		if (!OBJECT_SUBCLASS(com, "component") ||
@@ -250,8 +254,8 @@ int
 circuit_load(void *p, struct netbuf *buf)
 {
 	struct circuit *ckt = p;
-	Uint32 i, ncoms, nnodes;
-	int j;
+	Uint32 ncoms;
+	u_int i, j, nnodes;
 
 	if (version_read(buf, &circuit_ver, NULL) != 0) {
 		return (-1);
@@ -259,16 +263,22 @@ circuit_load(void *p, struct netbuf *buf)
 	copy_string(ckt->descr, buf, sizeof(ckt->descr));
 	read_uint32(buf);					/* Pad */
 
-	/* Load the circuit nodes. */
-	nnodes = read_uint32(buf);
-	for (i = 0; i < nnodes; i++) {
-		int nbranches, flags, name;
+	/* Load the circuit nodes (including ground). */
+	nnodes = (u_int)read_uint32(buf);
+	for (i = 0; i <= nnodes; i++) {
+		int nbranches, flags;
+		u_int name;
 
 		flags = (int)read_uint32(buf);
 		nbranches = (int)read_uint32(buf);
-		name = circuit_add_node(ckt, flags & ~(CKTNODE_EXAM));
-		dprintf("node %d/%d: flags=0x%x, branches=%d\n", i, ckt->n,
-		    flags, nbranches);
+		if (i == 0) {
+			name = 0;
+			circuit_destroy_node(ckt->nodes[0]);
+			Free(ckt->nodes[0], M_EDA);
+			init_ground(ckt);
+		} else {
+			name = circuit_add_node(ckt, flags & ~(CKTNODE_EXAM));
+		}
 		for (j = 0; j < nbranches; j++) {
 			char ppath[OBJECT_PATH_MAX];
 			struct component *pcom;
@@ -361,18 +371,18 @@ circuit_save(void *p, struct netbuf *buf)
 	struct cktbranch *br;
 	struct component *com;
 	off_t ncoms_offs;
-	Uint32 i, ncoms = 0;
+	Uint32 ncoms = 0;
+	u_int i;
 
 	version_write(buf, &circuit_ver);
 	write_string(buf, ckt->descr);
 	write_uint32(buf, 0);					/* Pad */
 	write_uint32(buf, ckt->n);
-	for (i = 0; i < ckt->n; i++) {
+	for (i = 0; i <= ckt->n; i++) {
 		struct cktnode *node = ckt->nodes[i];
 		off_t nbranches_offs;
 		Uint32 nbranches = 0;
 
-		dprintf("save node %d/%d\n", i, ckt->n);
 		write_uint32(buf, (Uint32)node->flags);
 		nbranches_offs = netbuf_tell(buf);
 		write_uint32(buf, 0);
@@ -385,8 +395,6 @@ circuit_save(void *p, struct netbuf *buf)
 			write_string(buf, path);
 			write_uint32(buf, 0);			/* Pad */
 			write_uint32(buf, (Uint32)br->pin->n);
-			dprintf("save branch %d (%s:%u)\n", nbranches, path,
-			    br->pin->n);
 			nbranches++;
 		}
 		pwrite_uint32(buf, nbranches, nbranches_offs);
@@ -403,8 +411,6 @@ circuit_save(void *p, struct netbuf *buf)
 		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
-		dprintf("save component %s (%u pins)\n", OBJECT(com)->name,
-		    com->npins);
 		write_string(buf, OBJECT(com)->name);
 		write_uint32(buf, (Uint32)com->npins);
 		for (i = 1; i <= com->npins; i++) {
@@ -427,47 +433,49 @@ circuit_save(void *p, struct netbuf *buf)
 }
 
 static void
-circuit_node_init(struct cktnode *node, u_int flags)
+init_node(struct cktnode *node, u_int flags)
 {
 	node->flags = flags;
 	node->nbranches = 0;
 	TAILQ_INIT(&node->branches);
 }
 
+static void
+init_ground(struct circuit *ckt)
+{
+	ckt->nodes[0] = Malloc(sizeof(struct cktnode), M_EDA);
+	init_node(ckt->nodes[0], CKTNODE_REFERENCE);
+}
+
 int
 circuit_add_node(struct circuit *ckt, u_int flags)
 {
 	struct cktnode *node;
+	u_int n = ++ckt->n;
 
-	ckt->nodes = Realloc(ckt->nodes, (ckt->n+1)*sizeof(struct cktnode *));
-	ckt->nodes[ckt->n] = Malloc(sizeof(struct cktnode), M_EDA);
-	circuit_node_init(ckt->nodes[ckt->n], flags);
-	return (ckt->n++);
+	ckt->nodes = Realloc(ckt->nodes, (n+1)*sizeof(struct cktnode *));
+	ckt->nodes[n] = Malloc(sizeof(struct cktnode), M_EDA);
+	init_node(ckt->nodes[n], flags);
+	return (n);
 }
 
 /* Evaluate whether node n is at ground potential. */
 int
 cktnode_grounded(struct circuit *ckt, u_int n)
 {
-	struct cktbranch *br;
-
-	TAILQ_FOREACH(br, &ckt->nodes[n]->branches, branches) {
-		if (br->pin != NULL && br->pin->com != NULL &&
-		   (br->pin->com->flags & COMPONENT_FLOATING) == 0 &&
-		   OBJECT_SUBCLASS(br->pin->com, "component.ground"))
-			return (1);
-	}
-	return (0);
+	/* TODO check for shunts */
+	return (n == 0 ? 1 : 0);
 }
 
 /*
  * Evaluate whether the given node is connected to the given voltage source.
- * If that is the case, return the polarity of the node.
+ * If that is the case, return the polarity of the node with respect to
+ * the source.
  */
 int
 cktnode_vsource(struct circuit *ckt, u_int n, u_int m, int *sign)
 {
-	struct cktnode *node = ckt->nodes[n-1];
+	struct cktnode *node = ckt->nodes[n];
 	struct cktbranch *br;
 	struct vsource *vs;
 	u_int i;
@@ -508,35 +516,35 @@ circuit_destroy_node(struct cktnode *node)
 }
 
 void
-circuit_del_node(struct circuit *ckt, int n)
+circuit_del_node(struct circuit *ckt, u_int n)
 {
 	struct cktnode *node;
 	struct cktbranch *br;
-	int i;
+	u_int i;
 
-	if (n < 0 || n >= ckt->n) {
-		dprintf("no such node: n%d\n", n);
-		return;
-	}
+#ifdef DEBUG
+	if (n == 0 || n > ckt->n)
+		fatal("bad node: n%u\n", n);
+#endif
 	node = ckt->nodes[n];
 	circuit_destroy_node(node);
 	Free(node, M_EDA);
 
-	if (n < --ckt->n) {
-		for (i = n; i < ckt->n; i++) {
-			ckt->nodes[i] = ckt->nodes[i+1];
-
-			/* Update the branch node references. */
+	if (n != ckt->n) {
+		for (i = n; i <= ckt->n; i++) {
 			TAILQ_FOREACH(br, &ckt->nodes[i]->branches, branches) {
 				if (br->pin != NULL && br->pin->com != NULL)
-					br->pin->node = i;
+					br->pin->node = i-1;
 			}
 		}
+		memmove(&ckt->nodes[n], &ckt->nodes[n+1],
+		    (ckt->n - n) * sizeof(struct cktnode *));
 	}
+	ckt->n--;
 }
 
 struct cktbranch *
-circuit_add_branch(struct circuit *ckt, int n, struct pin *pin)
+circuit_add_branch(struct circuit *ckt, u_int n, struct pin *pin)
 {
 	struct cktnode *node = ckt->nodes[n];
 	struct cktbranch *br;
@@ -549,7 +557,7 @@ circuit_add_branch(struct circuit *ckt, int n, struct pin *pin)
 }
 
 struct cktbranch *
-circuit_get_branch(struct circuit *ckt, int n, struct pin *pin)
+circuit_get_branch(struct circuit *ckt, u_int n, struct pin *pin)
 {
 	struct cktnode *node = ckt->nodes[n];
 	struct cktbranch *br;
@@ -562,17 +570,16 @@ circuit_get_branch(struct circuit *ckt, int n, struct pin *pin)
 }
 
 void
-circuit_del_branch(struct circuit *ckt, int n, struct cktbranch *br)
+circuit_del_branch(struct circuit *ckt, u_int n, struct cktbranch *br)
 {
 	struct cktnode *node = ckt->nodes[n];
 
 	TAILQ_REMOVE(&node->branches, br, branches);
 	Free(br, M_EDA);
-
-	if (--node->nbranches == 0) {
-		dprintf("removing node %d (tot %d)\n", n, ckt->n);
-		circuit_del_node(ckt, n);
-	}
+#ifdef DEBUG
+	if ((node->nbranches - 1) < 0) { fatal("--nbranches < 0"); }
+#endif
+	node->nbranches--;
 }
 
 void
@@ -668,23 +675,27 @@ poll_nodes(int argc, union evarg *argv)
 {
 	struct tlist *tl = argv[0].p;
 	struct circuit *ckt = argv[1].p;
-	int i;
+	u_int i;
 
 	tlist_clear_items(tl);
-	for (i = 0; i < ckt->n; i++) {
+	for (i = 0; i <= ckt->n; i++) {
 		struct cktnode *node = ckt->nodes[i];
 		struct cktbranch *br;
 		struct tlist_item *it, *it2;
 
-		it = tlist_insert(tl, NULL, "n%d (0x%x, %d branches)", i,
+		it = tlist_insert(tl, NULL, "n%u (0x%x, %d branches)", i,
 		    node->flags, node->nbranches);
 		it->p1 = node;
 		it->depth = 0;
 		TAILQ_FOREACH(br, &node->branches, branches) {
-			it = tlist_insert(tl, NULL, "%s:%s(%d)",
-			    (br->pin != NULL && br->pin->com != NULL) ?
-			    OBJECT(br->pin->com)->name : "(null)",
-			    br->pin->name, br->pin->n);
+			if (br->pin == NULL) {
+				it = tlist_insert(tl, NULL, "(null pin)");
+			} else {
+				it = tlist_insert(tl, NULL, "%s:%s(%d)",
+				    (br->pin != NULL && br->pin->com != NULL) ?
+				    OBJECT(br->pin->com)->name : "(null)",
+				    br->pin->name, br->pin->n);
+			}
 			it->p1 = br;
 			it->depth = 1;
 		}

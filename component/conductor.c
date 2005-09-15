@@ -1,4 +1,4 @@
-/*	$Csoft: conductor.c,v 1.3 2005/09/10 05:48:21 vedge Exp $	*/
+/*	$Csoft: conductor.c,v 1.4 2005/09/13 03:51:42 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -58,7 +58,7 @@ const struct component_ops conductor_ops = {
 	"Cd",
 	conductor_draw,
 	NULL,			/* edit */
-	NULL,			/* configure */
+	NULL,			/* connect */
 	conductor_export,
 	NULL,			/* tick */
 	conductor_resistance,

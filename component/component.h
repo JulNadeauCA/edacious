@@ -1,4 +1,4 @@
-/*	$Csoft: component.h,v 1.2 2005/09/10 05:48:21 vedge Exp $	*/
+/*	$Csoft: component.h,v 1.3 2005/09/13 03:51:42 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_COMPONENT_H_
@@ -53,7 +53,7 @@ struct component_ops {
 
 	void		 (*draw)(void *, struct vg *);
 	struct window	*(*edit)(void *);
-	int		 (*configure)(void *);
+	int		 (*connect)(void *, struct pin *, struct pin *);
 	int		 (*export_model)(void *, enum circuit_format, FILE *);
 	void		 (*tick)(void *);
 	double		 (*resistance)(void *, struct pin *, struct pin *);

@@ -1,4 +1,4 @@
-/*	$Csoft: resistor.h,v 1.5 2004/08/27 03:16:10 vedge Exp $	*/
+/*	$Csoft: resistor.h,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_RESISTOR_H_
@@ -23,7 +23,7 @@ int		 resistor_save(void *, struct netbuf *);
 int		 resistor_export(void *, enum circuit_format, FILE *);
 double		 resistor_resistance(void *, struct pin *, struct pin *);
 struct window	*resistor_edit(void *);
-int		 resistor_configure(void *);
+int		 resistor_connect(void *, struct pin *, struct pin *);
 void		 resistor_draw(void *, struct vg *);
 void		 resistor_update(void *, struct vg *);
 __END_DECLS

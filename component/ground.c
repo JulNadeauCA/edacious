@@ -1,4 +1,4 @@
-/*	$Csoft: ground.c,v 1.2 2005/09/09 02:50:15 vedge Exp $	*/
+/*	$Csoft: ground.c,v 1.1 2005/09/09 03:40:56 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -55,7 +55,7 @@ const struct component_ops ground_ops = {
 	"Gnd",
 	ground_draw,
 	NULL,			/* edit */
-	NULL,			/* configure */
+	ground_connect,
 	NULL,			/* export */
 	NULL,			/* tick */
 	NULL,			/* resistance */
@@ -69,6 +69,32 @@ const struct pin ground_pinout[] = {
 	{ 1, "A", 0.000, 0.000 },
 	{ -1 },
 };
+
+int
+ground_connect(void *p, struct pin *p1, struct pin *p2)
+{
+	struct ground *gnd = p;
+	struct circuit *ckt = COM(gnd)->ckt;
+	struct cktbranch *br;
+
+	if (p2 != NULL && p2->node > 0) {
+		u_int n = p2->node;
+		struct cktnode *node = ckt->nodes[n];
+	
+		TAILQ_FOREACH(br, &node->branches, branches) {
+			if (br->pin == NULL || br->pin->com == NULL ||
+			    br->pin->com->flags & COMPONENT_FLOATING) {
+				continue;
+			}
+			circuit_add_branch(ckt, 0, br->pin);
+			br->pin->node = 0;
+		}
+		circuit_del_node(ckt, n);
+	}
+	p1->node = 0;
+	p1->branch = circuit_add_branch(ckt, 0, p1);
+	return (0);
+}
 
 void
 ground_draw(void *p, struct vg *vg)

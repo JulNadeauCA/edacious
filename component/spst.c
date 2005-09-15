@@ -1,4 +1,4 @@
-/*	$Csoft: spst.c,v 1.2 2005/09/09 02:50:15 vedge Exp $	*/
+/*	$Csoft: spst.c,v 1.3 2005/09/10 05:48:21 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -55,7 +55,7 @@ const struct component_ops spst_ops = {
 	"Sw",
 	spst_draw,
 	spst_edit,
-	NULL,			/* configure */
+	NULL,			/* connect */
 	spst_export,
 	NULL,			/* tick */
 	spst_resistance,

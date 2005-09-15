@@ -1,4 +1,4 @@
-/*	$Csoft: ground.h,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: ground.h,v 1.1 2005/09/09 03:40:56 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_GROUND_H_
@@ -22,6 +22,7 @@ struct window	*ground_edit(void *);
 int		 ground_configure(void *);
 void		 ground_draw(void *, struct vg *);
 void		 ground_update(void *, struct vg *);
+int		 ground_connect(void *, struct pin *, struct pin *);
 __END_DECLS
 
 #include "close_code.h"

@@ -1,4 +1,4 @@
-/*	$Csoft: vsource.h,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: vsource.h,v 1.2 2005/09/13 03:51:42 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_VSOURCE_H_
@@ -10,13 +10,9 @@
 
 struct vsource {
 	struct component com;
-
-	double voltage;			/* Independent voltage */
-	double resistance;		/* Internal DC resistance */
-	
+	double voltage;
 	TAILQ_HEAD(,cktloop) loops;	/* Forward loops */
 	unsigned int        nloops;
-
 	struct pin	**lstack;	/* Temporary loop stack */
 	unsigned int	 nlstack;
 };
@@ -33,10 +29,8 @@ int		 vsource_load(void *, struct netbuf *);
 int		 vsource_save(void *, struct netbuf *);
 int		 vsource_export(void *, enum circuit_format, FILE *);
 double		 vsource_emf(void *, int, int);
-double		 vsource_resistance(void *, struct pin *, struct pin *);
 struct window	*vsource_edit(void *);
 void		 vsource_draw(void *, struct vg *);
-int		 vsource_configure(void *);
 void		 vsource_tick(void *);
 __END_DECLS
 

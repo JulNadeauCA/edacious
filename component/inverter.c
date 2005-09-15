@@ -1,4 +1,4 @@
-/*	$Csoft: inverter.c,v 1.2 2005/09/09 02:50:15 vedge Exp $	*/
+/*	$Csoft: inverter.c,v 1.3 2005/09/10 05:48:21 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -54,7 +54,7 @@ const struct component_ops inverter_ops = {
 	"Inv",
 	inverter_draw,
 	inverter_edit,
-	NULL,			/* configure */
+	NULL,			/* connect */
 	inverter_export,
 	inverter_tick,
 	NULL,			/* resistance */

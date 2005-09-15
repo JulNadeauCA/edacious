@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.h,v 1.3 2005/09/10 05:48:20 vedge Exp $	*/
+/*	$Csoft: circuit.h,v 1.4 2005/09/13 03:51:41 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _CIRCUIT_CIRCUIT_H_
@@ -24,8 +24,10 @@ struct cktbranch {
 
 /* Connection between two or more components. */
 struct cktnode {
-	int	flags;
-#define CKTNODE_EXAM	0x01		/* Branches are being examined */
+	u_int flags;
+#define CKTNODE_EXAM		0x01	/* Branches are being examined
+					   (used to avoid redundancies) */
+#define CKTNODE_REFERENCE	0x02	/* Reference node (eg. ground) */
 
 	TAILQ_HEAD(,cktbranch) branches;
 	u_int		      nbranches;
@@ -33,10 +35,10 @@ struct cktnode {
 
 /* Closed loop of dipoles with respect to some component in the circuit. */
 struct cktloop {
-	unsigned int name;
+	u_int name;
 	void *origin;			/* Origin component (ie. vsource) */
 	struct dipole **dipoles;	/* Dipoles in loop */
-	unsigned int   ndipoles;
+	u_int	       ndipoles;
 	TAILQ_ENTRY(cktloop) loops;
 };
 
@@ -52,13 +54,13 @@ struct circuit {
 	int dis_nodes;			/* Display node indications */
 	int dis_node_names;		/* Display node names */
 
-	struct cktnode **nodes;		/* Nodes */
+	struct cktnode **nodes;		/* Nodes (element 0 is ground) */
 	struct cktloop **loops;		/* Closed loops */
 	struct vsource **vsrcs;		/* Independent vsources */
 
 	u_int l;			/* Number of loops */
 	u_int m;			/* Number of independent vsources */
-	u_int n;			/* Number of nodes */
+	u_int n;			/* Number of nodes (except ground) */
 };
 
 __BEGIN_DECLS
@@ -71,14 +73,15 @@ void		circuit_free_components(struct circuit *);
 struct window  *circuit_edit(void *);
 
 int	circuit_add_node(struct circuit *, u_int);
-void	circuit_del_node(struct circuit *, int);
+void	circuit_del_node(struct circuit *, u_int);
 void	circuit_copy_node(struct circuit *, struct cktnode *, struct cktnode *);
 void	circuit_destroy_node(struct cktnode *);
 
-struct cktbranch *circuit_add_branch(struct circuit *, int, struct pin *);
-void		  circuit_del_branch(struct circuit *, int, struct cktbranch *);
+struct cktbranch *circuit_add_branch(struct circuit *, u_int, struct pin *);
+void		  circuit_del_branch(struct circuit *, u_int,
+		                     struct cktbranch *);
 
-__inline__ struct cktbranch *circuit_get_branch(struct circuit *, int,
+__inline__ struct cktbranch *circuit_get_branch(struct circuit *, u_int,
 						struct pin *);
 
 __inline__ int	 cktnode_grounded(struct circuit *, u_int);

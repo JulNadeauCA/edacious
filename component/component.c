@@ -1,4 +1,4 @@
-/*	$Csoft: component.c,v 1.4 2005/09/10 05:48:21 vedge Exp $	*/
+/*	$Csoft: component.c,v 1.5 2005/09/13 03:51:42 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -160,7 +160,7 @@ detached(int argc, union evarg *argv)
 {
 	struct component *com = argv[0].p;
 	struct circuit *ckt = argv[argc].p;
-	int i;
+	u_int i, j;
 
 	if (!OBJECT_SUBCLASS(ckt, "circuit"))
 		return;
@@ -176,15 +176,38 @@ detached(int argc, union evarg *argv)
 			}
 		}
 	}
+
+	for (i = 0; i <= ckt->n; i++) {
+		struct cktnode *node = ckt->nodes[i];
+		struct cktbranch *br, *nbr;
+
+		for (br = TAILQ_FIRST(&node->branches);
+		     br != TAILQ_END(&node->branches);
+		     br = nbr) {
+			nbr = TAILQ_NEXT(br, branches);
+			if (br->pin != NULL && br->pin->com == com) {
+				circuit_del_branch(ckt, i, br);
+			}
+		}
+	}
+
+del_nodes:
+	/* XXX widely inefficient */
+	for (i = 1; i <= ckt->n; i++) {
+		struct cktnode *node = ckt->nodes[i];
+		struct cktbranch *br;
+
+		if (node->nbranches == 0) {
+			circuit_del_node(ckt, i);
+			goto del_nodes;
+		}
+	}
 	
 	for (i = 1; i <= com->npins; i++) {
 		struct pin *pin = &com->pin[i];
 
-		if (pin->branch != NULL) {
-			circuit_del_branch(com->ckt, pin->node, pin->branch);
-			pin->branch = NULL;
-			pin->node = -1;
-		}
+		pin->branch = NULL;
+		pin->node = -1;
 		pin->selected = 0;
 	}
 
@@ -275,7 +298,11 @@ redraw(void *p, Uint32 ival, void *arg)
 			vg_style(vg, "node-name");
 			vg_color3(vg, 0, 200, 100);
 			vg_text_align(vg, VG_ALIGN_BR);
-			vg_printf(vg, "n%d", pin->node+1);
+			if (pin->node == 0) {
+				vg_printf(vg, "gnd");
+			} else {
+				vg_printf(vg, "n%d", pin->node);
+			}
 			vg_end_element(vg);
 		}
 	}
@@ -416,7 +443,7 @@ component_save(void *p, struct netbuf *buf)
 	return (0);
 }
 
-/* Return the effective DC resistance between two dipoles. */
+/* Return the effective DC resistance of a dipole. */
 double
 dipole_resistance(struct dipole *dip)
 {
@@ -434,7 +461,7 @@ dipole_resistance(struct dipole *dip)
 	}
 }
 
-/* Return the effective capacitance between two dipoles. */
+/* Return the effective capacitance of a dipole. */
 double
 dipole_capacitance(struct dipole *dip)
 {
@@ -452,7 +479,7 @@ dipole_capacitance(struct dipole *dip)
 	}
 }
 
-/* Return the effective inductance between two dipoles. */
+/* Return the effective inductance of a dipole. */
 double
 dipole_inductance(struct dipole *dip)
 {
@@ -470,6 +497,10 @@ dipole_inductance(struct dipole *dip)
 	}
 }
 
+/*
+ * Check whether a given dipole is part of a given loop, and return
+ * its polarity with respect to the loop direction.
+ */
 int
 dipole_in_loop(struct dipole *dip, struct cktloop *loop, int *sign)
 {
@@ -504,7 +535,7 @@ component_edit(void *p)
 	return (win);
 }
 
-/* Insert a new component into a circuit. */
+/* Insert a new, floating component into a circuit. */
 void
 component_insert(int argc, union evarg *argv)
 {
@@ -675,7 +706,7 @@ pin_grounded(struct pin *pin)
 	return (cktnode_grounded(ckt, pin->node));
 }
 
-/* Connect a floating component's pins to overlapping nodes. */
+/* Connect a floating component to the circuit. */
 void
 component_connect(struct circuit *ckt, struct component *com,
     struct vg_vertex *vtx)
@@ -687,20 +718,22 @@ component_connect(struct circuit *ckt, struct component *com,
 	for (i = 1; i <= com->npins; i++) {
 		struct pin *pin = &com->pin[i];
 
-		opin = pin_overlap(ckt, com,
-		    vtx->x + pin->x,
-		    vtx->y + pin->y);
-		if (opin != NULL) {
-			if (pin->node >= 0) {
-				circuit_del_node(ckt, pin->node);
+		opin = pin_overlap(ckt, com, vtx->x+pin->x, vtx->y+pin->y);
+		if (com->ops->connect == NULL ||
+		    com->ops->connect(com, pin, opin) == -1) {
+			if (opin != NULL) {
+#ifdef DEBUG
+				if (pin->node > 0)
+					fatal("spurious node");
+#endif
+				pin->node = opin->node;
+				pin->branch = circuit_add_branch(ckt,
+				    opin->node, pin);
+			} else {
+				pin->node = circuit_add_node(ckt, 0);
+				pin->branch = circuit_add_branch(ckt, pin->node,
+				    pin);
 			}
-			pin->node = opin->node;
-			pin->branch = circuit_add_branch(ckt, opin->node,
-			    &com->pin[i]);
-		} else {
-			pin->node = circuit_add_node(ckt, 0);
-			pin->branch = circuit_add_branch(ckt, pin->node,
-			    &com->pin[i]);
 		}
 		pin->selected = 0;
 	}
@@ -756,16 +789,6 @@ rotate_component(struct circuit *ckt, struct component *com)
 	}
 }
 
-/* Enter component initialization parameters. */
-static int
-configure_component(struct component *com)
-{
-	if (com->ops->configure == NULL) {
-		return (0);
-	}
-	return (com->ops->configure(com));
-}
-
 static int
 ins_tool_buttondown(void *p, int xmap, int ymap, int b)
 {
@@ -780,14 +803,10 @@ ins_tool_buttondown(void *p, int xmap, int ymap, int b)
 		if (sel_com != NULL) {
 			vg_map2vec(vg, xmap, ymap, &vtx.x, &vtx.y);
 			component_connect(ckt, sel_com, &vtx);
-			if (configure_component(sel_com) == 0) {
-				unselect_all_components(ckt);
-				select_component(sel_com);
-				sel_com = NULL;
-				mapview_select_tool(t->mv, NULL, NULL);
-			} else {
-				goto remove;
-			}
+			unselect_all_components(ckt);
+			select_component(sel_com);
+			sel_com = NULL;
+			mapview_select_tool(t->mv, NULL, NULL);
 		} else {
 			dprintf("no component to connect\n");
 		}

@@ -1,4 +1,4 @@
-/*	$Csoft: kvl.c,v 1.5 2005/09/10 05:48:20 vedge Exp $	*/
+/*	$Csoft: kvl.c,v 1.6 2005/09/11 02:33:24 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -225,7 +225,7 @@ solve_Ivec(struct kvl *kvl, struct circuit *ckt)
 
 	R = mat_new(ckt->l, ckt->l);
 	mat_copy(kvl->Rmat, R);
-	if (mat_lu_decompose(R, ivec, &d) == -1) {
+	if (mat_lu_decompose(R, R, ivec, &d) == NULL) {
 		goto fail;
 	}
 	mat_lu_backsubst(R, ivec, v);
