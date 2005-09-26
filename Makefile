@@ -1,18 +1,16 @@
-#	$Csoft: Makefile,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $
+#	$Csoft: Makefile,v 1.2 2005/09/08 09:48:56 vedge Exp $
 
 TOP=	.
 include ${TOP}/Makefile.config
 
-SUBDIR=	tools \
-	component \
+SUBDIR=	component \
 	circuit
 
 PROG=	aeda
-SRCS=	aeda.c tools.c
+SRCS=	aeda.c
 
 CFLAGS+=${AGAR_CFLAGS}
-LIBS+=	tools/libtools.a \
-	component/libcomponent.a \
+LIBS+=	component/libcomponent.a \
 	circuit/libcircuit.a \
 	${AGAR_LIBS}
 

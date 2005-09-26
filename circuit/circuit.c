@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.c,v 1.7 2005/09/13 03:51:41 vedge Exp $	*/
+/*	$Csoft: circuit.c,v 1.8 2005/09/15 02:04:48 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications Inc
@@ -1124,7 +1124,7 @@ circuit_edit(void *p)
 		menu_separator(pitem);
 
 		menu_action_kb(pitem, _("Close document"), CLOSE_ICON,
-		    SDLK_w, KMOD_CTRL, window_generic_close, "%p", win);
+		    SDLK_w, KMOD_CTRL, WINCLOSE(win));
 	}
 	pitem = menu_add_item(menu, _("Edit"));
 	{

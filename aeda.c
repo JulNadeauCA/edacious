@@ -1,4 +1,4 @@
-/*	$Csoft: aeda.c,v 1.3 2005/09/09 02:50:13 vedge Exp $	*/
+/*	$Csoft: aeda.c,v 1.4 2005/09/10 05:48:18 vedge Exp $	*/
 
 /*
  * Copyright (c) 2003, 2004, 2005 CubeSoft Communications, Inc.
@@ -74,64 +74,6 @@ const struct eda_type eda_models[] = {
 	{ NULL }
 };
 
-#if 0
-extern const struct eda_tool *tools[];
-extern const int ntools;
-
-static void
-selected_tool(int argc, union evarg *argv)
-{
-	struct tlist_item *it = argv[1].p;
-
-	window_show(it->p1);
-}
-
-static void
-tools_window(void)
-{
-	struct window *win;
-	struct tlist *tl;
-	int i;
-
-	win = window_new(0, "tools");
-	window_set_caption(win, _("EDA Tools"));
-	window_set_position(win, WINDOW_UPPER_RIGHT, 0);
-
-	tl = tlist_new(win, 0);
-	for (i = 0; i < ntools; i++) {
-		tools[i]->init();
-		tlist_insert_item(tl, NULL,
-		    _(tools[i]->name), tools[i]->win);
-	}
-	event_new(tl, "tlist-dblclick", selected_tool, NULL);
-	window_show(win);
-}
-#endif
-
-struct fspinbutton *
-bind_double(struct window *win, const char *unit, double *p,
-    void (*func)(int argc, union evarg *argv), const char *text)
-{
-	struct fspinbutton *fsu;
-
-	fsu = fspinbutton_new(win, unit, text);
-	widget_bind(fsu, "value", WIDGET_DOUBLE, p);
-	if (func != NULL) {
-		event_new(fsu, "fspinbutton-changed", func, NULL);
-	}
-	return (fsu);
-}
-
-struct fspinbutton *
-bind_double_ro(struct window *win, const char *unit, double *p,
-    const char *text)
-{
-	struct fspinbutton *fsb;
-
-	fsb = bind_double(win, unit, p, NULL, text);
-	return (fsb);
-}
-
 int
 main(int argc, char *argv[])
 {
@@ -196,9 +138,6 @@ main(int argc, char *argv[])
 
 	mapedit_init();
 	object_load(world);
-#if 0
-	tools_window();
-#endif
 
 	event_loop();
 	engine_destroy();
