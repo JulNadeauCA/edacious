@@ -1,4 +1,4 @@
-/*	$Csoft: aeda.c,v 1.5 2005/09/26 05:32:44 vedge Exp $	*/
+/*	$Csoft: aeda.c,v 1.6 2005/09/27 03:34:07 vedge Exp $	*/
 
 /*
  * Copyright (c) 2003, 2004, 2005 CubeSoft Communications, Inc.
@@ -80,7 +80,7 @@ main(int argc, char *argv[])
 {
 	extern const AG_ObjectOps circuit_ops;
 	const struct eda_type *ty;
-	int c, i, fps = 60;
+	int c, i, fps = -1;
 	char *s;
 
 	if (AG_InitCore("aeda", 0) == -1) {
