@@ -1,4 +1,4 @@
-/*	$Csoft: kvl.c,v 1.6 2005/09/11 02:33:24 vedge Exp $	*/
+/*	$Csoft: kvl.c,v 1.7 2005/09/15 02:04:48 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -45,7 +45,7 @@ struct kvl {
 	struct sim sim;
 	Uint32 Telapsed;		/* Simulated time elapsed (ns) */
 	int speed;			/* Simulation speed (updates/sec) */
-	struct timeout update_to;	/* Timer for simulation updates */
+	AG_Timeout update_to;	/* Timer for simulation updates */
 	
 	mat_t *Rmat;			/* Resistance matrix */
 	vec_t *Vvec;			/* Independent voltages */
@@ -64,8 +64,8 @@ kvl_tick(void *obj, Uint32 ival, void *arg)
 	struct component *com;
 
 	/* Effect the independent voltage sources. */
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component.vsource") ||
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		if (!AGOBJECT_SUBCLASS(com, "component.vsource") ||
 		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
@@ -74,8 +74,8 @@ kvl_tick(void *obj, Uint32 ival, void *arg)
 	}
 
 	/* Update model states. */
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component") ||
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		if (!AGOBJECT_SUBCLASS(com, "component") ||
 		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
@@ -86,7 +86,7 @@ kvl_tick(void *obj, Uint32 ival, void *arg)
 	/* Solve the loop currents. */
 	compose_Rmat(kvl, ckt);
 	if (solve_Ivec(kvl, ckt) == -1)
-		fprintf(stderr, "%s: %s\n", OBJECT(ckt)->name, error_get());
+		fprintf(stderr, "%s: %s\n", AGOBJECT(ckt)->name, AG_GetError());
 
 	kvl->Telapsed++;
 	return (ival);
@@ -103,7 +103,7 @@ kvl_init(void *p)
 	kvl->Rmat = mat_new(0, 0);
 	kvl->Vvec = vec_new(0);
 	kvl->Ivec = vec_new(0);
-	timeout_set(&kvl->update_to, kvl_tick, kvl, TIMEOUT_LOADABLE);
+	AG_SetTimeout(&kvl->update_to, kvl_tick, kvl, AG_TIMEOUT_LOADABLE);
 }
 
 static void
@@ -111,12 +111,12 @@ kvl_start(struct kvl *kvl)
 {
 	struct circuit *ckt = SIM(kvl)->ckt;
 
-	lock_timeout(ckt);
-	if (timeout_scheduled(ckt, &kvl->update_to)) {
-		timeout_del(ckt, &kvl->update_to);
+	AG_LockTimeouts(ckt);
+	if (AG_TimeoutIsScheduled(ckt, &kvl->update_to)) {
+		AG_DelTimeout(ckt, &kvl->update_to);
 	}
-	timeout_add(ckt, &kvl->update_to, 1000/kvl->speed);
-	unlock_timeout(ckt);
+	AG_AddTimeout(ckt, &kvl->update_to, 1000/kvl->speed);
+	AG_UnlockTimeouts(ckt);
 
 	kvl->Telapsed = 0;
 }
@@ -126,11 +126,11 @@ kvl_stop(struct kvl *kvl)
 {
 	struct circuit *ckt = SIM(kvl)->ckt;
 
-	lock_timeout(ckt);
-	if (timeout_scheduled(ckt, &kvl->update_to)) {
-		timeout_del(ckt, &kvl->update_to);
+	AG_LockTimeouts(ckt);
+	if (AG_TimeoutIsScheduled(ckt, &kvl->update_to)) {
+		AG_DelTimeout(ckt, &kvl->update_to);
 	}
-	unlock_timeout(ckt);
+	AG_UnlockTimeouts(ckt);
 }
 
 static void
@@ -245,7 +245,7 @@ fail:
 static void
 cont_run(int argc, union evarg *argv)
 {
-	struct button *bu = argv[0].p;
+	AG_Button *bu = argv[0].p;
 	struct kvl *kvl = argv[1].p;
 	struct sim *sim = argv[1].p;
 	int state = argv[2].i;
@@ -254,50 +254,50 @@ cont_run(int argc, union evarg *argv)
 		kvl_cktmod(kvl, sim->ckt);
 		kvl_start(kvl);
 		sim->running = 1;
-		text_tmsg(MSG_INFO, 500, _("Simulation started."));
+		AG_TextTmsg(AG_MSG_INFO, 500, _("Simulation started."));
 	} else {
 		kvl_stop(kvl);
 		sim->running = 0;
-		text_tmsg(MSG_INFO, 500, _("Simulation stopped."));
+		AG_TextTmsg(AG_MSG_INFO, 500, _("Simulation stopped."));
 	}
 }
 
-static struct window *
+static AG_Window *
 kvl_edit(void *p, struct circuit *ckt)
 {
 	struct kvl *kvl = p;
-	struct window *win;
-	struct spinbutton *sbu;
-	struct fspinbutton *fsu;
-	struct tlist *tl;
-	struct notebook *nb;
-	struct notebook_tab *ntab;
-	struct button *bu;
+	AG_Window *win;
+	AG_Spinbutton *sbu;
+	AG_FSpinbutton *fsu;
+	AG_Tlist *tl;
+	AG_Notebook *nb;
+	AG_NotebookTab *ntab;
+	AG_Button *bu;
 
-	win = window_new(0, NULL);
+	win = AG_WindowNew(0, NULL);
 
-	nb = notebook_new(win, NOTEBOOK_WFILL|NOTEBOOK_HFILL);
-	ntab = notebook_add_tab(nb, _("Continuous mode"), BOX_VERT);
+	nb = AG_NotebookNew(win, AG_NOTEBOOK_WFILL|AG_NOTEBOOK_HFILL);
+	ntab = AG_NotebookAddTab(nb, _("Continuous mode"), AG_BOX_VERT);
 	{
-		bu = button_new(ntab, _("Run simulation"));
-		button_set_sticky(bu, 1);
-		WIDGET(bu)->flags |= WIDGET_WFILL;
-		event_new(bu, "button-pushed", cont_run, "%p", kvl);
+		bu = AG_ButtonNew(ntab, _("Run simulation"));
+		AG_ButtonSetSticky(bu, 1);
+		AGWIDGET(bu)->flags |= AG_WIDGET_WFILL;
+		AG_SetEvent(bu, "button-pushed", cont_run, "%p", kvl);
 	
-		separator_new(ntab, SEPARATOR_HORIZ);
+		AG_SeparatorNew(ntab, AG_SEPARATOR_HORIZ);
 
-		sbu = spinbutton_new(ntab, _("Updates/sec: "));
-		widget_bind(sbu, "value", WIDGET_UINT32, &kvl->speed);
-		spinbutton_set_range(sbu, 1, 1000);
+		sbu = AG_SpinbuttonNew(ntab, _("Updates/sec: "));
+		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT32, &kvl->speed);
+		AG_SpinbuttonSetRange(sbu, 1, 1000);
 		
-		label_new(ntab, LABEL_POLLED, _("Elapsed time: %[u32]ns"),
+		AG_LabelNew(ntab, AG_LABEL_POLLED, _("Elapsed time: %[u32]ns"),
 		    &kvl->Telapsed);
 	}
-	ntab = notebook_add_tab(nb, _("R-matrix"), BOX_VERT);
+	ntab = AG_NotebookAddTab(nb, _("R-matrix"), AG_BOX_VERT);
 	{
-		struct matview *mv;
+		AG_Matview *mv;
 
-		mv = matview_new(ntab, kvl->Rmat, 0);
+		mv = AG_MatviewNew(ntab, kvl->Rmat, 0);
 	}
 	return (win);
 }

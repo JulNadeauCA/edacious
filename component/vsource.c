@@ -1,4 +1,4 @@
-/*	$Csoft: vsource.c,v 1.3 2005/09/10 05:48:21 vedge Exp $	*/
+/*	$Csoft: vsource.c,v 1.4 2005/09/15 02:04:49 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -31,6 +31,7 @@
 
 #ifdef EDITION
 #include <engine/widget/window.h>
+#include <engine/widget/spinbutton.h>
 #include <engine/widget/fspinbutton.h>
 #include <engine/widget/label.h>
 #include <engine/widget/tlist.h>
@@ -38,7 +39,7 @@
 
 #include "vsource.h"
 
-const struct version vsource_ver = {
+const AG_Version vsource_ver = {
 	"agar-eda voltage source",
 	0, 0
 };
@@ -78,67 +79,67 @@ enum {
 } vsource_sym = 1;
 
 void
-vsource_draw(void *p, struct vg *vg)
+vsource_draw(void *p, VG *vg)
 {
 	struct vsource *vs = p;
 	
 	switch (vsource_sym) {
 	case VSOURCE_SYM_LINEAR:
-		vg_begin_element(vg, VG_LINES);
-		vg_vertex2(vg, 0.0000, 0.0000);
-		vg_vertex2(vg, 0.0000, 0.3125);
-		vg_vertex2(vg, 0.0000, 0.6875);
-		vg_vertex2(vg, 0.0000, 1.0000);
-		vg_vertex2(vg, -0.0937, 0.3125);
-		vg_vertex2(vg, +0.0937, 0.3125);
-		vg_vertex2(vg, -0.1875, 0.4375);
-		vg_vertex2(vg, +0.1875, 0.4375);
-		vg_vertex2(vg, -0.0937, 0.5625);
-		vg_vertex2(vg, +0.0937, 0.5625);
-		vg_vertex2(vg, -0.1875, 0.6875);
-		vg_vertex2(vg, +0.1875, 0.6875);
-		vg_end_element(vg);
+		VG_Begin(vg, VG_LINES);
+		VG_Vertex2(vg, 0.0000, 0.0000);
+		VG_Vertex2(vg, 0.0000, 0.3125);
+		VG_Vertex2(vg, 0.0000, 0.6875);
+		VG_Vertex2(vg, 0.0000, 1.0000);
+		VG_Vertex2(vg, -0.0937, 0.3125);
+		VG_Vertex2(vg, +0.0937, 0.3125);
+		VG_Vertex2(vg, -0.1875, 0.4375);
+		VG_Vertex2(vg, +0.1875, 0.4375);
+		VG_Vertex2(vg, -0.0937, 0.5625);
+		VG_Vertex2(vg, +0.0937, 0.5625);
+		VG_Vertex2(vg, -0.1875, 0.6875);
+		VG_Vertex2(vg, +0.1875, 0.6875);
+		VG_End(vg);
 
-		vg_begin_element(vg, VG_TEXT);
-		vg_style(vg, "component-name");
-		vg_vertex2(vg, -0.0468, 0.0625);
-		vg_text_align(vg, VG_ALIGN_TR);
-		vg_printf(vg, "%s\n%.2fV\n", OBJECT(vs)->name, vs->voltage);
-		vg_end_element(vg);
+		VG_Begin(vg, VG_TEXT);
+		VG_SetStyle(vg, "component-name");
+		VG_Vertex2(vg, -0.0468, 0.0625);
+		VG_TextAlignment(vg, VG_ALIGN_TR);
+		VG_Printf(vg, "%s\n%.2fV\n", AGOBJECT(vs)->name, vs->voltage);
+		VG_End(vg);
 		break;
 	case VSOURCE_SYM_CIRCULAR:
-		vg_begin_element(vg, VG_LINES);
-		vg_vertex2(vg, 0.000, 0.000);
-		vg_vertex2(vg, 0.000, 0.400);
-		vg_vertex2(vg, 0.000, 1.600);
-		vg_vertex2(vg, 0.000, 2.000);
-		vg_end_element(vg);
+		VG_Begin(vg, VG_LINES);
+		VG_Vertex2(vg, 0.000, 0.000);
+		VG_Vertex2(vg, 0.000, 0.400);
+		VG_Vertex2(vg, 0.000, 1.600);
+		VG_Vertex2(vg, 0.000, 2.000);
+		VG_End(vg);
 
-		vg_begin_element(vg, VG_CIRCLE);
-		vg_vertex2(vg, 0.0, 1.0);
-		vg_circle_radius(vg, 0.6);
-		vg_end_element(vg);
+		VG_Begin(vg, VG_CIRCLE);
+		VG_Vertex2(vg, 0.0, 1.0);
+		VG_CircleRadius(vg, 0.6);
+		VG_End(vg);
 
-		vg_begin_element(vg, VG_TEXT);
-		vg_style(vg, "component-name");
-		vg_vertex2(vg, 0.0, 1.0);
-		vg_text_align(vg, VG_ALIGN_MC);
-		vg_printf(vg, "%s", OBJECT(vs)->name);
-		vg_end_element(vg);
+		VG_Begin(vg, VG_TEXT);
+		VG_SetStyle(vg, "component-name");
+		VG_Vertex2(vg, 0.0, 1.0);
+		VG_TextAlignment(vg, VG_ALIGN_MC);
+		VG_Printf(vg, "%s", AGOBJECT(vs)->name);
+		VG_End(vg);
 		
-		vg_begin_element(vg, VG_TEXT);
-		vg_style(vg, "component-name");
-		vg_vertex2(vg, 0.0, 0.6);
-		vg_text_align(vg, VG_ALIGN_MC);
-		vg_printf(vg, "+");
-		vg_end_element(vg);
+		VG_Begin(vg, VG_TEXT);
+		VG_SetStyle(vg, "component-name");
+		VG_Vertex2(vg, 0.0, 0.6);
+		VG_TextAlignment(vg, VG_ALIGN_MC);
+		VG_Printf(vg, "+");
+		VG_End(vg);
 		
-		vg_begin_element(vg, VG_TEXT);
-		vg_style(vg, "component-name");
-		vg_vertex2(vg, 0.0, 1.4);
-		vg_text_align(vg, VG_ALIGN_MC);
-		vg_printf(vg, "-");
-		vg_end_element(vg);
+		VG_Begin(vg, VG_TEXT);
+		VG_SetStyle(vg, "component-name");
+		VG_Vertex2(vg, 0.0, 1.4);
+		VG_TextAlignment(vg, VG_ALIGN_MC);
+		VG_Printf(vg, "-");
+		VG_End(vg);
 		break;
 	}
 }
@@ -360,28 +361,28 @@ vsource_free_loops(struct vsource *vs)
 }
 
 int
-vsource_load(void *p, struct netbuf *buf)
+vsource_load(void *p, AG_Netbuf *buf)
 {
 	struct vsource *vs = p;
 
-	if (version_read(buf, &vsource_ver, NULL) == -1 ||
+	if (AG_ReadVersion(buf, &vsource_ver, NULL) == -1 ||
 	    component_load(vs, buf) == -1)
 		return (-1);
 
-	vs->voltage = read_double(buf);
+	vs->voltage = AG_ReadDouble(buf);
 	return (0);
 }
 
 int
-vsource_save(void *p, struct netbuf *buf)
+vsource_save(void *p, AG_Netbuf *buf)
 {
 	struct vsource *vs = p;
 
-	version_write(buf, &vsource_ver);
+	AG_WriteVersion(buf, &vsource_ver);
 	if (component_save(vs, buf) == -1)
 		return (-1);
 
-	write_double(buf, vs->voltage);
+	AG_WriteDouble(buf, vs->voltage);
 	return (0);
 }
 
@@ -396,7 +397,7 @@ vsource_export(void *p, enum circuit_format fmt, FILE *f)
 
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
-		fprintf(f, "%s %d %d %g\n", OBJECT(vs)->name,
+		fprintf(f, "%s %d %d %g\n", AGOBJECT(vs)->name,
 		    PNODE(vs,1), PNODE(vs,2), vs->voltage);
 		break;
 	}
@@ -415,26 +416,26 @@ vsource_emf(void *p, int pin1, int pin2)
 static void
 poll_loops(int argc, union evarg *argv)
 {
-	char text[TLIST_LABEL_MAX];
-	struct tlist *tl = argv[0].p;
+	char text[AG_TLIST_LABEL_MAX];
+	AG_Tlist *tl = argv[0].p;
 	struct vsource *vs = argv[1].p;
-	struct tlist_item *it;
+	AG_TlistItem *it;
 	struct cktloop *l;
 	unsigned int i, j;
 
-	tlist_clear_items(tl);
+	AG_TlistClear(tl);
 	TAILQ_FOREACH(l, &vs->loops, loops) {
 		snprintf(text, sizeof(text), "L%u", l->name);
-		it = tlist_insert_item(tl, ICON(EDA_MESH_ICON), text, l);
+		it = AG_TlistAddPtr(tl, AGICON(EDA_MESH_ICON), text, l);
 		it->depth = 0;
 
 		for (i = 0; i < l->ndipoles; i++) {
 			struct dipole *dip = l->dipoles[i];
 
 			snprintf(text, sizeof(text), "%s:(%s,%s)",
-			    OBJECT(dip->com)->name, dip->p1->name,
+			    AGOBJECT(dip->com)->name, dip->p1->name,
 			    dip->p2->name);
-			it = tlist_insert_item(tl, ICON(EDA_NODE_ICON), text,
+			it = AG_TlistAddPtr(tl, AGICON(EDA_NODE_ICON), text,
 			    dip);
 			it->depth = 1;
 #if 0
@@ -443,35 +444,35 @@ poll_loops(int argc, union evarg *argv)
 				int dpol = dip->lpols[j];
 
 				snprintf(text, sizeof(text), "%s:L%d (%s)",
-				    OBJECT(dloop->origin)->name, dloop->name,
+				    AGOBJECT(dloop->origin)->name, dloop->name,
 				    dpol == 1 ? "+" : "-");
-				it = tlist_insert_item(tl, NULL, text,
+				it = AG_TlistAddPtr(tl, NULL, text,
 				    &dip->loops[j]);
 				it->depth = 2;
 			}
 #endif
 		}
 	}
-	tlist_restore_selections(tl);
+	AG_TlistRestore(tl);
 }
 
-struct window *
+AG_Window *
 vsource_edit(void *p)
 {
 	struct vsource *vs = p;
-	struct window *win, *subwin;
-	struct spinbutton *sb;
-	struct fspinbutton *fsb;
-	struct tlist *tl;
+	AG_Window *win, *subwin;
+	AG_Spinbutton *sb;
+	AG_FSpinbutton *fsb;
+	AG_Tlist *tl;
 
-	win = window_new(0, NULL);
+	win = AG_WindowNew(0, NULL);
 
-	fsb = fspinbutton_new(win, "V", _("Voltage: "));
-	widget_bind(fsb, "value", WIDGET_DOUBLE, &vs->voltage);
+	fsb = AG_FSpinbuttonNew(win, "V", _("Voltage: "));
+	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &vs->voltage);
 	
-	label_new(win, LABEL_STATIC, _("Loops:"));
-	tl = tlist_new(win, TLIST_POLL|TLIST_TREE);
-	event_new(tl, "tlist-poll", poll_loops, "%p", vs);
+	AG_LabelNew(win, AG_LABEL_STATIC, _("Loops:"));
+	tl = AG_TlistNew(win, AG_TLIST_POLL|AG_TLIST_TREE);
+	AG_SetEvent(tl, "tlist-poll", poll_loops, "%p", vs);
 	
 	return (win);
 }

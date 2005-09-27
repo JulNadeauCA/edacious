@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.h,v 1.4 2005/09/13 03:51:41 vedge Exp $	*/
+/*	$Csoft: circuit.h,v 1.5 2005/09/15 02:04:48 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _CIRCUIT_CIRCUIT_H_
@@ -45,9 +45,9 @@ struct cktloop {
 struct vsource;
 
 struct circuit {
-	struct object obj;
+	AG_Object obj;
 	char descr[CIRCUIT_DESCR_MAX];	/* Short description */
-	struct vg *vg;			/* Schematics drawing */
+	VG *vg;			/* Schematics drawing */
 	struct sim *sim;		/* Current simulation mode */
 
 	pthread_mutex_t lock;
@@ -66,11 +66,11 @@ struct circuit {
 __BEGIN_DECLS
 void		circuit_init(void *, const char *);
 void		circuit_reinit(void *);
-int		circuit_load(void *, struct netbuf *);
-int		circuit_save(void *, struct netbuf *);
+int		circuit_load(void *, AG_Netbuf *);
+int		circuit_save(void *, AG_Netbuf *);
 void		circuit_destroy(void *);
 void		circuit_free_components(struct circuit *);
-struct window  *circuit_edit(void *);
+void	       *circuit_edit(void *);
 
 int	circuit_add_node(struct circuit *, u_int);
 void	circuit_del_node(struct circuit *, u_int);

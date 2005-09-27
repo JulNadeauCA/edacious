@@ -1,4 +1,4 @@
-/*	$Csoft: sim.c,v 1.2 2005/09/09 02:50:14 vedge Exp $	*/
+/*	$Csoft: sim.c,v 1.3 2005/09/10 05:48:20 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications Inc
@@ -62,7 +62,7 @@ sim_destroy(void *p)
 	struct sim *sim = p;
 
 	if (sim->win != NULL) {
-		view_detach(sim->win);
+		AG_ViewDetach(sim->win);
 	}
 	if (sim->ops->destroy != NULL) {
 		sim->ops->destroy(sim);
@@ -74,19 +74,19 @@ void
 sim_edit(int argc, union evarg *argv)
 {
 	struct circuit *ckt = argv[1].p;
-	struct window *pwin = argv[2].p;
+	AG_Window *pwin = argv[2].p;
 	struct sim *sim = ckt->sim;
-	struct window *win;
+	AG_Window *win;
 
 	if (sim == NULL) {
-		error_set(_("No sim mode selected."));
+		AG_SetError(_("No sim mode selected."));
 		return;
 	}
 	if (sim->ops->edit != NULL &&
 	    (win = sim->ops->edit(sim, ckt)) != NULL) {
 		sim->win = win;
-		window_attach(pwin, win);
-		window_show(win);
+		AG_WindowAttach(pwin, win);
+		AG_WindowShow(win);
 	}
 }
 

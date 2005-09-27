@@ -1,4 +1,4 @@
-/*	$Csoft: conductor.c,v 1.4 2005/09/13 03:51:42 vedge Exp $	*/
+/*	$Csoft: conductor.c,v 1.5 2005/09/15 02:04:49 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -40,7 +40,7 @@
 
 #include "conductor.h"
 
-const struct version conductor_ver = {
+const AG_Version conductor_ver = {
 	"agar-eda conductor",
 	0, 0
 };
@@ -75,14 +75,14 @@ const struct pin conductor_pinout[] = {
 };
 
 void
-conductor_draw(void *p, struct vg *vg)
+conductor_draw(void *p, VG *vg)
 {
 	struct conductor *cd = p;
 
-	vg_begin_element(vg, VG_LINE_STRIP);
-	vg_vertex2(vg, COM(cd)->pin[1].x, COM(cd)->pin[1].y);
-	vg_vertex2(vg, COM(cd)->pin[2].x, COM(cd)->pin[2].y);
-	vg_end_element(vg);
+	VG_Begin(vg, VG_LINE_STRIP);
+	VG_Vertex2(vg, COM(cd)->pin[1].x, COM(cd)->pin[1].y);
+	VG_Vertex2(vg, COM(cd)->pin[2].x, COM(cd)->pin[2].y);
+	VG_End(vg);
 }
 
 void
@@ -110,7 +110,7 @@ conductor_export(void *p, enum circuit_format fmt, FILE *f)
 
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
-		fprintf(f, "V%s %d %d 0\n", OBJECT(c)->name,
+		fprintf(f, "V%s %d %d 0\n", AGOBJECT(c)->name,
 		    PNODE(c,1), PNODE(c,2));
 		break;
 	}
@@ -139,22 +139,22 @@ conductor_tool_reinit(void)
 static int
 conductor_tool_mousebuttondown(void *p, int xmap, int ymap, int b)
 {
-	struct tool *t = p;
-	char name[OBJECT_NAME_MAX];
+	AG_Maptool *t = p;
+	char name[AG_OBJECT_NAME_MAX];
 	struct circuit *ckt = t->p;
-	struct vg *vg = ckt->vg;
+	VG *vg = ckt->vg;
 	struct component *com;
 	double x, y;
 	int n = 0;
 
 	switch (b) {
 	case SDL_BUTTON_LEFT:
-		vg_map2vec(vg, xmap, ymap, &x, &y);
+		VG_Map2Vec(vg, xmap, ymap, &x, &y);
 		if (sel_cd == NULL) {
 tryname:
 			snprintf(name, sizeof(name), "Cd%d", n++);
-			OBJECT_FOREACH_CHILD(com, ckt, component) {
-				if (strcmp(OBJECT(com)->name, name) == 0)
+			AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+				if (strcmp(AGOBJECT(com)->name, name) == 0)
 					break;
 			}
 			if (com != NULL) {
@@ -162,11 +162,11 @@ tryname:
 			}
 			com = Malloc(sizeof(struct conductor), M_OBJECT);
 			conductor_init(com, name);
-			object_attach(ckt, com);
-			object_page_in(com, OBJECT_DATA);
-			event_post(ckt, com, "circuit-shown", NULL);
+			AG_ObjectAttach(ckt, com);
+			AG_ObjectPageIn(com, AG_OBJECT_DATA);
+			AG_PostEvent(ckt, com, "circuit-shown", NULL);
 
-			vg_move_block(vg, com->block, x, y, -1);
+			VG_MoveBlock(vg, com->block, x, y, -1);
 			com->pin[1].x = 0;
 			com->pin[1].y = 0;
 			sel_cd = (struct conductor *)com;
@@ -180,8 +180,8 @@ tryname:
 		break;
 	case SDL_BUTTON_MIDDLE:
 		if (sel_cd != NULL) {
-			object_detach(sel_cd);
-			object_destroy(sel_cd);
+			AG_ObjectDetach(sel_cd);
+			AG_ObjectDestroy(sel_cd);
 			Free(sel_cd, M_OBJECT);
 			sel_cd = NULL;
 		}
@@ -196,12 +196,12 @@ static int
 conductor_tool_mousemotion(void *p, int xmap, int ymap, int xrel, int yrel,
     int b)
 {
-	struct tool *t = p;
+	AG_Maptool *t = p;
 	struct circuit *ckt = t->p;
-	struct vg *vg = ckt->vg;
-	struct vg_vertex vtx;
+	VG *vg = ckt->vg;
+	VG_Vtx vtx;
 
-	if (vg_map2vec(vg, xmap, ymap, &vtx.x, &vtx.y) == -1) {
+	if (VG_Map2Vec(vg, xmap, ymap, &vtx.x, &vtx.y) == -1) {
 		return (0);
 	}
 	vg->origin[1].x = vtx.x;
@@ -221,11 +221,11 @@ conductor_tool_mousemotion(void *p, int xmap, int ymap, int xrel, int yrel,
 	return (0);
 }
 
-struct tool_ops conductor_tool = {
+AG_MaptoolOps conductor_tool = {
 	N_("Conductor"),
 	N_("Insert an ideal conductor between two nodes."),
 	EDA_BRANCH_TO_NODE_ICON,
-	sizeof(struct tool),
+	sizeof(AG_Maptool),
 	0,
 	conductor_tool_init,
 	NULL,				/* destroy */

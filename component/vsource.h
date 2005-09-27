@@ -1,4 +1,4 @@
-/*	$Csoft: vsource.h,v 1.2 2005/09/13 03:51:42 vedge Exp $	*/
+/*	$Csoft: vsource.h,v 1.3 2005/09/15 02:04:49 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_VSOURCE_H_
@@ -25,12 +25,12 @@ void		 vsource_reinit(void *);
 void		 vsource_destroy(void *);
 void		 vsource_find_loops(struct vsource *);
 void		 vsource_free_loops(struct vsource *);
-int		 vsource_load(void *, struct netbuf *);
-int		 vsource_save(void *, struct netbuf *);
+int		 vsource_load(void *, AG_Netbuf *);
+int		 vsource_save(void *, AG_Netbuf *);
 int		 vsource_export(void *, enum circuit_format, FILE *);
 double		 vsource_emf(void *, int, int);
-struct window	*vsource_edit(void *);
-void		 vsource_draw(void *, struct vg *);
+AG_Window	*vsource_edit(void *);
+void		 vsource_draw(void *, VG *);
 void		 vsource_tick(void *);
 __END_DECLS
 

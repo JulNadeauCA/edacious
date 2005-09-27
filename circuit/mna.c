@@ -1,4 +1,4 @@
-/*	$Csoft: mna.c,v 1.3 2005/09/13 03:51:41 vedge Exp $	*/
+/*	$Csoft: mna.c,v 1.4 2005/09/15 02:04:48 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -45,7 +45,7 @@ struct mna {
 	struct sim sim;
 	Uint32 Telapsed;		/* Simulated time elapsed (ns) */
 	int speed;			/* Simulation speed (updates/sec) */
-	struct timeout update_to;	/* Timer for simulation updates */
+	AG_Timeout update_to;	/* Timer for simulation updates */
 	
 	mat_t *A;			/* Block matrix of [G,B;C,D] */
 	mat_t *A_LU;			/* LU-decomposed form of A */
@@ -169,7 +169,7 @@ mna_solve(struct mna *mna, struct circuit *ckt)
 	mat_compose22(mna->A, mna->G, mna->B, mna->C, mna->D);
 	iv = veci_new(mna->z->m);
 	if ((mat_lu_decompose(mna->A, mna->A_LU, iv, &d)) == NULL) {
-		error_set("A(lu): %s", error_get());
+		AG_SetError("A(lu): %s", AG_GetError());
 		goto fail;
 	}
 	vec_copy(mna->z, mna->x);
@@ -191,8 +191,8 @@ mna_tick(void *obj, Uint32 ival, void *arg)
 	struct component *com;
 
 	/* Effect the independent voltage sources. XXX */
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component.vsource") ||
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		if (!AGOBJECT_SUBCLASS(com, "component.vsource") ||
 		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
@@ -200,8 +200,8 @@ mna_tick(void *obj, Uint32 ival, void *arg)
 			com->ops->tick(com);
 	}
 	/* Update model states. XXX */
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component") ||
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		if (!AGOBJECT_SUBCLASS(com, "component") ||
 		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
@@ -210,7 +210,7 @@ mna_tick(void *obj, Uint32 ival, void *arg)
 	}
 
 	if (mna_solve(mna, ckt) == -1) {
-		text_msg(MSG_ERROR, "%s", error_get());
+		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
 		return (0);
 	}
 	mna->Telapsed++;
@@ -225,7 +225,7 @@ mna_init(void *p)
 	sim_init(mna, &mna_ops);
 	mna->Telapsed = 0;
 	mna->speed = 4;
-	timeout_set(&mna->update_to, mna_tick, mna, TIMEOUT_LOADABLE);
+	AG_SetTimeout(&mna->update_to, mna_tick, mna, AG_TIMEOUT_LOADABLE);
 
 	mna->A = mat_new(0, 0);
 	mna->A_LU = mat_new(0, 0);
@@ -248,12 +248,12 @@ mna_start(struct mna *mna)
 {
 	struct circuit *ckt = SIM(mna)->ckt;
 
-	lock_timeout(ckt);
-	if (timeout_scheduled(ckt, &mna->update_to)) {
-		timeout_del(ckt, &mna->update_to);
+	AG_LockTimeouts(ckt);
+	if (AG_TimeoutIsScheduled(ckt, &mna->update_to)) {
+		AG_DelTimeout(ckt, &mna->update_to);
 	}
-	timeout_add(ckt, &mna->update_to, 1000/mna->speed);
-	unlock_timeout(ckt);
+	AG_AddTimeout(ckt, &mna->update_to, 1000/mna->speed);
+	AG_UnlockTimeouts(ckt);
 
 	mna->Telapsed = 0;
 }
@@ -263,11 +263,11 @@ mna_stop(struct mna *mna)
 {
 	struct circuit *ckt = SIM(mna)->ckt;
 
-	lock_timeout(ckt);
-	if (timeout_scheduled(ckt, &mna->update_to)) {
-		timeout_del(ckt, &mna->update_to);
+	AG_LockTimeouts(ckt);
+	if (AG_TimeoutIsScheduled(ckt, &mna->update_to)) {
+		AG_DelTimeout(ckt, &mna->update_to);
 	}
-	unlock_timeout(ckt);
+	AG_UnlockTimeouts(ckt);
 }
 
 static void
@@ -331,7 +331,7 @@ mna_cktmod(void *p, struct circuit *ckt)
 static void
 cont_run(int argc, union evarg *argv)
 {
-	struct button *bu = argv[0].p;
+	AG_Button *bu = argv[0].p;
 	struct mna *mna = argv[1].p;
 	struct sim *sim = argv[1].p;
 	int state = argv[2].i;
@@ -340,86 +340,86 @@ cont_run(int argc, union evarg *argv)
 		mna_cktmod(mna, sim->ckt);
 		mna_start(mna);
 		sim->running = 1;
-		text_tmsg(MSG_INFO, 500, _("Simulation started."));
+		AG_TextTmsg(AG_MSG_INFO, 500, _("Simulation started."));
 	} else {
 		mna_stop(mna);
 		sim->running = 0;
-		text_tmsg(MSG_INFO, 500, _("Simulation stopped."));
+		AG_TextTmsg(AG_MSG_INFO, 500, _("Simulation stopped."));
 	}
 }
 
-static struct window *
+static AG_Window *
 mna_edit(void *p, struct circuit *ckt)
 {
 	struct mna *mna = p;
-	struct window *win;
-	struct spinbutton *sbu;
-	struct fspinbutton *fsu;
-	struct tlist *tl;
-	struct notebook *nb;
-	struct notebook_tab *ntab;
-	struct button *bu;
-	struct matview *mv;
+	AG_Window *win;
+	AG_Spinbutton *sbu;
+	AG_FSpinbutton *fsu;
+	AG_Tlist *tl;
+	AG_Notebook *nb;
+	AG_NotebookTab *ntab;
+	AG_Button *bu;
+	AG_Matview *mv;
 
-	win = window_new(0, NULL);
+	win = AG_WindowNew(0, NULL);
 
-	nb = notebook_new(win, NOTEBOOK_WFILL|NOTEBOOK_HFILL);
-	ntab = notebook_add_tab(nb, _("Continuous mode"), BOX_VERT);
+	nb = AG_NotebookNew(win, AG_NOTEBOOK_WFILL|AG_NOTEBOOK_HFILL);
+	ntab = AG_NotebookAddTab(nb, _("Continuous mode"), AG_BOX_VERT);
 	{
-		bu = button_new(ntab, _("Run simulation"));
-		button_set_sticky(bu, 1);
-		WIDGET(bu)->flags |= WIDGET_WFILL;
-		event_new(bu, "button-pushed", cont_run, "%p", mna);
+		bu = AG_ButtonNew(ntab, _("Run simulation"));
+		AG_ButtonSetSticky(bu, 1);
+		AGWIDGET(bu)->flags |= AG_WIDGET_WFILL;
+		AG_SetEvent(bu, "button-pushed", cont_run, "%p", mna);
 	
-		separator_new(ntab, SEPARATOR_HORIZ);
+		AG_SeparatorNew(ntab, AG_SEPARATOR_HORIZ);
 
-		sbu = spinbutton_new(ntab, _("Speed (updates/sec): "));
-		widget_bind(sbu, "value", WIDGET_UINT32, &mna->speed);
-		spinbutton_set_range(sbu, 1, 1000);
+		sbu = AG_SpinbuttonNew(ntab, _("Speed (updates/sec): "));
+		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT32, &mna->speed);
+		AG_SpinbuttonSetRange(sbu, 1, 1000);
 		
-		label_new(ntab, LABEL_POLLED, _("Elapsed time: %[u32]ns"),
+		AG_LabelNew(ntab, AG_LABEL_POLLED, _("Elapsed time: %[u32]ns"),
 		    &mna->Telapsed);
 	}
 	
-	ntab = notebook_add_tab(nb, "[A]", BOX_VERT);
-	mv = matview_new(ntab, mna->A, 0);
-	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%.03f");
+	ntab = AG_NotebookAddTab(nb, "[A]", AG_BOX_VERT);
+	mv = AG_MatviewNew(ntab, mna->A, 0);
+	AG_MatviewPrescale(mv, "-0.000", 10, 5);
+	AG_MatviewSetNumericalFmt(mv, "%.03f");
 	
-	ntab = notebook_add_tab(nb, "[A]-LU", BOX_VERT);
-	mv = matview_new(ntab, mna->A_LU, 0);
-	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%.03f");
+	ntab = AG_NotebookAddTab(nb, "[A]-LU", AG_BOX_VERT);
+	mv = AG_MatviewNew(ntab, mna->A_LU, 0);
+	AG_MatviewPrescale(mv, "-0.000", 10, 5);
+	AG_MatviewSetNumericalFmt(mv, "%.03f");
 
-	ntab = notebook_add_tab(nb, "[G]", BOX_VERT);
-	mv = matview_new(ntab, mna->G, 0);
-	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%.03f");
+	ntab = AG_NotebookAddTab(nb, "[G]", AG_BOX_VERT);
+	mv = AG_MatviewNew(ntab, mna->G, 0);
+	AG_MatviewPrescale(mv, "-0.000", 10, 5);
+	AG_MatviewSetNumericalFmt(mv, "%.03f");
 	
-	ntab = notebook_add_tab(nb, "[B]", BOX_VERT);
-	mv = matview_new(ntab, mna->B, 0);
-	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%.03f");
+	ntab = AG_NotebookAddTab(nb, "[B]", AG_BOX_VERT);
+	mv = AG_MatviewNew(ntab, mna->B, 0);
+	AG_MatviewPrescale(mv, "-0.000", 10, 5);
+	AG_MatviewSetNumericalFmt(mv, "%.03f");
 	
-	ntab = notebook_add_tab(nb, "[C]", BOX_VERT);
-	mv = matview_new(ntab, mna->C, 0);
-	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%.03f");
+	ntab = AG_NotebookAddTab(nb, "[C]", AG_BOX_VERT);
+	mv = AG_MatviewNew(ntab, mna->C, 0);
+	AG_MatviewPrescale(mv, "-0.000", 10, 5);
+	AG_MatviewSetNumericalFmt(mv, "%.03f");
 	
-	ntab = notebook_add_tab(nb, "[D]", BOX_VERT);
-	mv = matview_new(ntab, mna->D, 0);
-	matview_prescale(mv, "-0.000", 10, 5);
-	matview_set_numfmt(mv, "%.03f");
+	ntab = AG_NotebookAddTab(nb, "[D]", AG_BOX_VERT);
+	mv = AG_MatviewNew(ntab, mna->D, 0);
+	AG_MatviewPrescale(mv, "-0.000", 10, 5);
+	AG_MatviewSetNumericalFmt(mv, "%.03f");
 	
-	ntab = notebook_add_tab(nb, "[z]", BOX_VERT);
-	mv = matview_new(ntab, mna->z, 0);
-	matview_prescale(mv, "-0000.0000", 10, 5);
-	matview_set_numfmt(mv, "%.03f");
+	ntab = AG_NotebookAddTab(nb, "[z]", AG_BOX_VERT);
+	mv = AG_MatviewNew(ntab, mna->z, 0);
+	AG_MatviewPrescale(mv, "-0000.0000", 10, 5);
+	AG_MatviewSetNumericalFmt(mv, "%.03f");
 	
-	ntab = notebook_add_tab(nb, "[x]", BOX_VERT);
-	mv = matview_new(ntab, mna->x, 0);
-	matview_prescale(mv, "-0000.0000", 10, 5);
-	matview_set_numfmt(mv, "%.03f");
+	ntab = AG_NotebookAddTab(nb, "[x]", AG_BOX_VERT);
+	mv = AG_MatviewNew(ntab, mna->x, 0);
+	AG_MatviewPrescale(mv, "-0000.0000", 10, 5);
+	AG_MatviewSetNumericalFmt(mv, "%.03f");
 	
 	return (win);
 }

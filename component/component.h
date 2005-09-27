@@ -1,13 +1,13 @@
-/*	$Csoft: component.h,v 1.3 2005/09/13 03:51:42 vedge Exp $	*/
+/*	$Csoft: component.h,v 1.4 2005/09/15 02:04:49 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_COMPONENT_H_
 #define _COMPONENT_COMPONENT_H_
 
 #include <circuit/circuit.h>
-#ifdef EDITION
+
+#include <engine/widget/window.h>
 #include <engine/widget/menu.h>
-#endif
 
 #include "begin_code.h"
 
@@ -47,12 +47,12 @@ struct dipole {
 
 /* Generic component description and operation vector. */
 struct component_ops {
-	struct object_ops ops;			/* Generic object ops */
+	AG_ObjectOps ops;			/* Generic object ops */
 	const char *name;			/* Name (eg. "Resistor") */
 	const char *pfx;			/* Prefix (eg. "R") */
 
-	void		 (*draw)(void *, struct vg *);
-	struct window	*(*edit)(void *);
+	void		 (*draw)(void *, VG *);
+	struct ag_window *(*edit)(void *);
 	int		 (*connect)(void *, struct pin *, struct pin *);
 	int		 (*export_model)(void *, enum circuit_format, FILE *);
 	void		 (*tick)(void *);
@@ -63,10 +63,10 @@ struct component_ops {
 };
 
 struct component {
-	struct object obj;
+	AG_Object obj;
 	const struct component_ops *ops;
 	struct circuit *ckt;			/* Back pointer to circuit */
-	struct vg_block *block;			/* Schematic block */
+	VG_Block *block;			/* Schematic block */
 
 	u_int flags;
 #define COMPONENT_FLOATING	0x01		/* Not yet connected */
@@ -75,7 +75,7 @@ struct component {
 	int highlighted;			/* Selected for selection? */
 
 	pthread_mutex_t lock;
-	struct timeout redraw_to;		/* Timer for vg updates */
+	AG_Timeout redraw_to;		/* Timer for vg updates */
 	struct pin pin[COMPONENT_MAX_PINS];	/* Connection points */
 	int npins;
 	struct dipole *dipoles;			/* Ordered pin pairs */
@@ -92,24 +92,24 @@ struct component {
 #define PNODE(p,n) (COM(p)->pin[n].node)
 #define U(p,n) (PIN((p),(n))->u)
 
-struct mapview;
+struct ag_mapview;
 
 __BEGIN_DECLS
 void		component_init(void *, const char *, const char *, const void *,
 			       const struct pin *);
 void		component_destroy(void *);
-int		component_load(void *, struct netbuf *);
-int		component_save(void *, struct netbuf *);
-struct window  *component_edit(void *);
+int		component_load(void *, AG_Netbuf *);
+int		component_save(void *, AG_Netbuf *);
+void	       *component_edit(void *);
 void		component_insert(int, union evarg *);
 
 struct pin	*pin_overlap(struct circuit *, struct component *, double,
 		             double);
 __inline__ int	 pin_grounded(struct pin *);
 
-void		component_connect(struct circuit *, struct component *,
-		                  struct vg_vertex *);
 int		component_highlight_pins(struct circuit *, struct component *);
+void		component_connect(struct circuit *, struct component *,
+		                  VG_Vtx *);
 
 double		dipole_resistance(struct dipole *);
 double		dipole_capacitance(struct dipole *);
@@ -118,8 +118,8 @@ __inline__ int	dipole_in_loop(struct dipole *, struct cktloop *,
 		               int *);
 
 #ifdef EDITION
-void		component_reg_menu(struct AGMenu *, struct AGMenuItem *,
-		                   struct circuit *, struct mapview *);
+void		component_reg_menu(AG_Menu *, AG_MenuItem *,
+		                   struct circuit *, struct ag_mapview *);
 #endif
 __END_DECLS
 

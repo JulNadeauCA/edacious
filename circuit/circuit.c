@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.c,v 1.8 2005/09/15 02:04:48 vedge Exp $	*/
+/*	$Csoft: circuit.c,v 1.9 2005/09/26 05:32:44 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications Inc
@@ -41,16 +41,16 @@
 
 #include <component/vsource.h>
 
-#include "tool.h"
+#include "aeda.h"
 #include "circuit.h"
 #include "spice.h"
 
-const struct version circuit_ver = {
+const AG_Version circuit_ver = {
 	"agar-eda circuit",
 	0, 0
 };
 
-const struct object_ops circuit_ops = {
+const AG_ObjectOps circuit_ops = {
 	circuit_init,
 	circuit_reinit,
 	circuit_destroy,
@@ -79,12 +79,12 @@ circuit_opened(int argc, union evarg *argv)
 	struct circuit *ckt = argv[0].p;
 	struct component *com;
 
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component"))
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		if (!AGOBJECT_SUBCLASS(com, "component"))
 			continue;
 
-		event_post(ckt, com, "circuit-shown", NULL);
-		object_page_in(com, OBJECT_DATA);
+		AG_PostEvent(ckt, com, "circuit-shown", NULL);
+		AG_ObjectPageIn(com, AG_OBJECT_DATA);
 	}
 }
 
@@ -99,12 +99,12 @@ circuit_closed(int argc, union evarg *argv)
 		ckt->sim = NULL;
 	}
 
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component"))
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		if (!AGOBJECT_SUBCLASS(com, "component"))
 			continue;
 
-		event_post(ckt, com, "circuit-hidden", NULL);
-		object_page_out(com, OBJECT_DATA);
+		AG_PostEvent(ckt, com, "circuit-hidden", NULL);
+		AG_ObjectPageOut(com, AG_OBJECT_DATA);
 	}
 }
 
@@ -118,16 +118,16 @@ circuit_modified(struct circuit *ckt)
 	u_int i;
 
 	/* Regenerate loop and dipole information. */
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component") ||
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		if (!AGOBJECT_SUBCLASS(com, "component") ||
 		    com->flags & COMPONENT_FLOATING)
 			continue;
 
 		for (i = 0; i < com->ndipoles; i++)
 			com->dipoles[i].nloops = 0;
 	}
-	OBJECT_FOREACH_CHILD(vs, ckt, vsource) {
-		if (!OBJECT_SUBCLASS(vs, "component.vsource") ||
+	AGOBJECT_FOREACH_CHILD(vs, ckt, vsource) {
+		if (!AGOBJECT_SUBCLASS(vs, "component.vsource") ||
 		    COM(vs)->flags & COMPONENT_FLOATING ||
 		    PIN(vs,1)->node == NULL ||
 		    PIN(vs,2)->node == NULL) {
@@ -137,15 +137,15 @@ circuit_modified(struct circuit *ckt)
 		vsource_find_loops(vs);
 	}
 #if 0
-	OBJECT_FOREACH_CHILD(com, ckt, component)
-		event_post(ckt, com, "circuit-modified", NULL);
+	AGOBJECT_FOREACH_CHILD(com, ckt, component)
+		AG_PostEvent(ckt, com, "circuit-modified", NULL);
 #endif
 	if (ckt->loops == NULL) {
 		ckt->loops = Malloc(sizeof(struct cktloop *), M_EDA);
 	}
 	ckt->l = 0;
-	OBJECT_FOREACH_CHILD(vs, ckt, vsource) {
-		if (!OBJECT_SUBCLASS(vs, "component.vsource") ||
+	AGOBJECT_FOREACH_CHILD(vs, ckt, vsource) {
+		if (!AGOBJECT_SUBCLASS(vs, "component.vsource") ||
 		    COM(vs)->flags & COMPONENT_FLOATING) {
 			continue;
 		}
@@ -166,14 +166,14 @@ void
 circuit_init(void *p, const char *name)
 {
 	struct circuit *ckt = p;
-	struct vg_style *vgs;
-	struct vg *vg;
+	VG_Style *vgs;
+	VG *vg;
 
-	object_init(ckt, "circuit", name, &circuit_ops);
+	AG_ObjectInit(ckt, "circuit", name, &circuit_ops);
 	ckt->sim = NULL;
 	ckt->dis_nodes = 1;
 	ckt->dis_node_names = 1;
-	pthread_mutex_init(&ckt->lock, &recursive_mutexattr);
+	pthread_mutex_init(&ckt->lock, &agRecursiveMutexAttr);
 
 	ckt->loops = NULL;
 	ckt->vsrcs = NULL;
@@ -183,24 +183,24 @@ circuit_init(void *p, const char *name)
 	ckt->n = 0;
 	init_ground(ckt);
 
-	vg = ckt->vg = vg_new(ckt, VG_VISGRID);
+	vg = ckt->vg = VG_New(ckt, VG_VISGRID);
 	strlcpy(vg->layers[0].name, _("Schematic"), sizeof(vg->layers[0].name));
-	vg_scale(vg, 11.0, 8.5, 2.0);
-	vg_default_scale(vg, 2.0);
-	vg_grid_gap(vg, 0.25);
+	VG_Scale(vg, 11.0, 8.5, 2.0);
+	VG_DefaultScale(vg, 2.0);
+	VG_SetGridGap(vg, 0.25);
 	vg->origin[0].x = 5.5;
 	vg->origin[0].y = 4.25;
-	vg_origin_radius(vg, 2, 0.09375);
-	vg_origin_color(vg, 2, 255, 255, 165);
+	VG_OriginRadius(vg, 2, 0.09375);
+	VG_OriginColor(vg, 2, 255, 255, 165);
 
-	vgs = vg_create_style(vg, VG_TEXT_STYLE, "component-name");
+	vgs = VG_CreateStyle(vg, VG_TEXT_STYLE, "component-name");
 	vgs->vg_text_st.size = 10;
 	
-	vgs = vg_create_style(vg, VG_TEXT_STYLE, "node-name");
+	vgs = VG_CreateStyle(vg, VG_TEXT_STYLE, "node-name");
 	vgs->vg_text_st.size = 8;
 	
-	event_new(ckt, "edit-open", circuit_opened, NULL);
-	event_new(ckt, "edit-close", circuit_closed, NULL);
+	AG_SetEvent(ckt, "edit-open", circuit_opened, NULL);
+	AG_SetEvent(ckt, "edit-close", circuit_closed, NULL);
 }
 
 void
@@ -231,8 +231,8 @@ circuit_reinit(void *p)
 	ckt->n = 0;
 	init_ground(ckt);
 
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component") ||
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		if (!AGOBJECT_SUBCLASS(com, "component") ||
 		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
@@ -247,30 +247,30 @@ circuit_reinit(void *p)
 		}
 		com->block = NULL;
 	}
-	vg_reinit(ckt->vg);
+	VG_Reinit(ckt->vg);
 }
 
 int
-circuit_load(void *p, struct netbuf *buf)
+circuit_load(void *p, AG_Netbuf *buf)
 {
 	struct circuit *ckt = p;
 	Uint32 ncoms;
 	u_int i, j, nnodes;
 
-	if (version_read(buf, &circuit_ver, NULL) != 0) {
+	if (AG_ReadVersion(buf, &circuit_ver, NULL) != 0) {
 		return (-1);
 	}
-	copy_string(ckt->descr, buf, sizeof(ckt->descr));
-	read_uint32(buf);					/* Pad */
+	AG_CopyString(ckt->descr, buf, sizeof(ckt->descr));
+	AG_ReadUint32(buf);					/* Pad */
 
 	/* Load the circuit nodes (including ground). */
-	nnodes = (u_int)read_uint32(buf);
+	nnodes = (u_int)AG_ReadUint32(buf);
 	for (i = 0; i <= nnodes; i++) {
 		int nbranches, flags;
 		u_int name;
 
-		flags = (int)read_uint32(buf);
-		nbranches = (int)read_uint32(buf);
+		flags = (int)AG_ReadUint32(buf);
+		nbranches = (int)AG_ReadUint32(buf);
 		if (i == 0) {
 			name = 0;
 			circuit_destroy_node(ckt->nodes[0]);
@@ -280,20 +280,20 @@ circuit_load(void *p, struct netbuf *buf)
 			name = circuit_add_node(ckt, flags & ~(CKTNODE_EXAM));
 		}
 		for (j = 0; j < nbranches; j++) {
-			char ppath[OBJECT_PATH_MAX];
+			char ppath[AG_OBJECT_PATH_MAX];
 			struct component *pcom;
 			struct cktbranch *br;
 			int ppin;
 
-			copy_string(ppath, buf, sizeof(ppath));
-			read_uint32(buf);			/* Pad */
-			ppin = (int)read_uint32(buf);
-			if ((pcom = object_find(ppath)) == NULL) {
-				error_set("%s", error_get());
+			AG_CopyString(ppath, buf, sizeof(ppath));
+			AG_ReadUint32(buf);			/* Pad */
+			ppin = (int)AG_ReadUint32(buf);
+			if ((pcom = AG_ObjectFind(ppath)) == NULL) {
+				AG_SetError("%s", AG_GetError());
 				return (-1);
 			}
 			if (ppin > pcom->npins) {
-				error_set("%s: pin #%d > %d", ppath, ppin,
+				AG_SetError("%s: pin #%d > %d", ppath, ppin,
 				    pcom->npins);
 				return (-1);
 			}
@@ -304,45 +304,45 @@ circuit_load(void *p, struct netbuf *buf)
 	}
 
 	/* Load the schematics. */
-	if (vg_load(ckt->vg, buf) == -1)
+	if (VG_Load(ckt->vg, buf) == -1)
 		return (-1);
 
 	/* Load the component pin assignments. */
-	ncoms = read_uint32(buf);
+	ncoms = AG_ReadUint32(buf);
 	for (i = 0; i < ncoms; i++) {
-		char name[OBJECT_NAME_MAX];
-		char path[OBJECT_PATH_MAX];
+		char name[AG_OBJECT_NAME_MAX];
+		char path[AG_OBJECT_PATH_MAX];
 		int j, npins;
 		struct component *com;
 
 		/* Lookup the component. */
-		copy_string(name, buf, sizeof(name));
-		OBJECT_FOREACH_CHILD(com, ckt, component) {
-			if (OBJECT_SUBCLASS(com, "component") &&
-			    strcmp(OBJECT(com)->name, name) == 0)
+		AG_CopyString(name, buf, sizeof(name));
+		AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+			if (AGOBJECT_SUBCLASS(com, "component") &&
+			    strcmp(AGOBJECT(com)->name, name) == 0)
 				break;
 		}
 		if (com == NULL)
 			fatal("unexisting component: `%s'", name);
 		
 		/* Reassign the block pointer since the vg was reloaded. */
-		object_copy_name(com, path, sizeof(path));
-		if ((com->block = vg_get_block(ckt->vg, path)) == NULL)
+		AG_ObjectCopyName(com, path, sizeof(path));
+		if ((com->block = VG_GetBlock(ckt->vg, path)) == NULL)
 			fatal("unexisting block: `%s'", path);
 
 		/* Load the pinout information. */
-		com->npins = (int)read_uint32(buf);
+		com->npins = (int)AG_ReadUint32(buf);
 		for (j = 1; j <= com->npins; j++) {
 			struct pin *pin = &com->pin[j];
-			struct vg_block *block_save;
+			VG_Block *block_save;
 			struct cktbranch *br;
 			struct cktnode *node;
 
-			pin->n = (int)read_uint32(buf);
-			copy_string(pin->name, buf, sizeof(pin->name));
-			pin->x = read_double(buf);
-			pin->y = read_double(buf);
-			pin->node = (int)read_uint32(buf);
+			pin->n = (int)AG_ReadUint32(buf);
+			AG_CopyString(pin->name, buf, sizeof(pin->name));
+			pin->x = AG_ReadDouble(buf);
+			pin->y = AG_ReadDouble(buf);
+			pin->node = (int)AG_ReadUint32(buf);
 			node = ckt->nodes[pin->node];
 
 			TAILQ_FOREACH(br, &node->branches, branches) {
@@ -352,7 +352,7 @@ circuit_load(void *p, struct netbuf *buf)
 			}
 			if (br == NULL) {
 				fatal("no such branch: %s:%d",
-				    OBJECT(com)->name, pin->n);
+				    AGOBJECT(com)->name, pin->n);
 			}
 			pin->branch = br;
 			pin->selected = 0;
@@ -363,9 +363,9 @@ circuit_load(void *p, struct netbuf *buf)
 }
 
 int
-circuit_save(void *p, struct netbuf *buf)
+circuit_save(void *p, AG_Netbuf *buf)
 {
-	char path[OBJECT_PATH_MAX];
+	char path[AG_OBJECT_PATH_MAX];
 	struct circuit *ckt = p;
 	struct cktnode *node;
 	struct cktbranch *br;
@@ -374,61 +374,61 @@ circuit_save(void *p, struct netbuf *buf)
 	Uint32 ncoms = 0;
 	u_int i;
 
-	version_write(buf, &circuit_ver);
-	write_string(buf, ckt->descr);
-	write_uint32(buf, 0);					/* Pad */
-	write_uint32(buf, ckt->n);
+	AG_WriteVersion(buf, &circuit_ver);
+	AG_WriteString(buf, ckt->descr);
+	AG_WriteUint32(buf, 0);					/* Pad */
+	AG_WriteUint32(buf, ckt->n);
 	for (i = 0; i <= ckt->n; i++) {
 		struct cktnode *node = ckt->nodes[i];
 		off_t nbranches_offs;
 		Uint32 nbranches = 0;
 
-		write_uint32(buf, (Uint32)node->flags);
-		nbranches_offs = netbuf_tell(buf);
-		write_uint32(buf, 0);
+		AG_WriteUint32(buf, (Uint32)node->flags);
+		nbranches_offs = AG_NetbufTell(buf);
+		AG_WriteUint32(buf, 0);
 		TAILQ_FOREACH(br, &node->branches, branches) {
 			if (br->pin == NULL || br->pin->com == NULL ||
 			    br->pin->com->flags & COMPONENT_FLOATING) {
 				continue;
 			}
-			object_copy_name(br->pin->com, path, sizeof(path));
-			write_string(buf, path);
-			write_uint32(buf, 0);			/* Pad */
-			write_uint32(buf, (Uint32)br->pin->n);
+			AG_ObjectCopyName(br->pin->com, path, sizeof(path));
+			AG_WriteString(buf, path);
+			AG_WriteUint32(buf, 0);			/* Pad */
+			AG_WriteUint32(buf, (Uint32)br->pin->n);
 			nbranches++;
 		}
-		pwrite_uint32(buf, nbranches, nbranches_offs);
+		AG_PwriteUint32(buf, nbranches, nbranches_offs);
 	}
 	
 	/* Save the schematics. */
-	vg_save(ckt->vg, buf);
+	VG_Save(ckt->vg, buf);
 	
 	/* Save the component information. */
-	ncoms_offs = netbuf_tell(buf);
-	write_uint32(buf, 0);
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component") ||
+	ncoms_offs = AG_NetbufTell(buf);
+	AG_WriteUint32(buf, 0);
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		if (!AGOBJECT_SUBCLASS(com, "component") ||
 		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
-		write_string(buf, OBJECT(com)->name);
-		write_uint32(buf, (Uint32)com->npins);
+		AG_WriteString(buf, AGOBJECT(com)->name);
+		AG_WriteUint32(buf, (Uint32)com->npins);
 		for (i = 1; i <= com->npins; i++) {
 			struct pin *pin = &com->pin[i];
 
-			write_uint32(buf, (Uint32)pin->n);
-			write_string(buf, pin->name);
-			write_double(buf, pin->x);
-			write_double(buf, pin->y);
+			AG_WriteUint32(buf, (Uint32)pin->n);
+			AG_WriteString(buf, pin->name);
+			AG_WriteDouble(buf, pin->x);
+			AG_WriteDouble(buf, pin->y);
 #ifdef DEBUG
 			if (pin->node == -1)
-				fatal("%s: bad pin %d", OBJECT(com)->name, i);
+				fatal("%s: bad pin %d", AGOBJECT(com)->name, i);
 #endif
-			write_uint32(buf, (Uint32)pin->node);
+			AG_WriteUint32(buf, (Uint32)pin->node);
 		}
 		ncoms++;
 	}
-	pwrite_uint32(buf, ncoms, ncoms_offs);
+	AG_PwriteUint32(buf, ncoms, ncoms_offs);
 	return (0);
 }
 
@@ -486,7 +486,7 @@ cktnode_vsource(struct circuit *ckt, u_int n, u_int m, int *sign)
 			continue;
 		}
 		if (COM(vs)->flags & COMPONENT_FLOATING ||
-		   !OBJECT_SUBCLASS(vs, "component.vsource") ||
+		   !AGOBJECT_SUBCLASS(vs, "component.vsource") ||
 		   vs != ckt->vsrcs[m-1]) {
 			continue;
 		}
@@ -587,12 +587,12 @@ circuit_free_components(struct circuit *ckt)
 {
 	struct component *com, *ncom;
 
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (!OBJECT_SUBCLASS(com, "component")) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		if (!AGOBJECT_SUBCLASS(com, "component")) {
 			continue;
 		}
-		object_detach(com);
-		object_destroy(com);
+		AG_ObjectDetach(com);
+		AG_ObjectDestroy(com);
 		Free(com, M_OBJECT);
 	}
 }
@@ -602,7 +602,7 @@ circuit_destroy(void *p)
 {
 	struct circuit *ckt = p;
 	
-	vg_destroy(ckt->vg);
+	VG_Destroy(ckt->vg);
 	pthread_mutex_destroy(&ckt->lock);
 }
 
@@ -626,10 +626,10 @@ circuit_set_sim(struct circuit *ckt, const struct sim_ops *sops)
 	}
 	if (sim->ops->edit != NULL &&
 	   (sim->win = sim->ops->edit(sim, ckt)) != NULL) {
-		window_set_caption(sim->win, "%s: %s", OBJECT(ckt)->name,
+		AG_WindowSetCaption(sim->win, "%s: %s", AGOBJECT(ckt)->name,
 		    _(sim->ops->name));
-		window_set_position(sim->win, WINDOW_LOWER_LEFT, 0);
-		window_show(sim->win);
+		AG_WindowSetPosition(sim->win, AG_WINDOW_LOWER_LEFT, 0);
+		AG_WindowShow(sim->win);
 	}
 	return (sim);
 }
@@ -637,88 +637,88 @@ circuit_set_sim(struct circuit *ckt, const struct sim_ops *sops)
 #ifdef EDITION
 
 static void
-rasterize_circuit(struct mapview *mv, void *p)
+rasterize_circuit(AG_Mapview *mv, void *p)
 {
-	struct vg *vg = p;
+	VG *vg = p;
 
 	if (vg->redraw) {
 		vg->redraw = 0;
 	}
 	vg->redraw++;
-	vg_rasterize(vg);
+	VG_Rasterize(vg);
 }
 
 static void
 poll_loops(int argc, union evarg *argv)
 {
-	struct tlist *tl = argv[0].p;
+	AG_Tlist *tl = argv[0].p;
 	struct circuit *ckt = argv[1].p;
 	int i;
 
-	tlist_clear_items(tl);
+	AG_TlistClear(tl);
 	for (i = 0; i < ckt->l; i++) {
 		char voltage[32];
 		struct cktloop *loop = ckt->loops[i];
 		struct vsource *vs = (struct vsource *)loop->origin;
-		struct tlist_item *it;
+		AG_TlistItem *it;
 
-		unit_format(vs->voltage, emf_units, voltage, sizeof(voltage));
-		it = tlist_insert(tl, NULL, "%s:L%u (%s)", OBJECT(vs)->name,
+		AG_UnitFormat(vs->voltage, agEMFUnits, voltage, sizeof(voltage));
+		it = AG_TlistAdd(tl, NULL, "%s:L%u (%s)", AGOBJECT(vs)->name,
 		    loop->name, voltage);
 		it->p1 = loop;
 	}
-	tlist_restore_selections(tl);
+	AG_TlistRestore(tl);
 }
 
 static void
 poll_nodes(int argc, union evarg *argv)
 {
-	struct tlist *tl = argv[0].p;
+	AG_Tlist *tl = argv[0].p;
 	struct circuit *ckt = argv[1].p;
 	u_int i;
 
-	tlist_clear_items(tl);
+	AG_TlistClear(tl);
 	for (i = 0; i <= ckt->n; i++) {
 		struct cktnode *node = ckt->nodes[i];
 		struct cktbranch *br;
-		struct tlist_item *it, *it2;
+		AG_TlistItem *it, *it2;
 
-		it = tlist_insert(tl, NULL, "n%u (0x%x, %d branches)", i,
+		it = AG_TlistAdd(tl, NULL, "n%u (0x%x, %d branches)", i,
 		    node->flags, node->nbranches);
 		it->p1 = node;
 		it->depth = 0;
 		TAILQ_FOREACH(br, &node->branches, branches) {
 			if (br->pin == NULL) {
-				it = tlist_insert(tl, NULL, "(null pin)");
+				it = AG_TlistAdd(tl, NULL, "(null pin)");
 			} else {
-				it = tlist_insert(tl, NULL, "%s:%s(%d)",
+				it = AG_TlistAdd(tl, NULL, "%s:%s(%d)",
 				    (br->pin != NULL && br->pin->com != NULL) ?
-				    OBJECT(br->pin->com)->name : "(null)",
+				    AGOBJECT(br->pin->com)->name : "(null)",
 				    br->pin->name, br->pin->n);
 			}
 			it->p1 = br;
 			it->depth = 1;
 		}
 	}
-	tlist_restore_selections(tl);
+	AG_TlistRestore(tl);
 }
 
 static void
 poll_sources(int argc, union evarg *argv)
 {
-	struct tlist *tl = argv[0].p;
+	AG_Tlist *tl = argv[0].p;
 	struct circuit *ckt = argv[1].p;
 	int i;
 
-	tlist_clear_items(tl);
+	AG_TlistClear(tl);
 	for (i = 0; i < ckt->m; i++) {
 		struct vsource *vs = ckt->vsrcs[i];
-		struct tlist_item *it;
+		AG_TlistItem *it;
 
-		it = tlist_insert(tl, NULL, "%s", OBJECT(vs)->name);
+		it = AG_TlistAdd(tl, NULL, "%s", AGOBJECT(vs)->name);
 		it->p1 = vs;
 	}
-	tlist_restore_selections(tl);
+	AG_TlistRestore(tl);
 }
 
 static void
@@ -726,13 +726,13 @@ revert_circuit(int argc, union evarg *argv)
 {
 	struct circuit *ckt = argv[1].p;
 
-	if (object_load(ckt) == 0) {
-		text_tmsg(MSG_INFO, 1000,
+	if (AG_ObjectLoad(ckt) == 0) {
+		AG_TextTmsg(AG_MSG_INFO, 1000,
 		    _("Circuit `%s' reverted successfully."),
-		    OBJECT(ckt)->name);
+		    AGOBJECT(ckt)->name);
 	} else {
-		text_msg(MSG_ERROR, "%s: %s", OBJECT(ckt)->name,
-		    error_get());
+		AG_TextMsg(AG_MSG_ERROR, "%s: %s", AGOBJECT(ckt)->name,
+		    AG_GetError());
 	}
 }
 
@@ -741,122 +741,122 @@ save_circuit(int argc, union evarg *argv)
 {
 	struct circuit *ckt = argv[1].p;
 
-	if (object_save(world) == 0 &&
-	    object_save(ckt) == 0) {
-		text_tmsg(MSG_INFO, 1250,
+	if (AG_ObjectSave(agWorld) == 0 &&
+	    AG_ObjectSave(ckt) == 0) {
+		AG_TextTmsg(AG_MSG_INFO, 1250,
 		    _("Circuit `%s' saved successfully."),
-		    OBJECT(ckt)->name);
+		    AGOBJECT(ckt)->name);
 	} else {
-		text_msg(MSG_ERROR, "%s: %s", OBJECT(ckt)->name,
-		    error_get());
+		AG_TextMsg(AG_MSG_ERROR, "%s: %s", AGOBJECT(ckt)->name,
+		    AG_GetError());
 	}
 }
 
 static void
 show_interconnects(int argc, union evarg *argv)
 {
-	struct window *pwin = argv[1].p;
+	AG_Window *pwin = argv[1].p;
 	struct circuit *ckt = argv[2].p;
-	struct window *win;
-	struct notebook *nb;
-	struct notebook_tab *ntab;
-	struct tlist *tl;
+	AG_Window *win;
+	AG_Notebook *nb;
+	AG_NotebookTab *ntab;
+	AG_Tlist *tl;
 	
-	if ((win = window_new(0, "%s-interconnects", OBJECT(ckt)->name))
+	if ((win = AG_WindowNew(0, "%s-interconnects", AGOBJECT(ckt)->name))
 	    == NULL) {
 		return;
 	}
-	window_set_caption(win, _("%s: Connections"), OBJECT(ckt)->name);
-	window_set_position(win, WINDOW_UPPER_RIGHT, 0);
+	AG_WindowSetCaption(win, _("%s: Connections"), AGOBJECT(ckt)->name);
+	AG_WindowSetPosition(win, AG_WINDOW_UPPER_RIGHT, 0);
 	
-	nb = notebook_new(win, NOTEBOOK_HFILL|NOTEBOOK_WFILL);
-	ntab = notebook_add_tab(nb, _("Nodes"), BOX_VERT);
+	nb = AG_NotebookNew(win, AG_NOTEBOOK_HFILL|AG_NOTEBOOK_WFILL);
+	ntab = AG_NotebookAddTab(nb, _("Nodes"), AG_BOX_VERT);
 	{
-		tl = tlist_new(ntab, TLIST_POLL|TLIST_TREE);
-		event_new(tl, "tlist-poll", poll_nodes, "%p", ckt);
+		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE);
+		AG_SetEvent(tl, "tlist-poll", poll_nodes, "%p", ckt);
 	}
 	
-	ntab = notebook_add_tab(nb, _("Loops"), BOX_VERT);
+	ntab = AG_NotebookAddTab(nb, _("Loops"), AG_BOX_VERT);
 	{
-		tl = tlist_new(ntab, TLIST_POLL);
-		event_new(tl, "tlist-poll", poll_loops, "%p", ckt);
+		tl = AG_TlistNew(ntab, AG_TLIST_POLL);
+		AG_SetEvent(tl, "tlist-poll", poll_loops, "%p", ckt);
 	}
 	
-	ntab = notebook_add_tab(nb, _("Sources"), BOX_VERT);
+	ntab = AG_NotebookAddTab(nb, _("Sources"), AG_BOX_VERT);
 	{
-		tl = tlist_new(ntab, TLIST_POLL);
-		event_new(tl, "tlist-poll", poll_sources, "%p", ckt);
+		tl = AG_TlistNew(ntab, AG_TLIST_POLL);
+		AG_SetEvent(tl, "tlist-poll", poll_sources, "%p", ckt);
 	}
 
-	window_attach(pwin, win);
-	window_show(win);
+	AG_WindowAttach(pwin, win);
+	AG_WindowShow(win);
 }
 
 static void
 layout_settings(int argc, union evarg *argv)
 {
-	char path[OBJECT_PATH_MAX];
-	struct window *pwin = argv[1].p;
+	char path[AG_OBJECT_PATH_MAX];
+	AG_Window *pwin = argv[1].p;
 	struct circuit *ckt = argv[2].p;
-	struct vg *vg = ckt->vg;
-	struct window *win;
-	struct mfspinbutton *mfsu;
-	struct fspinbutton *fsu;
-	struct textbox *tb;
-	struct checkbox *cb;
+	VG *vg = ckt->vg;
+	AG_Window *win;
+	AG_MFSpinbutton *mfsu;
+	AG_FSpinbutton *fsu;
+	AG_Textbox *tb;
+	AG_Checkbox *cb;
 	
-	object_copy_name(ckt, path, sizeof(path));
-	if ((win = window_new(0, "settings-%s", path)) == NULL) {
+	AG_ObjectCopyName(ckt, path, sizeof(path));
+	if ((win = AG_WindowNew(0, "settings-%s", path)) == NULL) {
 		return;
 	}
-	window_set_caption(win, _("Circuit layout: %s"), OBJECT(ckt)->name);
-	window_set_position(win, WINDOW_UPPER_RIGHT, 0);
+	AG_WindowSetCaption(win, _("Circuit layout: %s"), AGOBJECT(ckt)->name);
+	AG_WindowSetPosition(win, AG_WINDOW_UPPER_RIGHT, 0);
 
-	label_new(win, LABEL_POLLED, _("Loops: %u"), &ckt->l);
-	label_new(win, LABEL_POLLED, _("Voltage sources: %u"), &ckt->m);
-	label_new(win, LABEL_POLLED, _("Nodes: %u"), &ckt->n);
+	AG_LabelNew(win, AG_LABEL_POLLED, _("Loops: %u"), &ckt->l);
+	AG_LabelNew(win, AG_LABEL_POLLED, _("Voltage sources: %u"), &ckt->m);
+	AG_LabelNew(win, AG_LABEL_POLLED, _("Nodes: %u"), &ckt->n);
 
-	tb = textbox_new(win, _("Description: "));
-	widget_bind(tb, "string", WIDGET_STRING, &ckt->descr,
+	tb = AG_TextboxNew(win, _("Description: "));
+	AG_WidgetBind(tb, "string", AG_WIDGET_STRING, &ckt->descr,
 	    sizeof(ckt->descr));
 
-	mfsu = mfspinbutton_new(win, NULL, "x", _("Bounding box: "));
-	WIDGET(mfsu)->flags |= WIDGET_WFILL;
-	widget_bind(mfsu, "xvalue", WIDGET_DOUBLE, &vg->w);
-	widget_bind(mfsu, "yvalue", WIDGET_DOUBLE, &vg->h);
-	mfspinbutton_set_min(mfsu, 1.0);
-	mfspinbutton_set_increment(mfsu, 0.1);
-	event_new(mfsu, "mfspinbutton-changed", vg_geo_changed, "%p", vg);
+	mfsu = AG_MFSpinbuttonNew(win, NULL, "x", _("Bounding box: "));
+	AGWIDGET(mfsu)->flags |= AG_WIDGET_WFILL;
+	AG_WidgetBind(mfsu, "xvalue", AG_WIDGET_DOUBLE, &vg->w);
+	AG_WidgetBind(mfsu, "yvalue", AG_WIDGET_DOUBLE, &vg->h);
+	AG_MFSpinbuttonSetMin(mfsu, 1.0);
+	AG_MFSpinbuttonSetIncrement(mfsu, 0.1);
+	AG_SetEvent(mfsu, "mfspinbutton-changed", VG_GeoChangedEv, "%p", vg);
 
-	fsu = fspinbutton_new(win, NULL, _("Grid interval: "));
-	WIDGET(fsu)->flags |= WIDGET_WFILL;
-	widget_bind(fsu, "value", WIDGET_DOUBLE, &vg->grid_gap);
-	fspinbutton_set_min(fsu, 0.0625);
-	fspinbutton_set_increment(fsu, 0.0625);
-	event_new(fsu, "fspinbutton-changed", vg_changed, "%p", vg);
+	fsu = AG_FSpinbuttonNew(win, NULL, _("Grid interval: "));
+	AGWIDGET(fsu)->flags |= AG_WIDGET_WFILL;
+	AG_WidgetBind(fsu, "value", AG_WIDGET_DOUBLE, &vg->grid_gap);
+	AG_FSpinbuttonSetMin(fsu, 0.0625);
+	AG_FSpinbuttonSetIncrement(fsu, 0.0625);
+	AG_SetEvent(fsu, "fspinbutton-changed", VG_ChangedEv, "%p", vg);
 	
-	fsu = fspinbutton_new(win, NULL, _("Scaling factor: "));
-	WIDGET(fsu)->flags |= WIDGET_WFILL;
-	widget_bind(fsu, "value", WIDGET_DOUBLE, &vg->scale);
-	fspinbutton_set_min(fsu, 0.1);
-	fspinbutton_set_increment(fsu, 0.1);
-	event_new(fsu, "fspinbutton-changed", vg_geo_changed, "%p", vg);
+	fsu = AG_FSpinbuttonNew(win, NULL, _("Scaling factor: "));
+	AGWIDGET(fsu)->flags |= AG_WIDGET_WFILL;
+	AG_WidgetBind(fsu, "value", AG_WIDGET_DOUBLE, &vg->scale);
+	AG_FSpinbuttonSetMin(fsu, 0.1);
+	AG_FSpinbuttonSetIncrement(fsu, 0.1);
+	AG_SetEvent(fsu, "fspinbutton-changed", VG_GeoChangedEv, "%p", vg);
 
-	cb = checkbox_new(win, _("Display node indicators"));
-	widget_bind(cb, "state", WIDGET_INT, &ckt->dis_nodes);
+	cb = AG_CheckboxNew(win, _("Display node indicators"));
+	AG_WidgetBind(cb, "state", AG_WIDGET_INT, &ckt->dis_nodes);
 
-	cb = checkbox_new(win, _("Display node names"));
-	widget_bind(cb, "state", WIDGET_INT, &ckt->dis_node_names);
+	cb = AG_CheckboxNew(win, _("Display node names"));
+	AG_WidgetBind(cb, "state", AG_WIDGET_INT, &ckt->dis_node_names);
 	
 #if 0
-	label_new(win, LABEL_STATIC, _("Nodes:"));
-	tl = tlist_new(win, TLIST_POLL|TLIST_TREE);
-	WIDGET(tl)->flags &= ~(WIDGET_HFILL);
-	event_new(tl, "tlist-poll", poll_nodes, "%p", ckt);
+	AG_LabelNew(win, AG_LABEL_STATIC, _("Nodes:"));
+	tl = AG_TlistNew(win, AG_TLIST_POLL|AG_TLIST_TREE);
+	AGWIDGET(tl)->flags &= ~(AG_WIDGET_HFILL);
+	AG_SetEvent(tl, "tlist-poll", poll_nodes, "%p", ckt);
 #endif	
 
-	window_attach(pwin, win);
-	window_show(win);
+	AG_WindowAttach(pwin, win);
+	AG_WindowShow(win);
 }
 
 static void
@@ -865,11 +865,12 @@ export_to_spice(int argc, union evarg *argv)
 	char name[FILENAME_MAX];
 	struct circuit *ckt = argv[1].p;
 
-	strlcpy(name, OBJECT(ckt)->name, sizeof(name));
+	strlcpy(name, AGOBJECT(ckt)->name, sizeof(name));
 	strlcat(name, ".cir", sizeof(name));
 
 	if (circuit_export_spice3(ckt, name) == -1)
-		text_msg(MSG_ERROR, "%s: %s", OBJECT(ckt)->name, error_get());
+		AG_TextMsg(AG_MSG_ERROR, "%s: %s", AGOBJECT(ckt)->name,
+		    AG_GetError());
 }
 
 static void
@@ -884,14 +885,14 @@ double_click(int argc, union evarg *argv)
 	struct component *com;
 	double x, y;
 
-	vg_vcoords2(ckt->vg, tx, ty, txoff, tyoff, &x, &y);
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		struct vg_rect rext;
+	VG_Vcoords2(ckt->vg, tx, ty, txoff, tyoff, &x, &y);
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		VG_Rect rext;
 
-		if (!OBJECT_SUBCLASS(com, "component"))
+		if (!AGOBJECT_SUBCLASS(com, "component"))
 			continue;
 
-		vg_block_extent(ckt->vg, com->block, &rext);
+		VG_BlockExtent(ckt->vg, com->block, &rext);
 		if (x > rext.x && y > rext.y &&
 		    x < rext.x+rext.w && y < rext.y+rext.h) {
 #if 0
@@ -900,8 +901,8 @@ double_click(int argc, union evarg *argv)
 			/* XXX configurable */
 			switch (button) {
 			case 1:
-				if (OBJECT(com)->ops->edit != NULL) {
-					objmgr_open_data(com, 1);
+				if (AGOBJECT(com)->ops->edit != NULL) {
+					AG_ObjMgrOpenData(com, 1);
 				}
 				break;
 			case 2:
@@ -918,34 +919,34 @@ select_sim(int argc, union evarg *argv)
 {
 	struct circuit *ckt = argv[1].p;
 	struct sim_ops *sops = argv[2].p;
-	struct window *pwin = argv[3].p;
+	AG_Window *pwin = argv[3].p;
 	struct sim *sim;
 
 	sim = circuit_set_sim(ckt, sops);
 	if (sim->win != NULL)
-		window_attach(pwin, sim->win);
+		AG_WindowAttach(pwin, sim->win);
 }
 
 static void
-find_objs(struct tlist *tl, struct object *pob, int depth, void *ckt)
+find_objs(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 {
-	struct object *cob;
-	struct tlist_item *it;
+	AG_Object *cob;
+	AG_TlistItem *it;
 	SDL_Surface *icon;
 
-	it = tlist_insert(tl, object_icon(pob), "%s%s", pob->name,
-	    (pob->flags & OBJECT_DATA_RESIDENT) ? " (resident)" : "");
+	it = AG_TlistAdd(tl, AG_ObjectIcon(pob), "%s%s", pob->name,
+	    (pob->flags & AG_OBJECT_DATA_RESIDENT) ? " (resident)" : "");
 	it->depth = depth;
 	it->class = "object";
 	it->p1 = pob;
 
 	if (!TAILQ_EMPTY(&pob->children)) {
-		it->flags |= TLIST_HAS_CHILDREN;
-		if (pob == OBJECT(ckt))
-			it->flags |= TLIST_VISIBLE_CHILDREN;
+		it->flags |= AG_TLIST_HAS_CHILDREN;
+		if (pob == AGOBJECT(ckt))
+			it->flags |= AG_TLIST_VISIBLE_CHILDREN;
 	}
-	if ((it->flags & TLIST_HAS_CHILDREN) &&
-	    tlist_visible_children(tl, it)) {
+	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
+	    AG_TlistVisibleChildren(tl, it)) {
 		TAILQ_FOREACH(cob, &pob->children, cobjs)
 			find_objs(tl, cob, depth+1, ckt);
 	}
@@ -954,57 +955,57 @@ find_objs(struct tlist *tl, struct object *pob, int depth, void *ckt)
 static void
 poll_objs(int argc, union evarg *argv)
 {
-	struct tlist *tl = argv[0].p;
-	struct object *pob = argv[1].p;
-	struct tlist_item *it;
+	AG_Tlist *tl = argv[0].p;
+	AG_Object *pob = argv[1].p;
+	AG_TlistItem *it;
 
-	tlist_clear_items(tl);
-	lock_linkage();
+	AG_TlistClear(tl);
+	AG_LockLinkage();
 	find_objs(tl, pob, 0, pob);
-	unlock_linkage();
-	tlist_restore_selections(tl);
+	AG_UnlockLinkage();
+	AG_TlistRestore(tl);
 }
 
 static void
 create_view(int argc, union evarg *argv)
 {
-	extern struct tool_ops vg_scale_tool;
-	struct mapview *omv = argv[1].p;
-	struct window *pwin = argv[2].p;
+	extern AG_MaptoolOps vgScaleTool;
+	AG_Mapview *omv = argv[1].p;
+	AG_Window *pwin = argv[2].p;
 	struct circuit *ckt = argv[3].p;
-	struct map *map = omv->map;
-	struct mapview *mv;
-	struct window *win;
+	AG_Map *map = omv->map;
+	AG_Mapview *mv;
+	AG_Window *win;
 
-	win = window_new(0, NULL);
-	window_set_caption(win, _("View of %s"), OBJECT(ckt)->name);
+	win = AG_WindowNew(0, NULL);
+	AG_WindowSetCaption(win, _("View of %s"), AGOBJECT(ckt)->name);
 	{
-		mv = mapview_new(win, map,
-		    MAPVIEW_NO_BMPZOOM|MAPVIEW_NO_NODESEL,
+		mv = AG_MapviewNew(win, map,
+		    AG_MAPVIEW_NO_BMPSCALE|AG_MAPVIEW_NO_NODESEL,
 		    NULL, NULL);
-		mv->cam = map_add_camera(map, _("View"));
+		mv->cam = AG_MapAddCamera(map, _("View"));
 
-		mapview_prescale(mv, 8, 6);
-		mapview_reg_draw_cb(mv, rasterize_circuit, ckt->vg);
-		mapview_reg_tool(mv, &vg_scale_tool, ckt->vg);
-		widget_focus(mv);
+		AG_MapviewPrescale(mv, 8, 6);
+		AG_MapviewRegDrawCb(mv, rasterize_circuit, ckt->vg);
+		AG_MapviewRegTool(mv, &vgScaleTool, ckt->vg);
+		AG_WidgetFocus(mv);
 	}
-	window_attach(pwin, win);
-	window_show(win);
+	AG_WindowAttach(pwin, win);
+	AG_WindowShow(win);
 }
 
 static void
 poll_component_pins(int argc, union evarg *argv)
 {
-	struct tlist *tl = argv[0].p;
+	AG_Tlist *tl = argv[0].p;
 	struct circuit *ckt = argv[1].p;
 	struct component *com;
 	int i;
 	
-	tlist_clear_items(tl);
+	AG_TlistClear(tl);
 	
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (OBJECT_SUBCLASS(com, "component") && com->selected)
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		if (AGOBJECT_SUBCLASS(com, "component") && com->selected)
 			break;
 	}
 	if (com == NULL)
@@ -1012,32 +1013,32 @@ poll_component_pins(int argc, union evarg *argv)
 
 	pthread_mutex_lock(&com->lock);
 	for (i = 1; i <= com->npins; i++) {
-		char text[TLIST_LABEL_MAX];
+		char text[AG_TLIST_LABEL_MAX];
 		struct pin *pin = &com->pin[i];
 
 		snprintf(text, sizeof(text),
 		    "%d (%s) (U=%.2f, \xce\x94U=%.2f) -> n%d\n",
 		    pin->n, pin->name, pin->u, pin->du, pin->node);
-		tlist_insert_item(tl, ICON(EDA_BRANCH_TO_COMPONENT_ICON),
+		AG_TlistAddPtr(tl, AGICON(EDA_BRANCH_TO_COMPONENT_ICON),
 		    text, pin);
 	}
 	pthread_mutex_unlock(&com->lock);
 out:
-	tlist_restore_selections(tl);
+	AG_TlistRestore(tl);
 }
 
 static void
 poll_component_dipoles(int argc, union evarg *argv)
 {
-	struct tlist *tl = argv[0].p;
+	AG_Tlist *tl = argv[0].p;
 	struct circuit *ckt = argv[1].p;
 	struct component *com;
 	int i, j;
 	
-	tlist_clear_items(tl);
+	AG_TlistClear(tl);
 	
-	OBJECT_FOREACH_CHILD(com, ckt, component) {
-		if (OBJECT_SUBCLASS(com, "component") && com->selected)
+	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		if (AGOBJECT_SUBCLASS(com, "component") && com->selected)
 			break;
 	}
 	if (com == NULL)
@@ -1046,22 +1047,22 @@ poll_component_dipoles(int argc, union evarg *argv)
 	pthread_mutex_lock(&com->lock);
 	for (i = 0; i < com->ndipoles; i++) {
 		char Rbuf[32], Cbuf[32], Lbuf[32];
-		char text[TLIST_LABEL_MAX];
+		char text[AG_TLIST_LABEL_MAX];
 		struct dipole *dip = &com->dipoles[i];
-		struct tlist_item *it;
+		AG_TlistItem *it;
 
-		unit_format(dipole_resistance(dip), resistance_units, Rbuf,
+		AG_UnitFormat(dipole_resistance(dip), agResistanceUnits, Rbuf,
 		    sizeof(Rbuf));
-		unit_format(dipole_capacitance(dip), capacitance_units, Cbuf,
+		AG_UnitFormat(dipole_capacitance(dip), agCapacitanceUnits, Cbuf,
 		    sizeof(Cbuf));
-		unit_format(dipole_inductance(dip), inductance_units, Lbuf,
+		AG_UnitFormat(dipole_inductance(dip), agInductanceUnits, Lbuf,
 		    sizeof(Lbuf));
 
 		snprintf(text, sizeof(text),
 		    "%s:(%s,%s) - %s, %s, %s",
-		    OBJECT(com)->name, dip->p1->name, dip->p2->name,
+		    AGOBJECT(com)->name, dip->p1->name, dip->p2->name,
 		    Rbuf, Cbuf, Lbuf);
-		it = tlist_insert_item(tl, ICON(EDA_BRANCH_TO_COMPONENT_ICON),
+		it = AG_TlistAddPtr(tl, AGICON(EDA_BRANCH_TO_COMPONENT_ICON),
 		    text, dip);
 		it->depth = 0;
 
@@ -1070,244 +1071,249 @@ poll_component_dipoles(int argc, union evarg *argv)
 			int dpol = dip->lpols[j];
 
 			snprintf(text, sizeof(text), "%s:L%u (%s)",
-			    OBJECT(dloop->origin)->name,
+			    AGOBJECT(dloop->origin)->name,
 			    dloop->name,
 			    dpol == 1 ? "+" : "-");
-			it = tlist_insert_item(tl, ICON(EDA_MESH_ICON), text,
+			it = AG_TlistAddPtr(tl, AGICON(EDA_MESH_ICON), text,
 			    &dip->loops[j]);
 			it->depth = 1;
 		}
 	}
 	pthread_mutex_unlock(&com->lock);
 out:
-	tlist_restore_selections(tl);
+	AG_TlistRestore(tl);
 }
 
-struct window *
+void *
 circuit_edit(void *p)
 {
 	struct circuit *ckt = p;
-	struct window *win;
-	struct toolbar *toolbar;
-	struct statusbar *statbar;
-	struct AGMenu *menu;
-	struct AGMenuItem *pitem, *subitem;
-	struct mapview *mv;
-	struct hpane *pane;
-	struct hpane_div *div;
-	struct scrollbar *hbar, *vbar;
+	AG_Window *win;
+	AG_Toolbar *toolbar;
+	AG_Statusbar *statbar;
+	AG_Menu *menu;
+	AG_MenuItem *pitem, *subitem;
+	AG_Mapview *mv;
+	AG_HPane *pane;
+	AG_HPaneDiv *div;
+	AG_Scrollbar *hbar, *vbar;
 
-	win = window_new(0, NULL);
-	window_set_caption(win, "%s", OBJECT(ckt)->name);
+	win = AG_WindowNew(0, NULL);
+	AG_WindowSetCaption(win, "%s", AGOBJECT(ckt)->name);
 
-	toolbar = Malloc(sizeof(struct toolbar), M_OBJECT);
-	toolbar_init(toolbar, TOOLBAR_VERT, 1, 0);
-	statbar = Malloc(sizeof(struct statusbar), M_OBJECT);
-	statusbar_init(statbar);
-	mv = Malloc(sizeof(struct mapview), M_OBJECT);
-	mapview_init(mv, ckt->vg->map, MAPVIEW_NO_BMPZOOM|MAPVIEW_NO_NODESEL|
-	                               MAPVIEW_EDIT, toolbar, statbar);
+	toolbar = Malloc(sizeof(AG_Toolbar), M_OBJECT);
+	AG_ToolbarInit(toolbar, AG_TOOLBAR_VERT, 1, 0);
+	statbar = Malloc(sizeof(AG_Statusbar), M_OBJECT);
+	AG_StatusbarInit(statbar);
+	mv = Malloc(sizeof(AG_Mapview), M_OBJECT);
+	AG_MapviewInit(mv, ckt->vg->map,
+	    AG_MAPVIEW_NO_BMPSCALE|AG_MAPVIEW_NO_NODESEL|AG_MAPVIEW_EDIT,
+	    toolbar, statbar);
 	
-	menu = menu_new(win);
-	pitem = menu_add_item(menu, _("File"));
+	menu = AG_MenuNew(win);
+	pitem = AG_MenuAddItem(menu, _("File"));
 	{
-		menu_action_kb(pitem, _("Revert"), OBJLOAD_ICON,
+		AG_MenuActionKb(pitem, _("Revert"), OBJLOAD_ICON,
 		    SDLK_r, KMOD_CTRL, revert_circuit, "%p", ckt);
-		menu_action_kb(pitem, _("Save"), OBJSAVE_ICON,
+		AG_MenuActionKb(pitem, _("Save"), OBJSAVE_ICON,
 		    SDLK_s, KMOD_CTRL, save_circuit, "%p", ckt);
 
-		subitem = menu_action(pitem, _("Export circuit"), OBJSAVE_ICON,
-		    NULL, NULL);
-		menu_action(subitem, _("Export to SPICE3..."), EDA_SPICE_ICON,
+		subitem = AG_MenuAction(pitem, _("Export circuit"),
+		    OBJSAVE_ICON, NULL, NULL);
+		AG_MenuAction(subitem, _("Export to SPICE3..."), EDA_SPICE_ICON,
 		    export_to_spice, "%p", ckt);
 	
-		menu_separator(pitem);
+		AG_MenuSeparator(pitem);
 
-		menu_action_kb(pitem, _("Close document"), CLOSE_ICON,
-		    SDLK_w, KMOD_CTRL, WINCLOSE(win));
+		AG_MenuActionKb(pitem, _("Close document"), CLOSE_ICON,
+		    SDLK_w, KMOD_CTRL, AGWINCLOSE(win));
 	}
-	pitem = menu_add_item(menu, _("Edit"));
+	pitem = AG_MenuAddItem(menu, _("Edit"));
 	{
 		/* TODO */
-		menu_action(pitem, _("Undo"), -1, NULL, NULL);
-		menu_action(pitem, _("Redo"), -1, NULL, NULL);
+		AG_MenuAction(pitem, _("Undo"), -1, NULL, NULL);
+		AG_MenuAction(pitem, _("Redo"), -1, NULL, NULL);
 
-		menu_separator(pitem);
+		AG_MenuSeparator(pitem);
 
-		menu_action(pitem, _("Layout preferences..."), SETTINGS_ICON,
+		AG_MenuAction(pitem, _("Layout preferences..."), SETTINGS_ICON,
 		    layout_settings, "%p,%p", win, ckt);
 	}
 
-	pitem = menu_add_item(menu, _("Drawing"));
-	vg_reg_menu(menu, pitem, ckt->vg, mv);
+	pitem = AG_MenuAddItem(menu, _("Drawing"));
+	VG_GenericMenu(menu, pitem, ckt->vg, mv);
 
-	pitem = menu_add_item(menu, _("View"));
+	pitem = AG_MenuAddItem(menu, _("View"));
 	{
-		menu_action(pitem, _("Show interconnects..."), EDA_MESH_ICON,
+		AG_MenuAction(pitem, _("Show interconnects..."), EDA_MESH_ICON,
 		    show_interconnects, "%p,%p", win, ckt);
 
-		menu_separator(pitem);
+		AG_MenuSeparator(pitem);
 
-		menu_int_flags(pitem, _("Show origin"), VGORIGIN_ICON,
+		AG_MenuIntFlags(pitem, _("Show origin"), VGORIGIN_ICON,
 		    &ckt->vg->flags, VG_VISORIGIN, 0);
-		menu_int_flags(pitem, _("Show grid"), GRID_ICON,
+		AG_MenuIntFlags(pitem, _("Show grid"), GRID_ICON,
 		    &ckt->vg->flags, VG_VISGRID, 0);
-		menu_int_flags(pitem, _("Show extents"), VGBLOCK_ICON,
+		AG_MenuIntFlags(pitem, _("Show extents"), VGBLOCK_ICON,
 		    &ckt->vg->flags, VG_VISBBOXES, 0);
 		
-		menu_separator(pitem);
+		AG_MenuSeparator(pitem);
 		
-		menu_action(pitem, _("Create view..."), NEW_VIEW_ICON,
+		AG_MenuAction(pitem, _("Create view..."), NEW_VIEW_ICON,
 		    create_view, "%p,%p,%p", mv, win, ckt);
 	}
 
-	pitem = menu_add_item(menu, _("Simulation"));
+	pitem = AG_MenuAddItem(menu, _("Simulation"));
 	{
 		extern const struct sim_ops *sim_ops[];
 		const struct sim_ops **ops;
 
 		for (ops = &sim_ops[0]; *ops != NULL; ops++) {
-			menu_tool(pitem, toolbar, _((*ops)->name),
+			AG_MenuTool(pitem, toolbar, _((*ops)->name),
 			    (*ops)->icon, 0, 0,
 			    select_sim, "%p,%p,%p", ckt, *ops, win);
 		}
 	}
 #if 0
-	pitem = menu_add_item(menu, _("Component"));
+	pitem = AG_MenuAddItem(menu, _("Component"));
 	component_reg_menu(menu, pitem, ckt, mv);
 #endif
 
-	pane = hpane_new(win, HPANE_WFILL|HPANE_HFILL);
-	div = hpane_add_div(pane,
-	    BOX_VERT, BOX_HFILL,
-	    BOX_HORIZ, BOX_WFILL|BOX_HFILL);
+	pane = AG_HPaneNew(win, AG_HPANE_WFILL|AG_HPANE_HFILL);
+	div = AG_HPaneAddDiv(pane,
+	    AG_BOX_VERT, AG_BOX_HFILL,
+	    AG_BOX_HORIZ, AG_BOX_WFILL|AG_BOX_HFILL);
 	{
-		struct notebook *nb;
-		struct notebook_tab *ntab;
-		struct tlist *tl;
-		struct box *box;
+		AG_Notebook *nb;
+		AG_NotebookTab *ntab;
+		AG_Tlist *tl;
+		AG_Box *box;
 
-		nb = notebook_new(div->box1, NOTEBOOK_HFILL|NOTEBOOK_WFILL);
-		ntab = notebook_add_tab(nb, _("Models"), BOX_VERT);
+		nb = AG_NotebookNew(div->box1, AG_NOTEBOOK_HFILL|
+					       AG_NOTEBOOK_WFILL);
+		ntab = AG_NotebookAddTab(nb, _("Models"), AG_BOX_VERT);
 		{
-			char tname[OBJECT_TYPE_MAX];
+			char tname[AG_OBJECT_TYPE_MAX];
 			extern const struct eda_type eda_models[];
 			const struct eda_type *ty;
-			struct button *btn;
+			AG_Button *btn;
 			int i;
 
-			tl = tlist_new(ntab, TLIST_POLL|TLIST_TREE);
-			WIDGET(tl)->flags &= ~(WIDGET_FOCUSABLE);
-			event_new(tl, "tlist-dblclick", component_insert,
+			tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE);
+			AGWIDGET(tl)->flags &= ~(AG_WIDGET_FOCUSABLE);
+			AG_SetEvent(tl, "tlist-dblclick", component_insert,
 			    "%p,%p,%p", mv, tl, ckt);
 
-			btn = button_new(ntab, _("Insert component"));
-			WIDGET(btn)->flags |= WIDGET_WFILL;
-			event_new(btn, "button-pushed", component_insert,
+			btn = AG_ButtonNew(ntab, _("Insert component"));
+			AGWIDGET(btn)->flags |= AG_WIDGET_WFILL;
+			AG_SetEvent(btn, "button-pushed", component_insert,
 			    "%p,%p,%p", mv, tl, ckt);
 
 			for (ty = &eda_models[0]; ty->name != NULL; ty++) {
-				for (i = 0; i < ntypesw; i++) {
+				for (i = 0; i < agnTypes; i++) {
 					strlcpy(tname, "component.",
 					    sizeof(tname));
 					strlcat(tname, ty->name, sizeof(tname));
-					if (strcmp(typesw[i].type, tname) == 0)
+					if (strcmp(agTypes[i].type, tname) == 0)
 						break;
 				}
-				if (i < ntypesw) {
-					struct object_type *ctype = &typesw[i];
+				if (i < agnTypes) {
+					AG_ObjectType *ctype = &agTypes[i];
 					struct component_ops *cops =
 					    (struct component_ops *)ctype->ops;
 
-					tlist_insert_item(tl,
-					    ICON(EDA_COMPONENT_ICON),
+					AG_TlistAddPtr(tl,
+					    AGICON(EDA_COMPONENT_ICON),
 					    _(cops->name), ctype);
 				}
 			}
 		}
 
-		ntab = notebook_add_tab(nb, _("Objects"), BOX_VERT);
+		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
 		{
-			tl = tlist_new(ntab, TLIST_POLL|TLIST_TREE);
-			event_new(tl, "tlist-poll", poll_objs, "%p", ckt);
+			tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE);
+			AG_SetEvent(tl, "tlist-poll", poll_objs, "%p", ckt);
 			mv->objs_tl = tl;
-			WIDGET(tl)->flags &= ~(WIDGET_FOCUSABLE);
+			AGWIDGET(tl)->flags &= ~(AG_WIDGET_FOCUSABLE);
 		}
 
-		ntab = notebook_add_tab(nb, _("Component"), BOX_VERT);
+		ntab = AG_NotebookAddTab(nb, _("Component"), AG_BOX_VERT);
 		{
 #if 0
-			struct fspinbutton *fsb;
+			AG_FSpinbutton *fsb;
 
 			label_static(ntab, _("Temperature:"));
 
-			fsb = fspinbutton_new(win, "degC", _("Reference: "));
-			widget_bind(fsb, "value", WIDGET_FLOAT, &com->Tnom);
-			fspinbutton_set_min(fsb, 0.0);
+			fsb = AG_FSpinbuttonNew(win, "degC", _("Reference: "));
+			AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT,
+			    &com->Tnom);
+			AG_FSpinbuttonSetMin(fsb, 0.0);
 	
-			fsb = fspinbutton_new(win, "degC", _("Instance: "));
-			widget_bind(fsb, "value", WIDGET_FLOAT, &com->Tspec);
-			fspinbutton_set_min(fsb, 0.0);
+			fsb = AG_FSpinbuttonNew(win, "degC", _("Instance: "));
+			AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT,
+			    &com->Tspec);
+			AG_FSpinbuttonSetMin(fsb, 0.0);
 
-			separator_new(ntab, SEPARATOR_HORIZ);
+			AG_SeparatorNew(ntab, SEPARATOR_HORIZ);
 #endif
-			label_new(ntab, LABEL_STATIC, _("Pinout:"));
+			AG_LabelNew(ntab, AG_LABEL_STATIC, _("Pinout:"));
 			{
-				tl = tlist_new(ntab, TLIST_POLL);
-				WIDGET(tl)->flags &= ~(WIDGET_HFILL);
-				event_new(tl, "tlist-poll",
+				tl = AG_TlistNew(ntab, AG_TLIST_POLL);
+				AGWIDGET(tl)->flags &= ~(AG_WIDGET_HFILL);
+				AG_SetEvent(tl, "tlist-poll",
 				    poll_component_pins, "%p", ckt);
 			}
-			label_new(ntab, LABEL_STATIC, _("Dipoles:"));
+			AG_LabelNew(ntab, AG_LABEL_STATIC, _("Dipoles:"));
 			{
-				tl = tlist_new(ntab, TLIST_POLL);
-				event_new(tl, "tlist-poll",
+				tl = AG_TlistNew(ntab, AG_TLIST_POLL);
+				AG_SetEvent(tl, "tlist-poll",
 				    poll_component_dipoles, "%p", ckt);
 			}
 		}
 
-		vbar = scrollbar_new(div->box2, SCROLLBAR_VERT);
-		box = box_new(div->box2, BOX_VERT, BOX_WFILL|BOX_HFILL);
+		vbar = AG_ScrollbarNew(div->box2, AG_SCROLLBAR_VERT);
+		box = AG_BoxNew(div->box2, AG_BOX_VERT,
+		    AG_BOX_WFILL|AG_BOX_HFILL);
 		{
-			object_attach(box, mv);
-			widget_focus(mv);
-			hbar = scrollbar_new(box, SCROLLBAR_HORIZ);
+			AG_ObjectAttach(box, mv);
+			AG_WidgetFocus(mv);
+			hbar = AG_ScrollbarNew(box, AG_SCROLLBAR_HORIZ);
 		}
-		object_attach(div->box2, toolbar);
+		AG_ObjectAttach(div->box2, toolbar);
 	}
 
 	{
-		extern struct tool_ops component_ins_tool;
-		extern struct tool_ops component_sel_tool;
-		extern struct tool_ops conductor_tool;
-		extern struct tool_ops vg_scale_tool;
-		extern struct tool_ops vg_origin_tool;
-		extern struct tool_ops vg_line_tool;
-		extern struct tool_ops vg_text_tool;
-		struct tool *seltool;
+		extern AG_MaptoolOps component_ins_tool;
+		extern AG_MaptoolOps component_sel_tool;
+		extern AG_MaptoolOps conductor_tool;
+		extern AG_MaptoolOps vgScaleTool;
+		extern AG_MaptoolOps vgOriginTool;
+		extern AG_MaptoolOps vgLineTool;
+		extern AG_MaptoolOps vgTextTool;
+		AG_Maptool *seltool;
 
-		mapview_prescale(mv, 10, 8);
-		mapview_reg_draw_cb(mv, rasterize_circuit, ckt->vg);
-		mapview_set_scrollbars(mv, hbar, vbar);
+		AG_MapviewPrescale(mv, 10, 8);
+		AG_MapviewRegDrawCb(mv, rasterize_circuit, ckt->vg);
+		AG_MapviewUseScrollbars(mv, hbar, vbar);
 		
-		mapview_reg_tool(mv, &component_ins_tool, ckt);
-		mapview_reg_tool(mv, &conductor_tool, ckt);
-		mapview_reg_tool(mv, &vg_scale_tool, ckt->vg);
-		mapview_reg_tool(mv, &vg_origin_tool, ckt->vg);
-		mapview_reg_tool(mv, &vg_line_tool, ckt->vg);
-		mapview_reg_tool(mv, &vg_text_tool, ckt->vg);
+		AG_MapviewRegTool(mv, &component_ins_tool, ckt);
+		AG_MapviewRegTool(mv, &conductor_tool, ckt);
+		AG_MapviewRegTool(mv, &vgScaleTool, ckt->vg);
+		AG_MapviewRegTool(mv, &vgOriginTool, ckt->vg);
+		AG_MapviewRegTool(mv, &vgLineTool, ckt->vg);
+		AG_MapviewRegTool(mv, &vgTextTool, ckt->vg);
 		
-		seltool = mapview_reg_tool(mv, &component_sel_tool, ckt);
-		mapview_set_default_tool(mv, seltool);
+		seltool = AG_MapviewRegTool(mv, &component_sel_tool, ckt);
+		AG_MapviewSetDefaultTool(mv, seltool);
 
-		event_new(mv, "mapview-dblclick", double_click, "%p", ckt);
+		AG_SetEvent(mv, "mapview-dblclick", double_click, "%p", ckt);
 	}
 
-	object_attach(win, statbar);
-	window_scale(win, -1, -1);
-	window_set_geometry(win,
-	    view->w/6, view->h/6,
-	    2*view->w/3, 2*view->h/3);
+	AG_ObjectAttach(win, statbar);
+	AG_WindowScale(win, -1, -1);
+	AG_WindowSetGeometry(win,
+	    agView->w/6, agView->h/6,
+	    2*agView->w/3, 2*agView->h/3);
 	
 	return (win);
 }

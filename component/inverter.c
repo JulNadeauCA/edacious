@@ -1,4 +1,4 @@
-/*	$Csoft: inverter.c,v 1.3 2005/09/10 05:48:21 vedge Exp $	*/
+/*	$Csoft: inverter.c,v 1.4 2005/09/15 02:04:49 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -36,7 +36,7 @@
 
 #include "inverter.h"
 
-const struct version inverter_ver = {
+const AG_Version inverter_ver = {
 	"agar-eda inverter",
 	0, 0
 };
@@ -71,36 +71,36 @@ const struct pin inverter_pinout[] = {
 };
 
 void
-inverter_draw(void *p, struct vg *vg)
+inverter_draw(void *p, VG *vg)
 {
 	struct inverter *inv = p;
 	struct component *com = p;
-	struct vg_block *block;
+	VG_Block *block;
 
-	vg_begin_element(vg, VG_LINES);
-	vg_vertex2(vg, 0.000, 0.000);
-	vg_vertex2(vg, 0.250, 0.000);
-	vg_vertex2(vg, 2.000, 0.000);
-	vg_vertex2(vg, 1.750, 0.000);
-	vg_end_element(vg);
+	VG_Begin(vg, VG_LINES);
+	VG_Vertex2(vg, 0.000, 0.000);
+	VG_Vertex2(vg, 0.250, 0.000);
+	VG_Vertex2(vg, 2.000, 0.000);
+	VG_Vertex2(vg, 1.750, 0.000);
+	VG_End(vg);
 
-	vg_begin_element(vg, VG_LINE_LOOP);
-	vg_vertex2(vg, 0.250, +0.625);
-	vg_vertex2(vg, 1.750,  0.000);
-	vg_vertex2(vg, 0.250, -0.625);
-	vg_end_element(vg);
+	VG_Begin(vg, VG_LINE_LOOP);
+	VG_Vertex2(vg, 0.250, +0.625);
+	VG_Vertex2(vg, 1.750,  0.000);
+	VG_Vertex2(vg, 0.250, -0.625);
+	VG_End(vg);
 
-	vg_begin_element(vg, VG_CIRCLE);
-	vg_vertex2(vg, 1.750, 0.0000);
-	vg_circle_radius(vg, 0.0625);
-	vg_end_element(vg);
+	VG_Begin(vg, VG_CIRCLE);
+	VG_Vertex2(vg, 1.750, 0.0000);
+	VG_CircleRadius(vg, 0.0625);
+	VG_End(vg);
 
-	vg_begin_element(vg, VG_TEXT);
-	vg_style(vg, "component-name");
-	vg_vertex2(vg, 0.750, 0);
-	vg_text_align(vg, VG_ALIGN_MC);
-	vg_printf(vg, "%s", OBJECT(com)->name);
-	vg_end_element(vg);
+	VG_Begin(vg, VG_TEXT);
+	VG_SetStyle(vg, "component-name");
+	VG_Vertex2(vg, 0.750, 0);
+	VG_TextAlignment(vg, VG_ALIGN_MC);
+	VG_Printf(vg, "%s", AGOBJECT(com)->name);
+	VG_End(vg);
 }
 
 /* Initiate a LTH/HTL transition on a given pin. */
@@ -120,7 +120,7 @@ switch_pin(int argc, union evarg *argv)
 		    U(inv,2) <  inv->Voh) {
 			dv = inv->Voh/inv->Ttlh;
 			U(inv,2) += dv;
-			event_schedule(NULL, inv, 1, "Abar->1", NULL);
+			AG_SchedEvent(NULL, inv, 1, "Abar->1", NULL);
 		}
 		break;
 	case 0:
@@ -128,7 +128,7 @@ switch_pin(int argc, union evarg *argv)
 		    U(inv,2) >= inv->Voh) {
 			dv = inv->Voh/inv->Tthl;
 			U(inv,2) -= dv;
-			event_schedule(NULL, inv, 1, "Abar->0", NULL);
+			AG_SchedEvent(NULL, inv, 1, "Abar->0", NULL);
 		}
 		break;
 	}
@@ -154,8 +154,8 @@ inverter_init(void *p, const char *name)
 	inv->Vil = 0;
 	inv->Voh = 5;
 	inv->Vol = 0;
-	event_new(inv, "Abar->1", switch_pin, "%i, %i", 2, 1);
-	event_new(inv, "Abar->0", switch_pin, "%i, %i", 2, 0);
+	AG_SetEvent(inv, "Abar->1", switch_pin, "%i, %i", 2, 1);
+	AG_SetEvent(inv, "Abar->0", switch_pin, "%i, %i", 2, 0);
 }
 
 void
@@ -172,7 +172,7 @@ inverter_tick(void *p)
 	if (U(com,1) >= inv->Vih &&
 	    U(com,2) <  inv->Voh) {
 		if (++inv->Telh >= inv->Thold) {
-			event_schedule(NULL, inv, inv->Tplh, "Abar->1", NULL);
+			AG_SchedEvent(NULL, inv, inv->Tplh, "Abar->1", NULL);
 			inv->Telh = 0;
 		}
 	}
@@ -181,7 +181,7 @@ inverter_tick(void *p)
 	if (U(com,1) <= inv->Vil &&
 	    U(com,2) >  inv->Vol) {
 		if (++inv->Tehl >= inv->Thold) {
-			event_schedule(NULL, inv, inv->Tphl, "Abar->0", NULL);
+			AG_SchedEvent(NULL, inv, inv->Tphl, "Abar->0", NULL);
 			inv->Tehl = 0;
 		}
 	} else {
@@ -191,46 +191,46 @@ inverter_tick(void *p)
 }
 
 int
-inverter_load(void *p, struct netbuf *buf)
+inverter_load(void *p, AG_Netbuf *buf)
 {
 	struct inverter *inv = p;
 
-	if (version_read(buf, &inverter_ver, NULL) == -1 ||
+	if (AG_ReadVersion(buf, &inverter_ver, NULL) == -1 ||
 	    component_load(inv, buf) == -1) {
 		return (-1);
 	}
-	inv->Tphl = read_float(buf);
-	inv->Tplh = read_float(buf);
-	inv->Tthl = read_float(buf);
-	inv->Ttlh = read_float(buf);
-	inv->Cin = read_float(buf);
-	inv->Cpd = read_float(buf);
-	inv->Vih = read_float(buf);
-	inv->Vil = read_float(buf);
-	inv->Voh = read_float(buf);
-	inv->Vol = read_float(buf);
+	inv->Tphl = AG_ReadFloat(buf);
+	inv->Tplh = AG_ReadFloat(buf);
+	inv->Tthl = AG_ReadFloat(buf);
+	inv->Ttlh = AG_ReadFloat(buf);
+	inv->Cin = AG_ReadFloat(buf);
+	inv->Cpd = AG_ReadFloat(buf);
+	inv->Vih = AG_ReadFloat(buf);
+	inv->Vil = AG_ReadFloat(buf);
+	inv->Voh = AG_ReadFloat(buf);
+	inv->Vol = AG_ReadFloat(buf);
 	return (0);
 }
 
 int
-inverter_save(void *p, struct netbuf *buf)
+inverter_save(void *p, AG_Netbuf *buf)
 {
 	struct inverter *inv = p;
 
-	version_write(buf, &inverter_ver);
+	AG_WriteVersion(buf, &inverter_ver);
 	if (component_save(inv, buf) == -1) {
 		return (-1);
 	}
-	write_float(buf, inv->Tphl);
-	write_float(buf, inv->Tplh);
-	write_float(buf, inv->Tthl);
-	write_float(buf, inv->Ttlh);
-	write_float(buf, inv->Cin);
-	write_float(buf, inv->Cpd);
-	write_float(buf, inv->Vih);
-	write_float(buf, inv->Vil);
-	write_float(buf, inv->Voh);
-	write_float(buf, inv->Vol);
+	AG_WriteFloat(buf, inv->Tphl);
+	AG_WriteFloat(buf, inv->Tplh);
+	AG_WriteFloat(buf, inv->Tthl);
+	AG_WriteFloat(buf, inv->Ttlh);
+	AG_WriteFloat(buf, inv->Cin);
+	AG_WriteFloat(buf, inv->Cpd);
+	AG_WriteFloat(buf, inv->Vih);
+	AG_WriteFloat(buf, inv->Vil);
+	AG_WriteFloat(buf, inv->Voh);
+	AG_WriteFloat(buf, inv->Vol);
 	return (0);
 }
 
@@ -252,37 +252,37 @@ inverter_export(void *p, enum circuit_format fmt, FILE *f)
 }
 
 #ifdef EDITION
-struct window *
+AG_Window *
 inverter_edit(void *p)
 {
 	struct inverter *inv = p;
-	struct window *win;
-	struct fspinbutton *fsb;
+	AG_Window *win;
+	AG_FSpinbutton *fsb;
 
-	win = window_new(0, NULL);
+	win = AG_WindowNew(0, NULL);
 
-	fsb = fspinbutton_new(win, "ns", "Tphl: ");
-	widget_bind(fsb, "value", WIDGET_FLOAT, &inv->Tphl);
-	fsb = fspinbutton_new(win, "ns", "Tplh: ");
-	widget_bind(fsb, "value", WIDGET_FLOAT, &inv->Tplh);
-	fsb = fspinbutton_new(win, "ns", "Tthl: ");
-	widget_bind(fsb, "value", WIDGET_FLOAT, &inv->Tthl);
-	fsb = fspinbutton_new(win, "ns", "Ttlh: ");
-	widget_bind(fsb, "value", WIDGET_FLOAT, &inv->Ttlh);
+	fsb = AG_FSpinbuttonNew(win, "ns", "Tphl: ");
+	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Tphl);
+	fsb = AG_FSpinbuttonNew(win, "ns", "Tplh: ");
+	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Tplh);
+	fsb = AG_FSpinbuttonNew(win, "ns", "Tthl: ");
+	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Tthl);
+	fsb = AG_FSpinbuttonNew(win, "ns", "Ttlh: ");
+	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Ttlh);
 	
-	fsb = fspinbutton_new(win, "pF", "Cin: ");
-	widget_bind(fsb, "value", WIDGET_FLOAT, &inv->Cin);
-	fsb = fspinbutton_new(win, "pF", "Cpd: ");
-	widget_bind(fsb, "value", WIDGET_FLOAT, &inv->Cpd);
+	fsb = AG_FSpinbuttonNew(win, "pF", "Cin: ");
+	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Cin);
+	fsb = AG_FSpinbuttonNew(win, "pF", "Cpd: ");
+	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Cpd);
 	
-	fsb = fspinbutton_new(win, "V", "Vih: ");
-	widget_bind(fsb, "value", WIDGET_FLOAT, &inv->Vih);
-	fsb = fspinbutton_new(win, "V", "Vil: ");
-	widget_bind(fsb, "value", WIDGET_FLOAT, &inv->Vil);
-	fsb = fspinbutton_new(win, "V", "Voh: ");
-	widget_bind(fsb, "value", WIDGET_FLOAT, &inv->Voh);
-	fsb = fspinbutton_new(win, "V", "Vol: ");
-	widget_bind(fsb, "value", WIDGET_FLOAT, &inv->Vol);
+	fsb = AG_FSpinbuttonNew(win, "V", "Vih: ");
+	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Vih);
+	fsb = AG_FSpinbuttonNew(win, "V", "Vil: ");
+	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Vil);
+	fsb = AG_FSpinbuttonNew(win, "V", "Voh: ");
+	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Voh);
+	fsb = AG_FSpinbuttonNew(win, "V", "Vol: ");
+	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Vol);
 
 	return (win);
 }

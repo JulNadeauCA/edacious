@@ -1,4 +1,4 @@
-/*	$Csoft: analysis.h,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
+/*	$Csoft: sim.h,v 1.1 2005/09/08 09:46:01 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _CIRCUIT_SIM_H_
@@ -8,7 +8,7 @@
 struct sim {
 	struct circuit *ckt;
 	const struct sim_ops *ops;
-	struct window *win;
+	AG_Window *win;
 	int running;
 };
 
@@ -19,7 +19,7 @@ struct sim_ops {
 	void (*init)(void *);
 	void (*destroy)(void *);
 	void (*cktmod)(void *, struct circuit *);
-	struct window *(*edit)(void *, struct circuit *);
+	AG_Window *(*edit)(void *, struct circuit *);
 };
 
 #define SIM(p) ((struct sim *)p)

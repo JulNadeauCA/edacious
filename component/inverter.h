@@ -1,4 +1,4 @@
-/*	$Csoft: inverter.h,v 1.4 2004/08/27 03:16:10 vedge Exp $	*/
+/*	$Csoft: inverter.h,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_INVERTER_H_
@@ -22,12 +22,12 @@ struct inverter {
 
 __BEGIN_DECLS
 void		 inverter_init(void *, const char *);
-int		 inverter_load(void *, struct netbuf *);
-int		 inverter_save(void *, struct netbuf *);
+int		 inverter_load(void *, AG_Netbuf *);
+int		 inverter_save(void *, AG_Netbuf *);
 int		 inverter_export(void *, enum circuit_format, FILE *);
-struct window	*inverter_edit(void *);
+AG_Window	*inverter_edit(void *);
 void		 inverter_tick(void *);
-void		 inverter_draw(void *, struct vg *);
+void		 inverter_draw(void *, VG *);
 __END_DECLS
 
 #include "close_code.h"

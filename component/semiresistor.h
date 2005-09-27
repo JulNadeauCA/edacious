@@ -1,4 +1,4 @@
-/*	$Csoft: semiresistor.h,v 1.3 2004/08/27 03:16:10 vedge Exp $	*/
+/*	$Csoft: semiresistor.h,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_SEMIRESISTOR_H_
@@ -19,14 +19,14 @@ struct semiresistor {
 
 __BEGIN_DECLS
 void		 semiresistor_init(void *, const char *);
-int		 semiresistor_load(void *, struct netbuf *);
-int		 semiresistor_save(void *, struct netbuf *);
+int		 semiresistor_load(void *, AG_Netbuf *);
+int		 semiresistor_save(void *, AG_Netbuf *);
 int		 semiresistor_export(void *, enum circuit_format, FILE *);
 double		 semiresistor_resistance(void *, struct pin *, struct pin *);
-struct window	*semiresistor_edit(void *);
+AG_Window	*semiresistor_edit(void *);
 int		 semiresistor_configure(void *);
-void		 semiresistor_draw(void *, struct vg *);
-void		 semiresistor_update(void *, struct vg *);
+void		 semiresistor_draw(void *, VG *);
+void		 semiresistor_update(void *, VG *);
 __END_DECLS
 
 #include "close_code.h"

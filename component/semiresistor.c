@@ -1,4 +1,4 @@
-/*	$Csoft: semiresistor.c,v 1.3 2005/09/10 05:48:21 vedge Exp $	*/
+/*	$Csoft: semiresistor.c,v 1.4 2005/09/15 02:04:49 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -38,7 +38,7 @@
 
 #include "semiresistor.h"
 
-const struct version semiresistor_ver = {
+const AG_Version semiresistor_ver = {
 	"agar-eda semiconductor resistor",
 	0, 0
 };
@@ -73,30 +73,30 @@ const struct pin semiresistor_pinout[] = {
 };
 
 void
-semiresistor_draw(void *p, struct vg *vg)
+semiresistor_draw(void *p, VG *vg)
 {
 	struct semiresistor *r = p;
 
-	vg_begin_element(vg, VG_LINES);
-	vg_vertex2(vg, 0.000, 0.000);
-	vg_vertex2(vg, 0.156, 0.000);
-	vg_vertex2(vg, 1.250, 0.000);
-	vg_vertex2(vg, 1.09375, 0.000);
-	vg_end_element(vg);
-	vg_begin_element(vg, VG_LINE_LOOP);
-	vg_vertex2(vg, 0.156, -0.240);
-	vg_vertex2(vg, 0.156,  0.240);
-	vg_vertex2(vg, 1.09375,  0.240);
-	vg_vertex2(vg, 1.09375, -0.240);
-	vg_end_element(vg);
+	VG_Begin(vg, VG_LINES);
+	VG_Vertex2(vg, 0.000, 0.000);
+	VG_Vertex2(vg, 0.156, 0.000);
+	VG_Vertex2(vg, 1.250, 0.000);
+	VG_Vertex2(vg, 1.09375, 0.000);
+	VG_End(vg);
+	VG_Begin(vg, VG_LINE_LOOP);
+	VG_Vertex2(vg, 0.156, -0.240);
+	VG_Vertex2(vg, 0.156,  0.240);
+	VG_Vertex2(vg, 1.09375,  0.240);
+	VG_Vertex2(vg, 1.09375, -0.240);
+	VG_End(vg);
 
-	vg_begin_element(vg, VG_TEXT);
-	vg_style(vg, "component-name");
-	vg_vertex2(vg, 0.625, 0.000);
-	vg_text_align(vg, VG_ALIGN_MC);
+	VG_Begin(vg, VG_TEXT);
+	VG_SetStyle(vg, "component-name");
+	VG_Vertex2(vg, 0.625, 0.000);
+	VG_TextAlignment(vg, VG_ALIGN_MC);
 
-	vg_printf(vg, "%s\n", OBJECT(r)->name);
-	vg_end_element(vg);
+	VG_Printf(vg, "%s\n", AGOBJECT(r)->name);
+	VG_End(vg);
 }
 
 void
@@ -116,40 +116,40 @@ semiresistor_init(void *p, const char *name)
 }
 
 int
-semiresistor_load(void *p, struct netbuf *buf)
+semiresistor_load(void *p, AG_Netbuf *buf)
 {
 	struct semiresistor *r = p;
 
-	if (version_read(buf, &semiresistor_ver, NULL) == -1 ||
+	if (AG_ReadVersion(buf, &semiresistor_ver, NULL) == -1 ||
 	    component_load(r, buf) == -1)
 		return (-1);
 
-	r->l = read_double(buf);
-	r->w = read_double(buf);
-	r->rsh = read_double(buf);
-	r->defw = read_double(buf);
-	r->narrow = read_double(buf);
-	r->Tc1 = read_float(buf);
-	r->Tc2 = read_float(buf);
+	r->l = AG_ReadDouble(buf);
+	r->w = AG_ReadDouble(buf);
+	r->rsh = AG_ReadDouble(buf);
+	r->defw = AG_ReadDouble(buf);
+	r->narrow = AG_ReadDouble(buf);
+	r->Tc1 = AG_ReadFloat(buf);
+	r->Tc2 = AG_ReadFloat(buf);
 	return (0);
 }
 
 int
-semiresistor_save(void *p, struct netbuf *buf)
+semiresistor_save(void *p, AG_Netbuf *buf)
 {
 	struct semiresistor *r = p;
 
-	version_write(buf, &semiresistor_ver);
+	AG_WriteVersion(buf, &semiresistor_ver);
 	if (component_save(r, buf) == -1)
 		return (-1);
 
-	write_double(buf, r->l);
-	write_double(buf, r->w);
-	write_double(buf, r->rsh);
-	write_double(buf, r->defw);
-	write_double(buf, r->narrow);
-	write_float(buf, r->Tc1);
-	write_float(buf, r->Tc2);
+	AG_WriteDouble(buf, r->l);
+	AG_WriteDouble(buf, r->w);
+	AG_WriteDouble(buf, r->rsh);
+	AG_WriteDouble(buf, r->defw);
+	AG_WriteDouble(buf, r->narrow);
+	AG_WriteFloat(buf, r->Tc1);
+	AG_WriteFloat(buf, r->Tc2);
 	return (0);
 }
 
@@ -171,7 +171,7 @@ semiresistor_export(void *p, enum circuit_format fmt, FILE *f)
 		    nRmod, r->Tc1, r->Tc2, r->rsh, r->defw, r->narrow,
 		    COM(r)->Tnom);
 		fprintf(f, "%s %d %d Rmod%u L=%g W=%g TEMP=%g\n",
-		    OBJECT(r)->name, PNODE(r,1), PNODE(r,2),
+		    AGOBJECT(r)->name, PNODE(r,1), PNODE(r,2),
 		    nRmod, r->l, r->w, COM(r)->Tspec);
 		nRmod++;
 		break;
@@ -191,34 +191,34 @@ semiresistor_resistance(void *p, struct pin *p1, struct pin *p2)
 }
 
 #ifdef EDITION
-struct window *
+AG_Window *
 semiresistor_edit(void *p)
 {
 	struct semiresistor *r = p;
-	struct window *win, *subwin;
-	struct spinbutton *sb;
-	struct fspinbutton *fsb;
-	struct mfspinbutton *mfsb;
+	AG_Window *win, *subwin;
+	AG_Spinbutton *sb;
+	AG_FSpinbutton *fsb;
+	AG_MFSpinbutton *mfsb;
 
-	win = window_new(0, NULL);
+	win = AG_WindowNew(0, NULL);
 
-	mfsb = mfspinbutton_new(win, "um", "x", _("Geometry (LxW): "));
-	widget_bind(mfsb, "xvalue", WIDGET_DOUBLE, &r->l);
-	widget_bind(mfsb, "yvalue", WIDGET_DOUBLE, &r->w);
-	mfspinbutton_set_min(mfsb, 1e-6);
+	mfsb = AG_MFSpinbuttonNew(win, "um", "x", _("Geometry (LxW): "));
+	AG_WidgetBind(mfsb, "xvalue", AG_WIDGET_DOUBLE, &r->l);
+	AG_WidgetBind(mfsb, "yvalue", AG_WIDGET_DOUBLE, &r->w);
+	AG_MFSpinbuttonSetMin(mfsb, 1e-6);
 	
-	fsb = fspinbutton_new(win, "kohms", _("Sheet resistance/sq: "));
-	widget_bind(fsb, "value", WIDGET_DOUBLE, &r->rsh);
-	fspinbutton_set_min(fsb, 0);
+	fsb = AG_FSpinbuttonNew(win, "kohms", _("Sheet resistance/sq: "));
+	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->rsh);
+	AG_FSpinbuttonSetMin(fsb, 0);
 	
-	fsb = fspinbutton_new(win, "um", _("Narrowing due to side etching: "));
-	widget_bind(fsb, "value", WIDGET_DOUBLE, &r->narrow);
-	fspinbutton_set_min(fsb, 0);
+	fsb = AG_FSpinbuttonNew(win, "um", _("Narrowing due to side etching: "));
+	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->narrow);
+	AG_FSpinbuttonSetMin(fsb, 0);
 	
-	fsb = fspinbutton_new(win, "mohms/degC", _("Temp. coefficient: "));
-	widget_bind(fsb, "value", WIDGET_FLOAT, &r->Tc1);
-	fsb = fspinbutton_new(win, "mohms/degC^2", _("Temp. coefficient"));
-	widget_bind(fsb, "value", WIDGET_FLOAT, &r->Tc2);
+	fsb = AG_FSpinbuttonNew(win, "mohms/degC", _("Temp. coefficient: "));
+	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc1);
+	fsb = AG_FSpinbuttonNew(win, "mohms/degC^2", _("Temp. coefficient"));
+	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc2);
 
 	return (win);
 }

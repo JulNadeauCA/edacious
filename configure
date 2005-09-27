@@ -542,10 +542,10 @@ cat << EOT > conftest.c
 int
 main(int argc, char *argv[])
 {
-	engine_preinit("conftest");
-	engine_init();
-	event_loop();
-	engine_destroy();
+	AG_InitCore("conf-test", 0);
+	AG_InitVideo(320, 240, 32, 0);
+	AG_EventLoop();
+	AG_Quit();
 	return (0);
 }
 

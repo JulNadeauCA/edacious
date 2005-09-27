@@ -1,4 +1,4 @@
-/*	$Csoft: ground.c,v 1.1 2005/09/09 03:40:56 vedge Exp $	*/
+/*	$Csoft: ground.c,v 1.2 2005/09/15 02:04:49 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -37,7 +37,7 @@
 
 #include "ground.h"
 
-const struct version ground_ver = {
+const AG_Version ground_ver = {
 	"agar-eda ground",
 	0, 0
 };
@@ -97,18 +97,18 @@ ground_connect(void *p, struct pin *p1, struct pin *p2)
 }
 
 void
-ground_draw(void *p, struct vg *vg)
+ground_draw(void *p, VG *vg)
 {
-	vg_begin_element(vg, VG_LINES);
-	vg_vertex2(vg, 0.000, 0.000);
-	vg_vertex2(vg, 0.000, 0.250);
-	vg_vertex2(vg, -0.250, 0.250);
-	vg_vertex2(vg, +0.250, 0.250);
-	vg_vertex2(vg, -0.200, 0.375);
-	vg_vertex2(vg, +0.200, 0.375);
-	vg_vertex2(vg, -0.150, 0.500);
-	vg_vertex2(vg, +0.150, 0.500);
-	vg_end_element(vg);
+	VG_Begin(vg, VG_LINES);
+	VG_Vertex2(vg, 0.000, 0.000);
+	VG_Vertex2(vg, 0.000, 0.250);
+	VG_Vertex2(vg, -0.250, 0.250);
+	VG_Vertex2(vg, +0.250, 0.250);
+	VG_Vertex2(vg, -0.200, 0.375);
+	VG_Vertex2(vg, +0.200, 0.375);
+	VG_Vertex2(vg, -0.150, 0.500);
+	VG_Vertex2(vg, +0.150, 0.500);
+	VG_End(vg);
 }
 
 void
@@ -120,11 +120,11 @@ ground_init(void *p, const char *name)
 }
 
 int
-ground_load(void *p, struct netbuf *buf)
+ground_load(void *p, AG_Netbuf *buf)
 {
 	struct ground *gnd = p;
 
-	if (version_read(buf, &ground_ver, NULL) == -1 ||
+	if (AG_ReadVersion(buf, &ground_ver, NULL) == -1 ||
 	    component_load(gnd, buf) == -1) {
 		return (-1);
 	}
@@ -132,11 +132,11 @@ ground_load(void *p, struct netbuf *buf)
 }
 
 int
-ground_save(void *p, struct netbuf *buf)
+ground_save(void *p, AG_Netbuf *buf)
 {
 	struct ground *gnd = p;
 
-	version_write(buf, &ground_ver);
+	AG_WriteVersion(buf, &ground_ver);
 	if (component_save(gnd, buf) == -1) {
 		return (-1);
 	}

@@ -1,4 +1,4 @@
-/*	$Csoft: aeda.c,v 1.4 2005/09/10 05:48:18 vedge Exp $	*/
+/*	$Csoft: aeda.c,v 1.5 2005/09/26 05:32:44 vedge Exp $	*/
 
 /*
  * Copyright (c) 2003, 2004, 2005 CubeSoft Communications, Inc.
@@ -38,8 +38,9 @@
 #include <engine/widget/tlist.h>
 #include <engine/widget/fspinbutton.h>
 
+#include "aeda.h"
+
 #include <circuit/circuit.h>
-#include "tool.h"
 
 #include <string.h>
 #include <unistd.h>
@@ -77,13 +78,13 @@ const struct eda_type eda_models[] = {
 int
 main(int argc, char *argv[])
 {
-	extern const struct object_ops circuit_ops;
+	extern const AG_ObjectOps circuit_ops;
 	const struct eda_type *ty;
-	int c, i, fps = 17;
+	int c, i, fps = 60;
 	char *s;
 
-	if (engine_preinit("aeda") == -1) {
-		fprintf(stderr, "%s\n", error_get());
+	if (AG_InitCore("aeda", 0) == -1) {
+		fprintf(stderr, "%s\n", AG_GetError());
 		return (1);
 	}
 
@@ -94,26 +95,26 @@ main(int argc, char *argv[])
 		case 'v':
 			exit(0);
 		case 'r':
-			view_parse_fpsspec(optarg);
+			fps = atoi(optarg);
 			break;
 		case 'T':
-			prop_set_string(config, "font-path", "%s", optarg);
+			AG_SetString(agConfig, "font-path", "%s", optarg);
 			break;
 		case 't':
-			text_parse_fontspec(optarg);
+			AG_TextParseFontSpec(optarg);
 			break;
 #ifdef HAVE_OPENGL
 		case 'g':
-			prop_set_bool(config, "view.opengl", 1);
+			AG_SetBool(agConfig, "view.opengl", 1);
 			break;
 		case 'G':
-			prop_set_bool(config, "view.opengl", 0);
+			AG_SetBool(agConfig, "view.opengl", 0);
 			break;
 #endif
 		case '?':
 		default:
 			printf("Usage: %s [-v] [-r fps] [-T font-path] "
-			       "[-t fontspec]", progname);
+			       "[-t fontspec]", agProgName);
 #ifdef HAVE_OPENGL
 			printf(" [-gG]");
 #endif
@@ -121,26 +122,28 @@ main(int argc, char *argv[])
 			exit(0);
 		}
 	}
-	if (engine_init() == -1) {
-		fprintf(stderr, "%s\n", error_get());
+	if (AG_InitVideo(640, 480, 32, 0) == -1 ||
+	    AG_InitInput(AG_INPUT_KBDMOUSE)) {
+		fprintf(stderr, "%s\n", AG_GetError());
 		return (-1);
 	}
+	AG_InitConfigWin(AG_CONFIG_ALL);
+	AG_SetRefreshRate(fps);
 
 	for (ty = &eda_models[0]; ty->name != NULL; ty++) {
-		char tname[OBJECT_NAME_MAX];
+		char tname[AG_OBJECT_NAME_MAX];
 	
 		strlcpy(tname, "component.", sizeof(tname));
 		strlcat(tname, ty->name, sizeof(tname));
-		typesw_register(tname, ty->size, ty->ops, EDA_COMPONENT_ICON);
+		AG_RegisterType(tname, ty->size, ty->ops, EDA_COMPONENT_ICON);
 	}
-	typesw_register("circuit", sizeof(struct circuit), &circuit_ops,
+	AG_RegisterType("circuit", sizeof(struct circuit), &circuit_ops,
 	    EDA_CIRCUIT_ICON);
 
-	mapedit_init();
-	object_load(world);
-
-	event_loop();
-	engine_destroy();
+	AG_MapEditorInit();
+	AG_ObjectLoad(agWorld);
+	AG_EventLoop();
+	AG_Quit();
 	return (0);
 }
 
