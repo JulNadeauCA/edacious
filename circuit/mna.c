@@ -1,4 +1,4 @@
-/*	$Csoft: mna.c,v 1.4 2005/09/15 02:04:48 vedge Exp $	*/
+/*	$Csoft: mna.c,v 1.5 2005/09/27 03:34:08 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -358,7 +358,6 @@ mna_edit(void *p, struct circuit *ckt)
 	AG_Tlist *tl;
 	AG_Notebook *nb;
 	AG_NotebookTab *ntab;
-	AG_Button *bu;
 	AG_Matview *mv;
 
 	win = AG_WindowNew(0, NULL);
@@ -366,10 +365,9 @@ mna_edit(void *p, struct circuit *ckt)
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_WFILL|AG_NOTEBOOK_HFILL);
 	ntab = AG_NotebookAddTab(nb, _("Continuous mode"), AG_BOX_VERT);
 	{
-		bu = AG_ButtonNew(ntab, _("Run simulation"));
-		AG_ButtonSetSticky(bu, 1);
-		AGWIDGET(bu)->flags |= AG_WIDGET_WFILL;
-		AG_SetEvent(bu, "button-pushed", cont_run, "%p", mna);
+		AG_ButtonAct(ntab, _("Run simulation"),
+		    AG_BUTTON_WFILL|AG_BUTTON_STICKY,
+		    cont_run, "%p", mna);
 	
 		AG_SeparatorNew(ntab, AG_SEPARATOR_HORIZ);
 

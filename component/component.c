@@ -1,4 +1,4 @@
-/*	$Csoft: component.c,v 1.6 2005/09/15 02:04:49 vedge Exp $	*/
+/*	$Csoft: component.c,v 1.7 2005/09/27 03:34:08 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -635,17 +635,12 @@ ins_tool_init(void *p)
 
 	win = AG_MaptoolWindow(t, "circuit-component-tool");
 	tl = AG_TlistNew(win, 0);
-	AG_SetEvent(tl, "tlist-dblclick", component_insert, "%p, %p, %p",
-	    t->mv, tl, ckt);
+	AG_SetEvent(tl, "tlist-dblclick", component_insert,
+	    "%p,%p,%p", t->mv, tl, ckt);
 
 	box = AG_BoxNew(win, AG_BOX_HORIZ, AG_BOX_WFILL|AG_BOX_HOMOGENOUS);
-	{
-		AG_Button *bu;
-
-		bu = AG_ButtonNew(box, _("Insert"));
-		AG_SetEvent(bu, "button-pushed", component_insert, "%p, %p, %p",
-		    t->mv, tl, ckt);
-	}
+	AG_ButtonAct(box, _("Insert"), 0, component_insert,
+	    "%p,%p,%p", t->mv, tl, ckt);
 	
 	for (ty = &eda_models[0]; ty->name != NULL; ty++) {
 		for (i = 0; i < agnTypes; i++) {

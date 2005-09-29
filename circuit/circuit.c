@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.c,v 1.9 2005/09/26 05:32:44 vedge Exp $	*/
+/*	$Csoft: circuit.c,v 1.10 2005/09/27 03:34:07 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications Inc
@@ -1196,7 +1196,6 @@ circuit_edit(void *p)
 			char tname[AG_OBJECT_TYPE_MAX];
 			extern const struct eda_type eda_models[];
 			const struct eda_type *ty;
-			AG_Button *btn;
 			int i;
 
 			tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE);
@@ -1204,9 +1203,8 @@ circuit_edit(void *p)
 			AG_SetEvent(tl, "tlist-dblclick", component_insert,
 			    "%p,%p,%p", mv, tl, ckt);
 
-			btn = AG_ButtonNew(ntab, _("Insert component"));
-			AGWIDGET(btn)->flags |= AG_WIDGET_WFILL;
-			AG_SetEvent(btn, "button-pushed", component_insert,
+			AG_ButtonAct(ntab, _("Insert component"),
+			    AG_BUTTON_WFILL, component_insert,
 			    "%p,%p,%p", mv, tl, ckt);
 
 			for (ty = &eda_models[0]; ty->name != NULL; ty++) {

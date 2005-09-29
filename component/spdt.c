@@ -1,4 +1,4 @@
-/*	$Csoft: spdt.c,v 1.4 2005/09/15 02:04:49 vedge Exp $	*/
+/*	$Csoft: spdt.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -230,7 +230,6 @@ spdt_edit(void *p)
 	struct spdt *sw = p;
 	AG_Window *win;
 	AG_FSpinbutton *fsb;
-	AG_Button *sb;
 
 	win = AG_WindowNew(0, NULL);
 
@@ -242,9 +241,8 @@ spdt_edit(void *p)
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->off_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
 
-	sb = AG_ButtonNew(win, _("Toggle state"));
-	AGWIDGET(sb)->flags |= AG_WIDGET_WFILL|AG_WIDGET_HFILL;
-	AG_SetEvent(sb, "button-pushed", toggle_state, "%p", sw);
+	AG_ButtonAct(win, _("Toggle state"), AG_BUTTON_WFILL|AG_BUTTON_HFILL,
+	    toggle_state, "%p", sw);
 
 	return (win);
 }
