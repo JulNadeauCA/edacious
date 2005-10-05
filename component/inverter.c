@@ -1,4 +1,4 @@
-/*	$Csoft: inverter.c,v 1.4 2005/09/15 02:04:49 vedge Exp $	*/
+/*	$Csoft: inverter.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -259,7 +259,7 @@ inverter_edit(void *p)
 	AG_Window *win;
 	AG_FSpinbutton *fsb;
 
-	win = AG_WindowNew(0, NULL);
+	win = AG_WindowNew(0);
 
 	fsb = AG_FSpinbuttonNew(win, "ns", "Tphl: ");
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Tphl);

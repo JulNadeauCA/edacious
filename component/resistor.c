@@ -1,4 +1,4 @@
-/*	$Csoft: resistor.c,v 1.4 2005/09/15 02:04:49 vedge Exp $	*/
+/*	$Csoft: resistor.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -208,7 +208,7 @@ resistor_edit(void *p)
 	AG_Spinbutton *sb;
 	AG_FSpinbutton *fsb;
 
-	win = AG_WindowNew(0, NULL);
+	win = AG_WindowNew(0);
 
 	fsb = AG_FSpinbuttonNew(win, "ohms", _("Resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->resistance);

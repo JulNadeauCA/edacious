@@ -1,4 +1,4 @@
-/*	$Csoft: mna.c,v 1.5 2005/09/27 03:34:08 vedge Exp $	*/
+/*	$Csoft: mna.c,v 1.6 2005/09/29 00:22:34 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -360,7 +360,7 @@ mna_edit(void *p, struct circuit *ckt)
 	AG_NotebookTab *ntab;
 	AG_Matview *mv;
 
-	win = AG_WindowNew(0, NULL);
+	win = AG_WindowNew(0);
 
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_WFILL|AG_NOTEBOOK_HFILL);
 	ntab = AG_NotebookAddTab(nb, _("Continuous mode"), AG_BOX_VERT);

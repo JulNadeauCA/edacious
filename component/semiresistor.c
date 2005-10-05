@@ -1,4 +1,4 @@
-/*	$Csoft: semiresistor.c,v 1.4 2005/09/15 02:04:49 vedge Exp $	*/
+/*	$Csoft: semiresistor.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -200,7 +200,7 @@ semiresistor_edit(void *p)
 	AG_FSpinbutton *fsb;
 	AG_MFSpinbutton *mfsb;
 
-	win = AG_WindowNew(0, NULL);
+	win = AG_WindowNew(0);
 
 	mfsb = AG_MFSpinbuttonNew(win, "um", "x", _("Geometry (LxW): "));
 	AG_WidgetBind(mfsb, "xvalue", AG_WIDGET_DOUBLE, &r->l);

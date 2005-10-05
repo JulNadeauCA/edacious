@@ -1,4 +1,4 @@
-/*	$Csoft: circuit.c,v 1.10 2005/09/27 03:34:07 vedge Exp $	*/
+/*	$Csoft: circuit.c,v 1.11 2005/09/29 00:22:33 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications Inc
@@ -762,8 +762,8 @@ show_interconnects(int argc, union evarg *argv)
 	AG_NotebookTab *ntab;
 	AG_Tlist *tl;
 	
-	if ((win = AG_WindowNew(0, "%s-interconnects", AGOBJECT(ckt)->name))
-	    == NULL) {
+	if ((win = AG_WindowNewNamed(0, "%s-interconnects",
+	    AGOBJECT(ckt)->name)) == NULL) {
 		return;
 	}
 	AG_WindowSetCaption(win, _("%s: Connections"), AGOBJECT(ckt)->name);
@@ -806,7 +806,7 @@ layout_settings(int argc, union evarg *argv)
 	AG_Checkbox *cb;
 	
 	AG_ObjectCopyName(ckt, path, sizeof(path));
-	if ((win = AG_WindowNew(0, "settings-%s", path)) == NULL) {
+	if ((win = AG_WindowNewNamed(0, "settings-%s", path)) == NULL) {
 		return;
 	}
 	AG_WindowSetCaption(win, _("Circuit layout: %s"), AGOBJECT(ckt)->name);
@@ -977,7 +977,7 @@ create_view(int argc, union evarg *argv)
 	AG_Mapview *mv;
 	AG_Window *win;
 
-	win = AG_WindowNew(0, NULL);
+	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("View of %s"), AGOBJECT(ckt)->name);
 	{
 		mv = AG_MapviewNew(win, map,
@@ -1098,7 +1098,7 @@ circuit_edit(void *p)
 	AG_HPaneDiv *div;
 	AG_Scrollbar *hbar, *vbar;
 
-	win = AG_WindowNew(0, NULL);
+	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, "%s", AGOBJECT(ckt)->name);
 
 	toolbar = Malloc(sizeof(AG_Toolbar), M_OBJECT);

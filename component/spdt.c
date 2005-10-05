@@ -1,4 +1,4 @@
-/*	$Csoft: spdt.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
+/*	$Csoft: spdt.c,v 1.6 2005/09/29 00:22:35 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -231,7 +231,7 @@ spdt_edit(void *p)
 	AG_Window *win;
 	AG_FSpinbutton *fsb;
 
-	win = AG_WindowNew(0, NULL);
+	win = AG_WindowNew(0);
 
 	fsb = AG_FSpinbuttonNew(win, "ohms", _("ON resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->on_resistance);

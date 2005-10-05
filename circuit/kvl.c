@@ -1,4 +1,4 @@
-/*	$Csoft: kvl.c,v 1.8 2005/09/27 03:34:08 vedge Exp $	*/
+/*	$Csoft: kvl.c,v 1.9 2005/09/29 00:22:34 vedge Exp $	*/
 
 /*
  * Copyright (c) 2005 CubeSoft Communications, Inc.
@@ -273,7 +273,7 @@ kvl_edit(void *p, struct circuit *ckt)
 	AG_Notebook *nb;
 	AG_NotebookTab *ntab;
 
-	win = AG_WindowNew(0, NULL);
+	win = AG_WindowNew(0);
 
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_WFILL|AG_NOTEBOOK_HFILL);
 	ntab = AG_NotebookAddTab(nb, _("Continuous mode"), AG_BOX_VERT);

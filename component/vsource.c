@@ -1,4 +1,4 @@
-/*	$Csoft: vsource.c,v 1.4 2005/09/15 02:04:49 vedge Exp $	*/
+/*	$Csoft: vsource.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
 
 /*
  * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
@@ -465,7 +465,7 @@ vsource_edit(void *p)
 	AG_FSpinbutton *fsb;
 	AG_Tlist *tl;
 
-	win = AG_WindowNew(0, NULL);
+	win = AG_WindowNew(0);
 
 	fsb = AG_FSpinbuttonNew(win, "V", _("Voltage: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &vs->voltage);
