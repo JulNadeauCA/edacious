@@ -39,10 +39,10 @@ SH?=		sh
 FIND?=		find
 AWK?=		awk
 
-INSTALL_PROG=	install -c -m 555
-INSTALL_LIB=	install -c -m 444
-INSTALL_DATA=	install -c -m 444
-INSTALL_INCL=	install -c -m 444
+INSTALL_PROG=	install -c -m 755
+INSTALL_LIB=	install -c -m 644
+INSTALL_DATA=	install -c -m 644
+INSTALL_INCL=	install -c -m 644
 
 INSTALL_PROG_DIR=	mkdir -p
 INSTALL_LIB_DIR=	mkdir -p

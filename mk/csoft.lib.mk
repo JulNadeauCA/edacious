@@ -1,4 +1,4 @@
-# $Csoft: csoft.lib.mk,v 1.48 2004/09/03 10:14:24 vedge Exp $
+# $Csoft: csoft.lib.mk,v 1.50 2005/10/06 10:28:22 vedge Exp $
 
 # Copyright (c) 2001, 2002, 2003, 2004 CubeSoft Communications, Inc.
 # <http://www.csoft.org>
@@ -54,6 +54,7 @@ BINMODE?=	755
 STATIC?=	Yes
 CFLAGS+=    ${COPTS}
 SHARE?=
+SHARESRC?=
 LFLAGS?=
 YFLAGS?=
 
@@ -73,7 +74,7 @@ depend: depend-subdir
 # Compile C code into an object file
 .c.o:
 	${CC} ${CFLAGS} -c $<
-.c.lo:
+.c.lo: ${LIBTOOL}
 	${LIBTOOL} ${CC} ${CFLAGS} -c $<
 .c.po:
 	${CC} -pg -DPROF ${CFLAGS} ${CPPFLAGS} -o $@ -c $<
@@ -81,7 +82,7 @@ depend: depend-subdir
 # Compile Objective-C code into an object file
 .m.o:
 	${CC} ${OBJCFLAGS} -c $<
-.m.lo:
+.m.lo: ${LIBTOOL}
 	${LIBTOOL} ${CC} ${OBJCFLAGS} -c $<
 .m.po:
 	${CC} -pg -DPROF ${OBJCFLAGS} ${CPPFLAGS} -o $@ -c $<
@@ -89,7 +90,7 @@ depend: depend-subdir
 # Compile C++ code into an object file
 .cc.o:
 	${CXX} ${CXXFLAGS} -c $<
-.cc.lo:
+.cc.lo: ${LIBTOOL}
 	${LIBTOOL} ${CXX} ${CXXFLAGS} -c $<
 .cc.po:
 	${CXX} -pg -DPROF ${CXXFLAGS} ${CPPFLAGS} -o $@ -c $<
@@ -255,9 +256,10 @@ clean-lib:
 	fi
 
 cleandir-lib:
-	rm -f ${LIBTOOL} ${LTCONFIG_LOG}
+	rm -f ${LIBTOOL} ${LTCONFIG_LOG} config.log Makefile.config .depend
+	if [ -e "./config/prefix.h" ]; then rm -fr ./config; fi
 
-install-lib:
+install-lib: ${LIBTOOL}
 	@if [ "${INCL}" != "" ]; then \
 	    if [ ! -d "${INCLDIR}" ]; then \
                 echo "${INSTALL_DATA_DIR} ${INCLDIR}"; \
@@ -295,8 +297,27 @@ install-lib:
                 ${SUDO} ${INSTALL_DATA} $$F ${SHAREDIR}; \
             done; \
 	fi
+	@export _sharesrc="${SHARESRC}"; \
+        if [ "$$_sharesrc" != "" ]; then \
+            if [ ! -d "${SHAREDIR}" ]; then \
+                echo "${INSTALL_DATA_DIR} ${SHAREDIR}"; \
+                ${SUDO} ${INSTALL_DATA_DIR} ${SHAREDIR}; \
+            fi; \
+	    if [ "${SRC}" != "" ]; then \
+                for F in $$_sharesrc; do \
+                    echo "${INSTALL_DATA} $$F ${SHAREDIR}"; \
+                    ${SUDO} ${INSTALL_DATA} ${SRC}/${BUILDREL}/$$F \
+		    ${SHAREDIR}; \
+                done; \
+	    else \
+                for F in $$_sharesrc; do \
+                    echo "${INSTALL_DATA} $$F ${SHAREDIR}"; \
+                    ${SUDO} ${INSTALL_DATA} $$F ${SHAREDIR}; \
+                done; \
+	    fi; \
+	fi
 
-deinstall-lib:
+deinstall-lib: ${LIBTOOL}
 	@if [ "${LIB}" != "" -a "${LIB_SHARED}" = "Yes" ]; then \
 	    if [ "${LIB_STATIC}" = "Yes" ]; then \
 	        echo "${DEINSTALL_LIB} ${LIBDIR}/lib${LIB}.a"; \
@@ -313,6 +334,15 @@ deinstall-lib:
 	        ${SUDO} ${DEINSTALL_DATA} ${SHAREDIR}/$$F; \
 	    done; \
 	fi
+	@if [ "${SHARESRC}" != "" ]; then \
+	    for F in ${SHARESRC}; do \
+	        echo "${DEINSTALL_DATA} ${SHAREDIR}/$$F"; \
+	        ${SUDO} ${DEINSTALL_DATA} ${SHAREDIR}/$$F; \
+	    done; \
+	fi
+
+includes:
+	(cd ${TOP} && ${MAKE} install-includes)
 
 ${LIBTOOL}: ${LTCONFIG} ${LTMAIN_SH} ${LTCONFIG_GUESS} ${LTCONFIG_SUB}
 	@if [ "${LIB}" != "" -a "${LIB_SHARED}" = "Yes" ]; then \
@@ -322,7 +352,7 @@ ${LIBTOOL}: ${LTCONFIG} ${LTMAIN_SH} ${LTCONFIG_GUESS} ${LTCONFIG_SUB}
 
 ${LTCONFIG} ${LTCONFIG_GUESS} ${LTCONFIG_SUB} ${LTMAIN_SH}:
 
-.PHONY: install deinstall clean cleandir regress depend
+.PHONY: install deinstall includes clean cleandir regress depend
 .PHONY: install-lib deinstall-lib clean-lib cleandir-lib
 .PHONY: _lib_objs _lib_shobjs
 
