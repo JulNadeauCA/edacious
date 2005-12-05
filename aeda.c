@@ -26,19 +26,11 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
-#include <engine/config.h>
-#include <engine/view.h>
-#include <engine/typesw.h>
+#include <agar/core.h>
+#include <agar/vg.h>
+#include <agar/gui.h>
 
-#include <engine/map/map.h>
-#include <engine/map/mapedit.h>
-
-#include <engine/widget/window.h>
-#include <engine/widget/tlist.h>
-#include <engine/widget/fspinbutton.h>
-
-#include "aeda.h"
+#include "eda.h"
 
 #include <circuit/circuit.h>
 
