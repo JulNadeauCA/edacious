@@ -6,8 +6,8 @@ include ${TOP}/Makefile.config
 SUBDIR=	component \
 	circuit
 
-PROG=	aeda
-SRCS=	aeda.c
+PROG=	eda
+SRCS=	eda.c
 
 CFLAGS+=${AGAR_CFLAGS}
 LIBS+=	component/libcomponent.a \
