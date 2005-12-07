@@ -21,7 +21,7 @@ configure: configure.in
 	chmod 755 configure
 
 release: cleandir
-	sh mk/dist.sh
+	sh mk/dist.sh commit
 
 .PHONY: configure release
 
