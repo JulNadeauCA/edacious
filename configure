@@ -144,8 +144,8 @@ echo "    --with-manpages                Manual pages (-mdoc) [yes]"
 echo "    --with-docs                    Printable docs (-me/tbl/eqn/pic/refer) [no]"
 echo "    --enable-debug                 Include debugging code [no]"
 echo "    --enable-static                Produce a static binary [default: no]"
-echo "    --enable-capture               Enable schematic capture [default: yes]"
 echo "    --enable-warnings              Enable compiler warnings [default: no]"
+echo "    --enable-edition               Enable graphical editor [default: yes]"
 exit 1
 fi
 
@@ -247,7 +247,7 @@ else
 	echo "#endif /* SYSCONFDIR */" >> config/sysconfdir.h
 fi
 
-VERSION="\"1.0-alpha\""
+VERSION="\"1.0beta\""
 echo "#ifndef VERSION" > config/version.h
 echo "#define VERSION" $VERSION >> config/version.h
 echo "#endif" >> config/version.h
@@ -788,7 +788,7 @@ echo "CFLAGS=$CFLAGS" >> Makefile.config
 CFLAGS="$CFLAGS -Wno-unused"
 echo "CFLAGS=$CFLAGS" >> Makefile.config
 fi
-if [ "${enable_capture}" != "no" ]
+if [ "${enable_edition}" != "no" ]
  then
 EDITION=1
 echo "#ifndef EDITION" > config/edition.h
