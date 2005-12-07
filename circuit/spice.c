@@ -28,15 +28,13 @@
 
 #include <config/version.h>
 
-#include <engine/engine.h>
-#include <engine/widget/text.h>
+#include <agar/core.h>
+#include <agar/gui.h>
 
 #include <errno.h>
 #include <stdio.h>
 
-#include <circuit/circuit.h>
-#include <component/component.h>
-
+#include "eda.h"
 #include "spice.h"
 
 /* Generate a SPICE3 input deck for the given circuit. */

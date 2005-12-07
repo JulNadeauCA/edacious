@@ -27,7 +27,7 @@ struct sim_ops {
 __BEGIN_DECLS
 void sim_init(void *, const struct sim_ops *);
 void sim_destroy(void *);
-void sim_edit(int, union evarg *);
+void sim_edit(AG_Event *);
 __END_DECLS
 
 #include "close_code.h"

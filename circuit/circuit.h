@@ -4,10 +4,12 @@
 #ifndef _CIRCUIT_CIRCUIT_H_
 #define _CIRCUIT_CIRCUIT_H_
 
-#include <engine/vg/vg.h>
+#include <agar/core.h>
+#include <agar/vg.h>
+#include <agar/sc.h>
+
 #include <component/component.h>
 #include <circuit/sim.h>
-#include <mat/mat.h>
 
 #include "begin_code.h"
 
@@ -47,7 +49,7 @@ struct vsource;
 struct circuit {
 	AG_Object obj;
 	char descr[CIRCUIT_DESCR_MAX];	/* Short description */
-	VG *vg;			/* Schematics drawing */
+	VG *vg;				/* Schematics drawing */
 	struct sim *sim;		/* Current simulation mode */
 
 	pthread_mutex_t lock;

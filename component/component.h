@@ -6,13 +6,12 @@
 
 #include <circuit/circuit.h>
 
-#include <engine/widget/window.h>
-#include <engine/widget/menu.h>
-
 #include "begin_code.h"
 
 #define COMPONENT_MAX_PINS	128
 #define COMPONENT_PIN_NAME_MAX	16
+
+struct ag_window;
 
 /* Exportable circuit model formats. */
 enum circuit_format {
@@ -75,11 +74,13 @@ struct component {
 	int highlighted;			/* Selected for selection? */
 
 	pthread_mutex_t lock;
-	AG_Timeout redraw_to;		/* Timer for vg updates */
+	AG_Timeout redraw_to;			/* Timer for vg updates */
+
 	struct pin pin[COMPONENT_MAX_PINS];	/* Connection points */
-	int npins;
+	int       npins;
+
 	struct dipole *dipoles;			/* Ordered pin pairs */
-	int ndipoles;
+	int           ndipoles;
 
 	float Tnom;		/* Model reference temperature (k) */
 	float Tspec;		/* Component instance temperature (k) */
@@ -92,8 +93,6 @@ struct component {
 #define PNODE(p,n) (COM(p)->pin[n].node)
 #define U(p,n) (PIN((p),(n))->u)
 
-struct ag_mapview;
-
 __BEGIN_DECLS
 void		component_init(void *, const char *, const char *, const void *,
 			       const struct pin *);
@@ -101,7 +100,7 @@ void		component_destroy(void *);
 int		component_load(void *, AG_Netbuf *);
 int		component_save(void *, AG_Netbuf *);
 void	       *component_edit(void *);
-void		component_insert(int, union evarg *);
+void		component_insert(AG_Event *);
 
 struct pin	*pin_overlap(struct circuit *, struct component *, double,
 		             double);
@@ -118,8 +117,7 @@ __inline__ int	dipole_in_loop(struct dipole *, struct cktloop *,
 		               int *);
 
 #ifdef EDITION
-void		component_reg_menu(AG_Menu *, AG_MenuItem *,
-		                   struct circuit *, struct ag_mapview *);
+void component_reg_menu(AG_Menu *, AG_MenuItem *, struct circuit *);
 #endif
 __END_DECLS
 

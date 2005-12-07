@@ -26,16 +26,11 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
-#include <engine/vg/vg.h>
+#include <agar/core.h>
+#include <agar/vg.h>
+#include <agar/gui.h>
 
-#ifdef EDITION
-#include <engine/widget/window.h>
-#include <engine/widget/spinbutton.h>
-#include <engine/widget/fspinbutton.h>
-#include <engine/widget/mfspinbutton.h>
-#endif
-
+#include "eda.h"
 #include "semiresistor.h"
 
 const AG_Version semiresistor_ver = {
@@ -202,22 +197,23 @@ semiresistor_edit(void *p)
 
 	win = AG_WindowNew(0);
 
-	mfsb = AG_MFSpinbuttonNew(win, "um", "x", _("Geometry (LxW): "));
+	mfsb = AG_MFSpinbuttonNew(win, 0, "um", "x", _("Geometry (LxW): "));
 	AG_WidgetBind(mfsb, "xvalue", AG_WIDGET_DOUBLE, &r->l);
 	AG_WidgetBind(mfsb, "yvalue", AG_WIDGET_DOUBLE, &r->w);
 	AG_MFSpinbuttonSetMin(mfsb, 1e-6);
 	
-	fsb = AG_FSpinbuttonNew(win, "kohms", _("Sheet resistance/sq: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "kohms", _("Sheet resistance/sq: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->rsh);
 	AG_FSpinbuttonSetMin(fsb, 0);
 	
-	fsb = AG_FSpinbuttonNew(win, "um", _("Narrowing due to side etching: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "um",
+	    _("Narrowing due to side etching: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->narrow);
 	AG_FSpinbuttonSetMin(fsb, 0);
 	
-	fsb = AG_FSpinbuttonNew(win, "mohms/degC", _("Temp. coefficient: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "mohms/degC", _("Temp. coefficient: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc1);
-	fsb = AG_FSpinbuttonNew(win, "mohms/degC^2", _("Temp. coefficient"));
+	fsb = AG_FSpinbuttonNew(win, 0, "mohms/degC^2", _("Temp. coefficient"));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc2);
 
 	return (win);

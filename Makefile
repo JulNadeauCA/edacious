@@ -9,10 +9,10 @@ SUBDIR=	component \
 PROG=	eda
 SRCS=	eda.c
 
-CFLAGS+=${AGAR_CFLAGS}
+CFLAGS+=${AGAR_SC_CFLAGS} ${AGAR_CFLAGS}
 LIBS+=	component/libcomponent.a \
 	circuit/libcircuit.a \
-	${AGAR_LIBS}
+	${AGAR_SC_LIBS} ${AGAR_LIBS}
 
 all: all-subdir ${PROG}
 

@@ -1,4 +1,4 @@
-/*	$Csoft: aeda.c,v 1.6 2005/09/27 03:34:07 vedge Exp $	*/
+/*	$Csoft$	*/
 
 /*
  * Copyright (c) 2003, 2004, 2005 CubeSoft Communications, Inc.
@@ -32,14 +32,9 @@
 
 #include "eda.h"
 
-#include <circuit/circuit.h>
-
 #include <string.h>
 #include <unistd.h>
 
-#include <component/conductor.h>
-#include <component/vsource.h>
-#include <component/ground.h>
 #include <component/resistor.h>
 #include <component/semiresistor.h>
 #include <component/inverter.h>
@@ -75,7 +70,7 @@ main(int argc, char *argv[])
 	int c, i, fps = -1;
 	char *s;
 
-	if (AG_InitCore("aeda", 0) == -1) {
+	if (AG_InitCore("agar-eda", 0) == -1) {
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (1);
 	}
@@ -114,14 +109,17 @@ main(int argc, char *argv[])
 			exit(0);
 		}
 	}
-	if (AG_InitVideo(640, 480, 32, 0) == -1 ||
-	    AG_InitInput(AG_INPUT_KBDMOUSE)) {
+	if (AG_InitVideo(900, 600, 32, AG_VIDEO_RESIZABLE) == -1 ||
+	    AG_InitInput(0)) {
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (-1);
 	}
 	AG_InitConfigWin(AG_CONFIG_ALL);
 	AG_SetRefreshRate(fps);
-
+	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, AG_Quit);
+	AG_BindGlobalKey(SDLK_F1, KMOD_NONE, AG_ShowSettings);
+	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
+	
 	for (ty = &eda_models[0]; ty->name != NULL; ty++) {
 		char tname[AG_OBJECT_NAME_MAX];
 	
@@ -131,8 +129,11 @@ main(int argc, char *argv[])
 	}
 	AG_RegisterType("circuit", sizeof(struct circuit), &circuit_ops,
 	    EDA_CIRCUIT_ICON);
+	
+	/* Initialize the object manager. */
+	AG_ObjMgrInit();
+	AG_WindowShow(AG_ObjMgrWindow());
 
-	AG_MapEditorInit();
 	AG_ObjectLoad(agWorld);
 	AG_EventLoop();
 	AG_Quit();

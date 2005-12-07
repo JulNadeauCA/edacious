@@ -26,17 +26,12 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
-#include <engine/widget/gui.h>
-#include <engine/widget/matview.h>
+#include <agar/core.h>
+#include <agar/sc.h>
+#include <agar/gui.h>
+#include <agar/sc/sc_matview.h>
 
-#include <circuit/circuit.h>
-
-#include <component/component.h>
-#include <component/vsource.h>
-
-#include <mat/mat.h>
-
+#include "eda.h"
 #include "sim.h"
 
 const struct sim_ops kvl_ops;
@@ -45,11 +40,11 @@ struct kvl {
 	struct sim sim;
 	Uint32 Telapsed;		/* Simulated time elapsed (ns) */
 	int speed;			/* Simulation speed (updates/sec) */
-	AG_Timeout update_to;	/* Timer for simulation updates */
+	AG_Timeout update_to;		/* Timer for simulation updates */
 	
-	mat_t *Rmat;			/* Resistance matrix */
-	vec_t *Vvec;			/* Independent voltages */
-	vec_t *Ivec;			/* Vector of unknown currents */
+	SC_Matrix *Rmat;		/* Resistance matrix */
+	SC_Vector *Vvec;		/* Independent voltages */
+	SC_Vector *Ivec;		/* Vector of unknown currents */
 };
 
 static void compose_Rmat(struct kvl *, struct circuit *);
@@ -100,9 +95,9 @@ kvl_init(void *p)
 	sim_init(kvl, &kvl_ops);
 	kvl->Telapsed = 0;
 	kvl->speed = 4;
-	kvl->Rmat = mat_new(0, 0);
-	kvl->Vvec = vec_new(0);
-	kvl->Ivec = vec_new(0);
+	kvl->Rmat = SC_MatrixNew(0, 0);
+	kvl->Vvec = SC_VectorNew(0);
+	kvl->Ivec = SC_VectorNew(0);
 	AG_SetTimeout(&kvl->update_to, kvl_tick, kvl, AG_TIMEOUT_LOADABLE);
 }
 
@@ -140,9 +135,9 @@ kvl_destroy(void *p)
 	
 	kvl_stop(kvl);
 
-	mat_free(kvl->Rmat);
-	vec_free(kvl->Vvec);
-	vec_free(kvl->Ivec);
+	SC_MatrixFree(kvl->Rmat);
+	SC_VectorFree(kvl->Vvec);
+	SC_VectorFree(kvl->Ivec);
 }
 
 static void
@@ -150,13 +145,13 @@ kvl_cktmod(void *p, struct circuit *ckt)
 {
 	struct kvl *kvl = p;
 
-	mat_resize(kvl->Rmat, ckt->l, ckt->l);
-	vec_resize(kvl->Vvec, ckt->l);
-	vec_resize(kvl->Ivec, ckt->l);
+	SC_MatrixResize(kvl->Rmat, ckt->l, ckt->l);
+	SC_VectorResize(kvl->Vvec, ckt->l);
+	SC_VectorResize(kvl->Ivec, ckt->l);
 	
-	mat_set(kvl->Rmat, 0);
-	vec_set(kvl->Vvec, 0);
-	vec_set(kvl->Ivec, 0);
+	SC_MatrixSetZero(kvl->Rmat);
+	SC_VectorSetZero(kvl->Vvec);
+	SC_VectorSetZero(kvl->Ivec);
 }
 
 static void
@@ -180,8 +175,7 @@ compose_Rmat(struct kvl *kvl, struct circuit *ckt)
 			for (j = 0; j < dip->nloops; j++) {
 				n = dip->loops[j]->name;
 #ifdef DEBUG
-				if (n > ckt->l)
-					fatal("inconsistent loop info");
+				if (n > ckt->l) { Fatal("Bad loop"); }
 #endif
 				if (n == m) {
 					kvl->Rmat->mat[m][n] +=
@@ -214,41 +208,40 @@ compose_Rmat(struct kvl *kvl, struct circuit *ckt)
 static int
 solve_Ivec(struct kvl *kvl, struct circuit *ckt)
 {
-	veci_t *ivec;
-	vec_t *v;
-	mat_t *R;
+	SC_Ivector *ivec;
+	SC_Vector *v;
+	SC_Matrix *R;
 	double d;
 
-	ivec = veci_new(ckt->l);
-	v = vec_new(ckt->l);
-	vec_copy(kvl->Vvec, v);
+	ivec = SC_IvectorNew(ckt->l);
+	v = SC_VectorNew(ckt->l);
+	SC_VectorCopy(kvl->Vvec, v);
 
-	R = mat_new(ckt->l, ckt->l);
-	mat_copy(kvl->Rmat, R);
-	if (mat_lu_decompose(R, R, ivec, &d) == NULL) {
+	R = SC_MatrixNew(ckt->l, ckt->l);
+	SC_MatrixCopy(kvl->Rmat, R);
+	if (SC_FactorizeLU(R, R, ivec, &d) == NULL) {
 		goto fail;
 	}
-	mat_lu_backsubst(R, ivec, v);
-	vec_copy(v, kvl->Ivec);
+	SC_BacksubstLU(R, ivec, v);
+	SC_VectorCopy(v, kvl->Ivec);
 
-	vec_free(v);
-	veci_free(ivec);
-	mat_free(R);
+	SC_VectorFree(v);
+	SC_IvectorFree(ivec);
+	SC_MatrixFree(R);
 	return (0);
 fail:
-	vec_free(v);
-	veci_free(ivec);
-	mat_free(R);
+	SC_VectorFree(v);
+	SC_IvectorFree(ivec);
+	SC_MatrixFree(R);
 	return (-1);
 }
 
 static void
-cont_run(int argc, union evarg *argv)
+cont_run(AG_Event *event)
 {
-	AG_Button *bu = argv[0].p;
-	struct kvl *kvl = argv[1].p;
-	struct sim *sim = argv[1].p;
-	int state = argv[2].i;
+	struct sim *sim = AG_PTR(1);
+	struct kvl *kvl = (struct kvl *)sim;
+	int state = AG_INT(2);
 
 	if (state) {
 		kvl_cktmod(kvl, sim->ckt);
@@ -275,16 +268,17 @@ kvl_edit(void *p, struct circuit *ckt)
 
 	win = AG_WindowNew(0);
 
-	nb = AG_NotebookNew(win, AG_NOTEBOOK_WFILL|AG_NOTEBOOK_HFILL);
+	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
 	ntab = AG_NotebookAddTab(nb, _("Continuous mode"), AG_BOX_VERT);
 	{
-		AG_ButtonAct(ntab, _("Run simulation"),
-		    AG_BUTTON_WFILL|AG_BUTTON_STICKY,
+		AG_ButtonAct(ntab,
+		    AG_BUTTON_HFILL|AG_BUTTON_STICKY,
+		    _("Run simulation"),
 		    cont_run, "%p", kvl);
 	
 		AG_SeparatorNew(ntab, AG_SEPARATOR_HORIZ);
 
-		sbu = AG_SpinbuttonNew(ntab, _("Updates/sec: "));
+		sbu = AG_SpinbuttonNew(ntab, 0, _("Updates/sec: "));
 		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT32, &kvl->speed);
 		AG_SpinbuttonSetRange(sbu, 1, 1000);
 		

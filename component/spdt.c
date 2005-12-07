@@ -26,15 +26,11 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
-#include <engine/vg/vg.h>
+#include <agar/core.h>
+#include <agar/vg.h>
+#include <agar/gui.h>
 
-#ifdef EDITION
-#include <engine/widget/window.h>
-#include <engine/widget/spinbutton.h>
-#include <engine/widget/fspinbutton.h>
-#endif
-
+#include "eda.h"
 #include "spdt.h"
 
 const AG_Version spdt_ver = {
@@ -217,9 +213,9 @@ spdt_resistance(void *p, struct pin *p1, struct pin *p2)
 
 #ifdef EDITION
 static void
-toggle_state(int argc, union evarg *argv)
+toggle_state(AG_Event *event)
 {
-	struct spdt *sw = argv[1].p;
+	struct spdt *sw = AG_PTR(1);
 
 	sw->state = (sw->state == 1) ? 2 : 1;
 }
@@ -233,16 +229,16 @@ spdt_edit(void *p)
 
 	win = AG_WindowNew(0);
 
-	fsb = AG_FSpinbuttonNew(win, "ohms", _("ON resistance: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "ohms", _("ON resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->on_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
 	
-	fsb = AG_FSpinbuttonNew(win, "ohms", _("OFF resistance: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "ohms", _("OFF resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->off_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
 
-	AG_ButtonAct(win, _("Toggle state"), AG_BUTTON_WFILL|AG_BUTTON_HFILL,
-	    toggle_state, "%p", sw);
+	AG_ButtonAct(win, AG_BUTTON_EXPAND, _("Toggle state"), toggle_state,
+	    "%p", sw);
 
 	return (win);
 }

@@ -26,17 +26,11 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
-#include <engine/vg/vg.h>
+#include <agar/core.h>
+#include <agar/vg.h>
+#include <agar/gui.h>
 
-#ifdef EDITION
-#include <engine/widget/window.h>
-#include <engine/widget/spinbutton.h>
-#include <engine/widget/fspinbutton.h>
-#include <engine/widget/label.h>
-#include <engine/widget/tlist.h>
-#endif
-
+#include "eda.h"
 #include "vsource.h"
 
 const AG_Version vsource_ver = {
@@ -163,10 +157,10 @@ contig_dipole(struct pin *pA, struct pin *pB, struct dipole **Rdip,
 		 * As a convention, the relative polarities of dipoles is
 		 * determined by the pin number order.
 		 */
-		if (dip->p1 == pA && dip->p2->node != NULL) {
+		if (dip->p1 == pA && dip->p2->node >= 0) {
 			node = ckt->nodes[dip->p2->node];
 			pol = -1;
-		} else if (dip->p2 == pA && dip->p1->node != NULL) {
+		} else if (dip->p2 == pA && dip->p1->node >= 0) {
 			node = ckt->nodes[dip->p1->node];
 			pol = +1;
 		} else {
@@ -414,11 +408,11 @@ vsource_emf(void *p, int pin1, int pin2)
 
 #ifdef EDITION
 static void
-poll_loops(int argc, union evarg *argv)
+poll_loops(AG_Event *event)
 {
 	char text[AG_TLIST_LABEL_MAX];
-	AG_Tlist *tl = argv[0].p;
-	struct vsource *vs = argv[1].p;
+	struct vsource *vs = AG_PTR(1);
+	AG_Tlist *tl = AG_SELF();
 	AG_TlistItem *it;
 	struct cktloop *l;
 	unsigned int i, j;
@@ -467,7 +461,7 @@ vsource_edit(void *p)
 
 	win = AG_WindowNew(0);
 
-	fsb = AG_FSpinbuttonNew(win, "V", _("Voltage: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Voltage: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &vs->voltage);
 	
 	AG_LabelNew(win, AG_LABEL_STATIC, _("Loops:"));

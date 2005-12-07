@@ -26,18 +26,11 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
+#include <agar/core.h>
+#include <agar/vg.h>
+#include <agar/gui.h>
 
-#include <engine/vg/vg.h>
-
-#ifdef EDITION
-#include <engine/widget/window.h>
-#include <engine/widget/fspinbutton.h>
-
-#include <engine/map/mapview.h>
-#include <engine/map/tool.h>
-#endif
-
+#include "eda.h"
 #include "conductor.h"
 
 const AG_Version conductor_ver = {
@@ -131,25 +124,23 @@ void
 conductor_tool_reinit(void)
 {
 	if (sel_cd != NULL) {
-		dprintf("non-null conductor\n");
+		printf("non-null conductor\n");
 	}
 	sel_cd = NULL;
 }
 
 static int
-conductor_tool_mousebuttondown(void *p, int xmap, int ymap, int b)
+conductor_tool_mousebuttondown(void *p, float x, float y, int b)
 {
-	AG_Maptool *t = p;
+	VG_Tool *t = p;
 	char name[AG_OBJECT_NAME_MAX];
 	struct circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 	struct component *com;
-	double x, y;
 	int n = 0;
 
 	switch (b) {
 	case SDL_BUTTON_LEFT:
-		VG_Map2Vec(vg, xmap, ymap, &x, &y);
 		if (sel_cd == NULL) {
 tryname:
 			snprintf(name, sizeof(name), "Cd%d", n++);
@@ -193,46 +184,39 @@ tryname:
 }
 
 static int
-conductor_tool_mousemotion(void *p, int xmap, int ymap, int xrel, int yrel,
+conductor_tool_mousemotion(void *p, float x, float y, float xrel, float yrel,
     int b)
 {
-	AG_Maptool *t = p;
+	VG_Tool *t = p;
 	struct circuit *ckt = t->p;
 	VG *vg = ckt->vg;
-	VG_Vtx vtx;
 
-	if (VG_Map2Vec(vg, xmap, ymap, &vtx.x, &vtx.y) == -1) {
-		return (0);
-	}
-	vg->origin[1].x = vtx.x;
-	vg->origin[1].y = vtx.y;
+	vg->origin[1].x = x;
+	vg->origin[1].y = y;
 
 	if (sel_cd != NULL) {
-		COM(sel_cd)->pin[2].x = vtx.x - COM(sel_cd)->block->pos.x;
-		COM(sel_cd)->pin[2].y = vtx.y - COM(sel_cd)->block->pos.y;
+		COM(sel_cd)->pin[2].x = x - COM(sel_cd)->block->pos.x;
+		COM(sel_cd)->pin[2].y = y - COM(sel_cd)->block->pos.y;
 		component_highlight_pins(ckt, COM(sel_cd));
 	} else {
-		if (pin_overlap(ckt, NULL, vtx.x, vtx.y) != NULL) {
-			vg->origin[2].x = vtx.x;
-			vg->origin[2].y = vtx.y;
+		if (pin_overlap(ckt, NULL, x, y) != NULL) {
+			vg->origin[2].x = x;
+			vg->origin[2].y = y;
 		}
 	}
 	vg->redraw++;
 	return (0);
 }
 
-AG_MaptoolOps conductor_tool = {
+VG_ToolOps conductor_tool = {
 	N_("Conductor"),
 	N_("Insert an ideal conductor between two nodes."),
 	EDA_BRANCH_TO_NODE_ICON,
-	sizeof(AG_Maptool),
+	sizeof(VG_Tool),
 	0,
 	conductor_tool_init,
 	NULL,				/* destroy */
-	NULL,				/* load */
-	NULL,				/* save */
-	NULL,				/* cursor */
-	NULL,				/* effect */
+	NULL,				/* edit */
 	conductor_tool_mousemotion,
 	conductor_tool_mousebuttondown,
 	NULL,				/* mousebuttonup */

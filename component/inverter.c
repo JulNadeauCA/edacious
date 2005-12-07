@@ -26,14 +26,11 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
-#include <engine/vg/vg.h>
+#include <agar/core.h>
+#include <agar/vg.h>
+#include <agar/gui.h>
 
-#ifdef EDITION
-#include <engine/widget/window.h>
-#include <engine/widget/fspinbutton.h>
-#endif
-
+#include "eda.h"
 #include "inverter.h"
 
 const AG_Version inverter_ver = {
@@ -105,14 +102,14 @@ inverter_draw(void *p, VG *vg)
 
 /* Initiate a LTH/HTL transition on a given pin. */
 static void
-switch_pin(int argc, union evarg *argv)
+switch_pin(AG_Event *event)
 {
-	struct inverter *inv = argv[0].p;
-	int pin = argv[1].i;
-	int level = argv[2].i;
+	struct inverter *inv = AG_SELF();
+	int pin = AG_INT(1);
+	int level = AG_INT(2);
 	float dv;
 
-	dprintf("pin = %d, level = %d\n", pin, level);
+	printf("pin = %d, level = %d\n", pin, level);
 
 	switch (level) {
 	case 1:
@@ -261,27 +258,27 @@ inverter_edit(void *p)
 
 	win = AG_WindowNew(0);
 
-	fsb = AG_FSpinbuttonNew(win, "ns", "Tphl: ");
+	fsb = AG_FSpinbuttonNew(win, 0, "ns", "Tphl: ");
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Tphl);
-	fsb = AG_FSpinbuttonNew(win, "ns", "Tplh: ");
+	fsb = AG_FSpinbuttonNew(win, 0, "ns", "Tplh: ");
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Tplh);
-	fsb = AG_FSpinbuttonNew(win, "ns", "Tthl: ");
+	fsb = AG_FSpinbuttonNew(win, 0, "ns", "Tthl: ");
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Tthl);
-	fsb = AG_FSpinbuttonNew(win, "ns", "Ttlh: ");
+	fsb = AG_FSpinbuttonNew(win, 0, "ns", "Ttlh: ");
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Ttlh);
 	
-	fsb = AG_FSpinbuttonNew(win, "pF", "Cin: ");
+	fsb = AG_FSpinbuttonNew(win, 0, "pF", "Cin: ");
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Cin);
-	fsb = AG_FSpinbuttonNew(win, "pF", "Cpd: ");
+	fsb = AG_FSpinbuttonNew(win, 0, "pF", "Cpd: ");
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Cpd);
 	
-	fsb = AG_FSpinbuttonNew(win, "V", "Vih: ");
+	fsb = AG_FSpinbuttonNew(win, 0, "V", "Vih: ");
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Vih);
-	fsb = AG_FSpinbuttonNew(win, "V", "Vil: ");
+	fsb = AG_FSpinbuttonNew(win, 0, "V", "Vil: ");
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Vil);
-	fsb = AG_FSpinbuttonNew(win, "V", "Voh: ");
+	fsb = AG_FSpinbuttonNew(win, 0, "V", "Voh: ");
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Voh);
-	fsb = AG_FSpinbuttonNew(win, "V", "Vol: ");
+	fsb = AG_FSpinbuttonNew(win, 0, "V", "Vol: ");
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Vol);
 
 	return (win);

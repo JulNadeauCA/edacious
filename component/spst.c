@@ -26,15 +26,11 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
-#include <engine/vg/vg.h>
+#include <agar/core.h>
+#include <agar/vg.h>
+#include <agar/gui.h>
 
-#ifdef EDITION
-#include <engine/widget/window.h>
-#include <engine/widget/spinbutton.h>
-#include <engine/widget/fspinbutton.h>
-#endif
-
+#include "eda.h"
 #include "spst.h"
 
 const AG_Version spst_ver = {
@@ -189,16 +185,15 @@ spst_edit(void *p)
 
 	win = AG_WindowNew(0);
 
-	fsb = AG_FSpinbuttonNew(win, "ohms", _("ON resistance: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "ohms", _("ON resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->on_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
 	
-	fsb = AG_FSpinbuttonNew(win, "ohms", _("OFF resistance: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "ohms", _("OFF resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->off_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
 
-	sb = AG_ButtonNew(win, _("Toggle state"));
-	AGWIDGET(sb)->flags |= AG_WIDGET_WFILL|AG_WIDGET_HFILL;
+	sb = AG_ButtonNew(win, AG_WIDGET_EXPAND, _("Toggle state"));
 	AG_ButtonSetSticky(sb, 1);
 	AG_WidgetBind(sb, "state", AG_WIDGET_BOOL, &sw->state);
 

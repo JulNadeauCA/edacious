@@ -26,37 +26,11 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
-#include <engine/widget/window.h>
-#include <engine/view.h>
-#include <engine/typesw.h>
-#include <engine/objmgr.h>
+#include <agar/core.h>
+#include <agar/vg.h>
+#include <agar/gui.h>
 
-#include <engine/map/map.h>
-
-#include <engine/vg/vg.h>
-#include <engine/vg/vg_math.h>
-
-#ifdef EDITION
-#include <engine/widget/tlist.h>
-#include <engine/widget/label.h>
-#include <engine/widget/fspinbutton.h>
-#include <engine/widget/units.h>
-#include <engine/widget/menu.h>
-
-#include <engine/map/mapview.h>
-#include <engine/map/tool.h>
-#endif
-
-#include <errno.h>
-#include <stdarg.h>
-#include <string.h>
-
-#include "aeda.h"
-
-#include <circuit/circuit.h>
-#include <component/vsource.h>
-#include <component/conductor.h>
+#include "eda.h"
 
 const AG_Version component_ver = {
 	"agar-eda component",
@@ -65,8 +39,8 @@ const AG_Version component_ver = {
 
 #define COMPONENT_REDRAW_DELAY	50
 
-AG_MaptoolOps component_ins_tool;
-AG_MaptoolOps component_sel_tool;
+VG_ToolOps component_ins_tool;
+VG_ToolOps component_sel_tool;
 
 void
 component_destroy(void *p)
@@ -112,9 +86,9 @@ unselect_all_components(struct circuit *ckt)
 }
 
 static void
-renamed(int argc, union evarg *argv)
+ComponentRenamed(AG_Event *event)
 {
-	struct component *com = argv[0].p;
+	struct component *com = AG_SELF();
 
 	if (com->block == NULL)
 		return;
@@ -123,11 +97,11 @@ renamed(int argc, union evarg *argv)
 }
 
 static void
-attached(int argc, union evarg *argv)
+ComponentAttached(AG_Event *event)
 {
 	char blkname[VG_BLOCK_NAME_MAX];
-	struct component *com = argv[0].p;
-	struct circuit *ckt = argv[argc].p;
+	struct component *com = AG_SELF();
+	struct circuit *ckt = AG_SENDER();
 	VG *vg = ckt->vg;
 	VG_Block *block;
 
@@ -138,13 +112,11 @@ attached(int argc, union evarg *argv)
 	
 	AG_ObjectCopyName(com, blkname, sizeof(blkname));
 #ifdef DEBUG
-	if (com->block != NULL)
-		fatal("block exists");
-	if (VG_GetBlock(vg, blkname) != NULL)
-		fatal("duplicate block: %s", blkname);
+	if (com->block != NULL) { Fatal("Block exists"); }
+	if (VG_GetBlock(vg, blkname) != NULL) { Fatal("Duplicate block"); }
 #endif
 	com->block = VG_BeginBlock(vg, blkname, 0);
-	VG_Origin2(vg, 0, com->pin[0].x, com->pin[0].y);
+	VG_Origin(vg, 0, com->pin[0].x, com->pin[0].y);
 	VG_EndBlock(vg);
 
 	if (AGOBJECT_SUBCLASS(com, "component.vsource")) {
@@ -156,10 +128,10 @@ attached(int argc, union evarg *argv)
 }
 
 static void
-detached(int argc, union evarg *argv)
+ComponentDetached(AG_Event *event)
 {
-	struct component *com = argv[0].p;
-	struct circuit *ckt = argv[argc].p;
+	struct component *com = AG_SELF();
+	struct circuit *ckt = AG_SENDER();
 	u_int i, j;
 
 	if (!AGOBJECT_SUBCLASS(ckt, "circuit"))
@@ -222,17 +194,17 @@ del_nodes:
 }
 
 static void
-shown(int argc, union evarg *argv)
+ComponentShown(AG_Event *event)
 {
-	struct component *com = argv[0].p;
+	struct component *com = AG_SELF();
 
 	AG_AddTimeout(com, &com->redraw_to, COMPONENT_REDRAW_DELAY);
 }
 
 static void
-hidden(int argc, union evarg *argv)
+ComponentHidden(AG_Event *event)
 {
-	struct component *com = argv[0].p;
+	struct component *com = AG_SELF();
 
 	AG_LockTimeouts(com);
 	if (AG_TimeoutIsScheduled(com, &com->redraw_to)) {
@@ -243,7 +215,7 @@ hidden(int argc, union evarg *argv)
 
 /* Redraw a component schematic block. */
 static Uint32
-redraw(void *p, Uint32 ival, void *arg)
+ComponentRedraw(void *p, Uint32 ival, void *arg)
 {
 	struct component *com = p;
 	VG_Block *block_save;
@@ -256,8 +228,7 @@ redraw(void *p, Uint32 ival, void *arg)
 		return (ival);
 
 #ifdef DEBUG
-	if (com->block == NULL)
-		fatal("%s: no block", AGOBJECT(com)->name);
+	if (com->block == NULL) { Fatal("Missing block"); }
 #endif
 
 	pthread_mutex_lock(&vg->lock);
@@ -408,12 +379,13 @@ component_init(void *obj, const char *tname, const char *name, const void *ops,
 		}
 	}
 
-	AG_SetEvent(com, "attached", attached, NULL);
-	AG_SetEvent(com, "detached", detached, NULL);
-	AG_SetEvent(com, "renamed", renamed, NULL);
-	AG_SetEvent(com, "circuit-shown", shown, NULL);
-	AG_SetEvent(com, "circuit-hidden", hidden, NULL);
-	AG_SetTimeout(&com->redraw_to, redraw, NULL, AG_TIMEOUT_LOADABLE);
+	AG_SetEvent(com, "attached", ComponentAttached, NULL);
+	AG_SetEvent(com, "detached", ComponentDetached, NULL);
+	AG_SetEvent(com, "renamed", ComponentRenamed, NULL);
+	AG_SetEvent(com, "circuit-shown", ComponentShown, NULL);
+	AG_SetEvent(com, "circuit-hidden", ComponentHidden, NULL);
+	AG_SetTimeout(&com->redraw_to, ComponentRedraw, NULL,
+	    AG_TIMEOUT_LOADABLE);
 }
 
 int
@@ -448,8 +420,7 @@ double
 dipole_resistance(struct dipole *dip)
 {
 #ifdef DEBUG
-	if (dip->p1 == dip->p2)
-		fatal("p1 == p2");
+	if (dip->p1 == dip->p2) { Fatal("p1 == p2"); }
 #endif
 	if (dip->com->ops->resistance == NULL) {
 		return (0);
@@ -516,7 +487,7 @@ dipole_in_loop(struct dipole *dip, struct cktloop *loop, int *sign)
 }
 
 #ifdef EDITION
-static struct component *sel_com;
+static struct component *sel_com = NULL;
 
 void *
 component_edit(void *p)
@@ -537,17 +508,17 @@ component_edit(void *p)
 
 /* Insert a new, floating component into a circuit. */
 void
-component_insert(int argc, union evarg *argv)
+component_insert(AG_Event *event)
 {
 	char name[AG_OBJECT_NAME_MAX];
-	AG_Mapview *mv = argv[1].p;
-	AG_Tlist *tl = argv[2].p;
-	struct circuit *ckt = argv[3].p;
+	VG_View *vgv = AG_PTR(1);
+	AG_Tlist *tl = AG_PTR(2);
+	struct circuit *ckt = AG_PTR(3);
 	AG_TlistItem *it;
 	AG_ObjectType *comtype;
 	struct component_ops *comops;
 	struct component *com;
-	AG_Maptool *t;
+	VG_Tool *t;
 	int n = 1;
 
 	if ((it = AG_TlistSelectedItem(tl)) == NULL) {
@@ -571,21 +542,22 @@ tryname:
 	AG_ObjectAttach(ckt, com);
 	AG_ObjectUnlinkDatafiles(com);
 	AG_ObjectPageIn(com, AG_OBJECT_DATA);
+	AG_ObjectSave(com);
 	AG_PostEvent(ckt, com, "circuit-shown", NULL);
 
-	if ((t = AG_MapviewFindTool(mv, "Insert component")) != NULL) {
-		AG_MapviewSelectTool(mv, t, ckt);
+	if ((t = VG_ViewFindTool(vgv, "Insert component")) != NULL) {
+		VG_ViewSelectTool(vgv, t, ckt);
 	}
 	sel_com = com;
 	sel_com->selected = 1;
 
-	AG_WidgetFocus(mv);
-	AG_WindowFocus(AG_WidgetParentWindow(mv));
+	AG_WidgetFocus(vgv);
+	AG_WindowFocus(AG_WidgetParentWindow(vgv));
 }
 
 /* Remove the selected components from the circuit. */
 static int
-remove_component(AG_Maptool *t, SDLKey key, int state, void *arg)
+remove_component(VG_Tool *t, SDLKey key, int state, void *arg)
 {
 	struct circuit *ckt = t->p;
 	struct component *com;
@@ -624,43 +596,11 @@ scan:
 static void
 ins_tool_init(void *p)
 {
-	AG_Maptool *t = p;
-	extern const struct eda_type eda_models[];
-	const struct eda_type *ty;
-	struct circuit *ckt = t->p;
-	AG_Window *win;
-	AG_Box *box;
-	AG_Tlist *tl;
-	int i;
-
-	win = AG_MaptoolWindow(t, "circuit-component-tool");
-	tl = AG_TlistNew(win, 0);
-	AG_SetEvent(tl, "tlist-dblclick", component_insert,
-	    "%p,%p,%p", t->mv, tl, ckt);
-
-	box = AG_BoxNew(win, AG_BOX_HORIZ, AG_BOX_WFILL|AG_BOX_HOMOGENOUS);
-	AG_ButtonAct(box, _("Insert"), 0, component_insert,
-	    "%p,%p,%p", t->mv, tl, ckt);
-	
-	for (ty = &eda_models[0]; ty->name != NULL; ty++) {
-		for (i = 0; i < agnTypes; i++) {
-			if (strcmp(agTypes[i].type, ty->name) == 0)
-				break;
-		}
-		if (i < agnTypes) {
-			AG_ObjectType *ctype = &agTypes[i];
-			struct component_ops *cops = (struct component_ops *)
-			    ctype->ops;
-
-			AG_TlistAddPtr(tl, AGICON(EDA_COMPONENT_ICON),
-			    _(cops->name), ctype);
-		}
-	}
+	VG_Tool *t = p;
 
 	sel_com = NULL;
-	AG_MaptoolBindKey(t, KMOD_NONE, SDLK_DELETE, remove_component, NULL);
-	AG_MaptoolBindKey(t, KMOD_NONE, SDLK_d, remove_component, NULL);
-	AG_MaptoolPushStatus(t, _("Specify the type of component to create."));
+	VG_ToolBindKey(t, KMOD_NONE, SDLK_DELETE, remove_component, NULL);
+	VG_ToolBindKey(t, KMOD_NONE, SDLK_d, remove_component, NULL);
 }
 
 /*
@@ -769,7 +709,6 @@ rotate_component(struct circuit *ckt, struct component *com)
 	VG *vg = ckt->vg;
 	int i;
 
-	dprintf("rotate %s\n", AGOBJECT(com)->name);
 	com->block->theta += M_PI_2;
 
 	for (i = 1; i <= com->npins; i++) {
@@ -784,9 +723,9 @@ rotate_component(struct circuit *ckt, struct component *com)
 }
 
 static int
-ins_tool_buttondown(void *p, int xmap, int ymap, int b)
+ins_tool_buttondown(void *p, float x, float y, int b)
 {
-	AG_Maptool *t = p;
+	VG_Tool *t = p;
 	struct circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 	VG_Vtx vtx;
@@ -795,21 +734,22 @@ ins_tool_buttondown(void *p, int xmap, int ymap, int b)
 	switch (b) {
 	case SDL_BUTTON_LEFT:
 		if (sel_com != NULL) {
-			VG_Map2Vec(vg, xmap, ymap, &vtx.x, &vtx.y);
+			vtx.x = x;
+			vtx.y = y;
 			component_connect(ckt, sel_com, &vtx);
 			unselect_all_components(ckt);
 			select_component(sel_com);
 			sel_com = NULL;
-			AG_MapviewSelectTool(t->mv, NULL, NULL);
+			VG_ViewSelectTool(t->vgv, NULL, NULL);
 		} else {
-			dprintf("no component to connect\n");
+			printf("no component to connect\n");
 		}
 		break;
 	case SDL_BUTTON_MIDDLE:
 		if (sel_com != NULL) {
 			rotate_component(ckt, sel_com);
 		} else {
-			dprintf("no component to rotate\n");
+			printf("no component to rotate\n");
 		}
 		break;
 	default:
@@ -823,27 +763,24 @@ remove:
 		AG_ObjectDestroy(sel_com);
 		Free(sel_com, M_OBJECT);
 		sel_com = NULL;
-		AG_MapviewSelectTool(t->mv, NULL, NULL);
+		VG_ViewSelectTool(t->vgv, NULL, NULL);
 	}
 	return (1);
 }
 
 /* Select overlapping components. */
 static int
-sel_tool_mousebuttondown(void *p, int xmap, int ymap, int b)
+sel_tool_mousebuttondown(void *p, float x, float y, int b)
 {
-	AG_Maptool *t = p;
+	VG_Tool *t = p;
 	struct circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 	struct component *com;
-	double x, y;
 	int multi = SDL_GetModState() & KMOD_CTRL;
 	AG_Window *pwin;
 
 	if (b != SDL_BUTTON_LEFT)
 		return (0);
-
-	VG_Map2Vec(vg, xmap, ymap, &x, &y);
 
 	if (!multi) {
 		unselect_all_components(ckt);
@@ -870,23 +807,21 @@ sel_tool_mousebuttondown(void *p, int xmap, int ymap, int b)
 			}
 		}
 	}
-	if ((pwin = AG_WidgetParentWindow(t->mv)) != NULL) {
+	if ((pwin = AG_WidgetParentWindow(t->vgv)) != NULL) {
 		agView->focus_win = pwin;
-		AG_WidgetFocus(t->mv);
+		AG_WidgetFocus(t->vgv);
 	}
 	return (1);
 }
 
 /* Select overlapping components. */
 static int
-sel_tool_leftbutton(AG_Maptool *t, int button, int state, int rx, int ry,
+sel_tool_leftbutton(VG_Tool *t, int button, int state, float x, float y,
     void *arg)
 {
 	struct circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 	struct component *com;
-	double x = VG_VECXF(vg,rx);
-	double y = VG_VECYF(vg,ry);
 	int multi = SDL_GetModState() & KMOD_CTRL;
 
 	if (button != SDL_BUTTON_LEFT || !state)
@@ -923,32 +858,25 @@ sel_tool_leftbutton(AG_Maptool *t, int button, int state, int rx, int ry,
 static void
 sel_tool_init(void *p)
 {
-	AG_Maptool *t = p;
+	VG_Tool *t = p;
 
-	AG_MaptoolBindMouseButton(t, SDL_BUTTON_LEFT, sel_tool_leftbutton, NULL);
+	VG_ToolBindMouseButton(t, SDL_BUTTON_LEFT, sel_tool_leftbutton, NULL);
 }
 
 /* Move a floating component and highlight the overlapping nodes. */
 static int
-ins_tool_mousemotion(void *p, int xmap, int ymap, int xrel, int yrel, int b)
+ins_tool_mousemotion(void *p, float x, float y, float xrel, float yrel, int b)
 {
-	AG_Maptool *t = p;
+	VG_Tool *t = p;
 	struct circuit *ckt = t->p;
 	VG *vg = ckt->vg;
-	double x, y;
-	struct pin *pin;
 	int nconn;
 
-	VG_Map2Vec(vg, xmap, ymap, &x, &y);
 	vg->origin[1].x = x;
 	vg->origin[1].y = y;
-
 	if (sel_com != NULL) {
 		VG_MoveBlock(vg, sel_com->block, x, y, -1);
 		nconn = component_highlight_pins(ckt, sel_com);
-		AG_MaptoolPopStatus(t);
-		AG_MaptoolPushStatus(t, _("Connect %s (%d connections)"),
-		    AGOBJECT(sel_com)->name, nconn);
 		vg->redraw++;
 		return (1);
 	}
@@ -957,25 +885,21 @@ ins_tool_mousemotion(void *p, int xmap, int ymap, int xrel, int yrel, int b)
 
 /* Highlight any component underneath the cursor. */
 static int
-sel_tool_mousemotion(void *p, int xmap, int ymap, int xrel, int yrel, int b)
+sel_tool_mousemotion(void *p, float x, float y, float xrel, float yrel, int b)
 {
-	AG_Maptool *t = p;
+	VG_Tool *t = p;
 	struct circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 	struct component *com;
-	double x, y;
+	VG_Rect rext;
 
-	VG_Map2Vec(vg, xmap, ymap, &x, &y);
 	vg->origin[1].x = x;
 	vg->origin[1].y = y;
-
 	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
-		VG_Rect rext;
-
 		if (!AGOBJECT_SUBCLASS(com, "component") ||
-		    com->flags & COMPONENT_FLOATING)
+		    com->flags & COMPONENT_FLOATING) {
 			continue;
-
+		}
 		VG_BlockExtent(vg, com->block, &rext);
 		if (x > rext.x &&
 		    y > rext.y &&
@@ -989,18 +913,15 @@ sel_tool_mousemotion(void *p, int xmap, int ymap, int xrel, int yrel, int b)
 	return (0);
 }
 
-AG_MaptoolOps component_ins_tool = {
+VG_ToolOps component_ins_tool = {
 	N_("Insert component"),
 	N_("Insert new components into the circuit."),
 	EDA_INSERT_COMPONENT_ICON,
-	sizeof(AG_Maptool),
-	TOOL_HIDDEN,
+	sizeof(VG_Tool),
+	0,
 	ins_tool_init,
 	NULL,			/* destroy */
-	NULL,			/* edit_pane */
 	NULL,			/* edit */
-	NULL,			/* cursor */
-	NULL,			/* effect */
 	ins_tool_mousemotion,
 	ins_tool_buttondown,
 	NULL,			/* mousebuttonup */
@@ -1008,18 +929,15 @@ AG_MaptoolOps component_ins_tool = {
 	NULL			/* keyup */
 };
 
-AG_MaptoolOps component_sel_tool = {
+VG_ToolOps component_sel_tool = {
 	N_("Select component"),
 	N_("Select one or more component in the circuit."),
 	EDA_COMPONENT_ICON,
-	sizeof(AG_Maptool),
-	TOOL_HIDDEN,
+	sizeof(VG_Tool),
+	0,
 	sel_tool_init,
 	NULL,			/* destroy */
-	NULL,			/* edit_pane */
 	NULL,			/* edit */
-	NULL,			/* cursor */
-	NULL,			/* effect */
 	sel_tool_mousemotion,
 	sel_tool_mousebuttondown,
 	NULL,			/* mousebuttonup */
@@ -1030,8 +948,7 @@ AG_MaptoolOps component_sel_tool = {
 
 #ifdef EDITION
 void
-component_reg_menu(AG_Menu *m, AG_MenuItem *pitem,
-    struct circuit *ckt, AG_Mapview *mv)
+component_reg_menu(AG_Menu *m, AG_MenuItem *pitem, struct circuit *ckt)
 {
 	/* Nothing yet */
 }

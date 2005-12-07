@@ -26,15 +26,11 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
-#include <engine/vg/vg.h>
+#include <agar/core.h>
+#include <agar/vg.h>
+#include <agar/gui.h>
 
-#ifdef EDITION
-#include <engine/widget/window.h>
-#include <engine/widget/spinbutton.h>
-#include <engine/widget/fspinbutton.h>
-#endif
-
+#include "eda.h"
 #include "ground.h"
 
 const AG_Version ground_ver = {

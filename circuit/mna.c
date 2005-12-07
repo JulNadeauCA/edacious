@@ -26,17 +26,12 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
-#include <engine/widget/gui.h>
-#include <engine/widget/matview.h>
+#include <agar/core.h>
+#include <agar/sc.h>
+#include <agar/gui.h>
+#include <agar/sc/sc_matview.h>
 
-#include <circuit/circuit.h>
-
-#include <component/component.h>
-#include <component/vsource.h>
-
-#include <mat/mat.h>
-
+#include "eda.h"
 #include "sim.h"
 
 const struct sim_ops mna_ops;
@@ -45,22 +40,22 @@ struct mna {
 	struct sim sim;
 	Uint32 Telapsed;		/* Simulated time elapsed (ns) */
 	int speed;			/* Simulation speed (updates/sec) */
-	AG_Timeout update_to;	/* Timer for simulation updates */
+	AG_Timeout update_to;		/* Timer for simulation updates */
 	
-	mat_t *A;			/* Block matrix of [G,B;C,D] */
-	mat_t *A_LU;			/* LU-decomposed form of A */
-	mat_t *G;			/* Passive element interconnects */
-	mat_t *B;			/* Voltage sources */
-	mat_t *C;			/* Transpose of [B] */
-	mat_t *D;			/* Dependent sources */
+	SC_Matrix *A;			/* Block matrix of [G,B;C,D] */
+	SC_Matrix *A_LU;		/* LU factorization of A */
+	SC_Matrix *G;			/* Passive element interconnects */
+	SC_Matrix *B;			/* Voltage sources */
+	SC_Matrix *C;			/* Transpose of [B] */
+	SC_Matrix *D;			/* Dependent sources */
 
-	vec_t *z;			/* Block partitioned vector of [i;e] */
-	vec_t *i;			/* Sum of independent current sources */
-	vec_t *e;			/* Independent voltage sources */
+	SC_Vector *z;			/* Block partitioned vector of [i;e] */
+	SC_Vector *i;			/* Sum of independent current sources */
+	SC_Vector *e;			/* Independent voltage sources */
 
-	vec_t *x;			/* Block partitioned vector of [v;j] */
-	vec_t *v;			/* Unknown voltages */
-	vec_t *j;			/* Unknown currents thru vsources */
+	SC_Vector *x;			/* Block partitioned vector of [v;j] */
+	SC_Vector *v;			/* Unknown voltages */
+	SC_Vector *j;			/* Unknown currents thru vsources */
 };
 
 static int
@@ -68,13 +63,13 @@ mna_solve(struct mna *mna, struct circuit *ckt)
 {
 	struct component *com;
 	u_int i, n, m;
-	veci_t *iv;
+	SC_Ivector *iv;
 	double d;
 
-	mat_set(mna->G, 0.0);
-	mat_set(mna->B, 0.0);
-	mat_set(mna->C, 0.0);
-	mat_set(mna->D, 0.0);
+	SC_MatrixSetZero(mna->G);
+	SC_MatrixSetZero(mna->B);
+	SC_MatrixSetZero(mna->C);
+	SC_MatrixSetZero(mna->D);
 
 	for (n = 1; n <= ckt->n; n++) {
 		struct cktnode *node = ckt->nodes[n];
@@ -160,25 +155,25 @@ mna_solve(struct mna *mna, struct circuit *ckt)
 	for (m = 1; m <= ckt->m; m++) {
 		mna->e->mat[m][1] = VSOURCE(ckt->vsrcs[m-1])->voltage;
 	}
-	mat_compose21(mna->z, mna->i, mna->e);
+	SC_MatrixCompose21(mna->z, mna->i, mna->e);
 
 	/*
 	 * Generate the partitioned matrix A with blocks GBCD, compute the
 	 * LU decomposition and solve the system by backsubstitution.
 	 */
-	mat_compose22(mna->A, mna->G, mna->B, mna->C, mna->D);
-	iv = veci_new(mna->z->m);
-	if ((mat_lu_decompose(mna->A, mna->A_LU, iv, &d)) == NULL) {
+	SC_MatrixCompose22(mna->A, mna->G, mna->B, mna->C, mna->D);
+	iv = SC_IvectorNew(mna->z->m);
+	if ((SC_FactorizeLU(mna->A, mna->A_LU, iv, &d)) == NULL) {
 		AG_SetError("A(lu): %s", AG_GetError());
 		goto fail;
 	}
-	vec_copy(mna->z, mna->x);
-	mat_lu_backsubst(mna->A_LU, iv, mna->x);
+	SC_VectorCopy(mna->z, mna->x);
+	SC_BacksubstLU(mna->A_LU, iv, mna->x);
 
-	veci_free(iv);
+	SC_IvectorFree(iv);
 	return (0);
 fail:
-	veci_free(iv);
+	SC_IvectorFree(iv);
 	return (-1);
 }
 
@@ -227,20 +222,20 @@ mna_init(void *p)
 	mna->speed = 4;
 	AG_SetTimeout(&mna->update_to, mna_tick, mna, AG_TIMEOUT_LOADABLE);
 
-	mna->A = mat_new(0, 0);
-	mna->A_LU = mat_new(0, 0);
-	mna->G = mat_new(0, 0);
-	mna->B = mat_new(0, 0);
-	mna->C = mat_new(0, 0);
-	mna->D = mat_new(0, 0);
+	mna->A = SC_MatrixNew(0, 0);
+	mna->A_LU = SC_MatrixNew(0, 0);
+	mna->G = SC_MatrixNew(0, 0);
+	mna->B = SC_MatrixNew(0, 0);
+	mna->C = SC_MatrixNew(0, 0);
+	mna->D = SC_MatrixNew(0, 0);
 
-	mna->z = vec_new(0);
-	mna->i = vec_new(0);
-	mna->e = vec_new(0);
+	mna->z = SC_VectorNew(0);
+	mna->i = SC_VectorNew(0);
+	mna->e = SC_VectorNew(0);
 	
-	mna->x = vec_new(0);
-	mna->v = vec_new(0);
-	mna->j = vec_new(0);
+	mna->x = SC_VectorNew(0);
+	mna->v = SC_VectorNew(0);
+	mna->j = SC_VectorNew(0);
 }
 
 static void
@@ -277,20 +272,20 @@ mna_destroy(void *p)
 	
 	mna_stop(mna);
 
-	mat_free(mna->A);
-	mat_free(mna->A_LU);
-	mat_free(mna->G);
-	mat_free(mna->B);
-	mat_free(mna->C);
-	mat_free(mna->D);
+	SC_MatrixFree(mna->A);
+	SC_MatrixFree(mna->A_LU);
+	SC_MatrixFree(mna->G);
+	SC_MatrixFree(mna->B);
+	SC_MatrixFree(mna->C);
+	SC_MatrixFree(mna->D);
 
-	vec_free(mna->z);
-	vec_free(mna->i);
-	vec_free(mna->e);
+	SC_VectorFree(mna->z);
+	SC_VectorFree(mna->i);
+	SC_VectorFree(mna->e);
 
-	vec_free(mna->x);
-	vec_free(mna->v);
-	vec_free(mna->j);
+	SC_VectorFree(mna->x);
+	SC_VectorFree(mna->v);
+	SC_VectorFree(mna->j);
 }
 
 static void
@@ -298,43 +293,43 @@ mna_cktmod(void *p, struct circuit *ckt)
 {
 	struct mna *mna = p;
 
-	mat_resize(mna->A, ckt->n+ckt->m, ckt->n+ckt->m);
-	mat_resize(mna->A_LU, ckt->n+ckt->m, ckt->n+ckt->m);
-	mat_resize(mna->G, ckt->n, ckt->n);
-	mat_resize(mna->B, ckt->n, ckt->m);
-	mat_resize(mna->C, ckt->m, ckt->n);
-	mat_resize(mna->D, ckt->m, ckt->m);
+	SC_MatrixResize(mna->A, ckt->n+ckt->m, ckt->n+ckt->m);
+	SC_MatrixResize(mna->A_LU, ckt->n+ckt->m, ckt->n+ckt->m);
+	SC_MatrixResize(mna->G, ckt->n, ckt->n);
+	SC_MatrixResize(mna->B, ckt->n, ckt->m);
+	SC_MatrixResize(mna->C, ckt->m, ckt->n);
+	SC_MatrixResize(mna->D, ckt->m, ckt->m);
 
-	mat_resize(mna->i, ckt->n, 1);
-	mat_resize(mna->e, ckt->m, 1);
-	mat_resize(mna->z, ckt->n+ckt->m, 1);
+	SC_MatrixResize(mna->i, ckt->n, 1);
+	SC_MatrixResize(mna->e, ckt->m, 1);
+	SC_MatrixResize(mna->z, ckt->n+ckt->m, 1);
 	
-	mat_resize(mna->v, ckt->n, 1);
-	mat_resize(mna->j, ckt->m, 1);
-	mat_resize(mna->x, ckt->n+ckt->m, 1);
+	SC_MatrixResize(mna->v, ckt->n, 1);
+	SC_MatrixResize(mna->j, ckt->m, 1);
+	SC_MatrixResize(mna->x, ckt->n+ckt->m, 1);
 	
-	mat_set(mna->A, 0);
-	mat_set(mna->A_LU, 0);
-	mat_set(mna->G, 0);
-	mat_set(mna->B, 0);
-	mat_set(mna->C, 0);
-	mat_set(mna->D, 0);
+	SC_MatrixSetZero(mna->A);
+	SC_MatrixSetZero(mna->A_LU);
+	SC_MatrixSetZero(mna->G);
+	SC_MatrixSetZero(mna->B);
+	SC_MatrixSetZero(mna->C);
+	SC_MatrixSetZero(mna->D);
 
-	vec_set(mna->z, 0);
-	vec_set(mna->i, 0);
+	SC_VectorSetZero(mna->z);
+	SC_VectorSetZero(mna->i);
 	
-	vec_set(mna->x, 0);
-	vec_set(mna->v, 0);
-	vec_set(mna->j, 0);
+	SC_VectorSetZero(mna->x);
+	SC_VectorSetZero(mna->v);
+	SC_VectorSetZero(mna->j);
 }
 
 static void
-cont_run(int argc, union evarg *argv)
+cont_run(AG_Event *event)
 {
-	AG_Button *bu = argv[0].p;
-	struct mna *mna = argv[1].p;
-	struct sim *sim = argv[1].p;
-	int state = argv[2].i;
+	AG_Button *bu = AG_SELF();
+	struct sim *sim = AG_PTR(1);
+	struct mna *mna = (struct mna *)sim;
+	int state = AG_INT(2);
 
 	if (state) {
 		mna_cktmod(mna, sim->ckt);
@@ -362,16 +357,16 @@ mna_edit(void *p, struct circuit *ckt)
 
 	win = AG_WindowNew(0);
 
-	nb = AG_NotebookNew(win, AG_NOTEBOOK_WFILL|AG_NOTEBOOK_HFILL);
+	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
 	ntab = AG_NotebookAddTab(nb, _("Continuous mode"), AG_BOX_VERT);
 	{
-		AG_ButtonAct(ntab, _("Run simulation"),
-		    AG_BUTTON_WFILL|AG_BUTTON_STICKY,
+		AG_ButtonAct(ntab, AG_BUTTON_HFILL|AG_BUTTON_STICKY,
+		    _("Run simulation"),
 		    cont_run, "%p", mna);
 	
 		AG_SeparatorNew(ntab, AG_SEPARATOR_HORIZ);
 
-		sbu = AG_SpinbuttonNew(ntab, _("Speed (updates/sec): "));
+		sbu = AG_SpinbuttonNew(ntab, 0, _("Speed (updates/sec): "));
 		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT32, &mna->speed);
 		AG_SpinbuttonSetRange(sbu, 1, 1000);
 		

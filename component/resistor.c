@@ -26,15 +26,11 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
-#include <engine/vg/vg.h>
+#include <agar/core.h>
+#include <agar/vg.h>
+#include <agar/gui.h>
 
-#ifdef EDITION
-#include <engine/widget/window.h>
-#include <engine/widget/spinbutton.h>
-#include <engine/widget/fspinbutton.h>
-#endif
-
+#include "eda.h"
 #include "resistor.h"
 
 const AG_Version resistor_ver = {
@@ -210,21 +206,23 @@ resistor_edit(void *p)
 
 	win = AG_WindowNew(0);
 
-	fsb = AG_FSpinbuttonNew(win, "ohms", _("Resistance: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "ohms", _("Resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
 	
-	sb = AG_SpinbuttonNew(win, _("Tolerance (%%): "));
+	sb = AG_SpinbuttonNew(win, 0, _("Tolerance (%%): "));
 	AG_WidgetBind(sb, "value", AG_WIDGET_INT, &r->tolerance);
 	AG_SpinbuttonSetRange(sb, 1, 100);
 
-	fsb = AG_FSpinbuttonNew(win, "W", _("Power rating: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "W", _("Power rating: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->power_rating);
 	AG_FSpinbuttonSetMin(fsb, 0);
 	
-	fsb = AG_FSpinbuttonNew(win, "mohms/degC", _("Temp. coefficient: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "mohms/degC",
+	    _("Temp. coefficient: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc1);
-	fsb = AG_FSpinbuttonNew(win, "mohms/degC^2", _("Temp. coefficient: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "mohms/degC^2",
+	    _("Temp. coefficient: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc2);
 
 	return (win);

@@ -2,8 +2,8 @@
 # Public domain
 
 REGISTER("--enable-static",	"Produce a static binary [default: no]")
-REGISTER("--enable-capture",	"Enable schematic capture [default: yes]")
 REGISTER("--enable-warnings",	"Enable compiler warnings [default: no]")
+REGISTER("--enable-edition",	"Enable graphical editor [default: yes]")
 
 HDEFINE(VERSION, "\"1.0-alpha\"")
 
@@ -17,7 +17,13 @@ MDEFINE(INCLDIR, "$PREFIX/include/agar-eda")
 HDEFINE(INCLDIR, "\"$PREFIX/include/agar-eda\"")
 
 CHECK(cc)
-REQUIRE(agar, 1.0)
+CHECK(agar, 1.0)
+CHECK(agar-sc, 1.0)
+
+if [ "${HAVE_AGAR}" != "yes" -o "${HAVE_AGAR_SC}" != "yes" ]; then
+	echo "This application requires Agar and Agar-SC"
+	exit 1
+fi
 
 MDEFINE(CFLAGS, "$CFLAGS -I$SRC")
 if [ "${enable_warnings}" != "no" ]; then
@@ -25,7 +31,7 @@ if [ "${enable_warnings}" != "no" ]; then
 	MDEFINE(CFLAGS, "$CFLAGS -Wno-unused")
 fi
 
-if [ "${enable_capture}" != "no" ]; then
+if [ "${enable_edition}" != "no" ]; then
 	HDEFINE(EDITION, 1)
 else
 	HUNDEF(EDITION)

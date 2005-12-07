@@ -26,16 +26,10 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <engine/engine.h>
+#include <agar/core.h>
+#include <agar/gui.h>
 
-#include <engine/map/map.h>
-
-#ifdef EDITION
-#include <engine/widget/window.h>
-#include <engine/widget/tlist.h>
-#endif
-
-#include <circuit/circuit.h>
+#include "eda.h"
 
 extern const struct sim_ops kvl_ops;
 extern const struct sim_ops mna_ops;
@@ -71,10 +65,10 @@ sim_destroy(void *p)
 }
 
 void
-sim_edit(int argc, union evarg *argv)
+sim_edit(AG_Event *event)
 {
-	struct circuit *ckt = argv[1].p;
-	AG_Window *pwin = argv[2].p;
+	struct circuit *ckt = AG_PTR(1);
+	AG_Window *pwin = AG_PTR(2);
 	struct sim *sim = ckt->sim;
 	AG_Window *win;
 
