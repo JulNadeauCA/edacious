@@ -25,11 +25,13 @@
 # USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 CC?=		cc
-CFLAGS?=	-O2 -g
+CFLAGS?=
 OBJCFLAGS?=	${CFLAGS}
 SH?=		sh
 AR?=		ar
 RANLIB?=	ranlib
+ASM?=		nasm
+ASMFLAGS?=	-g -w-orphan-labels
 
 LIB?=
 LIB_INSTALL?=	No
@@ -37,13 +39,10 @@ LIB_SHARED?=	No
 LIB_STATIC?=	Yes
 LIB_MAJOR?=	1
 LIB_MINOR?=	0
-
 LIB_ADD?=
-ASM?=		nasm
-ASMFLAGS?=	-g -w-orphan-labels
-LIBTOOL?=	./libtool
 
-# Required files
+LIBTOOL?=	${TOP}/mk/libtool/libtool
+LIBTOOL_COOKIE?=${TOP}/mk/libtool.ok
 LTCONFIG?=	${TOP}/mk/libtool/ltconfig
 LTCONFIG_GUESS?=${TOP}/mk/libtool/config.guess
 LTCONFIG_SUB?=	${TOP}/mk/libtool/config.sub
@@ -52,14 +51,15 @@ LTMAIN_SH?=	${TOP}/mk/libtool/ltmain.sh
 LTCONFIG_LOG?=	./config.log
 BINMODE?=	755
 STATIC?=	Yes
-CFLAGS+=    ${COPTS}
-SHARE?=
-SHARESRC?=
+CFLAGS+=	${COPTS}
 LFLAGS?=
 YFLAGS?=
 
-INCL?=""
-INCLDIR?=""
+SHARE?=none
+SHARESRC?=none
+SRCS?=none
+INCL?=none
+INCLDIR?=
 
 all: all-subdir lib${LIB}.a lib${LIB}.la
 install: install-lib install-subdir
@@ -133,7 +133,7 @@ depend: depend-subdir
 
 # Build the library's object files.
 _lib_objs:
-	@if [ "${LIB}" != "" -a "${OBJS}" = "" \
+	@if [ "${LIB}" != "" -a "${OBJS}" = "" -a "${SRCS}" != "none" \
 	      -a "${LIB_STATIC}" = "Yes" ]; then \
 	    for F in ${SRCS}; do \
 	        F=`echo $$F | sed 's/.[clym]$$/.o/'`; \
@@ -149,7 +149,7 @@ _lib_objs:
 
 # Build PIC versions of the library's object files.
 _lib_shobjs:
-	@if [ "${LIB}" != "" -a "${SHOBJS}" = "" \
+	@if [ "${LIB}" != "" -a "${SHOBJS}" = "" -a "${SRCS}" != "none" \
 	      -a "${LIB_SHARED}" = "Yes" ]; then \
 	    for F in ${SRCS}; do \
 	        F=`echo $$F | sed 's/.[clym]$$/.lo/'`; \
@@ -165,7 +165,8 @@ _lib_shobjs:
 
 # Build a static version of the library.
 lib${LIB}.a: _lib_objs ${OBJS}
-	@if [ "${LIB}" != "" -a "${LIB_STATIC}" = "Yes" ]; then \
+	@if [ "${LIB}" != "" -a "${LIB_STATIC}" = "Yes" \
+	      -a "${SRCS}" != "none" ]; then \
 	    if [ "${OBJS}" = "" ]; then \
 	        export _objs=""; \
 	        for F in ${SRCS}; do \
@@ -185,8 +186,9 @@ lib${LIB}.a: _lib_objs ${OBJS}
 	fi
 
 # Build a Libtool version of the library.
-lib${LIB}.la: ${LIBTOOL} _lib_shobjs ${SHOBJS}
-	@if [ "${LIB}" != "" -a "${LIB_SHARED}" = "Yes" ]; then \
+lib${LIB}.la: ${LIBTOOL_COOKIE} _lib_shobjs ${SHOBJS}
+	@if [ "${LIB}" != "" -a "${LIB_SHARED}" = "Yes" \
+	      -a "${SRCS}" != "none" ]; then \
 	    if [ "${SHOBJS}" = "" ]; then \
 	        export _shobjs=""; \
 	        for F in ${SRCS}; do \
@@ -216,7 +218,7 @@ lib${LIB}.la: ${LIBTOOL} _lib_shobjs ${SHOBJS}
 	fi
 
 clean-lib:
-	@if [ "${LIB}" != "" ]; then \
+	@if [ "${LIB}" != "" -a "${SRCS}" != "none" ]; then \
 	    if [ "${LIB_STATIC}" = "Yes" ]; then \
 	        if [ "${OBJS}" = "" ]; then \
                     for F in ${SRCS}; do \
@@ -242,6 +244,13 @@ clean-lib:
 	    	        echo "rm -f $$F"; \
 	    	        rm -f $$F; \
                     done; \
+                    for F in ${SRCS}; do \
+	    	        F=`echo $$F | sed 's/.[clym]$$/.o/'`; \
+	    	        F=`echo $$F | sed 's/.cc$$/.o/'`; \
+	    	        F=`echo $$F | sed 's/.asm$$/.o/'`; \
+	    	        echo "rm -f $$F"; \
+	    	        rm -f $$F; \
+                    done; \
 		else \
 		    rm -f ${SHOBJS}; \
 		    echo "rm -f ${SHOBJS}"; \
@@ -256,11 +265,12 @@ clean-lib:
 	fi
 
 cleandir-lib:
-	rm -f ${LIBTOOL} ${LTCONFIG_LOG} config.log Makefile.config .depend
+	rm -f ${LIBTOOL} ${LIBTOOL_COOKIE} ${LTCONFIG_LOG} config.log
+	rm -f Makefile.config .depend
 	if [ -e "./config/prefix.h" ]; then rm -fr ./config; fi
 
-install-lib: ${LIBTOOL}
-	@if [ "${INCL}" != "" ]; then \
+install-lib: ${LIBTOOL_COOKIE}
+	@if [ "${INCL}" != "" -a "${INCL}" != "none" ]; then \
 	    if [ ! -d "${INCLDIR}" ]; then \
                 echo "${INSTALL_DATA_DIR} ${INCLDIR}"; \
                 ${SUDO} ${INSTALL_DATA_DIR} ${INCLDIR}; \
@@ -287,7 +297,7 @@ install-lib: ${LIBTOOL}
 	    ${SUDO} ${LIBTOOL} --finish ${LIBDIR}; \
 	fi
 	@export _share="${SHARE}"; \
-        if [ "$$_share" != "" ]; then \
+        if [ "$$_share" != "" -a "${SHARE}" != "none" ]; then \
             if [ ! -d "${SHAREDIR}" ]; then \
                 echo "${INSTALL_DATA_DIR} ${SHAREDIR}"; \
                 ${SUDO} ${INSTALL_DATA_DIR} ${SHAREDIR}; \
@@ -298,7 +308,7 @@ install-lib: ${LIBTOOL}
             done; \
 	fi
 	@export _sharesrc="${SHARESRC}"; \
-        if [ "$$_sharesrc" != "" ]; then \
+        if [ "$$_sharesrc" != "" -a "${SHARESRC}" != "none" ]; then \
             if [ ! -d "${SHAREDIR}" ]; then \
                 echo "${INSTALL_DATA_DIR} ${SHAREDIR}"; \
                 ${SUDO} ${INSTALL_DATA_DIR} ${SHAREDIR}; \
@@ -317,7 +327,7 @@ install-lib: ${LIBTOOL}
 	    fi; \
 	fi
 
-deinstall-lib: ${LIBTOOL}
+deinstall-lib: ${LIBTOOL_COOKIE}
 	@if [ "${LIB}" != "" -a "${LIB_SHARED}" = "Yes" ]; then \
 	    if [ "${LIB_STATIC}" = "Yes" ]; then \
 	        echo "${DEINSTALL_LIB} ${LIBDIR}/lib${LIB}.a"; \
@@ -328,13 +338,13 @@ deinstall-lib: ${LIBTOOL}
 	    ${SUDO} ${LIBTOOL} --mode=uninstall \
 	        rm -f ${LIBDIR}/lib${LIB}.la; \
 	fi
-	@if [ "${SHARE}" != "" ]; then \
+	@if [ "${SHARE}" != "" -a "${SHARE}" != "none" ]; then \
 	    for F in ${SHARE}; do \
 	        echo "${DEINSTALL_DATA} ${SHAREDIR}/$$F"; \
 	        ${SUDO} ${DEINSTALL_DATA} ${SHAREDIR}/$$F; \
 	    done; \
 	fi
-	@if [ "${SHARESRC}" != "" ]; then \
+	@if [ "${SHARESRC}" != "" -a "${SHARESRC}" != "none" ]; then \
 	    for F in ${SHARESRC}; do \
 	        echo "${DEINSTALL_DATA} ${SHAREDIR}/$$F"; \
 	        ${SUDO} ${DEINSTALL_DATA} ${SHAREDIR}/$$F; \
@@ -344,10 +354,19 @@ deinstall-lib: ${LIBTOOL}
 includes:
 	(cd ${TOP} && ${MAKE} install-includes)
 
-${LIBTOOL}: ${LTCONFIG} ${LTMAIN_SH} ${LTCONFIG_GUESS} ${LTCONFIG_SUB}
+${LIBTOOL_COOKIE}: ${LTCONFIG} ${LTMAIN_SH} ${LTCONFIG_GUESS} ${LTCONFIG_SUB}
 	@if [ "${LIB}" != "" -a "${LIB_SHARED}" = "Yes" ]; then \
 	    echo "${SH} ${LTCONFIG} ${LTMAIN_SH}"; \
 	    ${SH} ${LTCONFIG} ${LTMAIN_SH}; \
+	    if [ $? != 0 ]; then \
+	    	echo "${LTCONFIG} failed"; \
+	    	exit 1; \
+	    fi; \
+	    if [ ! -f "${LIBTOOL}" ]; then \
+		echo "mv libtool ${LIBTOOL}"; \
+		mv libtool ${LIBTOOL}; \
+	    fi; \
+	    echo "${LIBTOOL}" > ${LIBTOOL_COOKIE}; \
 	fi
 
 ${LTCONFIG} ${LTCONFIG_GUESS} ${LTCONFIG_SUB} ${LTMAIN_SH}:
