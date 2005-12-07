@@ -7,6 +7,6 @@ LIB=	component
 SRCS=	component.c conductor.c ground.c inverter.c resistor.c semiresistor.c \
 	spst.c spdt.c vsource.c
 
-CFLAGS+=${AGAR_CFLAGS}
+CFLAGS+=${AGAR_SC_CFLAGS} ${AGAR_CFLAGS}
 
 include ${TOP}/mk/csoft.lib.mk
