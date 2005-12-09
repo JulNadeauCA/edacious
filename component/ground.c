@@ -33,25 +33,25 @@
 #include "eda.h"
 #include "ground.h"
 
-const AG_Version ground_ver = {
+const AG_Version esGroundVer = {
 	"agar-eda ground",
 	0, 0
 };
 
-const struct component_ops ground_ops = {
+const ES_ComponentOps esGroundOps = {
 	{
-		ground_init,
+		ES_GroundInit,
 		NULL,			/* reinit */
-		component_destroy,
-		ground_load,
-		ground_save,
-		component_edit
+		ES_ComponentDestroy,
+		ES_GroundLoad,
+		ES_GroundSave,
+		ES_ComponentEdit
 	},
 	N_("Ground"),
 	"Gnd",
-	ground_draw,
+	ES_GroundDraw,
 	NULL,			/* edit */
-	ground_connect,
+	ES_GroundConnect,
 	NULL,			/* export */
 	NULL,			/* tick */
 	NULL,			/* resistance */
@@ -60,40 +60,40 @@ const struct component_ops ground_ops = {
 	NULL			/* isource */
 };
 
-const struct pin ground_pinout[] = {
+const ES_Port esGroundPinout[] = {
 	{ 0, "",  0.000, 0.000 },
 	{ 1, "A", 0.000, 0.000 },
 	{ -1 },
 };
 
 int
-ground_connect(void *p, struct pin *p1, struct pin *p2)
+ES_GroundConnect(void *p, ES_Port *p1, ES_Port *p2)
 {
-	struct ground *gnd = p;
+	ES_Ground *gnd = p;
 	struct circuit *ckt = COM(gnd)->ckt;
-	struct cktbranch *br;
+	ES_Branch *br;
 
 	if (p2 != NULL && p2->node > 0) {
 		u_int n = p2->node;
-		struct cktnode *node = ckt->nodes[n];
+		ES_Node *node = ckt->nodes[n];
 	
 		TAILQ_FOREACH(br, &node->branches, branches) {
-			if (br->pin == NULL || br->pin->com == NULL ||
-			    br->pin->com->flags & COMPONENT_FLOATING) {
+			if (br->port == NULL || br->port->com == NULL ||
+			    br->port->com->flags & COMPONENT_FLOATING) {
 				continue;
 			}
-			circuit_add_branch(ckt, 0, br->pin);
-			br->pin->node = 0;
+			ES_CircuitAddBranch(ckt, 0, br->port);
+			br->port->node = 0;
 		}
-		circuit_del_node(ckt, n);
+		ES_CircuitDelNode(ckt, n);
 	}
 	p1->node = 0;
-	p1->branch = circuit_add_branch(ckt, 0, p1);
+	p1->branch = ES_CircuitAddBranch(ckt, 0, p1);
 	return (0);
 }
 
 void
-ground_draw(void *p, VG *vg)
+ES_GroundDraw(void *p, VG *vg)
 {
 	VG_Begin(vg, VG_LINES);
 	VG_Vertex2(vg, 0.000, 0.000);
@@ -108,32 +108,32 @@ ground_draw(void *p, VG *vg)
 }
 
 void
-ground_init(void *p, const char *name)
+ES_GroundInit(void *p, const char *name)
 {
-	struct ground *gnd = p;
+	ES_Ground *gnd = p;
 
-	component_init(gnd, "ground", name, &ground_ops, ground_pinout);
+	ES_ComponentInit(gnd, "ground", name, &esGroundOps, esGroundPinout);
 }
 
 int
-ground_load(void *p, AG_Netbuf *buf)
+ES_GroundLoad(void *p, AG_Netbuf *buf)
 {
-	struct ground *gnd = p;
+	ES_Ground *gnd = p;
 
-	if (AG_ReadVersion(buf, &ground_ver, NULL) == -1 ||
-	    component_load(gnd, buf) == -1) {
+	if (AG_ReadVersion(buf, &esGroundVer, NULL) == -1 ||
+	    ES_ComponentLoad(gnd, buf) == -1) {
 		return (-1);
 	}
 	return (0);
 }
 
 int
-ground_save(void *p, AG_Netbuf *buf)
+ES_GroundSave(void *p, AG_Netbuf *buf)
 {
-	struct ground *gnd = p;
+	ES_Ground *gnd = p;
 
-	AG_WriteVersion(buf, &ground_ver);
-	if (component_save(gnd, buf) == -1) {
+	AG_WriteVersion(buf, &esGroundVer);
+	if (ES_ComponentSave(gnd, buf) == -1) {
 		return (-1);
 	}
 	return (0);

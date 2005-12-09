@@ -10,8 +10,8 @@ PROG=	eda
 SRCS=	eda.c
 
 CFLAGS+=${AGAR_SC_CFLAGS} ${AGAR_CFLAGS}
-LIBS+=	component/libcomponent.a \
-	circuit/libcircuit.a \
+LIBS+=	circuit/libcircuit.a \
+	component/libcomponent.a \
 	${AGAR_SC_LIBS} ${AGAR_LIBS}
 
 all: all-subdir ${PROG}

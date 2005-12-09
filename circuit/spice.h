@@ -7,7 +7,7 @@
 #include "begin_code.h"
 
 __BEGIN_DECLS
-int	circuit_export_spice3(struct circuit *, const char *);
+int	ES_CircuitExportSPICE3(struct circuit *, const char *);
 __END_DECLS
 
 #include "close_code.h"

@@ -19,34 +19,34 @@
 #define CIRCUIT_MAX_NODES	(0xffff-1)
 
 /* Connection to one component. */
-struct cktbranch {
-	struct pin *pin;
-	TAILQ_ENTRY(cktbranch) branches;
-};
+typedef struct es_branch {
+	ES_Port *port;
+	TAILQ_ENTRY(es_branch) branches;
+} ES_Branch;
 
 /* Connection between two or more components. */
-struct cktnode {
+typedef struct es_node {
 	u_int flags;
 #define CKTNODE_EXAM		0x01	/* Branches are being examined
 					   (used to avoid redundancies) */
 #define CKTNODE_REFERENCE	0x02	/* Reference node (eg. ground) */
 
-	TAILQ_HEAD(,cktbranch) branches;
+	TAILQ_HEAD(,es_branch) branches;
 	u_int		      nbranches;
-};
+} ES_Node;
 
-/* Closed loop of dipoles with respect to some component in the circuit. */
-struct cktloop {
+/* Closed loop of port pairs with respect to some component in the circuit. */
+typedef struct es_loop {
 	u_int name;
 	void *origin;			/* Origin component (ie. vsource) */
-	struct dipole **dipoles;	/* Dipoles in loop */
-	u_int	       ndipoles;
-	TAILQ_ENTRY(cktloop) loops;
-};
+	ES_Pair **pairs;		/* Port pairs in loop */
+	u_int	 npairs;
+	TAILQ_ENTRY(es_loop) loops;
+} ES_Loop;
 
-struct vsource;
+struct es_vsource;
 
-struct circuit {
+typedef struct circuit {
 	AG_Object obj;
 	char descr[CIRCUIT_DESCR_MAX];	/* Short description */
 	VG *vg;				/* Schematics drawing */
@@ -56,41 +56,38 @@ struct circuit {
 	int dis_nodes;			/* Display node indications */
 	int dis_node_names;		/* Display node names */
 
-	struct cktnode **nodes;		/* Nodes (element 0 is ground) */
-	struct cktloop **loops;		/* Closed loops */
-	struct vsource **vsrcs;		/* Independent vsources */
+	ES_Node **nodes;		/* Nodes (element 0 is ground) */
+	ES_Loop **loops;		/* Closed loops */
+	struct es_vsource **vsrcs;	/* Independent vsources */
 
 	u_int l;			/* Number of loops */
 	u_int m;			/* Number of independent vsources */
 	u_int n;			/* Number of nodes (except ground) */
-};
+} ES_Circuit;
 
 __BEGIN_DECLS
-void		circuit_init(void *, const char *);
-void		circuit_reinit(void *);
-int		circuit_load(void *, AG_Netbuf *);
-int		circuit_save(void *, AG_Netbuf *);
-void		circuit_destroy(void *);
-void		circuit_free_components(struct circuit *);
-void	       *circuit_edit(void *);
+void		 ES_CircuitInit(void *, const char *);
+void		 ES_CircuitReinit(void *);
+int		 ES_CircuitLoad(void *, AG_Netbuf *);
+int		 ES_CircuitSave(void *, AG_Netbuf *);
+void		 ES_CircuitDestroy(void *);
+void		 ES_CircuitFreeComponents(ES_Circuit *);
+void		*ES_CircuitEdit(void *);
 
-int	circuit_add_node(struct circuit *, u_int);
-void	circuit_del_node(struct circuit *, u_int);
-void	circuit_copy_node(struct circuit *, struct cktnode *, struct cktnode *);
-void	circuit_destroy_node(struct cktnode *);
+int		 ES_CircuitAddNode(ES_Circuit *, u_int);
+void		 ES_CircuitDelNode(ES_Circuit *, u_int);
+void		 ES_CircuitCopyNode(ES_Circuit *, ES_Node *, ES_Node *);
+void		 ES_CircuitDestroyNode(ES_Node *);
+ES_Branch	*ES_CircuitAddBranch(ES_Circuit *, u_int, ES_Port *);
+void		 ES_CircuitDelBranch(ES_Circuit *, u_int, ES_Branch *);
 
-struct cktbranch *circuit_add_branch(struct circuit *, u_int, struct pin *);
-void		  circuit_del_branch(struct circuit *, u_int,
-		                     struct cktbranch *);
+__inline__ ES_Branch *ES_CircuitGetBranch(ES_Circuit *, u_int, ES_Port *);
 
-__inline__ struct cktbranch *circuit_get_branch(struct circuit *, u_int,
-						struct pin *);
+__inline__ int	 ES_NodeGrounded(ES_Circuit *, u_int);
+__inline__ int	 ES_NodeVsource(ES_Circuit *, u_int, u_int, int *);
 
-__inline__ int	 cktnode_grounded(struct circuit *, u_int);
-__inline__ int	 cktnode_vsource(struct circuit *, u_int, u_int, int *);
-
-struct sim	*circuit_set_sim(struct circuit *, const struct sim_ops *);
-void		 circuit_modified(struct circuit *);
+struct sim	*ES_CircuitSetSimMode(ES_Circuit *, const struct sim_ops *);
+void		 ES_CircuitModified(ES_Circuit *);
 __END_DECLS
 
 #include "close_code.h"

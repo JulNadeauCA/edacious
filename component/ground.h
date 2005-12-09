@@ -8,21 +8,21 @@
 
 #include "begin_code.h"
 
-struct ground {
-	struct component com;
-};
+typedef struct es_ground {
+	struct es_component com;
+} ES_Ground;
 
 __BEGIN_DECLS
-void		 ground_init(void *, const char *);
-int		 ground_load(void *, AG_Netbuf *);
-int		 ground_save(void *, AG_Netbuf *);
-int		 ground_export(void *, enum circuit_format, FILE *);
-double		 ground_resistance(void *, struct pin *, struct pin *);
-AG_Window	*ground_edit(void *);
-int		 ground_configure(void *);
-void		 ground_draw(void *, VG *);
-void		 ground_update(void *, VG *);
-int		 ground_connect(void *, struct pin *, struct pin *);
+void		 ES_GroundInit(void *, const char *);
+int		 ES_GroundLoad(void *, AG_Netbuf *);
+int		 ES_GroundSave(void *, AG_Netbuf *);
+int		 ES_GroundExport(void *, enum circuit_format, FILE *);
+double		 ES_GroundResistance(void *, ES_Port *, ES_Port *);
+AG_Window	*ES_GroundEdit(void *);
+int		 ES_GroundConfigure(void *);
+void		 ES_GroundDraw(void *, VG *);
+void		 ES_GroundUpdate(void *, VG *);
+int		 ES_GroundConnect(void *, ES_Port *, ES_Port *);
 __END_DECLS
 
 #include "close_code.h"

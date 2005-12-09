@@ -8,16 +8,16 @@
 
 #include "begin_code.h"
 
-struct conductor {
-	struct component com;
-};
+typedef struct es_conductor {
+	struct es_component com;
+} ES_Conductor;
 
 __BEGIN_DECLS
-void		 conductor_init(void *, const char *);
-double		 conductor_resistance(void *, struct pin *, struct pin *);
-void		 conductor_draw(void *, VG *);
-int		 conductor_export(void *, enum circuit_format, FILE *);
-void		 conductor_tool_reinit(void);
+void	 ES_ConductorInit(void *, const char *);
+double	 ES_ConductorResistance(void *, ES_Port *, ES_Port *);
+void	 ES_ConductorDraw(void *, VG *);
+int	 ES_ConductorExport(void *, enum circuit_format, FILE *);
+void	 ES_ConductorToolReinit(void);
 __END_DECLS
 
 #include "close_code.h"

@@ -8,22 +8,22 @@
 
 #include "begin_code.h"
 
-struct spdt {
-	struct component com;
+typedef struct es_spdt {
+	struct es_component com;
 	double on_resistance;
 	double off_resistance;
 	int state;
-};
+} ES_Spdt;
 
 __BEGIN_DECLS
-void		 spdt_init(void *, const char *);
-int		 spdt_load(void *, AG_Netbuf *);
-int		 spdt_save(void *, AG_Netbuf *);
-int		 spdt_export(void *, enum circuit_format, FILE *);
-double		 spdt_resistance(void *, struct pin *, struct pin *);
-AG_Window	*spdt_edit(void *);
-void		 spdt_draw(void *, VG *);
-void		 spdt_update(void *, VG *);
+void		 ES_SpdtInit(void *, const char *);
+int		 ES_SpdtLoad(void *, AG_Netbuf *);
+int		 ES_SpdtSave(void *, AG_Netbuf *);
+int		 ES_SpdtExport(void *, enum circuit_format, FILE *);
+double		 ES_SpdtResistance(void *, ES_Port *, ES_Port *);
+AG_Window	*ES_SpdtEdit(void *);
+void		 ES_SpdtDraw(void *, VG *);
+void		 ES_SpdtUpdate(void *, VG *);
 __END_DECLS
 
 #include "close_code.h"

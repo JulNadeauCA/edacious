@@ -33,34 +33,34 @@
 #include "eda.h"
 #include "spdt.h"
 
-const AG_Version spdt_ver = {
+const AG_Version esSpdtVer = {
 	"agar-eda spdt switch",
 	0, 0
 };
 
-const struct component_ops spdt_ops = {
+const ES_ComponentOps esSpdtOps = {
 	{
-		spdt_init,
+		ES_SpdtInit,
 		NULL,			/* reinit */
-		component_destroy,
-		spdt_load,
-		spdt_save,
-		component_edit
+		ES_ComponentDestroy,
+		ES_SpdtLoad,
+		ES_SpdtSave,
+		ES_ComponentEdit
 	},
 	N_("SPDT switch"),
 	"Sw",
-	spdt_draw,
-	spdt_edit,
+	ES_SpdtDraw,
+	ES_SpdtEdit,
 	NULL,			/* connect */
-	spdt_export,
+	ES_SpdtExport,
 	NULL,			/* tick */
-	spdt_resistance,
+	ES_SpdtResistance,
 	NULL,			/* capacitance */
 	NULL,			/* inductance */
 	NULL			/* isource */
 };
 
-const struct pin spdt_pinout[] = {
+const ES_Port esSpdtPinout[] = {
 	{ 0, "",  0, +1.000 },
 	{ 1, "A", 0,  0.000 },
 	{ 2, "B", 2, -0.500 },
@@ -69,9 +69,9 @@ const struct pin spdt_pinout[] = {
 };
 
 void
-spdt_draw(void *p, VG *vg)
+ES_SpdtDraw(void *p, VG *vg)
 {
-	struct spdt *sw = p;
+	ES_Spdt *sw = p;
 
 	VG_Begin(vg, VG_LINES);
 	VG_Vertex2(vg, 0.000, 0.000);
@@ -116,23 +116,23 @@ spdt_draw(void *p, VG *vg)
 }
 
 void
-spdt_init(void *p, const char *name)
+ES_SpdtInit(void *p, const char *name)
 {
-	struct spdt *sw = p;
+	ES_Spdt *sw = p;
 
-	component_init(sw, "spdt", name, &spdt_ops, spdt_pinout);
+	ES_ComponentInit(sw, "spdt", name, &esSpdtOps, esSpdtPinout);
 	sw->on_resistance = 1.0;
 	sw->off_resistance = HUGE_VAL;
 	sw->state = 1;
 }
 
 int
-spdt_load(void *p, AG_Netbuf *buf)
+ES_SpdtLoad(void *p, AG_Netbuf *buf)
 {
-	struct spdt *sw = p;
+	ES_Spdt *sw = p;
 
-	if (AG_ReadVersion(buf, &spdt_ver, NULL) == -1 ||
-	    component_load(sw, buf) == -1)
+	if (AG_ReadVersion(buf, &esSpdtVer, NULL) == -1 ||
+	    ES_ComponentLoad(sw, buf) == -1)
 		return (-1);
 
 	sw->on_resistance = AG_ReadDouble(buf);
@@ -142,12 +142,12 @@ spdt_load(void *p, AG_Netbuf *buf)
 }
 
 int
-spdt_save(void *p, AG_Netbuf *buf)
+ES_SpdtSave(void *p, AG_Netbuf *buf)
 {
-	struct spdt *sw = p;
+	ES_Spdt *sw = p;
 
-	AG_WriteVersion(buf, &spdt_ver);
-	if (component_save(sw, buf) == -1)
+	AG_WriteVersion(buf, &esSpdtVer);
+	if (ES_ComponentSave(sw, buf) == -1)
 		return (-1);
 
 	AG_WriteDouble(buf, sw->on_resistance);
@@ -157,9 +157,9 @@ spdt_save(void *p, AG_Netbuf *buf)
 }
 
 int
-spdt_export(void *p, enum circuit_format fmt, FILE *f)
+ES_SpdtExport(void *p, enum circuit_format fmt, FILE *f)
 {
-	struct spdt *sw = p;
+	ES_Spdt *sw = p;
 	
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
@@ -167,19 +167,19 @@ spdt_export(void *p, enum circuit_format fmt, FILE *f)
 		    PNODE(sw,2) != -1) {
 			fprintf(f, "R%s %d %d %g\n", AGOBJECT(sw)->name,
 			    PNODE(sw,1), PNODE(sw,2),
-			    spdt_resistance(sw, PIN(sw,1), PIN(sw,2)));
+			    ES_SpdtResistance(sw, PORT(sw,1), PORT(sw,2)));
 		}
 		if (PNODE(sw,1) != -1 &&
 		    PNODE(sw,3) != -1) {
 			fprintf(f, "R%s %d %d %g\n", AGOBJECT(sw)->name,
 			    PNODE(sw,1), PNODE(sw,3),
-			    spdt_resistance(sw, PIN(sw,1), PIN(sw,3)));
+			    ES_SpdtResistance(sw, PORT(sw,1), PORT(sw,3)));
 		}
 		if (PNODE(sw,2) != -1 &&
 		    PNODE(sw,3) != -1) {
 			fprintf(f, "%s %d %d %g\n", AGOBJECT(sw)->name,
 			    PNODE(sw,2), PNODE(sw,3),
-			    spdt_resistance(sw, PIN(sw,2), PIN(sw,3)));
+			    ES_SpdtResistance(sw, PORT(sw,2), PORT(sw,3)));
 		}
 		break;
 	}
@@ -187,9 +187,9 @@ spdt_export(void *p, enum circuit_format fmt, FILE *f)
 }
 
 double
-spdt_resistance(void *p, struct pin *p1, struct pin *p2)
+ES_SpdtResistance(void *p, ES_Port *p1, ES_Port *p2)
 {
-	struct spdt *sw = p;
+	ES_Spdt *sw = p;
 
 	if (p1->n == 2 && p2->n == 3)
 		return (sw->off_resistance);
@@ -215,15 +215,15 @@ spdt_resistance(void *p, struct pin *p1, struct pin *p2)
 static void
 toggle_state(AG_Event *event)
 {
-	struct spdt *sw = AG_PTR(1);
+	ES_Spdt *sw = AG_PTR(1);
 
 	sw->state = (sw->state == 1) ? 2 : 1;
 }
 
 AG_Window *
-spdt_edit(void *p)
+ES_SpdtEdit(void *p)
 {
-	struct spdt *sw = p;
+	ES_Spdt *sw = p;
 	AG_Window *win;
 	AG_FSpinbutton *fsb;
 

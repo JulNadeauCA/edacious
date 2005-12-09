@@ -33,25 +33,25 @@
 #include "eda.h"
 #include "spice.h"
 
-const AG_Version circuit_ver = {
+const AG_Version esCircuitVer = {
 	"agar-eda circuit",
 	0, 0
 };
 
-const AG_ObjectOps circuit_ops = {
-	circuit_init,
-	circuit_reinit,
-	circuit_destroy,
-	circuit_load,
-	circuit_save,
-	circuit_edit
+const AG_ObjectOps esCircuitOps = {
+	ES_CircuitInit,
+	ES_CircuitReinit,
+	ES_CircuitDestroy,
+	ES_CircuitLoad,
+	ES_CircuitSave,
+	ES_CircuitEdit
 };
 
-static void init_node(struct cktnode *, u_int);
+static void init_node(ES_Node *, u_int);
 static void init_ground(struct circuit *);
 
 static void
-circuit_detached(AG_Event *event)
+ES_CircuitDetached(AG_Event *event)
 {
 	struct circuit *ckt = AG_SELF();
 
@@ -62,12 +62,12 @@ circuit_detached(AG_Event *event)
 }
 
 static void
-circuit_opened(AG_Event *event)
+ES_CircuitOpened(AG_Event *event)
 {
 	struct circuit *ckt = AG_SELF();
-	struct component *com;
+	ES_Component *com;
 
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (!AGOBJECT_SUBCLASS(com, "component"))
 			continue;
 
@@ -77,17 +77,17 @@ circuit_opened(AG_Event *event)
 }
 
 static void
-circuit_closed(AG_Event *event)
+ES_CircuitClosed(AG_Event *event)
 {
 	struct circuit *ckt = AG_SELF();
-	struct component *com;
+	ES_Component *com;
 
 	if (ckt->sim != NULL) {
 		sim_destroy(ckt->sim);
 		ckt->sim = NULL;
 	}
 
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (!AGOBJECT_SUBCLASS(com, "component"))
 			continue;
 
@@ -98,48 +98,48 @@ circuit_closed(AG_Event *event)
 
 /* Effect a change in the circuit topology.  */
 void
-circuit_modified(struct circuit *ckt)
+ES_CircuitModified(struct circuit *ckt)
 {
-	struct component *com;
-	struct vsource *vs;
-	struct cktloop *loop;
+	ES_Component *com;
+	ES_Vsource *vs;
+	ES_Loop *loop;
 	u_int i;
 
-	/* Regenerate loop and dipole information. */
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	/* Regenerate loop and pair information. */
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (!AGOBJECT_SUBCLASS(com, "component") ||
 		    com->flags & COMPONENT_FLOATING)
 			continue;
 
-		for (i = 0; i < com->ndipoles; i++)
-			com->dipoles[i].nloops = 0;
+		for (i = 0; i < com->npairs; i++)
+			com->pairs[i].nloops = 0;
 	}
-	AGOBJECT_FOREACH_CHILD(vs, ckt, vsource) {
+	AGOBJECT_FOREACH_CHILD(vs, ckt, es_vsource) {
 		if (!AGOBJECT_SUBCLASS(vs, "component.vsource") ||
 		    COM(vs)->flags & COMPONENT_FLOATING ||
-		    PIN(vs,1)->node == -1 ||
-		    PIN(vs,2)->node == -1) {
+		    PORT(vs,1)->node == -1 ||
+		    PORT(vs,2)->node == -1) {
 			continue;
 		}
-		vsource_free_loops(vs);
-		vsource_find_loops(vs);
+		ES_VsourceFreeLoops(vs);
+		ES_VsourceFindLoops(vs);
 	}
 #if 0
-	AGOBJECT_FOREACH_CHILD(com, ckt, component)
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component)
 		AG_PostEvent(ckt, com, "circuit-modified", NULL);
 #endif
 	if (ckt->loops == NULL) {
-		ckt->loops = Malloc(sizeof(struct cktloop *), M_EDA);
+		ckt->loops = Malloc(sizeof(ES_Loop *), M_EDA);
 	}
 	ckt->l = 0;
-	AGOBJECT_FOREACH_CHILD(vs, ckt, vsource) {
+	AGOBJECT_FOREACH_CHILD(vs, ckt, es_vsource) {
 		if (!AGOBJECT_SUBCLASS(vs, "component.vsource") ||
 		    COM(vs)->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		TAILQ_FOREACH(loop, &vs->loops, loops) {
 			ckt->loops = Realloc(ckt->loops,
-			    (ckt->l+1)*sizeof(struct cktloop *));
+			    (ckt->l+1)*sizeof(ES_Loop *));
 			ckt->loops[ckt->l++] = loop;
 			loop->name = ckt->l;
 		}
@@ -151,13 +151,13 @@ circuit_modified(struct circuit *ckt)
 }
 
 void
-circuit_init(void *p, const char *name)
+ES_CircuitInit(void *p, const char *name)
 {
 	struct circuit *ckt = p;
 	VG_Style *vgs;
 	VG *vg;
 
-	AG_ObjectInit(ckt, "circuit", name, &circuit_ops);
+	AG_ObjectInit(ckt, "circuit", name, &esCircuitOps);
 	ckt->descr[0] = '\0';
 	ckt->sim = NULL;
 	ckt->dis_nodes = 1;
@@ -168,7 +168,7 @@ circuit_init(void *p, const char *name)
 	ckt->vsrcs = NULL;
 	ckt->m = 0;
 	
-	ckt->nodes = Malloc(sizeof(struct cktnode *), M_EDA);
+	ckt->nodes = Malloc(sizeof(ES_Node *), M_EDA);
 	ckt->n = 0;
 	init_ground(ckt);
 
@@ -188,15 +188,15 @@ circuit_init(void *p, const char *name)
 	vgs = VG_CreateStyle(vg, VG_TEXT_STYLE, "node-name");
 	vgs->vg_text_st.size = 8;
 	
-	AG_SetEvent(ckt, "edit-open", circuit_opened, NULL);
-	AG_SetEvent(ckt, "edit-close", circuit_closed, NULL);
+	AG_SetEvent(ckt, "edit-open", ES_CircuitOpened, NULL);
+	AG_SetEvent(ckt, "edit-close", ES_CircuitClosed, NULL);
 }
 
 void
-circuit_reinit(void *p)
+ES_CircuitReinit(void *p)
 {
 	struct circuit *ckt = p;
-	struct component *com;
+	ES_Component *com;
 	u_int i;
 	
 	if (ckt->sim != NULL) {
@@ -213,26 +213,25 @@ circuit_reinit(void *p)
 	ckt->m = 0;
 	
 	for (i = 0; i <= ckt->n; i++) {
-		circuit_destroy_node(ckt->nodes[i]);
+		ES_CircuitDestroyNode(ckt->nodes[i]);
 		Free(ckt->nodes[i], M_EDA);
 	}
-	ckt->nodes = Realloc(ckt->nodes, sizeof(struct cktnode *));
+	ckt->nodes = Realloc(ckt->nodes, sizeof(ES_Node *));
 	ckt->n = 0;
 	init_ground(ckt);
 
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (!AGOBJECT_SUBCLASS(com, "component") ||
 		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
-		for (i = 1; i <= com->npins; i++) {
-			struct pin *pin = &com->pin[i];
+		for (i = 1; i <= com->nports; i++) {
+			ES_Port *port = &com->ports[i];
 
-			pin->node = -1;
-			pin->branch = NULL;
-			pin->selected = 0;
-			pin->u = 0;
-			pin->du = 0;
+			port->node = -1;
+			port->branch = NULL;
+			port->selected = 0;
+			port->u = 0;
 		}
 		com->block = NULL;
 	}
@@ -240,13 +239,13 @@ circuit_reinit(void *p)
 }
 
 int
-circuit_load(void *p, AG_Netbuf *buf)
+ES_CircuitLoad(void *p, AG_Netbuf *buf)
 {
 	struct circuit *ckt = p;
 	Uint32 ncoms;
 	u_int i, j, nnodes;
 
-	if (AG_ReadVersion(buf, &circuit_ver, NULL) != 0) {
+	if (AG_ReadVersion(buf, &esCircuitVer, NULL) != 0) {
 		return (-1);
 	}
 	AG_CopyString(ckt->descr, buf, sizeof(ckt->descr));
@@ -262,33 +261,34 @@ circuit_load(void *p, AG_Netbuf *buf)
 		nbranches = (int)AG_ReadUint32(buf);
 		if (i == 0) {
 			name = 0;
-			circuit_destroy_node(ckt->nodes[0]);
+			ES_CircuitDestroyNode(ckt->nodes[0]);
 			Free(ckt->nodes[0], M_EDA);
 			init_ground(ckt);
 		} else {
-			name = circuit_add_node(ckt, flags & ~(CKTNODE_EXAM));
+			name = ES_CircuitAddNode(ckt, flags & ~(CKTNODE_EXAM));
 		}
 		for (j = 0; j < nbranches; j++) {
 			char ppath[AG_OBJECT_PATH_MAX];
-			struct component *pcom;
-			struct cktbranch *br;
-			int ppin;
+			ES_Component *pcom;
+			ES_Branch *br;
+			int pport;
 
 			AG_CopyString(ppath, buf, sizeof(ppath));
 			AG_ReadUint32(buf);			/* Pad */
-			ppin = (int)AG_ReadUint32(buf);
+			pport = (int)AG_ReadUint32(buf);
 			if ((pcom = AG_ObjectFind(ppath)) == NULL) {
 				AG_SetError("%s", AG_GetError());
 				return (-1);
 			}
-			if (ppin > pcom->npins) {
-				AG_SetError("%s: pin #%d > %d", ppath, ppin,
-				    pcom->npins);
+			if (pport > pcom->nports) {
+				AG_SetError("%s: port #%d > %d", ppath, pport,
+				    pcom->nports);
 				return (-1);
 			}
-			br = circuit_add_branch(ckt, name, &pcom->pin[ppin]);
-			pcom->pin[ppin].node = name;
-			pcom->pin[ppin].branch = br;
+			br = ES_CircuitAddBranch(ckt, name,
+			    &pcom->ports[pport]);
+			pcom->ports[pport].node = name;
+			pcom->ports[pport].branch = br;
 		}
 	}
 
@@ -296,17 +296,17 @@ circuit_load(void *p, AG_Netbuf *buf)
 	if (VG_Load(ckt->vg, buf) == -1)
 		return (-1);
 
-	/* Load the component pin assignments. */
+	/* Load the component port assignments. */
 	ncoms = AG_ReadUint32(buf);
 	for (i = 0; i < ncoms; i++) {
 		char name[AG_OBJECT_NAME_MAX];
 		char path[AG_OBJECT_PATH_MAX];
-		int j, npins;
-		struct component *com;
+		int j, nports;
+		ES_Component *com;
 
 		/* Lookup the component. */
 		AG_CopyString(name, buf, sizeof(name));
-		AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+		AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 			if (AGOBJECT_SUBCLASS(com, "component") &&
 			    strcmp(AGOBJECT(com)->name, name) == 0)
 				break;
@@ -318,53 +318,53 @@ circuit_load(void *p, AG_Netbuf *buf)
 		if ((com->block = VG_GetBlock(ckt->vg, path)) == NULL)
 			Fatal("unexisting block");
 
-		/* Load the pinout information. */
-		com->npins = (int)AG_ReadUint32(buf);
-		for (j = 1; j <= com->npins; j++) {
-			struct pin *pin = &com->pin[j];
+		/* Load the port information. */
+		com->nports = (int)AG_ReadUint32(buf);
+		for (j = 1; j <= com->nports; j++) {
+			ES_Port *port = &com->ports[j];
 			VG_Block *block_save;
-			struct cktbranch *br;
-			struct cktnode *node;
+			ES_Branch *br;
+			ES_Node *node;
 
-			pin->n = (int)AG_ReadUint32(buf);
-			AG_CopyString(pin->name, buf, sizeof(pin->name));
-			pin->x = AG_ReadDouble(buf);
-			pin->y = AG_ReadDouble(buf);
-			pin->node = (int)AG_ReadUint32(buf);
-			node = ckt->nodes[pin->node];
+			port->n = (int)AG_ReadUint32(buf);
+			AG_CopyString(port->name, buf, sizeof(port->name));
+			port->x = AG_ReadDouble(buf);
+			port->y = AG_ReadDouble(buf);
+			port->node = (int)AG_ReadUint32(buf);
+			node = ckt->nodes[port->node];
 
 			TAILQ_FOREACH(br, &node->branches, branches) {
-				if (br->pin->com == com &&
-				    br->pin->n == pin->n)
+				if (br->port->com == com &&
+				    br->port->n == port->n)
 					break;
 			}
 			if (br == NULL) { Fatal("Illegal branch"); }
-			pin->branch = br;
-			pin->selected = 0;
+			port->branch = br;
+			port->selected = 0;
 		}
 	}
-	circuit_modified(ckt);
+	ES_CircuitModified(ckt);
 	return (0);
 }
 
 int
-circuit_save(void *p, AG_Netbuf *buf)
+ES_CircuitSave(void *p, AG_Netbuf *buf)
 {
 	char path[AG_OBJECT_PATH_MAX];
 	struct circuit *ckt = p;
-	struct cktnode *node;
-	struct cktbranch *br;
-	struct component *com;
+	ES_Node *node;
+	ES_Branch *br;
+	ES_Component *com;
 	off_t ncoms_offs;
 	Uint32 ncoms = 0;
 	u_int i;
 
-	AG_WriteVersion(buf, &circuit_ver);
+	AG_WriteVersion(buf, &esCircuitVer);
 	AG_WriteString(buf, ckt->descr);
 	AG_WriteUint32(buf, 0);					/* Pad */
 	AG_WriteUint32(buf, ckt->n);
 	for (i = 0; i <= ckt->n; i++) {
-		struct cktnode *node = ckt->nodes[i];
+		ES_Node *node = ckt->nodes[i];
 		off_t nbranches_offs;
 		Uint32 nbranches = 0;
 
@@ -372,14 +372,14 @@ circuit_save(void *p, AG_Netbuf *buf)
 		nbranches_offs = AG_NetbufTell(buf);
 		AG_WriteUint32(buf, 0);
 		TAILQ_FOREACH(br, &node->branches, branches) {
-			if (br->pin == NULL || br->pin->com == NULL ||
-			    br->pin->com->flags & COMPONENT_FLOATING) {
+			if (br->port == NULL || br->port->com == NULL ||
+			    br->port->com->flags & COMPONENT_FLOATING) {
 				continue;
 			}
-			AG_ObjectCopyName(br->pin->com, path, sizeof(path));
+			AG_ObjectCopyName(br->port->com, path, sizeof(path));
 			AG_WriteString(buf, path);
 			AG_WriteUint32(buf, 0);			/* Pad */
-			AG_WriteUint32(buf, (Uint32)br->pin->n);
+			AG_WriteUint32(buf, (Uint32)br->port->n);
 			nbranches++;
 		}
 		AG_PwriteUint32(buf, nbranches, nbranches_offs);
@@ -391,24 +391,24 @@ circuit_save(void *p, AG_Netbuf *buf)
 	/* Save the component information. */
 	ncoms_offs = AG_NetbufTell(buf);
 	AG_WriteUint32(buf, 0);
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (!AGOBJECT_SUBCLASS(com, "component") ||
 		    com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		AG_WriteString(buf, AGOBJECT(com)->name);
-		AG_WriteUint32(buf, (Uint32)com->npins);
-		for (i = 1; i <= com->npins; i++) {
-			struct pin *pin = &com->pin[i];
+		AG_WriteUint32(buf, (Uint32)com->nports);
+		for (i = 1; i <= com->nports; i++) {
+			ES_Port *port = &com->ports[i];
 
-			AG_WriteUint32(buf, (Uint32)pin->n);
-			AG_WriteString(buf, pin->name);
-			AG_WriteDouble(buf, pin->x);
-			AG_WriteDouble(buf, pin->y);
+			AG_WriteUint32(buf, (Uint32)port->n);
+			AG_WriteString(buf, port->name);
+			AG_WriteDouble(buf, port->x);
+			AG_WriteDouble(buf, port->y);
 #ifdef DEBUG
-			if (pin->node == -1) { Fatal("Illegal pin"); }
+			if (port->node == -1) { Fatal("Illegal port"); }
 #endif
-			AG_WriteUint32(buf, (Uint32)pin->node);
+			AG_WriteUint32(buf, (Uint32)port->node);
 		}
 		ncoms++;
 	}
@@ -417,7 +417,7 @@ circuit_save(void *p, AG_Netbuf *buf)
 }
 
 static void
-init_node(struct cktnode *node, u_int flags)
+init_node(ES_Node *node, u_int flags)
 {
 	node->flags = flags;
 	node->nbranches = 0;
@@ -427,25 +427,25 @@ init_node(struct cktnode *node, u_int flags)
 static void
 init_ground(struct circuit *ckt)
 {
-	ckt->nodes[0] = Malloc(sizeof(struct cktnode), M_EDA);
+	ckt->nodes[0] = Malloc(sizeof(ES_Node), M_EDA);
 	init_node(ckt->nodes[0], CKTNODE_REFERENCE);
 }
 
 int
-circuit_add_node(struct circuit *ckt, u_int flags)
+ES_CircuitAddNode(struct circuit *ckt, u_int flags)
 {
-	struct cktnode *node;
+	ES_Node *node;
 	u_int n = ++ckt->n;
 
-	ckt->nodes = Realloc(ckt->nodes, (n+1)*sizeof(struct cktnode *));
-	ckt->nodes[n] = Malloc(sizeof(struct cktnode), M_EDA);
+	ckt->nodes = Realloc(ckt->nodes, (n+1)*sizeof(ES_Node *));
+	ckt->nodes[n] = Malloc(sizeof(ES_Node), M_EDA);
 	init_node(ckt->nodes[n], flags);
 	return (n);
 }
 
 /* Evaluate whether node n is at ground potential. */
 int
-cktnode_grounded(struct circuit *ckt, u_int n)
+ES_NodeGrounded(struct circuit *ckt, u_int n)
 {
 	/* TODO check for shunts */
 	return (n == 0 ? 1 : 0);
@@ -457,16 +457,16 @@ cktnode_grounded(struct circuit *ckt, u_int n)
  * the source.
  */
 int
-cktnode_vsource(struct circuit *ckt, u_int n, u_int m, int *sign)
+ES_NodeVsource(struct circuit *ckt, u_int n, u_int m, int *sign)
 {
-	struct cktnode *node = ckt->nodes[n];
-	struct cktbranch *br;
-	struct vsource *vs;
+	ES_Node *node = ckt->nodes[n];
+	ES_Branch *br;
+	ES_Vsource *vs;
 	u_int i;
 
 	TAILQ_FOREACH(br, &node->branches, branches) {
-		if (br->pin == NULL ||
-		   (vs = VSOURCE(br->pin->com)) == NULL) {
+		if (br->port == NULL ||
+		   (vs = VSOURCE(br->port->com)) == NULL) {
 			continue;
 		}
 		if (COM(vs)->flags & COMPONENT_FLOATING ||
@@ -474,7 +474,7 @@ cktnode_vsource(struct circuit *ckt, u_int n, u_int m, int *sign)
 		   vs != ckt->vsrcs[m-1]) {
 			continue;
 		}
-		if (br->pin->n == 1) {
+		if (br->port->n == 1) {
 			*sign = +1;
 		} else {
 			*sign = -1;
@@ -486,9 +486,9 @@ cktnode_vsource(struct circuit *ckt, u_int n, u_int m, int *sign)
 
 
 void
-circuit_destroy_node(struct cktnode *node)
+ES_CircuitDestroyNode(ES_Node *node)
 {
-	struct cktbranch *br, *nbr;
+	ES_Branch *br, *nbr;
 
 	for (br = TAILQ_FIRST(&node->branches);
 	     br != TAILQ_END(&node->branches);
@@ -500,62 +500,62 @@ circuit_destroy_node(struct cktnode *node)
 }
 
 void
-circuit_del_node(struct circuit *ckt, u_int n)
+ES_CircuitDelNode(struct circuit *ckt, u_int n)
 {
-	struct cktnode *node;
-	struct cktbranch *br;
+	ES_Node *node;
+	ES_Branch *br;
 	u_int i;
 
 #ifdef DEBUG
 	if (n == 0 || n > ckt->n) { Fatal("Illegal node"); }
 #endif
 	node = ckt->nodes[n];
-	circuit_destroy_node(node);
+	ES_CircuitDestroyNode(node);
 	Free(node, M_EDA);
 
 	if (n != ckt->n) {
 		for (i = n; i <= ckt->n; i++) {
 			TAILQ_FOREACH(br, &ckt->nodes[i]->branches, branches) {
-				if (br->pin != NULL && br->pin->com != NULL)
-					br->pin->node = i-1;
+				if (br->port != NULL && br->port->com != NULL)
+					br->port->node = i-1;
 			}
 		}
 		memmove(&ckt->nodes[n], &ckt->nodes[n+1],
-		    (ckt->n - n) * sizeof(struct cktnode *));
+		    (ckt->n - n) * sizeof(ES_Node *));
 	}
 	ckt->n--;
 }
 
-struct cktbranch *
-circuit_add_branch(struct circuit *ckt, u_int n, struct pin *pin)
+ES_Branch *
+ES_CircuitAddBranch(struct circuit *ckt, u_int n, ES_Port *port)
 {
-	struct cktnode *node = ckt->nodes[n];
-	struct cktbranch *br;
+	ES_Node *node = ckt->nodes[n];
+	ES_Branch *br;
 
-	br = Malloc(sizeof(struct cktbranch), M_EDA);
-	br->pin = pin;
+	br = Malloc(sizeof(ES_Branch), M_EDA);
+	br->port = port;
 	TAILQ_INSERT_TAIL(&node->branches, br, branches);
 	node->nbranches++;
 	return (br);
 }
 
-struct cktbranch *
-circuit_get_branch(struct circuit *ckt, u_int n, struct pin *pin)
+ES_Branch *
+ES_CircuitGetBranch(struct circuit *ckt, u_int n, ES_Port *port)
 {
-	struct cktnode *node = ckt->nodes[n];
-	struct cktbranch *br;
+	ES_Node *node = ckt->nodes[n];
+	ES_Branch *br;
 
 	TAILQ_FOREACH(br, &node->branches, branches) {
-		if (br->pin == pin)
+		if (br->port == port)
 			break;
 	}
 	return (br);
 }
 
 void
-circuit_del_branch(struct circuit *ckt, u_int n, struct cktbranch *br)
+ES_CircuitDelBranch(struct circuit *ckt, u_int n, ES_Branch *br)
 {
-	struct cktnode *node = ckt->nodes[n];
+	ES_Node *node = ckt->nodes[n];
 
 	TAILQ_REMOVE(&node->branches, br, branches);
 	Free(br, M_EDA);
@@ -566,11 +566,11 @@ circuit_del_branch(struct circuit *ckt, u_int n, struct cktbranch *br)
 }
 
 void
-circuit_free_components(struct circuit *ckt)
+ES_CircuitFreeComponents(struct circuit *ckt)
 {
-	struct component *com, *ncom;
+	ES_Component *com, *ncom;
 
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (!AGOBJECT_SUBCLASS(com, "component")) {
 			continue;
 		}
@@ -581,7 +581,7 @@ circuit_free_components(struct circuit *ckt)
 }
 
 void
-circuit_destroy(void *p)
+ES_CircuitDestroy(void *p)
 {
 	struct circuit *ckt = p;
 	
@@ -591,7 +591,7 @@ circuit_destroy(void *p)
 
 /* Select the simulation mode. */
 struct sim *
-circuit_set_sim(struct circuit *ckt, const struct sim_ops *sops)
+ES_CircuitSetSimMode(struct circuit *ckt, const struct sim_ops *sops)
 {
 	struct sim *sim;
 
@@ -629,8 +629,8 @@ poll_loops(AG_Event *event)
 	AG_TlistClear(tl);
 	for (i = 0; i < ckt->l; i++) {
 		char voltage[32];
-		struct cktloop *loop = ckt->loops[i];
-		struct vsource *vs = (struct vsource *)loop->origin;
+		ES_Loop *loop = ckt->loops[i];
+		ES_Vsource *vs = (ES_Vsource *)loop->origin;
 		AG_TlistItem *it;
 
 		AG_UnitFormat(vs->voltage, agEMFUnits, voltage,
@@ -651,8 +651,8 @@ poll_nodes(AG_Event *event)
 
 	AG_TlistClear(tl);
 	for (i = 0; i <= ckt->n; i++) {
-		struct cktnode *node = ckt->nodes[i];
-		struct cktbranch *br;
+		ES_Node *node = ckt->nodes[i];
+		ES_Branch *br;
 		AG_TlistItem *it, *it2;
 
 		it = AG_TlistAdd(tl, NULL, "n%u (0x%x, %d branches)", i,
@@ -660,13 +660,13 @@ poll_nodes(AG_Event *event)
 		it->p1 = node;
 		it->depth = 0;
 		TAILQ_FOREACH(br, &node->branches, branches) {
-			if (br->pin == NULL) {
-				it = AG_TlistAdd(tl, NULL, "(null pin)");
+			if (br->port == NULL) {
+				it = AG_TlistAdd(tl, NULL, "(null port)");
 			} else {
 				it = AG_TlistAdd(tl, NULL, "%s:%s(%d)",
-				    (br->pin != NULL && br->pin->com != NULL) ?
-				    AGOBJECT(br->pin->com)->name : "(null)",
-				    br->pin->name, br->pin->n);
+				    (br->port!=NULL && br->port->com!=NULL) ?
+				    AGOBJECT(br->port->com)->name : "(null)",
+				    br->port->name, br->port->n);
 			}
 			it->p1 = br;
 			it->depth = 1;
@@ -684,7 +684,7 @@ poll_sources(AG_Event *event)
 
 	AG_TlistClear(tl);
 	for (i = 0; i < ckt->m; i++) {
-		struct vsource *vs = ckt->vsrcs[i];
+		ES_Vsource *vs = ckt->vsrcs[i];
 		AG_TlistItem *it;
 
 		it = AG_TlistAdd(tl, NULL, "%s", AGOBJECT(vs)->name);
@@ -744,19 +744,20 @@ show_interconnects(AG_Event *event)
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
 	ntab = AG_NotebookAddTab(nb, _("Nodes"), AG_BOX_VERT);
 	{
-		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE);
+		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE|
+		                       AG_TLIST_EXPAND);
 		AG_SetEvent(tl, "tlist-poll", poll_nodes, "%p", ckt);
 	}
 	
 	ntab = AG_NotebookAddTab(nb, _("Loops"), AG_BOX_VERT);
 	{
-		tl = AG_TlistNew(ntab, AG_TLIST_POLL);
+		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_EXPAND);
 		AG_SetEvent(tl, "tlist-poll", poll_loops, "%p", ckt);
 	}
 	
 	ntab = AG_NotebookAddTab(nb, _("Sources"), AG_BOX_VERT);
 	{
-		tl = AG_TlistNew(ntab, AG_TLIST_POLL);
+		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_EXPAND);
 		AG_SetEvent(tl, "tlist-poll", poll_sources, "%p", ckt);
 	}
 
@@ -840,7 +841,7 @@ export_to_spice(AG_Event *event)
 	strlcpy(name, AGOBJECT(ckt)->name, sizeof(name));
 	strlcat(name, ".cir", sizeof(name));
 
-	if (circuit_export_spice3(ckt, name) == -1)
+	if (ES_CircuitExportSPICE3(ckt, name) == -1)
 		AG_TextMsg(AG_MSG_ERROR, "%s: %s", AGOBJECT(ckt)->name,
 		    AG_GetError());
 }
@@ -855,11 +856,11 @@ double_click(AG_Event *event)
 	int ty = AG_INT(4);
 	int txoff = AG_INT(5);
 	int tyoff = AG_INT(6);
-	struct component *com;
+	ES_Component *com;
 	double x, y;
 
 	VG_Vcoords2(ckt->vg, tx, ty, txoff, tyoff, &x, &y);
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		VG_Rect rext;
 
 		if (!AGOBJECT_SUBCLASS(com, "component"))
@@ -896,7 +897,7 @@ select_sim(AG_Event *event)
 	AG_Window *pwin = AG_PTR(3);
 	struct sim *sim;
 
-	sim = circuit_set_sim(ckt, sops);
+	sim = ES_CircuitSetSimMode(ckt, sops);
 	if (sim->win != NULL)
 		AG_WindowAttach(pwin, sim->win);
 }
@@ -980,16 +981,16 @@ create_view(AG_Event *event)
 #endif
 
 static void
-poll_component_pins(AG_Event *event)
+poll_component_ports(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	struct circuit *ckt = AG_PTR(1);
-	struct component *com;
+	ES_Component *com;
 	int i;
 	
 	AG_TlistClear(tl);
 	
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (AGOBJECT_SUBCLASS(com, "component") && com->selected)
 			break;
 	}
@@ -997,15 +998,14 @@ poll_component_pins(AG_Event *event)
 		goto out;
 
 	pthread_mutex_lock(&com->lock);
-	for (i = 1; i <= com->npins; i++) {
+	for (i = 1; i <= com->nports; i++) {
 		char text[AG_TLIST_LABEL_MAX];
-		struct pin *pin = &com->pin[i];
+		ES_Port *port = &com->ports[i];
 
-		snprintf(text, sizeof(text),
-		    "%d (%s) (U=%.2f, \xce\x94U=%.2f) -> n%d\n",
-		    pin->n, pin->name, pin->u, pin->du, pin->node);
+		snprintf(text, sizeof(text), "%d (%s) (U=%.2f) -> n%d\n",
+		    port->n, port->name, port->u, port->node);
 		AG_TlistAddPtr(tl, AGICON(EDA_BRANCH_TO_COMPONENT_ICON),
-		    text, pin);
+		    text, port);
 	}
 	pthread_mutex_unlock(&com->lock);
 out:
@@ -1013,16 +1013,16 @@ out:
 }
 
 static void
-poll_component_dipoles(AG_Event *event)
+poll_component_pairs(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	struct circuit *ckt = AG_PTR(1);
-	struct component *com;
+	ES_Component *com;
 	int i, j;
 	
 	AG_TlistClear(tl);
 	
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (AGOBJECT_SUBCLASS(com, "component") && com->selected)
 			break;
 	}
@@ -1030,37 +1030,37 @@ poll_component_dipoles(AG_Event *event)
 		goto out;
 
 	pthread_mutex_lock(&com->lock);
-	for (i = 0; i < com->ndipoles; i++) {
+	for (i = 0; i < com->npairs; i++) {
 		char Rbuf[32], Cbuf[32], Lbuf[32];
 		char text[AG_TLIST_LABEL_MAX];
-		struct dipole *dip = &com->dipoles[i];
+		ES_Pair *pair = &com->pairs[i];
 		AG_TlistItem *it;
 
-		AG_UnitFormat(dipole_resistance(dip), agResistanceUnits, Rbuf,
-		    sizeof(Rbuf));
-		AG_UnitFormat(dipole_capacitance(dip), agCapacitanceUnits, Cbuf,
-		    sizeof(Cbuf));
-		AG_UnitFormat(dipole_inductance(dip), agInductanceUnits, Lbuf,
-		    sizeof(Lbuf));
+		AG_UnitFormat(ES_PairResistance(pair), agResistanceUnits,
+		    Rbuf, sizeof(Rbuf));
+		AG_UnitFormat(ES_PairCapacitance(pair), agCapacitanceUnits,
+		    Cbuf, sizeof(Cbuf));
+		AG_UnitFormat(ES_PairInductance(pair), agInductanceUnits,
+		    Lbuf, sizeof(Lbuf));
 
 		snprintf(text, sizeof(text),
 		    "%s:(%s,%s) - %s, %s, %s",
-		    AGOBJECT(com)->name, dip->p1->name, dip->p2->name,
+		    AGOBJECT(com)->name, pair->p1->name, pair->p2->name,
 		    Rbuf, Cbuf, Lbuf);
 		it = AG_TlistAddPtr(tl, AGICON(EDA_BRANCH_TO_COMPONENT_ICON),
-		    text, dip);
+		    text, pair);
 		it->depth = 0;
 
-		for (j = 0; j < dip->nloops; j++) {
-			struct cktloop *dloop = dip->loops[j];
-			int dpol = dip->lpols[j];
+		for (j = 0; j < pair->nloops; j++) {
+			ES_Loop *dloop = pair->loops[j];
+			int dpol = pair->lpols[j];
 
 			snprintf(text, sizeof(text), "%s:L%u (%s)",
 			    AGOBJECT(dloop->origin)->name,
 			    dloop->name,
 			    dpol == 1 ? "+" : "-");
 			it = AG_TlistAddPtr(tl, AGICON(EDA_MESH_ICON), text,
-			    &dip->loops[j]);
+			    &pair->loops[j]);
 			it->depth = 1;
 		}
 	}
@@ -1070,7 +1070,7 @@ out:
 }
 
 void *
-circuit_edit(void *p)
+ES_CircuitEdit(void *p)
 {
 	struct circuit *ckt = p;
 	AG_Window *win;
@@ -1174,12 +1174,12 @@ circuit_edit(void *p)
 
 			tl = AG_TlistNew(ntab, AG_TLIST_EXPAND);
 			AGWIDGET(tl)->flags &= ~(AG_WIDGET_FOCUSABLE);
-			AG_SetEvent(tl, "tlist-dblclick", component_insert,
+			AG_SetEvent(tl, "tlist-dblclick", ES_ComponentInsert,
 			    "%p,%p,%p", vgv, tl, ckt);
 
 			AG_ButtonAct(ntab, AG_BUTTON_HFILL,
 			    _("Insert component"),
-			    component_insert, "%p,%p,%p", vgv, tl, ckt);
+			    ES_ComponentInsert, "%p,%p,%p", vgv, tl, ckt);
 
 			for (ty = &eda_models[0]; ty->name != NULL; ty++) {
 				for (i = 0; i < agnTypes; i++) {
@@ -1191,8 +1191,8 @@ circuit_edit(void *p)
 				}
 				if (i < agnTypes) {
 					AG_ObjectType *ctype = &agTypes[i];
-					struct component_ops *cops =
-					    (struct component_ops *)ctype->ops;
+					ES_ComponentOps *cops =
+					    (ES_ComponentOps *)ctype->ops;
 
 					AG_TlistAddPtr(tl, NULL,
 					    _(cops->name), ctype);
@@ -1234,14 +1234,14 @@ circuit_edit(void *p)
 				tl = AG_TlistNew(ntab, AG_TLIST_POLL|
 						       AG_TLIST_EXPAND);
 				AG_SetEvent(tl, "tlist-poll",
-				    poll_component_pins, "%p", ckt);
+				    poll_component_ports, "%p", ckt);
 			}
-			AG_LabelNew(ntab, AG_LABEL_STATIC, _("Dipoles:"));
+			AG_LabelNew(ntab, AG_LABEL_STATIC, _("Port pairs:"));
 			{
 				tl = AG_TlistNew(ntab, AG_TLIST_POLL|
 				                       AG_TLIST_HFILL);
 				AG_SetEvent(tl, "tlist-poll",
-				    poll_component_dipoles, "%p", ckt);
+				    poll_component_pairs, "%p", ckt);
 			}
 		}
 
@@ -1254,11 +1254,11 @@ circuit_edit(void *p)
 	}
 	
 	pitem = AG_MenuAddItem(menu, _("Components"));
-	component_reg_menu(menu, pitem, ckt);
+	ES_ComponentRegMenu(menu, pitem, ckt);
 	{
-		extern VG_ToolOps component_ins_tool;
-		extern VG_ToolOps component_sel_tool;
-		extern VG_ToolOps conductor_tool;
+		extern VG_ToolOps esInscomOps;
+		extern VG_ToolOps esSelcomOps;
+		extern VG_ToolOps esConductorTool;
 #if 0
 		extern VG_ToolOps vgScaleTool;
 		extern VG_ToolOps vgOriginTool;
@@ -1274,15 +1274,15 @@ circuit_edit(void *p)
 		VG_ViewRegTool(vgv, &vgTextTool, ckt->vg);
 		AG_SetEvent(vgv, "mapview-dblclick", double_click, "%p", ckt);
 #endif
-		VG_ViewRegTool(vgv, &component_ins_tool, ckt);
+		VG_ViewRegTool(vgv, &esInscomOps, ckt);
 
-		tool = VG_ViewRegTool(vgv, &component_sel_tool, ckt);
+		tool = VG_ViewRegTool(vgv, &esSelcomOps, ckt);
 		AG_MenuTool(pitem, toolbar, _("Select components"),
 		    tool->ops->icon, 0, 0,
 		    select_tool, "%p,%p,%p", vgv, tool, ckt);
 		VG_ViewSetDefaultTool(vgv, tool);
 		
-		tool = VG_ViewRegTool(vgv, &conductor_tool, ckt);
+		tool = VG_ViewRegTool(vgv, &esConductorTool, ckt);
 		AG_MenuTool(pitem, toolbar, _("Insert conductor"),
 		    tool->ops->icon, 0, 0,
 		    select_tool, "%p,%p,%p", vgv, tool, ckt);

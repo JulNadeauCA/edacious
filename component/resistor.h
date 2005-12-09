@@ -8,24 +8,24 @@
 
 #include "begin_code.h"
 
-struct resistor {
-	struct component com;
+typedef struct es_resistor {
+	struct es_component com;
 	double resistance;	/* Resistance at Tnom */
 	double power_rating;	/* Power rating in watts */
 	int tolerance;		/* Tolerance in % */
 	float Tc1, Tc2;		/* Resistance/temperature coefficients */
-};
+} ES_Resistor;
 
 __BEGIN_DECLS
-void		 resistor_init(void *, const char *);
-int		 resistor_load(void *, AG_Netbuf *);
-int		 resistor_save(void *, AG_Netbuf *);
-int		 resistor_export(void *, enum circuit_format, FILE *);
-double		 resistor_resistance(void *, struct pin *, struct pin *);
-AG_Window	*resistor_edit(void *);
-int		 resistor_connect(void *, struct pin *, struct pin *);
-void		 resistor_draw(void *, VG *);
-void		 resistor_update(void *, VG *);
+void		 ES_ResistorInit(void *, const char *);
+int		 ES_ResistorLoad(void *, AG_Netbuf *);
+int		 ES_ResistorSave(void *, AG_Netbuf *);
+int		 ES_ResistorExport(void *, enum circuit_format, FILE *);
+double		 ES_ResistorResistance(void *, ES_Port *, ES_Port *);
+AG_Window	*ES_ResistorEdit(void *);
+int		 ES_ResistorConnect(void *, ES_Port *, ES_Port *);
+void		 ES_ResistorDraw(void *, VG *);
+void		 ES_ResistorUpdate(void *, VG *);
 __END_DECLS
 
 #include "close_code.h"

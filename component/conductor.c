@@ -33,34 +33,34 @@
 #include "eda.h"
 #include "conductor.h"
 
-const AG_Version conductor_ver = {
+const AG_Version esConductorVer = {
 	"agar-eda conductor",
 	0, 0
 };
 
-const struct component_ops conductor_ops = {
+const ES_ComponentOps esConductorOps = {
 	{
-		conductor_init,
+		ES_ConductorInit,
 		NULL,			/* reinit */
-		component_destroy,
+		ES_ComponentDestroy,
 		NULL,			/* load */
 		NULL,			/* save */
-		component_edit
+		ES_ComponentEdit
 	},
 	N_("Conductor"),
 	"Cd",
-	conductor_draw,
+	ES_ConductorDraw,
 	NULL,			/* edit */
 	NULL,			/* connect */
-	conductor_export,
+	ES_ConductorExport,
 	NULL,			/* tick */
-	conductor_resistance,
+	ES_ConductorResistance,
 	NULL,			/* capacitance */
 	NULL,			/* inductance */
 	NULL			/* isource */
 };
 
-const struct pin conductor_pinout[] = {
+const ES_Port esConductorPinout[] = {
 	{ 0, "",  0, 0 },
 	{ 1, "A", 0, 0 },
 	{ 2, "B", 0, 0 },
@@ -68,34 +68,35 @@ const struct pin conductor_pinout[] = {
 };
 
 void
-conductor_draw(void *p, VG *vg)
+ES_ConductorDraw(void *p, VG *vg)
 {
-	struct conductor *cd = p;
+	ES_Conductor *cd = p;
 
 	VG_Begin(vg, VG_LINE_STRIP);
-	VG_Vertex2(vg, COM(cd)->pin[1].x, COM(cd)->pin[1].y);
-	VG_Vertex2(vg, COM(cd)->pin[2].x, COM(cd)->pin[2].y);
+	VG_Vertex2(vg, COM(cd)->ports[1].x, COM(cd)->ports[1].y);
+	VG_Vertex2(vg, COM(cd)->ports[2].x, COM(cd)->ports[2].y);
 	VG_End(vg);
 }
 
 void
-conductor_init(void *p, const char *name)
+ES_ConductorInit(void *p, const char *name)
 {
-	struct conductor *cd = p;
+	ES_Conductor *cd = p;
 
-	component_init(cd, "conductor", name, &conductor_ops, conductor_pinout);
+	ES_ComponentInit(cd, "conductor", name, &esConductorOps,
+	    esConductorPinout);
 }
 
 double
-conductor_resistance(void *p, struct pin *p1, struct pin *p2)
+ES_ConductorResistance(void *p, ES_Port *p1, ES_Port *p2)
 {
 	return (0);
 }
 
 int
-conductor_export(void *p, enum circuit_format fmt, FILE *f)
+ES_ConductorExport(void *p, enum circuit_format fmt, FILE *f)
 {
-	struct conductor *c = p;
+	ES_Conductor *c = p;
 	
 	if (PNODE(c,1) == -1 ||
 	    PNODE(c,2) == -1)
@@ -111,70 +112,70 @@ conductor_export(void *p, enum circuit_format fmt, FILE *f)
 }
 
 #ifdef EDITION
-static struct conductor *sel_cd;
+static ES_Conductor *esCurCd;
 
 static void
-conductor_tool_init(void *p)
+ES_ConductorToolInit(void *p)
 {
 	/* XXX */
-	sel_cd = NULL;
+	esCurCd = NULL;
 }
 
 void
-conductor_tool_reinit(void)
+ES_ConductorToolReinit(void)
 {
-	if (sel_cd != NULL) {
+	if (esCurCd != NULL) {
 		printf("non-null conductor\n");
 	}
-	sel_cd = NULL;
+	esCurCd = NULL;
 }
 
 static int
-conductor_tool_mousebuttondown(void *p, float x, float y, int b)
+ES_ConductorToolMousebuttondown(void *p, float x, float y, int b)
 {
 	VG_Tool *t = p;
 	char name[AG_OBJECT_NAME_MAX];
 	struct circuit *ckt = t->p;
 	VG *vg = ckt->vg;
-	struct component *com;
+	ES_Component *com;
 	int n = 0;
 
 	switch (b) {
 	case SDL_BUTTON_LEFT:
-		if (sel_cd == NULL) {
+		if (esCurCd == NULL) {
 tryname:
 			snprintf(name, sizeof(name), "Cd%d", n++);
-			AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+			AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 				if (strcmp(AGOBJECT(com)->name, name) == 0)
 					break;
 			}
 			if (com != NULL) {
 				goto tryname;
 			}
-			com = Malloc(sizeof(struct conductor), M_OBJECT);
-			conductor_init(com, name);
+			com = Malloc(sizeof(ES_Conductor), M_OBJECT);
+			ES_ConductorInit(com, name);
 			AG_ObjectAttach(ckt, com);
 			AG_ObjectPageIn(com, AG_OBJECT_DATA);
 			AG_PostEvent(ckt, com, "circuit-shown", NULL);
 
 			VG_MoveBlock(vg, com->block, x, y, -1);
-			com->pin[1].x = 0;
-			com->pin[1].y = 0;
-			sel_cd = (struct conductor *)com;
+			com->ports[1].x = 0;
+			com->ports[1].y = 0;
+			esCurCd = (ES_Conductor *)com;
 		} else {
-			COM(sel_cd)->pin[1].selected = 0;
-			COM(sel_cd)->pin[2].selected = 0;
-			component_connect(ckt, COM(sel_cd),
-			    &COM(sel_cd)->block->pos);
-			sel_cd = NULL;
+			COM(esCurCd)->ports[1].selected = 0;
+			COM(esCurCd)->ports[2].selected = 0;
+			ES_ComponentConnect(ckt, COM(esCurCd),
+			    &COM(esCurCd)->block->pos);
+			esCurCd = NULL;
 		}
 		break;
 	case SDL_BUTTON_MIDDLE:
-		if (sel_cd != NULL) {
-			AG_ObjectDetach(sel_cd);
-			AG_ObjectDestroy(sel_cd);
-			Free(sel_cd, M_OBJECT);
-			sel_cd = NULL;
+		if (esCurCd != NULL) {
+			AG_ObjectDetach(esCurCd);
+			AG_ObjectDestroy(esCurCd);
+			Free(esCurCd, M_OBJECT);
+			esCurCd = NULL;
 		}
 		break;
 	default:
@@ -184,7 +185,7 @@ tryname:
 }
 
 static int
-conductor_tool_mousemotion(void *p, float x, float y, float xrel, float yrel,
+ES_ConductorToolMousemotion(void *p, float x, float y, float xrel, float yrel,
     int b)
 {
 	VG_Tool *t = p;
@@ -194,12 +195,12 @@ conductor_tool_mousemotion(void *p, float x, float y, float xrel, float yrel,
 	vg->origin[1].x = x;
 	vg->origin[1].y = y;
 
-	if (sel_cd != NULL) {
-		COM(sel_cd)->pin[2].x = x - COM(sel_cd)->block->pos.x;
-		COM(sel_cd)->pin[2].y = y - COM(sel_cd)->block->pos.y;
-		component_highlight_pins(ckt, COM(sel_cd));
+	if (esCurCd != NULL) {
+		COM(esCurCd)->ports[2].x = x - COM(esCurCd)->block->pos.x;
+		COM(esCurCd)->ports[2].y = y - COM(esCurCd)->block->pos.y;
+		ES_ComponentHighlightPorts(ckt, COM(esCurCd));
 	} else {
-		if (pin_overlap(ckt, NULL, x, y) != NULL) {
+		if (ES_ComponentPortOverlap(ckt, NULL, x, y) != NULL) {
 			vg->origin[2].x = x;
 			vg->origin[2].y = y;
 		}
@@ -208,17 +209,17 @@ conductor_tool_mousemotion(void *p, float x, float y, float xrel, float yrel,
 	return (0);
 }
 
-VG_ToolOps conductor_tool = {
+VG_ToolOps esConductorTool = {
 	N_("Conductor"),
 	N_("Insert an ideal conductor between two nodes."),
 	EDA_BRANCH_TO_NODE_ICON,
 	sizeof(VG_Tool),
 	0,
-	conductor_tool_init,
+	ES_ConductorToolInit,
 	NULL,				/* destroy */
 	NULL,				/* edit */
-	conductor_tool_mousemotion,
-	conductor_tool_mousebuttondown,
+	ES_ConductorToolMousemotion,
+	ES_ConductorToolMousebuttondown,
 	NULL,				/* mousebuttonup */
 	NULL,				/* keydown */
 	NULL				/* keyup */

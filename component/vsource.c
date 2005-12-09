@@ -33,34 +33,34 @@
 #include "eda.h"
 #include "vsource.h"
 
-const AG_Version vsource_ver = {
+const AG_Version esVsourceVer = {
 	"agar-eda voltage source",
 	0, 0
 };
 
-const struct component_ops vsource_ops = {
+const ES_ComponentOps esVsourceOps = {
 	{
-		vsource_init,
-		vsource_reinit,
-		vsource_destroy,
-		vsource_load,
-		vsource_save,
-		component_edit
+		ES_VsourceInit,
+		ES_VsourceReinit,
+		ES_VsourceDestroy,
+		ES_VsourceLoad,
+		ES_VsourceSave,
+		ES_ComponentEdit
 	},
 	N_("Independent voltage source"),
 	"V",
-	vsource_draw,
-	vsource_edit,
+	ES_VsourceDraw,
+	ES_VsourceEdit,
 	NULL,
-	vsource_export,
-	vsource_tick,
+	ES_VsourceExport,
+	ES_VsourceTick,
 	NULL,			/* resistance */
 	NULL,			/* capacitance */
 	NULL,			/* inductance */
 	NULL			/* isource */
 };
 
-const struct pin vsource_pinout[] = {
+const ES_Port esVsourcePinout[] = {
 	{ 0, "",  0, 0 },
 	{ 1, "v+", 0, 0 },
 	{ 2, "v-", 0, 2 },
@@ -70,14 +70,14 @@ const struct pin vsource_pinout[] = {
 enum {
 	VSOURCE_SYM_LINEAR,
 	VSOURCE_SYM_CIRCULAR
-} vsource_sym = 1;
+} esVsourceStyle = 1;
 
 void
-vsource_draw(void *p, VG *vg)
+ES_VsourceDraw(void *p, VG *vg)
 {
-	struct vsource *vs = p;
+	ES_Vsource *vs = p;
 	
-	switch (vsource_sym) {
+	switch (esVsourceStyle) {
 	case VSOURCE_SYM_LINEAR:
 		VG_Begin(vg, VG_LINES);
 		VG_Vertex2(vg, 0.0000, 0.0000);
@@ -138,24 +138,23 @@ vsource_draw(void *p, VG *vg)
 	}
 }
 
-/* Find the dipole connecting two contiguous pins, and its polarity. */
+/* Find the pairs connecting two contiguous ports, and its polarity. */
 static int
-contig_dipole(struct pin *pA, struct pin *pB, struct dipole **Rdip,
-    int *Rpol)
+contig_pair(ES_Port *pA, ES_Port *pB, ES_Pair **Rdip, int *Rpol)
 {
-	struct component *com = pA->com;
+	ES_Component *com = pA->com;
 	struct circuit *ckt = com->ckt;
 	unsigned int i;
 
-	for (i = 0; i < com->ndipoles; i++) {
-		struct dipole *dip = &com->dipoles[i];
-		struct cktnode *node;
-		struct cktbranch *br;
+	for (i = 0; i < com->npairs; i++) {
+		ES_Pair *dip = &com->pairs[i];
+		ES_Node *node;
+		ES_Branch *br;
 		int pol;
 
 		/*
-		 * As a convention, the relative polarities of dipoles is
-		 * determined by the pin number order.
+		 * As a convention, the relative polarities of pairs is
+		 * determined by the port number order.
 		 */
 		if (dip->p1 == pA && dip->p2->node >= 0) {
 			node = ckt->nodes[dip->p2->node];
@@ -168,7 +167,7 @@ contig_dipole(struct pin *pA, struct pin *pB, struct dipole **Rdip,
 		}
 
 		TAILQ_FOREACH(br, &node->branches, branches) {
-			if (br->pin == pB)
+			if (br->port == pB)
 				break;
 		}
 		if (br != NULL) {
@@ -177,38 +176,37 @@ contig_dipole(struct pin *pA, struct pin *pB, struct dipole **Rdip,
 			break;
 		}
 	}
-	return (i < com->ndipoles);
+	return (i < com->npairs);
 }
 
 /*
- * Insert a new voltage source loop based on the pins currently in the
+ * Insert a new voltage source loop based on the ports currently in the
  * loop stack.
  */
 static void
-insert_loop(struct vsource *vs)
+insert_loop(ES_Vsource *vs)
 {
-	struct cktloop *lnew;
+	ES_Loop *lnew;
 	unsigned int i;
 
 	/* Create a new voltage source loop entry. */
-	lnew = Malloc(sizeof(struct cktloop), M_EDA);
+	lnew = Malloc(sizeof(ES_Loop), M_EDA);
 	lnew->name = 1+vs->nloops++;
-	lnew->dipoles = Malloc((vs->nlstack-1)*sizeof(struct dipole *), M_EDA);
-	lnew->ndipoles = 0;
+	lnew->pairs = Malloc((vs->nlstack-1)*sizeof(ES_Pair *), M_EDA);
+	lnew->npairs = 0;
 	lnew->origin = vs;
 
 	for (i = 1; i < vs->nlstack; i++) {
-		struct dipole *dip;
+		ES_Pair *dip;
 		int pol;
 
-		if (!contig_dipole(vs->lstack[i], vs->lstack[i-1], &dip,
-		    &pol))
+		if (!contig_pair(vs->lstack[i], vs->lstack[i-1], &dip, &pol))
 			continue;
 
-		lnew->dipoles[lnew->ndipoles++] = dip;
+		lnew->pairs[lnew->npairs++] = dip;
 
 		dip->loops = Realloc(dip->loops,
-		    (dip->nloops+1)*sizeof(struct cktloop *));
+		    (dip->nloops+1)*sizeof(ES_Loop *));
 		dip->lpols = Realloc(dip->lpols,
 		    (dip->nloops+1)*sizeof(int));
 		dip->loops[dip->nloops] = lnew;
@@ -221,43 +219,43 @@ insert_loop(struct vsource *vs)
 /*
  * Isolate closed loops with respect to a voltage source.
  *
- * The resulting loop structure is an array of dipoles whose polarities
+ * The resulting loop structure is an array of pairs whose polarities
  * with respect to the loop are recorded in a separate array.
  */
 static void
-find_loops(struct vsource *vs, struct pin *pcur)
+find_loops(ES_Vsource *vs, ES_Port *pcur)
 {
 	struct circuit *ckt = COM(vs)->ckt;
-	struct cktnode *node = ckt->nodes[pcur->node];
-	struct cktbranch *br;
+	ES_Node *node = ckt->nodes[pcur->node];
+	ES_Branch *br;
 	unsigned int i;
 
 	node->flags |= CKTNODE_EXAM;
 
-	vs->lstack = Realloc(vs->lstack, (vs->nlstack+1)*sizeof(struct pin *));
+	vs->lstack = Realloc(vs->lstack, (vs->nlstack+1)*sizeof(ES_Port *));
 	vs->lstack[vs->nlstack++] = pcur;
 
 	TAILQ_FOREACH(br, &node->branches, branches) {
-		if (br->pin == pcur) {
+		if (br->port == pcur) {
 			continue;
 		}
-		if (br->pin->com == COM(vs) &&
-		    br->pin->n == 2 &&
+		if (br->port->com == COM(vs) &&
+		    br->port->n == 2 &&
 		    vs->nlstack > 2) {
 			vs->lstack = Realloc(vs->lstack,
-			    (vs->nlstack+1)*sizeof(struct pin *));
-			vs->lstack[vs->nlstack++] = &COM(vs)->pin[2];
+			    (vs->nlstack+1)*sizeof(ES_Port *));
+			vs->lstack[vs->nlstack++] = &COM(vs)->ports[2];
 			insert_loop(vs);
 			vs->nlstack--;
 			continue;
 		}
-		for (i = 1; i <= br->pin->com->npins; i++) {
-			struct pin *pnext = &br->pin->com->pin[i];
-			struct cktnode *nnext = ckt->nodes[pnext->node];
+		for (i = 1; i <= br->port->com->nports; i++) {
+			ES_Port *pnext = &br->port->com->ports[i];
+			ES_Node *nnext = ckt->nodes[pnext->node];
 
 			if ((pnext == pcur) ||
-			    (pnext->com == br->pin->com &&
-			     pnext->n == br->pin->n) ||
+			    (pnext->com == br->port->com &&
+			     pnext->n == br->port->n) ||
 			    (nnext->flags & CKTNODE_EXAM)) {
 				continue;
 			}
@@ -271,12 +269,12 @@ find_loops(struct vsource *vs, struct pin *pcur)
 
 /* Isolate the loops relative to the given voltage source. */
 void
-vsource_find_loops(struct vsource *vs)
+ES_VsourceFindLoops(ES_Vsource *vs)
 {
 	unsigned int i;
 
-	vs->lstack = Malloc(sizeof(struct pin *), M_EDA);
-	find_loops(vs, PIN(vs,1));
+	vs->lstack = Malloc(sizeof(ES_Port *), M_EDA);
+	find_loops(vs, PORT(vs,1));
 
 	Free(vs->lstack, M_EDA);
 	vs->lstack = NULL;
@@ -284,10 +282,10 @@ vsource_find_loops(struct vsource *vs)
 }
 
 void
-vsource_tick(void *p)
+ES_VsourceTick(void *p)
 {
-	struct vsource *vs = p;
-	struct cktnode *n1, *n2;
+	ES_Vsource *vs = p;
+	ES_Node *n1, *n2;
 	struct circuit *ckt = COM(vs)->ckt;
 
 	if (PNODE(vs,1) == -1 ||
@@ -305,11 +303,11 @@ vsource_tick(void *p)
 }
 
 void
-vsource_init(void *p, const char *name)
+ES_VsourceInit(void *p, const char *name)
 {
-	struct vsource *vs = p;
+	ES_Vsource *vs = p;
 
-	component_init(vs, "vsource", name, &vsource_ops, vsource_pinout);
+	ES_ComponentInit(vs, "vsource", name, &esVsourceOps, esVsourcePinout);
 	vs->voltage = 5;
 	vs->lstack = NULL;
 	vs->nlstack = 0;
@@ -318,32 +316,32 @@ vsource_init(void *p, const char *name)
 }
 
 void
-vsource_reinit(void *p)
+ES_VsourceReinit(void *p)
 {
-	struct vsource *vs = p;
+	ES_Vsource *vs = p;
 
-	vsource_free_loops(vs);
+	ES_VsourceFreeLoops(vs);
 }
 
 void
-vsource_destroy(void *p)
+ES_VsourceDestroy(void *p)
 {
-	struct vsource *vs = p;
+	ES_Vsource *vs = p;
 
-	vsource_free_loops(vs);
+	ES_VsourceFreeLoops(vs);
 }
 
 void
-vsource_free_loops(struct vsource *vs)
+ES_VsourceFreeLoops(ES_Vsource *vs)
 {
-	struct cktloop *loop, *nloop;
+	ES_Loop *loop, *nloop;
 	unsigned int i;
 
 	for (loop = TAILQ_FIRST(&vs->loops);
 	     loop != TAILQ_END(&vs->loops);
 	     loop = nloop) {
 		nloop = TAILQ_NEXT(loop, loops);
-		Free(loop->dipoles, M_EDA);
+		Free(loop->pairs, M_EDA);
 		Free(loop, M_EDA);
 	}
 	TAILQ_INIT(&vs->loops);
@@ -355,12 +353,12 @@ vsource_free_loops(struct vsource *vs)
 }
 
 int
-vsource_load(void *p, AG_Netbuf *buf)
+ES_VsourceLoad(void *p, AG_Netbuf *buf)
 {
-	struct vsource *vs = p;
+	ES_Vsource *vs = p;
 
-	if (AG_ReadVersion(buf, &vsource_ver, NULL) == -1 ||
-	    component_load(vs, buf) == -1)
+	if (AG_ReadVersion(buf, &esVsourceVer, NULL) == -1 ||
+	    ES_ComponentLoad(vs, buf) == -1)
 		return (-1);
 
 	vs->voltage = AG_ReadDouble(buf);
@@ -368,12 +366,12 @@ vsource_load(void *p, AG_Netbuf *buf)
 }
 
 int
-vsource_save(void *p, AG_Netbuf *buf)
+ES_VsourceSave(void *p, AG_Netbuf *buf)
 {
-	struct vsource *vs = p;
+	ES_Vsource *vs = p;
 
-	AG_WriteVersion(buf, &vsource_ver);
-	if (component_save(vs, buf) == -1)
+	AG_WriteVersion(buf, &esVsourceVer);
+	if (ES_ComponentSave(vs, buf) == -1)
 		return (-1);
 
 	AG_WriteDouble(buf, vs->voltage);
@@ -381,9 +379,9 @@ vsource_save(void *p, AG_Netbuf *buf)
 }
 
 int
-vsource_export(void *p, enum circuit_format fmt, FILE *f)
+ES_VsourceExport(void *p, enum circuit_format fmt, FILE *f)
 {
-	struct vsource *vs = p;
+	ES_Vsource *vs = p;
 
 	if (PNODE(vs,1) == -1 ||
 	    PNODE(vs,2) == -1)
@@ -399,11 +397,11 @@ vsource_export(void *p, enum circuit_format fmt, FILE *f)
 }
 
 double
-vsource_emf(void *p, int pin1, int pin2)
+ES_VsourceVoltage(void *p, int p1, int p2)
 {
-	struct vsource *vs = p;
+	ES_Vsource *vs = p;
 
-	return (pin1 == 1 ? vs->voltage : -(vs->voltage));
+	return (p1 == 1 ? vs->voltage : -(vs->voltage));
 }
 
 #ifdef EDITION
@@ -411,10 +409,10 @@ static void
 poll_loops(AG_Event *event)
 {
 	char text[AG_TLIST_LABEL_MAX];
-	struct vsource *vs = AG_PTR(1);
+	ES_Vsource *vs = AG_PTR(1);
 	AG_Tlist *tl = AG_SELF();
 	AG_TlistItem *it;
-	struct cktloop *l;
+	ES_Loop *l;
 	unsigned int i, j;
 
 	AG_TlistClear(tl);
@@ -423,8 +421,8 @@ poll_loops(AG_Event *event)
 		it = AG_TlistAddPtr(tl, AGICON(EDA_MESH_ICON), text, l);
 		it->depth = 0;
 
-		for (i = 0; i < l->ndipoles; i++) {
-			struct dipole *dip = l->dipoles[i];
+		for (i = 0; i < l->npairs; i++) {
+			ES_Pair *dip = l->pairs[i];
 
 			snprintf(text, sizeof(text), "%s:(%s,%s)",
 			    AGOBJECT(dip->com)->name, dip->p1->name,
@@ -434,7 +432,7 @@ poll_loops(AG_Event *event)
 			it->depth = 1;
 #if 0
 			for (j = 0; j < dip->nloops; j++) {
-				struct cktloop *dloop = dip->loops[j];
+				ES_Loop *dloop = dip->loops[j];
 				int dpol = dip->lpols[j];
 
 				snprintf(text, sizeof(text), "%s:L%d (%s)",
@@ -451,9 +449,9 @@ poll_loops(AG_Event *event)
 }
 
 AG_Window *
-vsource_edit(void *p)
+ES_VsourceEdit(void *p)
 {
-	struct vsource *vs = p;
+	ES_Vsource *vs = p;
 	AG_Window *win, *subwin;
 	AG_Spinbutton *sb;
 	AG_FSpinbutton *fsb;

@@ -41,31 +41,31 @@
 #include <component/spst.h>
 #include <component/spdt.h>
 
-extern const struct component_ops conductor_ops;
-extern const struct component_ops vsource_ops;
-extern const struct component_ops ground_ops;
-extern const struct component_ops resistor_ops;
-extern const struct component_ops semiresistor_ops;
-extern const struct component_ops inverter_ops;
-extern const struct component_ops spst_ops;
-extern const struct component_ops spdt_ops;
+extern const ES_ComponentOps esConductorOps;
+extern const ES_ComponentOps esVsourceOps;
+extern const ES_ComponentOps esGroundOps;
+extern const ES_ComponentOps esResistorOps;
+extern const ES_ComponentOps esSemiResistorOps;
+extern const ES_ComponentOps esInverterOps;
+extern const ES_ComponentOps esSpstOps;
+extern const ES_ComponentOps esSpdtOps;
 
 const struct eda_type eda_models[] = {
-	{ "conductor",	sizeof(struct conductor),	&conductor_ops },
-	{ "vsource",	sizeof(struct vsource),		&vsource_ops },
-	{ "ground",	sizeof(struct ground),		&ground_ops },
-	{ "resistor",	sizeof(struct resistor),	&resistor_ops },
-	{ "semiresistor", sizeof(struct semiresistor),	&semiresistor_ops },
-	{ "inverter",	sizeof(struct inverter),	&inverter_ops },
-	{ "spst",	sizeof(struct spst),		&spst_ops },
-	{ "spdt",	sizeof(struct spdt),		&spdt_ops },
+	{ "conductor",	sizeof(ES_Conductor),		&esConductorOps },
+	{ "vsource",	sizeof(ES_Vsource),		&esVsourceOps },
+	{ "ground",	sizeof(ES_Ground),		&esGroundOps },
+	{ "resistor",	sizeof(ES_Resistor),		&esResistorOps },
+	{ "semiresistor", sizeof(ES_SemiResistor),	&esSemiResistorOps },
+	{ "inverter",	sizeof(ES_Inverter),		&esInverterOps },
+	{ "spst",	sizeof(ES_Spst),		&esSpstOps },
+	{ "spdt",	sizeof(ES_Spdt),		&esSpdtOps },
 	{ NULL }
 };
 
 int
 main(int argc, char *argv[])
 {
-	extern const AG_ObjectOps circuit_ops;
+	extern const AG_ObjectOps esCircuitOps;
 	const struct eda_type *ty;
 	int c, i, fps = -1;
 	char *s;
@@ -127,7 +127,7 @@ main(int argc, char *argv[])
 		strlcat(tname, ty->name, sizeof(tname));
 		AG_RegisterType(tname, ty->size, ty->ops, EDA_COMPONENT_ICON);
 	}
-	AG_RegisterType("circuit", sizeof(struct circuit), &circuit_ops,
+	AG_RegisterType("circuit", sizeof(struct circuit), &esCircuitOps,
 	    EDA_CIRCUIT_ICON);
 	
 	/* Initialize the object manager. */

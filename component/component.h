@@ -8,116 +8,106 @@
 
 #include "begin_code.h"
 
-#define COMPONENT_MAX_PINS	128
-#define COMPONENT_PIN_NAME_MAX	16
+#define COMPONENT_MAX_PORTS	128
+#define COMPONENT_PORT_NAME_MAX	16
 
 struct ag_window;
+struct es_branch;
+struct es_loop;
 
 /* Exportable circuit model formats. */
 enum circuit_format {
-	CIRCUIT_SPICE3		/* Spice3 deck (tested with Spice-3f5) */
+	CIRCUIT_SPICE3				/* SPICE3 deck */
 };
 
-/* Primary interface element between the model and the circuit. */
-struct pin {
-	int	n;				/* Pin number */
-	char	name[COMPONENT_PIN_NAME_MAX];	/* Pin name */
-	double	x, y;				/* Position in drawing */
+/* Interface element between the model and the circuit. */
+typedef struct es_port {
+	int n;					/* Port number */
+	char name[COMPONENT_PORT_NAME_MAX];	/* Port name */
+	float x, y;				/* Position in drawing */
+	struct es_component *com;		/* Back pointer to component */
+	int node;				/* Node connection (or -1) */
+	struct es_branch *branch;		/* Branch into node */
+	int selected;				/* Port selected for edition */
+	double u;				/* Potential (fictitious) */
+} ES_Port;
 
-	struct component *com;		/* Back pointer to component */
-	int		  node;		/* Node connection (or -1) */
-	struct cktbranch *branch;	/* Branch into node */
-
-	int	selected;		/* Pin selected for edition */
-	double	u;			/* Potential at this pin (fictitious) */
-	double	du;			/* Change in potential as t->0 */
-};
-
-/* Ordered pair of pins belonging to the same component. */
-struct dipole {
-	struct component *com;		/* Back pointer to component */
-	struct pin *p1;			/* Positive pin (current enters) */
-	struct pin *p2;			/* Negative pin (current exits) */
-
-	struct cktloop **loops;		/* Loops this dipole is part of */
-	int	        *lpols;		/* Polarities with respect to loops */
-	unsigned int    nloops;
-};
+/* Ordered pair of ports belonging to the same component. */
+typedef struct es_pair {
+	struct es_component *com;	/* Back pointer to component */
+	ES_Port *p1;			/* + with respect to reference */
+	ES_Port *p2;			/* - with respect to reference */
+	struct es_loop **loops;		/* Loops this pair is part of */
+	int *lpols;			/* Polarities with respect to loops */
+	unsigned int nloops;
+} ES_Pair;
 
 /* Generic component description and operation vector. */
-struct component_ops {
+typedef struct es_component_ops {
 	AG_ObjectOps ops;			/* Generic object ops */
 	const char *name;			/* Name (eg. "Resistor") */
 	const char *pfx;			/* Prefix (eg. "R") */
 
 	void		 (*draw)(void *, VG *);
 	struct ag_window *(*edit)(void *);
-	int		 (*connect)(void *, struct pin *, struct pin *);
+	int		 (*connect)(void *, ES_Port *, ES_Port *);
 	int		 (*export_model)(void *, enum circuit_format, FILE *);
 	void		 (*tick)(void *);
-	double		 (*resistance)(void *, struct pin *, struct pin *);
-	double		 (*capacitance)(void *, struct pin *, struct pin *);
-	double		 (*inductance)(void *, struct pin *, struct pin *);
-	double		 (*isource)(void *, struct pin *, struct pin *);
-};
+	double		 (*resistance)(void *, ES_Port *, ES_Port *);
+	double		 (*capacitance)(void *, ES_Port *, ES_Port *);
+	double		 (*inductance)(void *, ES_Port *, ES_Port *);
+	double		 (*isource)(void *, ES_Port *, ES_Port *);
+} ES_ComponentOps;
 
-struct component {
+typedef struct es_component {
 	AG_Object obj;
-	const struct component_ops *ops;
+	const ES_ComponentOps *ops;
 	struct circuit *ckt;			/* Back pointer to circuit */
 	VG_Block *block;			/* Schematic block */
-
 	u_int flags;
 #define COMPONENT_FLOATING	0x01		/* Not yet connected */
-
 	int selected;				/* Selected for edition? */
 	int highlighted;			/* Selected for selection? */
-
 	pthread_mutex_t lock;
 	AG_Timeout redraw_to;			/* Timer for vg updates */
+	float Tnom;				/* Model ref temp (k) */
+	float Tspec;				/* Instance temp (k) */
+	ES_Port ports[COMPONENT_MAX_PORTS];	/* Interface elements */
+	int    nports;
+	ES_Pair *pairs;				/* Port pairs */
+	int     npairs;
+	TAILQ_ENTRY(es_component) components;
+} ES_Component;
 
-	struct pin pin[COMPONENT_MAX_PINS];	/* Connection points */
-	int       npins;
-
-	struct dipole *dipoles;			/* Ordered pin pairs */
-	int           ndipoles;
-
-	float Tnom;		/* Model reference temperature (k) */
-	float Tspec;		/* Component instance temperature (k) */
-
-	TAILQ_ENTRY(component) components;
-};
-
-#define COM(p) ((struct component *)(p))
-#define PIN(p,n) (&COM(p)->pin[n])
-#define PNODE(p,n) (COM(p)->pin[n].node)
-#define U(p,n) (PIN((p),(n))->u)
+#define COM(p) ((struct es_component *)(p))
+#define PORT(p,n) (&COM(p)->ports[n])
+#define PNODE(p,n) (COM(p)->ports[n].node)
+#define U(p,n) (PORT((p),(n))->u)
 
 __BEGIN_DECLS
-void		component_init(void *, const char *, const char *, const void *,
-			       const struct pin *);
-void		component_destroy(void *);
-int		component_load(void *, AG_Netbuf *);
-int		component_save(void *, AG_Netbuf *);
-void	       *component_edit(void *);
-void		component_insert(AG_Event *);
+void	 ES_ComponentInit(void *, const char *, const char *, const void *,
+		          const ES_Port *);
+void	 ES_ComponentDestroy(void *);
+int	 ES_ComponentLoad(void *, AG_Netbuf *);
+int	 ES_ComponentSave(void *, AG_Netbuf *);
+void	*ES_ComponentEdit(void *);
+void	 ES_ComponentInsert(AG_Event *);
+ES_Port	*ES_ComponentPortOverlap(struct circuit *, ES_Component *, float,
+		                 float);
+int	 ES_ComponentHighlightPorts(struct circuit *, ES_Component *);
+void	 ES_ComponentConnect(struct circuit *, ES_Component *, VG_Vtx *);
+void	 ES_ComponentSelect(ES_Component *);
+void	 ES_ComponentUnselect(ES_Component *);
+void	 ES_ComponentUnselectAll(struct circuit *);
 
-struct pin	*pin_overlap(struct circuit *, struct component *, double,
-		             double);
-__inline__ int	 pin_grounded(struct pin *);
-
-int		component_highlight_pins(struct circuit *, struct component *);
-void		component_connect(struct circuit *, struct component *,
-		                  VG_Vtx *);
-
-double		dipole_resistance(struct dipole *);
-double		dipole_capacitance(struct dipole *);
-double		dipole_inductance(struct dipole *);
-__inline__ int	dipole_in_loop(struct dipole *, struct cktloop *,
-		               int *);
+__inline__ int  ES_PortIsGrounded(ES_Port *);
+double		ES_PairResistance(ES_Pair *);
+double		ES_PairCapacitance(ES_Pair *);
+double		ES_PairInductance(ES_Pair *);
+__inline__ int	ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
 
 #ifdef EDITION
-void component_reg_menu(AG_Menu *, AG_MenuItem *, struct circuit *);
+void		ES_ComponentRegMenu(AG_Menu *, AG_MenuItem *, struct circuit *);
 #endif
 __END_DECLS
 

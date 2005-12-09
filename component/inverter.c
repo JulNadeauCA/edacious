@@ -33,34 +33,34 @@
 #include "eda.h"
 #include "inverter.h"
 
-const AG_Version inverter_ver = {
+const AG_Version esInverterVer = {
 	"agar-eda inverter",
 	0, 0
 };
 
-const struct component_ops inverter_ops = {
+const ES_ComponentOps esInverterOps = {
 	{
-		inverter_init,
+		ES_InverterInit,
 		NULL,			/* reinit */
-		component_destroy,
-		inverter_load,
-		inverter_save,
-		component_edit
+		ES_ComponentDestroy,
+		ES_InverterLoad,
+		ES_InverterSave,
+		ES_ComponentEdit
 	},
 	N_("Inverter"),
 	"Inv",
-	inverter_draw,
-	inverter_edit,
+	ES_InverterDraw,
+	ES_InverterEdit,
 	NULL,			/* connect */
-	inverter_export,
-	inverter_tick,
+	ES_InverterExport,
+	ES_InverterTick,
 	NULL,			/* resistance */
 	NULL,			/* capacitance */
 	NULL,			/* inductance */
 	NULL			/* isource */
 };
 
-const struct pin inverter_pinout[] = {
+const ES_Port esInverterPinout[] = {
 	{ 0, "",	0.0, 1.0 },
 	{ 1, "A",	0.0, 0.0 },
 	{ 2, "A-bar",	2.0, 0.0 },
@@ -68,10 +68,10 @@ const struct pin inverter_pinout[] = {
 };
 
 void
-inverter_draw(void *p, VG *vg)
+ES_InverterDraw(void *p, VG *vg)
 {
-	struct inverter *inv = p;
-	struct component *com = p;
+	ES_Inverter *inv = p;
+	ES_Component *com = p;
 	VG_Block *block;
 
 	VG_Begin(vg, VG_LINES);
@@ -100,16 +100,16 @@ inverter_draw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-/* Initiate a LTH/HTL transition on a given pin. */
+/* Initiate a LTH/HTL transition on a given port. */
 static void
-switch_pin(AG_Event *event)
+switch_port(AG_Event *event)
 {
-	struct inverter *inv = AG_SELF();
-	int pin = AG_INT(1);
+	ES_Inverter *inv = AG_SELF();
+	int port = AG_INT(1);
 	int level = AG_INT(2);
 	float dv;
 
-	printf("pin = %d, level = %d\n", pin, level);
+	printf("port = %d, level = %d\n", port, level);
 
 	switch (level) {
 	case 1:
@@ -132,12 +132,13 @@ switch_pin(AG_Event *event)
 }
 
 void
-inverter_init(void *p, const char *name)
+ES_InverterInit(void *p, const char *name)
 {
-	struct inverter *inv = p;
+	ES_Inverter *inv = p;
 
 	/* Default parameters: CD4069UBC (Fairchild 04/2002). */
-	component_init(inv, "inverter", name, &inverter_ops, inverter_pinout);
+	ES_ComponentInit(inv, "inverter", name, &esInverterOps,
+	    esInverterPinout);
 	inv->Tphl = 50;
 	inv->Tplh = 50;
 	inv->Tthl = 80;
@@ -151,15 +152,15 @@ inverter_init(void *p, const char *name)
 	inv->Vil = 0;
 	inv->Voh = 5;
 	inv->Vol = 0;
-	AG_SetEvent(inv, "Abar->1", switch_pin, "%i, %i", 2, 1);
-	AG_SetEvent(inv, "Abar->0", switch_pin, "%i, %i", 2, 0);
+	AG_SetEvent(inv, "Abar->1", switch_port, "%i, %i", 2, 1);
+	AG_SetEvent(inv, "Abar->0", switch_port, "%i, %i", 2, 0);
 }
 
 void
-inverter_tick(void *p)
+ES_InverterTick(void *p)
 {
-	struct inverter *inv = p;
-	struct component *com = p;
+	ES_Inverter *inv = p;
+	ES_Component *com = p;
 
 #if 0
 	/*
@@ -188,12 +189,12 @@ inverter_tick(void *p)
 }
 
 int
-inverter_load(void *p, AG_Netbuf *buf)
+ES_InverterLoad(void *p, AG_Netbuf *buf)
 {
-	struct inverter *inv = p;
+	ES_Inverter *inv = p;
 
-	if (AG_ReadVersion(buf, &inverter_ver, NULL) == -1 ||
-	    component_load(inv, buf) == -1) {
+	if (AG_ReadVersion(buf, &esInverterVer, NULL) == -1 ||
+	    ES_ComponentLoad(inv, buf) == -1) {
 		return (-1);
 	}
 	inv->Tphl = AG_ReadFloat(buf);
@@ -210,12 +211,12 @@ inverter_load(void *p, AG_Netbuf *buf)
 }
 
 int
-inverter_save(void *p, AG_Netbuf *buf)
+ES_InverterSave(void *p, AG_Netbuf *buf)
 {
-	struct inverter *inv = p;
+	ES_Inverter *inv = p;
 
-	AG_WriteVersion(buf, &inverter_ver);
-	if (component_save(inv, buf) == -1) {
+	AG_WriteVersion(buf, &esInverterVer);
+	if (ES_ComponentSave(inv, buf) == -1) {
 		return (-1);
 	}
 	AG_WriteFloat(buf, inv->Tphl);
@@ -232,9 +233,9 @@ inverter_save(void *p, AG_Netbuf *buf)
 }
 
 int
-inverter_export(void *p, enum circuit_format fmt, FILE *f)
+ES_InverterExport(void *p, enum circuit_format fmt, FILE *f)
 {
-	struct inverter *inv = p;
+	ES_Inverter *inv = p;
 	
 	if (PNODE(inv,1) == -1 ||
 	    PNODE(inv,2) == -1)
@@ -250,9 +251,9 @@ inverter_export(void *p, enum circuit_format fmt, FILE *f)
 
 #ifdef EDITION
 AG_Window *
-inverter_edit(void *p)
+ES_InverterEdit(void *p)
 {
-	struct inverter *inv = p;
+	ES_Inverter *inv = p;
 	AG_Window *win;
 	AG_FSpinbutton *fsb;
 

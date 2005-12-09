@@ -33,34 +33,34 @@
 #include "eda.h"
 #include "spst.h"
 
-const AG_Version spst_ver = {
+const AG_Version esSpstVer = {
 	"agar-eda spst switch",
 	0, 0
 };
 
-const struct component_ops spst_ops = {
+const ES_ComponentOps esSpstOps = {
 	{
-		spst_init,
+		ES_SpstInit,
 		NULL,			/* reinit */
-		component_destroy,
-		spst_load,
-		spst_save,
-		component_edit
+		ES_ComponentDestroy,
+		ES_SpstLoad,
+		ES_SpstSave,
+		ES_ComponentEdit
 	},
 	N_("SPST switch"),
 	"Sw",
-	spst_draw,
-	spst_edit,
+	ES_SpstDraw,
+	ES_SpstEdit,
 	NULL,			/* connect */
-	spst_export,
+	ES_SpstExport,
 	NULL,			/* tick */
-	spst_resistance,
+	ES_SpstResistance,
 	NULL,			/* capacitance */
 	NULL,			/* inductance */
 	NULL			/* isource */
 };
 
-const struct pin spst_pinout[] = {
+const ES_Port esSpstPinout[] = {
 	{ 0, "",  0, 1 },
 	{ 1, "A", 0, 0 },
 	{ 2, "B", 2, 0 },
@@ -68,9 +68,9 @@ const struct pin spst_pinout[] = {
 };
 
 void
-spst_draw(void *p, VG *vg)
+ES_SpstDraw(void *p, VG *vg)
 {
-	struct spst *sw = p;
+	ES_Spst *sw = p;
 
 	VG_Begin(vg, VG_LINES);
 	VG_Vertex2(vg, 0.000, 0.000);
@@ -107,23 +107,23 @@ spst_draw(void *p, VG *vg)
 }
 
 void
-spst_init(void *p, const char *name)
+ES_SpstInit(void *p, const char *name)
 {
-	struct spst *sw = p;
+	ES_Spst *sw = p;
 
-	component_init(sw, "spst", name, &spst_ops, spst_pinout);
+	ES_ComponentInit(sw, "spst", name, &esSpstOps, esSpstPinout);
 	sw->on_resistance = 1.0;
 	sw->off_resistance = HUGE_VAL;
 	sw->state = 0;
 }
 
 int
-spst_load(void *p, AG_Netbuf *buf)
+ES_SpstLoad(void *p, AG_Netbuf *buf)
 {
-	struct spst *sw = p;
+	ES_Spst *sw = p;
 
-	if (AG_ReadVersion(buf, &spst_ver, NULL) == -1 ||
-	    component_load(sw, buf) == -1)
+	if (AG_ReadVersion(buf, &esSpstVer, NULL) == -1 ||
+	    ES_ComponentLoad(sw, buf) == -1)
 		return (-1);
 
 	sw->on_resistance = AG_ReadDouble(buf);
@@ -133,12 +133,12 @@ spst_load(void *p, AG_Netbuf *buf)
 }
 
 int
-spst_save(void *p, AG_Netbuf *buf)
+ES_SpstSave(void *p, AG_Netbuf *buf)
 {
-	struct spst *sw = p;
+	ES_Spst *sw = p;
 
-	AG_WriteVersion(buf, &spst_ver);
-	if (component_save(sw, buf) == -1)
+	AG_WriteVersion(buf, &esSpstVer);
+	if (ES_ComponentSave(sw, buf) == -1)
 		return (-1);
 
 	AG_WriteDouble(buf, sw->on_resistance);
@@ -148,9 +148,9 @@ spst_save(void *p, AG_Netbuf *buf)
 }
 
 int
-spst_export(void *p, enum circuit_format fmt, FILE *f)
+ES_SpstExport(void *p, enum circuit_format fmt, FILE *f)
 {
-	struct spst *sw = p;
+	ES_Spst *sw = p;
 
 	if (PNODE(sw,1) == -1 ||
 	    PNODE(sw,2) == -1)
@@ -160,25 +160,25 @@ spst_export(void *p, enum circuit_format fmt, FILE *f)
 	case CIRCUIT_SPICE3:
 		fprintf(f, "R%s %d %d %g\n", AGOBJECT(sw)->name,
 		    PNODE(sw,1), PNODE(sw,2),
-		    spst_resistance(sw, PIN(sw,1), PIN(sw,2)));
+		    ES_SpstResistance(sw, PORT(sw,1), PORT(sw,2)));
 		break;
 	}
 	return (0);
 }
 
 double
-spst_resistance(void *p, struct pin *p1, struct pin *p2)
+ES_SpstResistance(void *p, ES_Port *p1, ES_Port *p2)
 {
-	struct spst *sw = p;
+	ES_Spst *sw = p;
 
 	return (sw->state ? sw->on_resistance : sw->off_resistance);
 }
 
 #ifdef EDITION
 AG_Window *
-spst_edit(void *p)
+ES_SpstEdit(void *p)
 {
-	struct spst *sw = p;
+	ES_Spst *sw = p;
 	AG_Window *win, *subwin;
 	AG_FSpinbutton *fsb;
 	AG_Button *sb;

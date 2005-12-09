@@ -33,34 +33,34 @@
 #include "eda.h"
 #include "semiresistor.h"
 
-const AG_Version semiresistor_ver = {
+const AG_Version esSemiResistorVer = {
 	"agar-eda semiconductor resistor",
 	0, 0
 };
 
-const struct component_ops semiresistor_ops = {
+const ES_ComponentOps esSemiResistorOps = {
 	{
-		semiresistor_init,
+		ES_SemiResistorInit,
 		NULL,			/* reinit */
-		component_destroy,
-		semiresistor_load,
-		semiresistor_save,
-		component_edit
+		ES_ComponentDestroy,
+		ES_SemiResistorLoad,
+		ES_SemiResistorSave,
+		ES_ComponentEdit
 	},
 	N_("Semiconductor resistor"),
 	"R",
-	semiresistor_draw,
-	semiresistor_edit,
+	ES_SemiResistorDraw,
+	ES_SemiResistorEdit,
 	NULL,			/* connect */
-	semiresistor_export,
+	ES_SemiResistorExport,
 	NULL,			/* tick */
-	semiresistor_resistance,
+	ES_SemiResistorResistance,
 	NULL,			/* capacitance */
 	NULL,			/* inductance */
 	NULL			/* isource */
 };
 
-const struct pin semiresistor_pinout[] = {
+const ES_Port esSemiResistorPinout[] = {
 	{ 0, "",  0.000, 0.625 },
 	{ 1, "A", 0.000, 0.000 },
 	{ 2, "B", 1.250, 0.000 },
@@ -68,9 +68,9 @@ const struct pin semiresistor_pinout[] = {
 };
 
 void
-semiresistor_draw(void *p, VG *vg)
+ES_SemiResistorDraw(void *p, VG *vg)
 {
-	struct semiresistor *r = p;
+	ES_SemiResistor *r = p;
 
 	VG_Begin(vg, VG_LINES);
 	VG_Vertex2(vg, 0.000, 0.000);
@@ -90,17 +90,17 @@ semiresistor_draw(void *p, VG *vg)
 	VG_Vertex2(vg, 0.625, 0.000);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
 
-	VG_Printf(vg, "%s\n", AGOBJECT(r)->name);
+	VG_Printf(vg, "%s", AGOBJECT(r)->name);
 	VG_End(vg);
 }
 
 void
-semiresistor_init(void *p, const char *name)
+ES_SemiResistorInit(void *p, const char *name)
 {
-	struct semiresistor *r = p;
+	ES_SemiResistor *r = p;
 
-	component_init(r, "semiresistor", name, &semiresistor_ops,
-	    semiresistor_pinout);
+	ES_ComponentInit(r, "semiresistor", name, &esSemiResistorOps,
+	    esSemiResistorPinout);
 	r->l = 2e-6;
 	r->w = 1e-6;
 	r->rsh = 1000;
@@ -111,12 +111,12 @@ semiresistor_init(void *p, const char *name)
 }
 
 int
-semiresistor_load(void *p, AG_Netbuf *buf)
+ES_SemiResistorLoad(void *p, AG_Netbuf *buf)
 {
-	struct semiresistor *r = p;
+	ES_SemiResistor *r = p;
 
-	if (AG_ReadVersion(buf, &semiresistor_ver, NULL) == -1 ||
-	    component_load(r, buf) == -1)
+	if (AG_ReadVersion(buf, &esSemiResistorVer, NULL) == -1 ||
+	    ES_ComponentLoad(r, buf) == -1)
 		return (-1);
 
 	r->l = AG_ReadDouble(buf);
@@ -130,12 +130,12 @@ semiresistor_load(void *p, AG_Netbuf *buf)
 }
 
 int
-semiresistor_save(void *p, AG_Netbuf *buf)
+ES_SemiResistorSave(void *p, AG_Netbuf *buf)
 {
-	struct semiresistor *r = p;
+	ES_SemiResistor *r = p;
 
-	AG_WriteVersion(buf, &semiresistor_ver);
-	if (component_save(r, buf) == -1)
+	AG_WriteVersion(buf, &esSemiResistorVer);
+	if (ES_ComponentSave(r, buf) == -1)
 		return (-1);
 
 	AG_WriteDouble(buf, r->l);
@@ -149,9 +149,9 @@ semiresistor_save(void *p, AG_Netbuf *buf)
 }
 
 int
-semiresistor_export(void *p, enum circuit_format fmt, FILE *f)
+ES_SemiResistorExport(void *p, enum circuit_format fmt, FILE *f)
 {
-	struct semiresistor *r = p;
+	ES_SemiResistor *r = p;
 	static int nRmod = 1;
 
 	if (PNODE(r,1) == -1 ||
@@ -175,9 +175,9 @@ semiresistor_export(void *p, enum circuit_format fmt, FILE *f)
 }
 
 double
-semiresistor_resistance(void *p, struct pin *p1, struct pin *p2)
+ES_SemiResistorResistance(void *p, ES_Port *p1, ES_Port *p2)
 {
-	struct semiresistor *r = p;
+	ES_SemiResistor *r = p;
 	double deltaT = COM(r)->Tnom - COM(r)->Tspec;
 	double R;
 
@@ -187,9 +187,9 @@ semiresistor_resistance(void *p, struct pin *p1, struct pin *p2)
 
 #ifdef EDITION
 AG_Window *
-semiresistor_edit(void *p)
+ES_SemiResistorEdit(void *p)
 {
-	struct semiresistor *r = p;
+	ES_SemiResistor *r = p;
 	AG_Window *win, *subwin;
 	AG_Spinbutton *sb;
 	AG_FSpinbutton *fsb;

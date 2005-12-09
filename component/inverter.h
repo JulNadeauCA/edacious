@@ -8,8 +8,8 @@
 
 #include "begin_code.h"
 
-struct inverter {
-	struct component com;
+typedef struct es_inverter {
+	struct es_component com;
 	float Tphl, Tplh;		/* Propagation delays for A -> A-bar */
 	float Tthl, Ttlh;		/* Transition delay for A-bar */
 	float Thold;			/* Minimum hold time for A */
@@ -18,16 +18,16 @@ struct inverter {
 	float Cpd;			/* Power dissipation capacitance (pF) */
 	float Vih, Vil;			/* Input logic threshold */
 	float Voh, Vol;			/* Output logic threshold */
-};
+} ES_Inverter;
 
 __BEGIN_DECLS
-void		 inverter_init(void *, const char *);
-int		 inverter_load(void *, AG_Netbuf *);
-int		 inverter_save(void *, AG_Netbuf *);
-int		 inverter_export(void *, enum circuit_format, FILE *);
-AG_Window	*inverter_edit(void *);
-void		 inverter_tick(void *);
-void		 inverter_draw(void *, VG *);
+void		 ES_InverterInit(void *, const char *);
+int		 ES_InverterLoad(void *, AG_Netbuf *);
+int		 ES_InverterSave(void *, AG_Netbuf *);
+int		 ES_InverterExport(void *, enum circuit_format, FILE *);
+AG_Window	*ES_InverterEdit(void *);
+void		 ES_InverterTick(void *);
+void		 ES_InverterDraw(void *, VG *);
 __END_DECLS
 
 #include "close_code.h"

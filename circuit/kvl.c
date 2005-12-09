@@ -56,10 +56,10 @@ kvl_tick(void *obj, Uint32 ival, void *arg)
 	struct circuit *ckt = obj;
 	struct sim *sim = arg;
 	struct kvl *kvl = arg;
-	struct component *com;
+	ES_Component *com;
 
 	/* Effect the independent voltage sources. */
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (!AGOBJECT_SUBCLASS(com, "component.vsource") ||
 		    com->flags & COMPONENT_FLOATING) {
 			continue;
@@ -69,7 +69,7 @@ kvl_tick(void *obj, Uint32 ival, void *arg)
 	}
 
 	/* Update model states. */
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (!AGOBJECT_SUBCLASS(com, "component") ||
 		    com->flags & COMPONENT_FLOATING) {
 			continue;
@@ -160,8 +160,8 @@ compose_Rmat(struct kvl *kvl, struct circuit *ckt)
 	unsigned int m, n, i, j, k;
 
 	for (m = 1; m <= ckt->l; m++) {
-		struct cktloop *loop = ckt->loops[m-1];
-		struct vsource *vs = (struct vsource *)loop->origin;
+		ES_Loop *loop = ckt->loops[m-1];
+		ES_Vsource *vs = (ES_Vsource *)loop->origin;
 
 		kvl->Vvec->mat[m][0] = vs->voltage;
 		kvl->Ivec->mat[m][0] = 0.0;
@@ -169,32 +169,32 @@ compose_Rmat(struct kvl *kvl, struct circuit *ckt)
 		for (n = 1; n <= ckt->l; n++)
 			kvl->Rmat->mat[m][n] = 0.0;
 
-		for (i = 0; i < loop->ndipoles; i++) {
-			struct dipole *dip = loop->dipoles[i];
+		for (i = 0; i < loop->npairs; i++) {
+			ES_Pair *pair = loop->pairs[i];
 
-			for (j = 0; j < dip->nloops; j++) {
-				n = dip->loops[j]->name;
+			for (j = 0; j < pair->nloops; j++) {
+				n = pair->loops[j]->name;
 #ifdef DEBUG
 				if (n > ckt->l) { Fatal("Bad loop"); }
 #endif
 				if (n == m) {
 					kvl->Rmat->mat[m][n] +=
-					    dipole_resistance(dip);
+					    ES_PairResistance(pair);
 				} else {
 					/* XXX */
 #if 0
 					kvl->Rmat->mat[m][n] -=
-					    dipole_resistance(dip);
+					    ES_PairResistance(pair);
 #else
-					for (k = 0; k < dip->nloops; k++) {
+					for (k = 0; k < pair->nloops; k++) {
 						if (j == k) {
 							continue;
 						}
-						if (dip->lpols[j] !=
-						    dip->lpols[k]) {
+						if (pair->lpols[j] !=
+						    pair->lpols[k]) {
 							kvl->Rmat->mat[m][n] -=
-							    dipole_resistance(
-							    dip);
+							    ES_PairResistance(
+							        pair);
 						}
 					}
 #endif

@@ -5,7 +5,7 @@ include ${TOP}/Makefile.config
 
 LIB=	component
 SRCS=	component.c conductor.c ground.c inverter.c resistor.c semiresistor.c \
-	spst.c spdt.c vsource.c
+	spst.c spdt.c vsource.c selcom.c inscom.c
 
 CFLAGS+=${AGAR_SC_CFLAGS} ${AGAR_CFLAGS}
 

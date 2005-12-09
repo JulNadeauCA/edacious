@@ -61,7 +61,7 @@ struct mna {
 static int
 mna_solve(struct mna *mna, struct circuit *ckt)
 {
-	struct component *com;
+	ES_Component *com;
 	u_int i, n, m;
 	SC_Ivector *iv;
 	double d;
@@ -72,10 +72,10 @@ mna_solve(struct mna *mna, struct circuit *ckt)
 	SC_MatrixSetZero(mna->D);
 
 	for (n = 1; n <= ckt->n; n++) {
-		struct cktnode *node = ckt->nodes[n];
-		struct cktbranch *br;
-		struct component *com;
-		struct dipole *dip;
+		ES_Node *node = ckt->nodes[n];
+		ES_Branch *br;
+		ES_Component *com;
+		ES_Pair *pair;
 
 		mna->G->mat[n][n] = 0.0;
 
@@ -84,7 +84,7 @@ mna_solve(struct mna *mna, struct circuit *ckt)
 			for (m = 1; m <= ckt->m; m++) {
 				int sign;
 
-				if (cktnode_vsource(ckt, n, m, &sign)) {
+				if (ES_NodeVsource(ckt, n, m, &sign)) {
 					mna->B->mat[n][m] = sign;
 					mna->C->mat[m][n] = sign;
 				}
@@ -93,20 +93,20 @@ mna_solve(struct mna *mna, struct circuit *ckt)
 
 		/* Load passive components into the G matrix. */
 		TAILQ_FOREACH(br, &node->branches, branches) {
-			if ((com = br->pin->com) == NULL)
+			if ((com = br->port->com) == NULL)
 				continue;
 
-			for (i = 0; i < com->ndipoles; i++) {
-				struct dipole *dip = &com->dipoles[i];
+			for (i = 0; i < com->npairs; i++) {
+				ES_Pair *pair = &com->pairs[i];
 				int grounded;
 				double r;
 			
-				if (dip->p1 != br->pin &&
-				    dip->p2 != br->pin) {
+				if (pair->p1 != br->port &&
+				    pair->p2 != br->port) {
 					continue;
 				}
-				if ((dip->p1 == br->pin && dip->p2->node == 0)||
-				    (dip->p2 == br->pin && dip->p1->node == 0)){
+				if ((pair->p1==br->port && pair->p2->node==0)||
+				    (pair->p2==br->port && pair->p1->node==0)){
 					grounded = 1;
 				} else {
 					grounded = 0;
@@ -115,8 +115,8 @@ mna_solve(struct mna *mna, struct circuit *ckt)
 				if (com->ops->resistance == NULL) {
 					continue;
 				}
-				r = com->ops->resistance(com, dip->p1, dip->p2);
-
+				r = com->ops->resistance(com, pair->p1,
+				                              pair->p2);
 				/*
 				 * The main diagonal contains the sum of the
 				 * conductances connected to node n.
@@ -128,13 +128,13 @@ mna_solve(struct mna *mna, struct circuit *ckt)
 				}
 
 				/*
-				 * If the dipole is ungrounded, add its negative
+				 * If the pair is ungrounded, add its negative
 				 * conductance to elements G(n1,n2) and
 				 * G(n2,n1).
 				 */
 				if (!grounded) {
-					u_int n1 = dip->p1->node;
-					u_int n2 = dip->p2->node;
+					u_int n1 = pair->p1->node;
+					u_int n2 = pair->p2->node;
 
 					if (isinf(1.0/r)) {
 						mna->G->mat[n1][n2]+=10000000.0;
@@ -158,8 +158,8 @@ mna_solve(struct mna *mna, struct circuit *ckt)
 	SC_MatrixCompose21(mna->z, mna->i, mna->e);
 
 	/*
-	 * Generate the partitioned matrix A with blocks GBCD, compute the
-	 * LU decomposition and solve the system by backsubstitution.
+	 * Generate the partitioned matrix A with blocks GBCD and solve the
+	 * system using LU factorization and backsubstitution.
 	 */
 	SC_MatrixCompose22(mna->A, mna->G, mna->B, mna->C, mna->D);
 	iv = SC_IvectorNew(mna->z->m);
@@ -183,10 +183,10 @@ mna_tick(void *obj, Uint32 ival, void *arg)
 	struct circuit *ckt = obj;
 	struct sim *sim = arg;
 	struct mna *mna = arg;
-	struct component *com;
+	ES_Component *com;
 
 	/* Effect the independent voltage sources. XXX */
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (!AGOBJECT_SUBCLASS(com, "component.vsource") ||
 		    com->flags & COMPONENT_FLOATING) {
 			continue;
@@ -195,7 +195,7 @@ mna_tick(void *obj, Uint32 ival, void *arg)
 			com->ops->tick(com);
 	}
 	/* Update model states. XXX */
-	AGOBJECT_FOREACH_CHILD(com, ckt, component) {
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (!AGOBJECT_SUBCLASS(com, "component") ||
 		    com->flags & COMPONENT_FLOATING) {
 			continue;

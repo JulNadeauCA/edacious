@@ -8,30 +8,30 @@
 
 #include "begin_code.h"
 
-struct vsource {
-	struct component com;
+typedef struct es_vsource {
+	struct es_component com;
 	double voltage;
-	TAILQ_HEAD(,cktloop) loops;	/* Forward loops */
-	unsigned int        nloops;
-	struct pin	**lstack;	/* Temporary loop stack */
-	unsigned int	 nlstack;
-};
+	TAILQ_HEAD(,es_loop) loops;	/* Forward loops */
+	Uint nloops;
+	ES_Port	**lstack;		/* Temporary loop stack */
+	Uint nlstack;
+} ES_Vsource;
 
-#define VSOURCE(com) ((struct vsource *)(com))
+#define VSOURCE(com) ((struct es_vsource *)(com))
 
 __BEGIN_DECLS
-void		 vsource_init(void *, const char *);
-void		 vsource_reinit(void *);
-void		 vsource_destroy(void *);
-void		 vsource_find_loops(struct vsource *);
-void		 vsource_free_loops(struct vsource *);
-int		 vsource_load(void *, AG_Netbuf *);
-int		 vsource_save(void *, AG_Netbuf *);
-int		 vsource_export(void *, enum circuit_format, FILE *);
-double		 vsource_emf(void *, int, int);
-AG_Window	*vsource_edit(void *);
-void		 vsource_draw(void *, VG *);
-void		 vsource_tick(void *);
+void		 ES_VsourceInit(void *, const char *);
+void		 ES_VsourceReinit(void *);
+void		 ES_VsourceDestroy(void *);
+void		 ES_VsourceFindLoops(ES_Vsource *);
+void		 ES_VsourceFreeLoops(ES_Vsource *);
+int		 ES_VsourceLoad(void *, AG_Netbuf *);
+int		 ES_VsourceSave(void *, AG_Netbuf *);
+int		 ES_VsourceExport(void *, enum circuit_format, FILE *);
+double		 ES_VsourceVoltage(void *, int, int);
+AG_Window	*ES_VsourceEdit(void *);
+void		 ES_VsourceDraw(void *, VG *);
+void		 ES_VsourceTick(void *);
 __END_DECLS
 
 #include "close_code.h"

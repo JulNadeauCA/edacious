@@ -33,53 +33,52 @@
 #include "eda.h"
 #include "resistor.h"
 
-const AG_Version resistor_ver = {
+const AG_Version esResistorVer = {
 	"agar-eda resistor",
 	0, 0
 };
 
-const struct component_ops resistor_ops = {
+const ES_ComponentOps esResistorOps = {
 	{
-		resistor_init,
+		ES_ResistorInit,
 		NULL,			/* reinit */
-		component_destroy,
-		resistor_load,
-		resistor_save,
-		component_edit
+		ES_ComponentDestroy,
+		ES_ResistorLoad,
+		ES_ResistorSave,
+		ES_ComponentEdit
 	},
 	N_("Resistor"),
 	"R",
-	resistor_draw,
-	resistor_edit,
+	ES_ResistorDraw,
+	ES_ResistorEdit,
 	NULL,
-	resistor_export,
+	ES_ResistorExport,
 	NULL,			/* tick */
-	resistor_resistance,
+	ES_ResistorResistance,
 	NULL,			/* capacitance */
 	NULL,			/* inductance */
 	NULL			/* isource */
 };
 
-const struct pin resistor_pinout[] = {
+const ES_Port esResistorPinout[] = {
 	{ 0, "",  0.000, 0.625 },
 	{ 1, "A", 0.000, 0.000 },
 	{ 2, "B", 1.250, 0.000 },
 	{ -1 },
 };
 
+int esResistorDispVal = 0;
 enum {
 	RESISTOR_BOX_STYLE,
 	RESISTOR_LINE_STYLE
-} resistor_style = 0;
-
-int resistor_dispval = 0;
+} esResistorStyle = 0;
 
 void
-resistor_draw(void *p, VG *vg)
+ES_ResistorDraw(void *p, VG *vg)
 {
-	struct resistor *r = p;
+	ES_Resistor *r = p;
 
-	switch (resistor_style) {
+	switch (esResistorStyle) {
 	case RESISTOR_BOX_STYLE:
 		VG_Begin(vg, VG_LINES);
 		VG_Vertex2(vg, 0.000, 0.000);
@@ -114,33 +113,33 @@ resistor_draw(void *p, VG *vg)
 	VG_Vertex2(vg, 0.625, 0.000);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
 
-	if (resistor_dispval) {
-		VG_Printf(vg, "%s\n%.2f \xce\xa9\n", AGOBJECT(r)->name,
+	if (esResistorDispVal) {
+		VG_Printf(vg, "%s (%.2f\xce\xa9)", AGOBJECT(r)->name,
 		    r->resistance);
 	} else {
-		VG_Printf(vg, "%s\n", AGOBJECT(r)->name);
+		VG_Printf(vg, "%s", AGOBJECT(r)->name);
 	}
 	VG_End(vg);
 }
 
 void
-resistor_init(void *p, const char *name)
+ES_ResistorInit(void *p, const char *name)
 {
-	struct resistor *r = p;
+	ES_Resistor *r = p;
 
-	component_init(r, "resistor", name, &resistor_ops, resistor_pinout);
+	ES_ComponentInit(r, "resistor", name, &esResistorOps, esResistorPinout);
 	r->resistance = 1;
 	r->power_rating = HUGE_VAL;
 	r->tolerance = 0;
 }
 
 int
-resistor_load(void *p, AG_Netbuf *buf)
+ES_ResistorLoad(void *p, AG_Netbuf *buf)
 {
-	struct resistor *r = p;
+	ES_Resistor *r = p;
 
-	if (AG_ReadVersion(buf, &resistor_ver, NULL) == -1 ||
-	    component_load(r, buf) == -1)
+	if (AG_ReadVersion(buf, &esResistorVer, NULL) == -1 ||
+	    ES_ComponentLoad(r, buf) == -1)
 		return (-1);
 
 	r->resistance = AG_ReadDouble(buf);
@@ -152,12 +151,12 @@ resistor_load(void *p, AG_Netbuf *buf)
 }
 
 int
-resistor_save(void *p, AG_Netbuf *buf)
+ES_ResistorSave(void *p, AG_Netbuf *buf)
 {
-	struct resistor *r = p;
+	ES_Resistor *r = p;
 
-	AG_WriteVersion(buf, &resistor_ver);
-	if (component_save(r, buf) == -1)
+	AG_WriteVersion(buf, &esResistorVer);
+	if (ES_ComponentSave(r, buf) == -1)
 		return (-1);
 
 	AG_WriteDouble(buf, r->resistance);
@@ -169,9 +168,9 @@ resistor_save(void *p, AG_Netbuf *buf)
 }
 
 int
-resistor_export(void *p, enum circuit_format fmt, FILE *f)
+ES_ResistorExport(void *p, enum circuit_format fmt, FILE *f)
 {
-	struct resistor *r = p;
+	ES_Resistor *r = p;
 
 	if (PNODE(r,1) == -1 ||
 	    PNODE(r,2) == -1)
@@ -187,9 +186,9 @@ resistor_export(void *p, enum circuit_format fmt, FILE *f)
 }
 
 double
-resistor_resistance(void *p, struct pin *p1, struct pin *p2)
+ES_ResistorResistance(void *p, ES_Port *p1, ES_Port *p2)
 {
-	struct resistor *r = p;
+	ES_Resistor *r = p;
 	double deltaT = COM(r)->Tnom - COM(r)->Tspec;
 
 	return (r->resistance * (1.0 + r->Tc1*deltaT + r->Tc2*deltaT*deltaT));
@@ -197,9 +196,9 @@ resistor_resistance(void *p, struct pin *p1, struct pin *p2)
 
 #ifdef EDITION
 AG_Window *
-resistor_edit(void *p)
+ES_ResistorEdit(void *p)
 {
-	struct resistor *r = p;
+	ES_Resistor *r = p;
 	AG_Window *win;
 	AG_Spinbutton *sb;
 	AG_FSpinbutton *fsb;
@@ -218,8 +217,7 @@ resistor_edit(void *p)
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->power_rating);
 	AG_FSpinbuttonSetMin(fsb, 0);
 	
-	fsb = AG_FSpinbuttonNew(win, 0, "mohms/degC",
-	    _("Temp. coefficient: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "mohms/degC", _("Temp. coefficient: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc1);
 	fsb = AG_FSpinbuttonNew(win, 0, "mohms/degC^2",
 	    _("Temp. coefficient: "));
