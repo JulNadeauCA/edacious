@@ -38,7 +38,7 @@ ES_Component *esInscomCur = NULL;
 static int
 remove_component(VG_Tool *t, SDLKey key, int state, void *arg)
 {
-	struct circuit *ckt = t->p;
+	ES_Circuit *ckt = t->p;
 	ES_Component *com;
 
 	if (!state) {
@@ -74,7 +74,7 @@ scan:
 
 /* Rotate a floating component by 90 degrees. */
 static void
-rotate_component(struct circuit *ckt, ES_Component *com)
+rotate_component(ES_Circuit *ckt, ES_Component *com)
 {
 	VG *vg = ckt->vg;
 	int i;
@@ -96,7 +96,7 @@ static int
 InscomButtondown(void *p, float x, float y, int b)
 {
 	VG_Tool *t = p;
-	struct circuit *ckt = t->p;
+	ES_Circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 	VG_Vtx vtx;
 	int i;
@@ -143,7 +143,7 @@ static int
 InscomMousemotion(void *p, float x, float y, float xrel, float yrel, int b)
 {
 	VG_Tool *t = p;
-	struct circuit *ckt = t->p;
+	ES_Circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 	int nconn;
 

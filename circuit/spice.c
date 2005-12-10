@@ -39,7 +39,7 @@
 
 /* Generate a SPICE3 input deck for the given circuit. */
 int
-ES_CircuitExportSPICE3(struct circuit *ckt, const char *path)
+ES_CircuitExportSPICE3(ES_Circuit *ckt, const char *path)
 {
 	char spice_name[8];
 	ES_Component *com;

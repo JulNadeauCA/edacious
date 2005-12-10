@@ -11,9 +11,10 @@
 #define COMPONENT_MAX_PORTS	128
 #define COMPONENT_PORT_NAME_MAX	16
 
-struct ag_window;
 struct es_branch;
 struct es_loop;
+struct es_circuit;
+struct ag_window;
 
 /* Exportable circuit model formats. */
 enum circuit_format {
@@ -62,7 +63,7 @@ typedef struct es_component_ops {
 typedef struct es_component {
 	AG_Object obj;
 	const ES_ComponentOps *ops;
-	struct circuit *ckt;			/* Back pointer to circuit */
+	struct es_circuit *ckt;			/* Back pointer to circuit */
 	VG_Block *block;			/* Schematic block */
 	u_int flags;
 #define COMPONENT_FLOATING	0x01		/* Not yet connected */
@@ -92,13 +93,13 @@ int	 ES_ComponentLoad(void *, AG_Netbuf *);
 int	 ES_ComponentSave(void *, AG_Netbuf *);
 void	*ES_ComponentEdit(void *);
 void	 ES_ComponentInsert(AG_Event *);
-ES_Port	*ES_ComponentPortOverlap(struct circuit *, ES_Component *, float,
+ES_Port	*ES_ComponentPortOverlap(struct es_circuit *, ES_Component *, float,
 		                 float);
-int	 ES_ComponentHighlightPorts(struct circuit *, ES_Component *);
-void	 ES_ComponentConnect(struct circuit *, ES_Component *, VG_Vtx *);
+int	 ES_ComponentHighlightPorts(struct es_circuit *, ES_Component *);
+void	 ES_ComponentConnect(struct es_circuit *, ES_Component *, VG_Vtx *);
 void	 ES_ComponentSelect(ES_Component *);
 void	 ES_ComponentUnselect(ES_Component *);
-void	 ES_ComponentUnselectAll(struct circuit *);
+void	 ES_ComponentUnselectAll(struct es_circuit *);
 
 __inline__ int  ES_PortIsGrounded(ES_Port *);
 double		ES_PairResistance(ES_Pair *);
@@ -107,7 +108,8 @@ double		ES_PairInductance(ES_Pair *);
 __inline__ int	ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
 
 #ifdef EDITION
-void		ES_ComponentRegMenu(AG_Menu *, AG_MenuItem *, struct circuit *);
+void		ES_ComponentRegMenu(AG_Menu *, AG_MenuItem *,
+		                    struct es_circuit *);
 #endif
 __END_DECLS
 

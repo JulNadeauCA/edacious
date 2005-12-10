@@ -46,7 +46,7 @@ typedef struct es_loop {
 
 struct es_vsource;
 
-typedef struct circuit {
+typedef struct es_circuit {
 	AG_Object obj;
 	char descr[CIRCUIT_DESCR_MAX];	/* Short description */
 	VG *vg;				/* Schematics drawing */

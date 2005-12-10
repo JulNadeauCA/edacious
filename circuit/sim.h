@@ -5,8 +5,10 @@
 #define _CIRCUIT_SIM_H_
 #include "begin_code.h"
 
+struct es_circuit;
+
 struct sim {
-	struct circuit *ckt;
+	struct es_circuit *ckt;
 	const struct sim_ops *ops;
 	AG_Window *win;
 	int running;
@@ -18,8 +20,8 @@ struct sim_ops {
 	size_t size;
 	void (*init)(void *);
 	void (*destroy)(void *);
-	void (*cktmod)(void *, struct circuit *);
-	AG_Window *(*edit)(void *, struct circuit *);
+	void (*cktmod)(void *, struct es_circuit *);
+	AG_Window *(*edit)(void *, struct es_circuit *);
 };
 
 #define SIM(p) ((struct sim *)p)

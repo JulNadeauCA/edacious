@@ -143,7 +143,7 @@ static int
 contig_pair(ES_Port *pA, ES_Port *pB, ES_Pair **Rdip, int *Rpol)
 {
 	ES_Component *com = pA->com;
-	struct circuit *ckt = com->ckt;
+	ES_Circuit *ckt = com->ckt;
 	unsigned int i;
 
 	for (i = 0; i < com->npairs; i++) {
@@ -225,7 +225,7 @@ insert_loop(ES_Vsource *vs)
 static void
 find_loops(ES_Vsource *vs, ES_Port *pcur)
 {
-	struct circuit *ckt = COM(vs)->ckt;
+	ES_Circuit *ckt = COM(vs)->ckt;
 	ES_Node *node = ckt->nodes[pcur->node];
 	ES_Branch *br;
 	unsigned int i;
@@ -286,7 +286,7 @@ ES_VsourceTick(void *p)
 {
 	ES_Vsource *vs = p;
 	ES_Node *n1, *n2;
-	struct circuit *ckt = COM(vs)->ckt;
+	ES_Circuit *ckt = COM(vs)->ckt;
 
 	if (PNODE(vs,1) == -1 ||
 	    PNODE(vs,2) == -1)

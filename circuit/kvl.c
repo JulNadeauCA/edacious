@@ -47,13 +47,13 @@ struct kvl {
 	SC_Vector *Ivec;		/* Vector of unknown currents */
 };
 
-static void compose_Rmat(struct kvl *, struct circuit *);
-static int solve_Ivec(struct kvl *, struct circuit *);
+static void compose_Rmat(struct kvl *, ES_Circuit *);
+static int solve_Ivec(struct kvl *, ES_Circuit *);
 
 static Uint32
 kvl_tick(void *obj, Uint32 ival, void *arg)
 {
-	struct circuit *ckt = obj;
+	ES_Circuit *ckt = obj;
 	struct sim *sim = arg;
 	struct kvl *kvl = arg;
 	ES_Component *com;
@@ -104,7 +104,7 @@ kvl_init(void *p)
 static void
 kvl_start(struct kvl *kvl)
 {
-	struct circuit *ckt = SIM(kvl)->ckt;
+	ES_Circuit *ckt = SIM(kvl)->ckt;
 
 	AG_LockTimeouts(ckt);
 	if (AG_TimeoutIsScheduled(ckt, &kvl->update_to)) {
@@ -119,7 +119,7 @@ kvl_start(struct kvl *kvl)
 static void
 kvl_stop(struct kvl *kvl)
 {
-	struct circuit *ckt = SIM(kvl)->ckt;
+	ES_Circuit *ckt = SIM(kvl)->ckt;
 
 	AG_LockTimeouts(ckt);
 	if (AG_TimeoutIsScheduled(ckt, &kvl->update_to)) {
@@ -141,7 +141,7 @@ kvl_destroy(void *p)
 }
 
 static void
-kvl_cktmod(void *p, struct circuit *ckt)
+kvl_cktmod(void *p, ES_Circuit *ckt)
 {
 	struct kvl *kvl = p;
 
@@ -155,7 +155,7 @@ kvl_cktmod(void *p, struct circuit *ckt)
 }
 
 static void
-compose_Rmat(struct kvl *kvl, struct circuit *ckt)
+compose_Rmat(struct kvl *kvl, ES_Circuit *ckt)
 {
 	unsigned int m, n, i, j, k;
 
@@ -206,7 +206,7 @@ compose_Rmat(struct kvl *kvl, struct circuit *ckt)
 
 /* Solve the loop currents of a circuit. */
 static int
-solve_Ivec(struct kvl *kvl, struct circuit *ckt)
+solve_Ivec(struct kvl *kvl, ES_Circuit *ckt)
 {
 	SC_Ivector *ivec;
 	SC_Vector *v;
@@ -256,7 +256,7 @@ cont_run(AG_Event *event)
 }
 
 static AG_Window *
-kvl_edit(void *p, struct circuit *ckt)
+kvl_edit(void *p, ES_Circuit *ckt)
 {
 	struct kvl *kvl = p;
 	AG_Window *win;

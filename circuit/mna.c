@@ -59,7 +59,7 @@ struct mna {
 };
 
 static int
-mna_solve(struct mna *mna, struct circuit *ckt)
+mna_solve(struct mna *mna, ES_Circuit *ckt)
 {
 	ES_Component *com;
 	u_int i, n, m;
@@ -180,7 +180,7 @@ fail:
 static Uint32
 mna_tick(void *obj, Uint32 ival, void *arg)
 {
-	struct circuit *ckt = obj;
+	ES_Circuit *ckt = obj;
 	struct sim *sim = arg;
 	struct mna *mna = arg;
 	ES_Component *com;
@@ -241,7 +241,7 @@ mna_init(void *p)
 static void
 mna_start(struct mna *mna)
 {
-	struct circuit *ckt = SIM(mna)->ckt;
+	ES_Circuit *ckt = SIM(mna)->ckt;
 
 	AG_LockTimeouts(ckt);
 	if (AG_TimeoutIsScheduled(ckt, &mna->update_to)) {
@@ -256,7 +256,7 @@ mna_start(struct mna *mna)
 static void
 mna_stop(struct mna *mna)
 {
-	struct circuit *ckt = SIM(mna)->ckt;
+	ES_Circuit *ckt = SIM(mna)->ckt;
 
 	AG_LockTimeouts(ckt);
 	if (AG_TimeoutIsScheduled(ckt, &mna->update_to)) {
@@ -289,7 +289,7 @@ mna_destroy(void *p)
 }
 
 static void
-mna_cktmod(void *p, struct circuit *ckt)
+mna_cktmod(void *p, ES_Circuit *ckt)
 {
 	struct mna *mna = p;
 
@@ -344,7 +344,7 @@ cont_run(AG_Event *event)
 }
 
 static AG_Window *
-mna_edit(void *p, struct circuit *ckt)
+mna_edit(void *p, ES_Circuit *ckt)
 {
 	struct mna *mna = p;
 	AG_Window *win;

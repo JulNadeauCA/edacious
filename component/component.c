@@ -68,7 +68,7 @@ ES_ComponentUnselect(ES_Component *com)
 }
 		
 void
-ES_ComponentUnselectAll(struct circuit *ckt)
+ES_ComponentUnselectAll(ES_Circuit *ckt)
 {
 	ES_Component *com;
 
@@ -96,7 +96,7 @@ ES_ComponentAttached(AG_Event *event)
 {
 	char blkname[VG_BLOCK_NAME_MAX];
 	ES_Component *com = AG_SELF();
-	struct circuit *ckt = AG_SENDER();
+	ES_Circuit *ckt = AG_SENDER();
 	VG *vg = ckt->vg;
 	VG_Block *block;
 
@@ -126,7 +126,7 @@ static void
 ES_ComponentDetached(AG_Event *event)
 {
 	ES_Component *com = AG_SELF();
-	struct circuit *ckt = AG_SENDER();
+	ES_Circuit *ckt = AG_SENDER();
 	u_int i, j;
 
 	if (!AGOBJECT_SUBCLASS(ckt, "circuit"))
@@ -506,7 +506,7 @@ ES_ComponentInsert(AG_Event *event)
 	char name[AG_OBJECT_NAME_MAX];
 	VG_View *vgv = AG_PTR(1);
 	AG_Tlist *tl = AG_PTR(2);
-	struct circuit *ckt = AG_PTR(3);
+	ES_Circuit *ckt = AG_PTR(3);
 	AG_TlistItem *it;
 	AG_ObjectType *comtype;
 	ES_ComponentOps *comops;
@@ -535,7 +535,7 @@ tryname:
 	AG_ObjectAttach(ckt, com);
 	AG_ObjectUnlinkDatafiles(com);
 	AG_ObjectPageIn(com, AG_OBJECT_DATA);
-	AG_ObjectSave(com);
+//	AG_ObjectSave(com);
 	AG_PostEvent(ckt, com, "circuit-shown", NULL);
 
 	if ((t = VG_ViewFindTool(vgv, "Insert component")) != NULL) {
@@ -552,7 +552,7 @@ tryname:
  * (that does not belong to the given component if specified).
  */
 ES_Port *
-ES_ComponentPortOverlap(struct circuit *ckt, ES_Component *ncom, float x,
+ES_ComponentPortOverlap(ES_Circuit *ckt, ES_Component *ncom, float x,
     float y)
 {
 	ES_Component *ocom;
@@ -580,14 +580,14 @@ ES_ComponentPortOverlap(struct circuit *ckt, ES_Component *ncom, float x,
 int
 ES_PortIsGrounded(ES_Port *port)
 {
-	struct circuit *ckt = port->com->ckt;
+	ES_Circuit *ckt = port->com->ckt;
 
 	return (ES_NodeGrounded(ckt, port->node));
 }
 
 /* Connect a floating component to the circuit. */
 void
-ES_ComponentConnect(struct circuit *ckt, ES_Component *com, VG_Vtx *vtx)
+ES_ComponentConnect(ES_Circuit *ckt, ES_Component *com, VG_Vtx *vtx)
 {
 	ES_Port *oport;
 	ES_Branch *br;
@@ -627,7 +627,7 @@ ES_ComponentConnect(struct circuit *ckt, ES_Component *com, VG_Vtx *vtx)
  * to other components in the circuit and return the number of matches.
  */
 int
-ES_ComponentHighlightPorts(struct circuit *ckt, ES_Component *com)
+ES_ComponentHighlightPorts(ES_Circuit *ckt, ES_Component *com)
 {
 	ES_Port *oport;
 	int i, nconn = 0;
@@ -649,7 +649,7 @@ ES_ComponentHighlightPorts(struct circuit *ckt, ES_Component *com)
 }
 
 void
-ES_ComponentRegMenu(AG_Menu *m, AG_MenuItem *pitem, struct circuit *ckt)
+ES_ComponentRegMenu(AG_Menu *m, AG_MenuItem *pitem, ES_Circuit *ckt)
 {
 	/* Nothing yet */
 }

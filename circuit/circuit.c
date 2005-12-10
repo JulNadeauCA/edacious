@@ -48,12 +48,12 @@ const AG_ObjectOps esCircuitOps = {
 };
 
 static void init_node(ES_Node *, u_int);
-static void init_ground(struct circuit *);
+static void init_ground(ES_Circuit *);
 
 static void
 ES_CircuitDetached(AG_Event *event)
 {
-	struct circuit *ckt = AG_SELF();
+	ES_Circuit *ckt = AG_SELF();
 
 	if (ckt->sim != NULL) {
 		sim_destroy(ckt->sim);
@@ -64,7 +64,7 @@ ES_CircuitDetached(AG_Event *event)
 static void
 ES_CircuitOpened(AG_Event *event)
 {
-	struct circuit *ckt = AG_SELF();
+	ES_Circuit *ckt = AG_SELF();
 	ES_Component *com;
 
 	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
@@ -79,7 +79,7 @@ ES_CircuitOpened(AG_Event *event)
 static void
 ES_CircuitClosed(AG_Event *event)
 {
-	struct circuit *ckt = AG_SELF();
+	ES_Circuit *ckt = AG_SELF();
 	ES_Component *com;
 
 	if (ckt->sim != NULL) {
@@ -98,7 +98,7 @@ ES_CircuitClosed(AG_Event *event)
 
 /* Effect a change in the circuit topology.  */
 void
-ES_CircuitModified(struct circuit *ckt)
+ES_CircuitModified(ES_Circuit *ckt)
 {
 	ES_Component *com;
 	ES_Vsource *vs;
@@ -107,7 +107,7 @@ ES_CircuitModified(struct circuit *ckt)
 
 	/* Regenerate loop and pair information. */
 	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component") ||
+		if (!AG_ObjectSubclass(AGOBJECT(com), "component", 0) ||
 		    com->flags & COMPONENT_FLOATING)
 			continue;
 
@@ -153,7 +153,7 @@ ES_CircuitModified(struct circuit *ckt)
 void
 ES_CircuitInit(void *p, const char *name)
 {
-	struct circuit *ckt = p;
+	ES_Circuit *ckt = p;
 	VG_Style *vgs;
 	VG *vg;
 
@@ -195,7 +195,7 @@ ES_CircuitInit(void *p, const char *name)
 void
 ES_CircuitReinit(void *p)
 {
-	struct circuit *ckt = p;
+	ES_Circuit *ckt = p;
 	ES_Component *com;
 	u_int i;
 	
@@ -241,7 +241,7 @@ ES_CircuitReinit(void *p)
 int
 ES_CircuitLoad(void *p, AG_Netbuf *buf)
 {
-	struct circuit *ckt = p;
+	ES_Circuit *ckt = p;
 	Uint32 ncoms;
 	u_int i, j, nnodes;
 
@@ -351,7 +351,7 @@ int
 ES_CircuitSave(void *p, AG_Netbuf *buf)
 {
 	char path[AG_OBJECT_PATH_MAX];
-	struct circuit *ckt = p;
+	ES_Circuit *ckt = p;
 	ES_Node *node;
 	ES_Branch *br;
 	ES_Component *com;
@@ -425,14 +425,14 @@ init_node(ES_Node *node, u_int flags)
 }
 
 static void
-init_ground(struct circuit *ckt)
+init_ground(ES_Circuit *ckt)
 {
 	ckt->nodes[0] = Malloc(sizeof(ES_Node), M_EDA);
 	init_node(ckt->nodes[0], CKTNODE_REFERENCE);
 }
 
 int
-ES_CircuitAddNode(struct circuit *ckt, u_int flags)
+ES_CircuitAddNode(ES_Circuit *ckt, u_int flags)
 {
 	ES_Node *node;
 	u_int n = ++ckt->n;
@@ -445,7 +445,7 @@ ES_CircuitAddNode(struct circuit *ckt, u_int flags)
 
 /* Evaluate whether node n is at ground potential. */
 int
-ES_NodeGrounded(struct circuit *ckt, u_int n)
+ES_NodeGrounded(ES_Circuit *ckt, u_int n)
 {
 	/* TODO check for shunts */
 	return (n == 0 ? 1 : 0);
@@ -457,7 +457,7 @@ ES_NodeGrounded(struct circuit *ckt, u_int n)
  * the source.
  */
 int
-ES_NodeVsource(struct circuit *ckt, u_int n, u_int m, int *sign)
+ES_NodeVsource(ES_Circuit *ckt, u_int n, u_int m, int *sign)
 {
 	ES_Node *node = ckt->nodes[n];
 	ES_Branch *br;
@@ -500,7 +500,7 @@ ES_CircuitDestroyNode(ES_Node *node)
 }
 
 void
-ES_CircuitDelNode(struct circuit *ckt, u_int n)
+ES_CircuitDelNode(ES_Circuit *ckt, u_int n)
 {
 	ES_Node *node;
 	ES_Branch *br;
@@ -527,7 +527,7 @@ ES_CircuitDelNode(struct circuit *ckt, u_int n)
 }
 
 ES_Branch *
-ES_CircuitAddBranch(struct circuit *ckt, u_int n, ES_Port *port)
+ES_CircuitAddBranch(ES_Circuit *ckt, u_int n, ES_Port *port)
 {
 	ES_Node *node = ckt->nodes[n];
 	ES_Branch *br;
@@ -540,7 +540,7 @@ ES_CircuitAddBranch(struct circuit *ckt, u_int n, ES_Port *port)
 }
 
 ES_Branch *
-ES_CircuitGetBranch(struct circuit *ckt, u_int n, ES_Port *port)
+ES_CircuitGetBranch(ES_Circuit *ckt, u_int n, ES_Port *port)
 {
 	ES_Node *node = ckt->nodes[n];
 	ES_Branch *br;
@@ -553,7 +553,7 @@ ES_CircuitGetBranch(struct circuit *ckt, u_int n, ES_Port *port)
 }
 
 void
-ES_CircuitDelBranch(struct circuit *ckt, u_int n, ES_Branch *br)
+ES_CircuitDelBranch(ES_Circuit *ckt, u_int n, ES_Branch *br)
 {
 	ES_Node *node = ckt->nodes[n];
 
@@ -566,7 +566,7 @@ ES_CircuitDelBranch(struct circuit *ckt, u_int n, ES_Branch *br)
 }
 
 void
-ES_CircuitFreeComponents(struct circuit *ckt)
+ES_CircuitFreeComponents(ES_Circuit *ckt)
 {
 	ES_Component *com, *ncom;
 
@@ -583,7 +583,7 @@ ES_CircuitFreeComponents(struct circuit *ckt)
 void
 ES_CircuitDestroy(void *p)
 {
-	struct circuit *ckt = p;
+	ES_Circuit *ckt = p;
 	
 	VG_Destroy(ckt->vg);
 	pthread_mutex_destroy(&ckt->lock);
@@ -591,7 +591,7 @@ ES_CircuitDestroy(void *p)
 
 /* Select the simulation mode. */
 struct sim *
-ES_CircuitSetSimMode(struct circuit *ckt, const struct sim_ops *sops)
+ES_CircuitSetSimMode(ES_Circuit *ckt, const struct sim_ops *sops)
 {
 	struct sim *sim;
 
@@ -623,7 +623,7 @@ static void
 poll_loops(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
-	struct circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(1);
 	int i;
 
 	AG_TlistClear(tl);
@@ -646,7 +646,7 @@ static void
 poll_nodes(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
-	struct circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(1);
 	u_int i;
 
 	AG_TlistClear(tl);
@@ -679,7 +679,7 @@ static void
 poll_sources(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
-	struct circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(1);
 	int i;
 
 	AG_TlistClear(tl);
@@ -696,7 +696,7 @@ poll_sources(AG_Event *event)
 static void
 revert_circuit(AG_Event *event)
 {
-	struct circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(1);
 
 	if (AG_ObjectLoad(ckt) == 0) {
 		AG_TextTmsg(AG_MSG_INFO, 1000,
@@ -711,7 +711,7 @@ revert_circuit(AG_Event *event)
 static void
 save_circuit(AG_Event *event)
 {
-	struct circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(1);
 
 	if (AG_ObjectSave(agWorld) == 0 &&
 	    AG_ObjectSave(ckt) == 0) {
@@ -728,7 +728,7 @@ static void
 show_interconnects(AG_Event *event)
 {
 	AG_Window *pwin = AG_PTR(1);
-	struct circuit *ckt = AG_PTR(2);
+	ES_Circuit *ckt = AG_PTR(2);
 	AG_Window *win;
 	AG_Notebook *nb;
 	AG_NotebookTab *ntab;
@@ -770,7 +770,7 @@ layout_settings(AG_Event *event)
 {
 	char path[AG_OBJECT_PATH_MAX];
 	AG_Window *pwin = AG_PTR(1);
-	struct circuit *ckt = AG_PTR(2);
+	ES_Circuit *ckt = AG_PTR(2);
 	VG *vg = ckt->vg;
 	AG_Window *win;
 	AG_MFSpinbutton *mfsu;
@@ -836,7 +836,7 @@ static void
 export_to_spice(AG_Event *event)
 {
 	char name[FILENAME_MAX];
-	struct circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(1);
 
 	strlcpy(name, AGOBJECT(ckt)->name, sizeof(name));
 	strlcat(name, ".cir", sizeof(name));
@@ -850,7 +850,7 @@ export_to_spice(AG_Event *event)
 static void
 double_click(AG_Event *event)
 {
-	struct circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(1);
 	int button = AG_INT(2);
 	int tx = AG_INT(3);
 	int ty = AG_INT(4);
@@ -892,7 +892,7 @@ double_click(AG_Event *event)
 static void
 select_sim(AG_Event *event)
 {
-	struct circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(1);
 	struct sim_ops *sops = AG_PTR(2);
 	AG_Window *pwin = AG_PTR(3);
 	struct sim *sim;
@@ -907,7 +907,7 @@ select_tool(AG_Event *event)
 {
 	VG_View *vgv = AG_PTR(1);
 	VG_Tool *tool = AG_PTR(2);
-	struct circuit *ckt = AG_PTR(3);
+	ES_Circuit *ckt = AG_PTR(3);
 
 	VG_ViewSelectTool(vgv, tool, ckt);
 }
@@ -958,7 +958,7 @@ create_view(AG_Event *event)
 	extern VG_ToolOps vgScaleTool;
 	VG_View *omv = AG_PTR(1);
 	AG_Window *pwin = AG_PTR(2);
-	struct circuit *ckt = AG_PTR(3);
+	ES_Circuit *ckt = AG_PTR(3);
 	AG_Map *map = omv->map;
 	VG_View *mv;
 	AG_Window *win;
@@ -984,7 +984,7 @@ static void
 poll_component_ports(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
-	struct circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(1);
 	ES_Component *com;
 	int i;
 	
@@ -1016,7 +1016,7 @@ static void
 poll_component_pairs(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
-	struct circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(1);
 	ES_Component *com;
 	int i, j;
 	
@@ -1072,7 +1072,7 @@ out:
 void *
 ES_CircuitEdit(void *p)
 {
-	struct circuit *ckt = p;
+	ES_Circuit *ckt = p;
 	AG_Window *win;
 	AG_Toolbar *toolbar;
 	AG_Menu *menu;
@@ -1194,8 +1194,8 @@ ES_CircuitEdit(void *p)
 					ES_ComponentOps *cops =
 					    (ES_ComponentOps *)ctype->ops;
 
-					AG_TlistAddPtr(tl, NULL,
-					    _(cops->name), ctype);
+					AG_TlistAddPtr(tl, NULL, _(cops->name),
+					    ctype);
 				}
 			}
 		}

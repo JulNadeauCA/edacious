@@ -127,7 +127,7 @@ main(int argc, char *argv[])
 		strlcat(tname, ty->name, sizeof(tname));
 		AG_RegisterType(tname, ty->size, ty->ops, EDA_COMPONENT_ICON);
 	}
-	AG_RegisterType("circuit", sizeof(struct circuit), &esCircuitOps,
+	AG_RegisterType("circuit", sizeof(ES_Circuit), &esCircuitOps,
 	    EDA_CIRCUIT_ICON);
 	
 	/* Initialize the object manager. */

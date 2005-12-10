@@ -135,7 +135,7 @@ ES_ConductorToolMousebuttondown(void *p, float x, float y, int b)
 {
 	VG_Tool *t = p;
 	char name[AG_OBJECT_NAME_MAX];
-	struct circuit *ckt = t->p;
+	ES_Circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 	ES_Component *com;
 	int n = 0;
@@ -189,7 +189,7 @@ ES_ConductorToolMousemotion(void *p, float x, float y, float xrel, float yrel,
     int b)
 {
 	VG_Tool *t = p;
-	struct circuit *ckt = t->p;
+	ES_Circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 
 	vg->origin[1].x = x;

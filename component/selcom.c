@@ -37,7 +37,7 @@ static int
 SelcomButtondown(void *p, float x, float y, int b)
 {
 	VG_Tool *t = p;
-	struct circuit *ckt = t->p;
+	ES_Circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 	ES_Component *com;
 	int multi = SDL_GetModState() & KMOD_CTRL;
@@ -82,7 +82,7 @@ SelcomButtondown(void *p, float x, float y, int b)
 static int
 SelcomLeftButton(VG_Tool *t, int button, int state, float x, float y, void *arg)
 {
-	struct circuit *ckt = t->p;
+	ES_Circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 	ES_Component *com;
 	int multi = SDL_GetModState() & KMOD_CTRL;
@@ -123,7 +123,7 @@ static int
 SelcomMousemotion(void *p, float x, float y, float xrel, float yrel, int b)
 {
 	VG_Tool *t = p;
-	struct circuit *ckt = t->p;
+	ES_Circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 	ES_Component *com;
 	VG_Rect rext;

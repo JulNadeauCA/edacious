@@ -67,7 +67,7 @@ sim_destroy(void *p)
 void
 sim_edit(AG_Event *event)
 {
-	struct circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(1);
 	AG_Window *pwin = AG_PTR(2);
 	struct sim *sim = ckt->sim;
 	AG_Window *win;
