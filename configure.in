@@ -5,7 +5,7 @@ REGISTER("--enable-static",	"Produce a static binary [default: no]")
 REGISTER("--enable-warnings",	"Enable compiler warnings [default: no]")
 REGISTER("--enable-edition",	"Enable graphical editor [default: yes]")
 
-HDEFINE(VERSION, "\"0.1\"")
+HDEFINE(VERSION, "\"0.2\"")
 
 MDEFINE(SHAREDIR, "$PREFIX/share/agar-eda")
 HDEFINE(SHAREDIR, "\"$PREFIX/share/agar-eda\"")
