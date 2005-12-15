@@ -47,8 +47,8 @@ const AG_ObjectOps esCircuitOps = {
 	ES_CircuitEdit
 };
 
-static void init_node(ES_Node *, u_int);
-static void init_ground(ES_Circuit *);
+static void InitNode(ES_Node *, u_int);
+static void InitGround(ES_Circuit *);
 
 static void
 ES_CircuitDetached(AG_Event *event)
@@ -107,7 +107,7 @@ ES_CircuitModified(ES_Circuit *ckt)
 
 	/* Regenerate loop and pair information. */
 	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AG_ObjectSubclass(AGOBJECT(com), "component", 0) ||
+		if (!AGOBJECT_SUBCLASS(com, "component") ||
 		    com->flags & COMPONENT_FLOATING)
 			continue;
 
@@ -170,9 +170,9 @@ ES_CircuitInit(void *p, const char *name)
 	
 	ckt->nodes = Malloc(sizeof(ES_Node *), M_EDA);
 	ckt->n = 0;
-	init_ground(ckt);
+	InitGround(ckt);
 
-	vg = ckt->vg = VG_New(VG_VISGRID);
+	vg = ckt->vg = VG_New(VG_DIRECT|VG_VISGRID);
 	strlcpy(vg->layers[0].name, _("Schematic"), sizeof(vg->layers[0].name));
 	VG_Scale(vg, 11.0, 8.5, 32.0);
 	VG_DefaultScale(vg, 2.0);
@@ -218,7 +218,7 @@ ES_CircuitReinit(void *p)
 	}
 	ckt->nodes = Realloc(ckt->nodes, sizeof(ES_Node *));
 	ckt->n = 0;
-	init_ground(ckt);
+	InitGround(ckt);
 
 	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (!AGOBJECT_SUBCLASS(com, "component") ||
@@ -263,7 +263,7 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 			name = 0;
 			ES_CircuitDestroyNode(ckt->nodes[0]);
 			Free(ckt->nodes[0], M_EDA);
-			init_ground(ckt);
+			InitGround(ckt);
 		} else {
 			name = ES_CircuitAddNode(ckt, flags & ~(CKTNODE_EXAM));
 		}
@@ -328,8 +328,8 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 
 			port->n = (int)AG_ReadUint32(buf);
 			AG_CopyString(port->name, buf, sizeof(port->name));
-			port->x = AG_ReadDouble(buf);
-			port->y = AG_ReadDouble(buf);
+			port->x = AG_ReadFloat(buf);
+			port->y = AG_ReadFloat(buf);
 			port->node = (int)AG_ReadUint32(buf);
 			node = ckt->nodes[port->node];
 
@@ -403,8 +403,8 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 
 			AG_WriteUint32(buf, (Uint32)port->n);
 			AG_WriteString(buf, port->name);
-			AG_WriteDouble(buf, port->x);
-			AG_WriteDouble(buf, port->y);
+			AG_WriteFloat(buf, port->x);
+			AG_WriteFloat(buf, port->y);
 #ifdef DEBUG
 			if (port->node == -1) { Fatal("Illegal port"); }
 #endif
@@ -417,7 +417,7 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 }
 
 static void
-init_node(ES_Node *node, u_int flags)
+InitNode(ES_Node *node, u_int flags)
 {
 	node->flags = flags;
 	node->nbranches = 0;
@@ -425,10 +425,10 @@ init_node(ES_Node *node, u_int flags)
 }
 
 static void
-init_ground(ES_Circuit *ckt)
+InitGround(ES_Circuit *ckt)
 {
 	ckt->nodes[0] = Malloc(sizeof(ES_Node), M_EDA);
-	init_node(ckt->nodes[0], CKTNODE_REFERENCE);
+	InitNode(ckt->nodes[0], CKTNODE_REFERENCE);
 }
 
 int
@@ -439,7 +439,7 @@ ES_CircuitAddNode(ES_Circuit *ckt, u_int flags)
 
 	ckt->nodes = Realloc(ckt->nodes, (n+1)*sizeof(ES_Node *));
 	ckt->nodes[n] = Malloc(sizeof(ES_Node), M_EDA);
-	init_node(ckt->nodes[n], flags);
+	InitNode(ckt->nodes[n], flags);
 	return (n);
 }
 
@@ -620,7 +620,7 @@ ES_CircuitSetSimMode(ES_Circuit *ckt, const struct sim_ops *sops)
 #ifdef EDITION
 
 static void
-poll_loops(AG_Event *event)
+PollCircuitLoops(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
@@ -643,7 +643,7 @@ poll_loops(AG_Event *event)
 }
 
 static void
-poll_nodes(AG_Event *event)
+PollCircuitNodes(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
@@ -676,7 +676,7 @@ poll_nodes(AG_Event *event)
 }
 
 static void
-poll_sources(AG_Event *event)
+PollCircuitSources(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
@@ -694,7 +694,7 @@ poll_sources(AG_Event *event)
 }
 
 static void
-revert_circuit(AG_Event *event)
+RevertCircuit(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
 
@@ -709,7 +709,7 @@ revert_circuit(AG_Event *event)
 }
 
 static void
-save_circuit(AG_Event *event)
+SaveCircuit(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
 
@@ -725,7 +725,7 @@ save_circuit(AG_Event *event)
 }
 
 static void
-show_interconnects(AG_Event *event)
+ShowInterconnects(AG_Event *event)
 {
 	AG_Window *pwin = AG_PTR(1);
 	ES_Circuit *ckt = AG_PTR(2);
@@ -746,19 +746,19 @@ show_interconnects(AG_Event *event)
 	{
 		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE|
 		                       AG_TLIST_EXPAND);
-		AG_SetEvent(tl, "tlist-poll", poll_nodes, "%p", ckt);
+		AG_SetEvent(tl, "tlist-poll", PollCircuitNodes, "%p", ckt);
 	}
 	
 	ntab = AG_NotebookAddTab(nb, _("Loops"), AG_BOX_VERT);
 	{
 		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_EXPAND);
-		AG_SetEvent(tl, "tlist-poll", poll_loops, "%p", ckt);
+		AG_SetEvent(tl, "tlist-poll", PollCircuitLoops, "%p", ckt);
 	}
 	
 	ntab = AG_NotebookAddTab(nb, _("Sources"), AG_BOX_VERT);
 	{
 		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_EXPAND);
-		AG_SetEvent(tl, "tlist-poll", poll_sources, "%p", ckt);
+		AG_SetEvent(tl, "tlist-poll", PollCircuitSources, "%p", ckt);
 	}
 
 	AG_WindowAttach(pwin, win);
@@ -766,7 +766,7 @@ show_interconnects(AG_Event *event)
 }
 
 static void
-layout_settings(AG_Event *event)
+ShowLayoutSettings(AG_Event *event)
 {
 	char path[AG_OBJECT_PATH_MAX];
 	AG_Window *pwin = AG_PTR(1);
@@ -789,32 +789,15 @@ layout_settings(AG_Event *event)
 	AG_LabelNew(win, AG_LABEL_POLLED, _("Voltage sources: %u"), &ckt->m);
 	AG_LabelNew(win, AG_LABEL_POLLED, _("Nodes: %u"), &ckt->n);
 
-	tb = AG_TextboxNew(win, AG_WIDGET_HFILL, _("Description: "));
+	tb = AG_TextboxNew(win, AG_TEXTBOX_HFILL, _("Description: "));
 	AG_WidgetBind(tb, "string", AG_WIDGET_STRING, &ckt->descr,
 	    sizeof(ckt->descr));
 
-	mfsu = AG_MFSpinbuttonNew(win, AG_WIDGET_HFILL, NULL, "x",
-	    _("Bounding box: "));
-	AG_WidgetBind(mfsu, "xvalue", AG_WIDGET_DOUBLE, &vg->w);
-	AG_WidgetBind(mfsu, "yvalue", AG_WIDGET_DOUBLE, &vg->h);
-	AG_MFSpinbuttonSetMin(mfsu, 1.0);
-	AG_MFSpinbuttonSetIncrement(mfsu, 0.1);
-//	AG_SetEvent(mfsu, "mfspinbutton-changed", VG_GeoChangedEv, "%p", vg);
-
-	fsu = AG_FSpinbuttonNew(win, AG_WIDGET_HFILL, NULL,
-	    _("Grid spacing: "));
-	AG_WidgetBind(fsu, "value", AG_WIDGET_DOUBLE, &vg->grid_gap);
+	fsu = AG_FSpinbuttonNew(win, 0, NULL, _("Grid spacing: "));
+	AG_WidgetBind(fsu, "value", AG_WIDGET_FLOAT, &vg->grid_gap);
 	AG_FSpinbuttonSetMin(fsu, 0.0625);
 	AG_FSpinbuttonSetIncrement(fsu, 0.0625);
-//	AG_SetEvent(fsu, "fspinbutton-changed", VG_ChangedEv, "%p", vg);
 	
-	fsu = AG_FSpinbuttonNew(win, AG_WIDGET_HFILL, NULL,
-	    _("Scaling factor: "));
-	AG_WidgetBind(fsu, "value", AG_WIDGET_DOUBLE, &vg->scale);
-	AG_FSpinbuttonSetMin(fsu, 0.1);
-	AG_FSpinbuttonSetIncrement(fsu, 0.1);
-//	AG_SetEvent(fsu, "fspinbutton-changed", VG_GeoChangedEv, "%p", vg);
-
 	cb = AG_CheckboxNew(win, 0, _("Display node indicators"));
 	AG_WidgetBind(cb, "state", AG_WIDGET_INT, &ckt->dis_nodes);
 
@@ -833,7 +816,7 @@ layout_settings(AG_Event *event)
 }
 
 static void
-export_to_spice(AG_Event *event)
+ExportToSPICE(AG_Event *event)
 {
 	char name[FILENAME_MAX];
 	ES_Circuit *ckt = AG_PTR(1);
@@ -846,51 +829,69 @@ export_to_spice(AG_Event *event)
 		    AG_GetError());
 }
 
-#if 0
 static void
-double_click(AG_Event *event)
+CircuitViewButtondown(AG_Event *event)
 {
+	VG_View *vgv =  AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
 	int button = AG_INT(2);
-	int tx = AG_INT(3);
-	int ty = AG_INT(4);
-	int txoff = AG_INT(5);
-	int tyoff = AG_INT(6);
+	float x = AG_FLOAT(3);
+	float y = AG_FLOAT(4);
 	ES_Component *com;
-	double x, y;
+	VG_Rect rExt;
 
-	VG_Vcoords2(ckt->vg, tx, ty, txoff, tyoff, &x, &y);
+	if (button != SDL_BUTTON_RIGHT) { return; }
+
 	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		VG_Rect rext;
-
-		if (!AGOBJECT_SUBCLASS(com, "component"))
+		if (!AGOBJECT_SUBCLASS(com, "component") ||
+		    AGOBJECT(com)->ops->edit == NULL) {
 			continue;
+		}
+		VG_BlockExtent(ckt->vg, com->block, &rExt);
+		if (x > rExt.x && y > rExt.y &&
+		    x < rExt.x+rExt.w && y < rExt.y+rExt.h) {
+			int mx, my;
 
-		VG_BlockExtent(ckt->vg, com->block, &rext);
-		if (x > rext.x && y > rext.y &&
-		    x < rext.x+rext.w && y < rext.y+rext.h) {
-#if 0
-			com->selected = !com->selected;
-#endif
-			/* XXX configurable */
-			switch (button) {
-			case 1:
-				if (AGOBJECT(com)->ops->edit != NULL) {
-					AG_ObjMgrOpenData(com, 1);
-				}
-				break;
-			case 2:
-			case 3:
-				com->selected = !com->selected;
-				break;
-			}
+			SDL_GetMouseState(&mx, &my);
+			ES_ComponentOpenMenu(com, vgv, mx, my);
 		}
 	}
 }
-#endif
 
 static void
-select_sim(AG_Event *event)
+CircuitViewKeydown(AG_Event *event)
+{
+	VG_View *vgv =  AG_SELF();
+	ES_Circuit *ckt = AG_PTR(1);
+}
+
+static void
+CircuitDoubleClick(AG_Event *event)
+{
+	ES_Circuit *ckt = AG_PTR(1);
+	int button = AG_INT(2);
+	float x = AG_INT(3);
+	float y = AG_INT(4);
+	ES_Component *com;
+	VG_Rect rExt;
+
+	if (button != SDL_BUTTON_LEFT) { return; }
+
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
+		if (!AGOBJECT_SUBCLASS(com, "component") ||
+		    AGOBJECT(com)->ops->edit == NULL) {
+			continue;
+		}
+		VG_BlockExtent(ckt->vg, com->block, &rExt);
+		if (x > rExt.x && y > rExt.y &&
+		    x < rExt.x+rExt.w && y < rExt.y+rExt.h) {
+			AG_ObjMgrOpenData(com, 1);
+		}
+	}
+}
+
+static void
+CircuitSelectSim(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
 	struct sim_ops *sops = AG_PTR(2);
@@ -903,7 +904,7 @@ select_sim(AG_Event *event)
 }
 
 static void
-select_tool(AG_Event *event)
+CircuitSelectTool(AG_Event *event)
 {
 	VG_View *vgv = AG_PTR(1);
 	VG_Tool *tool = AG_PTR(2);
@@ -913,13 +914,13 @@ select_tool(AG_Event *event)
 }
 
 static void
-find_objs(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
+FindCircuitObjs(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 {
 	AG_Object *cob;
 	AG_TlistItem *it;
 	SDL_Surface *icon;
 
-	it = AG_TlistAdd(tl, AG_ObjectIcon(pob), "%s%s", pob->name,
+	it = AG_TlistAdd(tl, NULL, "%s%s", pob->name,
 	    (pob->flags & AG_OBJECT_DATA_RESIDENT) ? " (resident)" : "");
 	it->depth = depth;
 	it->class = "object";
@@ -933,12 +934,12 @@ find_objs(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
 	    AG_TlistVisibleChildren(tl, it)) {
 		TAILQ_FOREACH(cob, &pob->children, cobjs)
-			find_objs(tl, cob, depth+1, ckt);
+			FindCircuitObjs(tl, cob, depth+1, ckt);
 	}
 }
 
 static void
-poll_objs(AG_Event *event)
+PollCircuitObjs(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	AG_Object *pob = AG_PTR(1);
@@ -946,42 +947,29 @@ poll_objs(AG_Event *event)
 
 	AG_TlistClear(tl);
 	AG_LockLinkage();
-	find_objs(tl, pob, 0, pob);
+	FindCircuitObjs(tl, pob, 0, pob);
 	AG_UnlockLinkage();
 	AG_TlistRestore(tl);
 }
 
-#if 0
 static void
-create_view(AG_Event *event)
+CircuitCreateView(AG_Event *event)
 {
-	extern VG_ToolOps vgScaleTool;
-	VG_View *omv = AG_PTR(1);
-	AG_Window *pwin = AG_PTR(2);
-	ES_Circuit *ckt = AG_PTR(3);
-	AG_Map *map = omv->map;
-	VG_View *mv;
+	AG_Window *pwin = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(2);
+	VG_View *vgv;
 	AG_Window *win;
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("View of %s"), AGOBJECT(ckt)->name);
-	{
-		mv = VG_ViewNew(win, map,
-		    AG_MAPVIEW_NO_BMPSCALE|AG_MAPVIEW_NO_NODESEL,
-		    NULL, NULL);
-		mv->cam = AG_MapAddCamera(map, _("View"));
-
-		VG_ViewPrescale(mv, 8, 6);
-		VG_ViewRegTool(mv, &vgScaleTool, ckt->vg);
-		AG_WidgetFocus(mv);
-	}
+	vgv = VG_ViewNew(win, ckt->vg, VG_VIEW_EXPAND);
+	AG_WidgetFocus(vgv);
 	AG_WindowAttach(pwin, win);
 	AG_WindowShow(win);
 }
-#endif
 
 static void
-poll_component_ports(AG_Event *event)
+PollComponentPorts(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
@@ -1002,10 +990,9 @@ poll_component_ports(AG_Event *event)
 		char text[AG_TLIST_LABEL_MAX];
 		ES_Port *port = &com->ports[i];
 
-		snprintf(text, sizeof(text), "%d (%s) (U=%.2f) -> n%d\n",
-		    port->n, port->name, port->u, port->node);
-		AG_TlistAddPtr(tl, AGICON(EDA_BRANCH_TO_COMPONENT_ICON),
-		    text, port);
+		snprintf(text, sizeof(text), "%d (%s) -> n%d",
+		    port->n, port->name, port->node);
+		AG_TlistAddPtr(tl, NULL, text, port);
 	}
 	pthread_mutex_unlock(&com->lock);
 out:
@@ -1013,7 +1000,7 @@ out:
 }
 
 static void
-poll_component_pairs(AG_Event *event)
+PollComponentPairs(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
@@ -1031,24 +1018,13 @@ poll_component_pairs(AG_Event *event)
 
 	pthread_mutex_lock(&com->lock);
 	for (i = 0; i < com->npairs; i++) {
-		char Rbuf[32], Cbuf[32], Lbuf[32];
 		char text[AG_TLIST_LABEL_MAX];
 		ES_Pair *pair = &com->pairs[i];
 		AG_TlistItem *it;
 
-		AG_UnitFormat(ES_PairResistance(pair), agResistanceUnits,
-		    Rbuf, sizeof(Rbuf));
-		AG_UnitFormat(ES_PairCapacitance(pair), agCapacitanceUnits,
-		    Cbuf, sizeof(Cbuf));
-		AG_UnitFormat(ES_PairInductance(pair), agInductanceUnits,
-		    Lbuf, sizeof(Lbuf));
-
-		snprintf(text, sizeof(text),
-		    "%s:(%s,%s) - %s, %s, %s",
-		    AGOBJECT(com)->name, pair->p1->name, pair->p2->name,
-		    Rbuf, Cbuf, Lbuf);
-		it = AG_TlistAddPtr(tl, AGICON(EDA_BRANCH_TO_COMPONENT_ICON),
-		    text, pair);
+		snprintf(text, sizeof(text), "%s:(%s,%s)",
+		    AGOBJECT(com)->name, pair->p1->name, pair->p2->name);
+		it = AG_TlistAddPtr(tl, NULL, text, pair);
 		it->depth = 0;
 
 		for (j = 0; j < pair->nloops; j++) {
@@ -1059,8 +1035,7 @@ poll_component_pairs(AG_Event *event)
 			    AGOBJECT(dloop->origin)->name,
 			    dloop->name,
 			    dpol == 1 ? "+" : "-");
-			it = AG_TlistAddPtr(tl, AGICON(EDA_MESH_ICON), text,
-			    &pair->loops[j]);
+			it = AG_TlistAddPtr(tl, NULL, text, &pair->loops[j]);
 			it->depth = 1;
 		}
 	}
@@ -1093,14 +1068,14 @@ ES_CircuitEdit(void *p)
 	pitem = AG_MenuAddItem(menu, _("File"));
 	{
 		AG_MenuActionKb(pitem, _("Revert"), OBJLOAD_ICON,
-		    SDLK_r, KMOD_CTRL, revert_circuit, "%p", ckt);
+		    SDLK_r, KMOD_CTRL, RevertCircuit, "%p", ckt);
 		AG_MenuActionKb(pitem, _("Save"), OBJSAVE_ICON,
-		    SDLK_s, KMOD_CTRL, save_circuit, "%p", ckt);
+		    SDLK_s, KMOD_CTRL, SaveCircuit, "%p", ckt);
 
 		subitem = AG_MenuAction(pitem, _("Export circuit"),
 		    OBJSAVE_ICON, NULL, NULL);
-		AG_MenuAction(subitem, _("Export to SPICE3..."), EDA_SPICE_ICON,
-		    export_to_spice, "%p", ckt);
+		AG_MenuAction(subitem, _("Export to SPICE..."), EDA_SPICE_ICON,
+		    ExportToSPICE, "%p", ckt);
 	
 		AG_MenuSeparator(pitem);
 
@@ -1112,21 +1087,15 @@ ES_CircuitEdit(void *p)
 		/* TODO */
 		AG_MenuAction(pitem, _("Undo"), -1, NULL, NULL);
 		AG_MenuAction(pitem, _("Redo"), -1, NULL, NULL);
-
-		AG_MenuSeparator(pitem);
-
-		AG_MenuAction(pitem, _("Layout preferences..."), SETTINGS_ICON,
-		    layout_settings, "%p,%p", win, ckt);
 	}
-#if 0
-	pitem = AG_MenuAddItem(menu, _("Drawing"));
-	VG_GenericMenu(menu, pitem, ckt->vg, vgv);
-#endif
-	pitem = AG_MenuAddItem(menu, _("View"));
-	{
-		AG_MenuAction(pitem, _("Show interconnects..."), EDA_MESH_ICON,
-		    show_interconnects, "%p,%p", win, ckt);
 
+	pitem = AG_MenuAddItem(menu, _("Layout"));
+	{
+		AG_MenuItem *mSnap;
+
+		AG_MenuAction(pitem, _("Create view..."), NEW_VIEW_ICON,
+		    CircuitCreateView, "%p,%p", win, ckt);
+		    
 		AG_MenuSeparator(pitem);
 
 		AG_MenuIntFlags(pitem, _("Show origin"), VGORIGIN_ICON,
@@ -1136,12 +1105,16 @@ ES_CircuitEdit(void *p)
 		AG_MenuIntFlags(pitem, _("Show extents"), VGBLOCK_ICON,
 		    &ckt->vg->flags, VG_VISBBOXES, 0);
 		AG_MenuSeparator(pitem);
-#if 0
-		AG_MenuAction(pitem, _("Create view..."), NEW_VIEW_ICON,
-		    create_view, "%p,%p,%p", vgv, win, ckt);
-#endif
-	}
+		
+		mSnap = AG_MenuNode(pitem, _("Snapping mode"),
+		    SNAP_CENTERPT_ICON);
+		VG_SnapMenu(menu, mSnap, ckt->vg);
 
+		AG_MenuAction(pitem, _("Layout settings..."), SETTINGS_ICON,
+		    ShowLayoutSettings, "%p,%p", win, ckt);
+		    
+	}
+		
 	pitem = AG_MenuAddItem(menu, _("Simulation"));
 	{
 		extern const struct sim_ops *sim_ops[];
@@ -1150,8 +1123,11 @@ ES_CircuitEdit(void *p)
 		for (ops = &sim_ops[0]; *ops != NULL; ops++) {
 			AG_MenuTool(pitem, toolbar, _((*ops)->name),
 			    (*ops)->icon, 0, 0,
-			    select_sim, "%p,%p,%p", ckt, *ops, win);
+			    CircuitSelectSim, "%p,%p,%p", ckt, *ops, win);
 		}
+		AG_MenuSeparator(pitem);
+		AG_MenuAction(pitem, _("Show interconnects..."), EDA_MESH_ICON,
+		    ShowInterconnects, "%p,%p", win, ckt);
 	}
 	
 	pane = AG_HPaneNew(win, AG_HPANE_EXPAND);
@@ -1204,7 +1180,8 @@ ES_CircuitEdit(void *p)
 		{
 			tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE|
 			                       AG_TLIST_EXPAND);
-			AG_SetEvent(tl, "tlist-poll", poll_objs, "%p", ckt);
+			AG_SetEvent(tl, "tlist-poll", PollCircuitObjs,
+			    "%p", ckt);
 			AGWIDGET(tl)->flags &= ~(AG_WIDGET_FOCUSABLE);
 		}
 
@@ -1234,14 +1211,14 @@ ES_CircuitEdit(void *p)
 				tl = AG_TlistNew(ntab, AG_TLIST_POLL|
 						       AG_TLIST_EXPAND);
 				AG_SetEvent(tl, "tlist-poll",
-				    poll_component_ports, "%p", ckt);
+				    PollComponentPorts, "%p", ckt);
 			}
 			AG_LabelNew(ntab, AG_LABEL_STATIC, _("Port pairs:"));
 			{
 				tl = AG_TlistNew(ntab, AG_TLIST_POLL|
 				                       AG_TLIST_HFILL);
 				AG_SetEvent(tl, "tlist-poll",
-				    poll_component_pairs, "%p", ckt);
+				    PollComponentPairs, "%p", ckt);
 			}
 		}
 
@@ -1254,7 +1231,6 @@ ES_CircuitEdit(void *p)
 	}
 	
 	pitem = AG_MenuAddItem(menu, _("Components"));
-	ES_ComponentRegMenu(menu, pitem, ckt);
 	{
 		extern VG_ToolOps esInscomOps;
 		extern VG_ToolOps esSelcomOps;
@@ -1274,18 +1250,21 @@ ES_CircuitEdit(void *p)
 		VG_ViewRegTool(vgv, &vgTextTool, ckt->vg);
 		AG_SetEvent(vgv, "mapview-dblclick", double_click, "%p", ckt);
 #endif
+		VG_ViewButtondownFn(vgv, CircuitViewButtondown, "%p", ckt);
+		VG_ViewKeydownFn(vgv, CircuitViewKeydown, "%p", ckt);
+
 		VG_ViewRegTool(vgv, &esInscomOps, ckt);
 
 		tool = VG_ViewRegTool(vgv, &esSelcomOps, ckt);
 		AG_MenuTool(pitem, toolbar, _("Select components"),
 		    tool->ops->icon, 0, 0,
-		    select_tool, "%p,%p,%p", vgv, tool, ckt);
+		    CircuitSelectTool, "%p,%p,%p", vgv, tool, ckt);
 		VG_ViewSetDefaultTool(vgv, tool);
 		
 		tool = VG_ViewRegTool(vgv, &esConductorTool, ckt);
 		AG_MenuTool(pitem, toolbar, _("Insert conductor"),
 		    tool->ops->icon, 0, 0,
-		    select_tool, "%p,%p,%p", vgv, tool, ckt);
+		    CircuitSelectTool, "%p,%p,%p", vgv, tool, ckt);
 	}
 
 	AG_WindowScale(win, -1, -1);

@@ -51,13 +51,10 @@ const ES_ComponentOps esInverterOps = {
 	"Inv",
 	ES_InverterDraw,
 	ES_InverterEdit,
+	NULL,			/* menu */
 	NULL,			/* connect */
-	ES_InverterExport,
-	ES_InverterTick,
-	NULL,			/* resistance */
-	NULL,			/* capacitance */
-	NULL,			/* inductance */
-	NULL			/* isource */
+	NULL,			/* disconnect */
+	ES_InverterExport
 };
 
 const ES_Port esInverterPinout[] = {
@@ -139,15 +136,15 @@ ES_InverterInit(void *p, const char *name)
 	/* Default parameters: CD4069UBC (Fairchild 04/2002). */
 	ES_ComponentInit(inv, "inverter", name, &esInverterOps,
 	    esInverterPinout);
-	inv->Tphl = 50;
-	inv->Tplh = 50;
-	inv->Tthl = 80;
-	inv->Ttlh = 80;
-	inv->Thold = 40;				/* XXX */
+	inv->Tphl = 50e-9;
+	inv->Tplh = 50e-9;
+	inv->Tthl = 80e-9;
+	inv->Ttlh = 80e-9;
+	inv->Thold = 40e-9;				/* XXX */
 	inv->Tehl = 0;
 	inv->Telh = 0;
-	inv->Cin = 6;
-	inv->Cpd = 12;
+	inv->Cin = 6e-12;
+	inv->Cpd = 12e-12;
 	inv->Vih = 4;
 	inv->Vil = 0;
 	inv->Voh = 5;
@@ -250,7 +247,7 @@ ES_InverterExport(void *p, enum circuit_format fmt, FILE *f)
 }
 
 #ifdef EDITION
-AG_Window *
+void *
 ES_InverterEdit(void *p)
 {
 	ES_Inverter *inv = p;

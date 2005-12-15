@@ -42,18 +42,18 @@ struct mna {
 	int speed;			/* Simulation speed (updates/sec) */
 	AG_Timeout update_to;		/* Timer for simulation updates */
 	
-	SC_Matrix *A;			/* Block matrix of [G,B;C,D] */
+	SC_Matrix *A;			/* Block matrix [G B; C D] */
 	SC_Matrix *A_LU;		/* LU factorization of A */
-	SC_Matrix *G;			/* Passive element interconnects */
-	SC_Matrix *B;			/* Voltage sources */
-	SC_Matrix *C;			/* Transpose of [B] */
-	SC_Matrix *D;			/* Dependent sources */
+	SC_Matrix *G;			/* Reduced conductance matrix */
+	SC_Matrix *B;			/* Voltage source matrix */
+	SC_Matrix *C;			/* Transpose of B */
+	SC_Matrix *D;			/* Dependent source matrix */
 
-	SC_Vector *z;			/* Block partitioned vector of [i;e] */
+	SC_Vector *z;			/* Block matrix (i e) */
 	SC_Vector *i;			/* Sum of independent current sources */
 	SC_Vector *e;			/* Independent voltage sources */
 
-	SC_Vector *x;			/* Block partitioned vector of [v;j] */
+	SC_Vector *x;			/* Block matrix (v j) */
 	SC_Vector *v;			/* Unknown voltages */
 	SC_Vector *j;			/* Unknown currents thru vsources */
 };
@@ -70,7 +70,27 @@ mna_solve(struct mna *mna, ES_Circuit *ckt)
 	SC_MatrixSetZero(mna->B);
 	SC_MatrixSetZero(mna->C);
 	SC_MatrixSetZero(mna->D);
-
+	SC_MatrixSetZero(mna->i);
+	SC_MatrixSetZero(mna->e);
+	
+	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
+		if (!AGOBJECT_SUBCLASS(com, "component")) {
+			continue;
+		}
+		if (com->loadDC_G != NULL)
+			com->loadDC_G(com, mna->G);
+		if (com->loadDC_BCD != NULL)
+			com->loadDC_BCD(com, mna->B, mna->C, mna->D);
+		if (com->loadDC_RHS != NULL)
+			com->loadDC_RHS(com, mna->i, mna->e);
+#if 0
+		if (com->loadAC != NULL)
+			com->loadAC(com, mna->Y);
+		if (com->loadSP != NULL)
+			com->loadSP(com, mna->S, mna->N);
+#endif
+	}
+#if 0
 	for (n = 1; n <= ckt->n; n++) {
 		ES_Node *node = ckt->nodes[n];
 		ES_Branch *br;
@@ -91,7 +111,7 @@ mna_solve(struct mna *mna, ES_Circuit *ckt)
 			}
 		}
 
-		/* Load passive components into the G matrix. */
+		/* Load conductances into the G matrix. */
 		TAILQ_FOREACH(br, &node->branches, branches) {
 			if ((com = br->port->com) == NULL)
 				continue;
@@ -99,7 +119,7 @@ mna_solve(struct mna *mna, ES_Circuit *ckt)
 			for (i = 0; i < com->npairs; i++) {
 				ES_Pair *pair = &com->pairs[i];
 				int grounded;
-				double r;
+				double g;
 			
 				if (pair->p1 != br->port &&
 				    pair->p2 != br->port) {
@@ -110,61 +130,51 @@ mna_solve(struct mna *mna, ES_Circuit *ckt)
 					grounded = 1;
 				} else {
 					grounded = 0;
-				}
-
+				} 
 				if (com->ops->resistance == NULL) {
 					continue;
 				}
-				r = com->ops->resistance(com, pair->p1,
+				g = com->ops->resistance(com, pair->p1,
 				                              pair->p2);
+				if (g == 0.0) {
+					continue;
+				}
+				g = 1.0/g;
+
 				/*
 				 * The main diagonal contains the sum of the
 				 * conductances connected to node n.
 				 */
-				if (isinf(1.0/r)) {
-					mna->G->mat[n][n] += 10000000.0;
-				} else {
-					mna->G->mat[n][n] += 1.0/r;
-				}
+				mna->G->mat[n][n] += g;
 
 				/*
-				 * If the pair is ungrounded, add its negative
-				 * conductance to elements G(n1,n2) and
-				 * G(n2,n1).
+				 * If the component is ungrounded, subtract its
+				 * conductance from G(n1,n2) and G(n2,n1).
 				 */
 				if (!grounded) {
 					u_int n1 = pair->p1->node;
 					u_int n2 = pair->p2->node;
 
-					if (isinf(1.0/r)) {
-						mna->G->mat[n1][n2]+=10000000.0;
-						mna->G->mat[n2][n1]+=10000000.0;
-					} else {
-						mna->G->mat[n1][n2] += -(1.0/r);
-						mna->G->mat[n2][n1] += -(1.0/r);
-					}
+					mna->G->mat[n1][n2] -= g;
+					mna->G->mat[n2][n1] -= g;
 				}
 			}
 		}
 	}
 
-	/* Build the vector of current and voltage sources. */
-	for (n = 1; n <= ckt->n; n++) {
-		mna->i->mat[n][1] = 0.0;	/* TODO */
-	}
+	/* Initialize the RHS vector (current and voltage sources). */
 	for (m = 1; m <= ckt->m; m++) {
 		mna->e->mat[m][1] = VSOURCE(ckt->vsrcs[m-1])->voltage;
 	}
+#endif
+
 	SC_MatrixCompose21(mna->z, mna->i, mna->e);
 
-	/*
-	 * Generate the partitioned matrix A with blocks GBCD and solve the
-	 * system using LU factorization and backsubstitution.
-	 */
+	/* Build the block matrix A from GBCD and solve the system. */
 	SC_MatrixCompose22(mna->A, mna->G, mna->B, mna->C, mna->D);
 	iv = SC_IvectorNew(mna->z->m);
 	if ((SC_FactorizeLU(mna->A, mna->A_LU, iv, &d)) == NULL) {
-		AG_SetError("A(lu): %s", AG_GetError());
+		AG_SetError("A(LU): %s", AG_GetError());
 		goto fail;
 	}
 	SC_VectorCopy(mna->z, mna->x);
@@ -184,25 +194,6 @@ mna_tick(void *obj, Uint32 ival, void *arg)
 	struct sim *sim = arg;
 	struct mna *mna = arg;
 	ES_Component *com;
-
-	/* Effect the independent voltage sources. XXX */
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component.vsource") ||
-		    com->flags & COMPONENT_FLOATING) {
-			continue;
-		}
-		if (com->ops->tick != NULL)
-			com->ops->tick(com);
-	}
-	/* Update model states. XXX */
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component") ||
-		    com->flags & COMPONENT_FLOATING) {
-			continue;
-		}
-		if (com->ops->tick != NULL)
-			com->ops->tick(com);
-	}
 
 	if (mna_solve(mna, ckt) == -1) {
 		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());

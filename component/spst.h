@@ -16,14 +16,14 @@ typedef struct es_spst {
 } ES_Spst;
 
 __BEGIN_DECLS
-void		 ES_SpstInit(void *, const char *);
-int		 ES_SpstLoad(void *, AG_Netbuf *);
-int		 ES_SpstSave(void *, AG_Netbuf *);
-int		 ES_SpstExport(void *, enum circuit_format, FILE *);
-double		 ES_SpstResistance(void *, ES_Port *, ES_Port *);
-AG_Window	*ES_SpstEdit(void *);
-void		 ES_SpstDraw(void *, VG *);
-void		 ES_SpstUpdate(void *, VG *);
+void	 ES_SpstInit(void *, const char *);
+int	 ES_SpstLoad(void *, AG_Netbuf *);
+int	 ES_SpstSave(void *, AG_Netbuf *);
+int	 ES_SpstExport(void *, enum circuit_format, FILE *);
+double	 ES_SpstResistance(void *, ES_Port *, ES_Port *);
+void	*ES_SpstEdit(void *);
+void	 ES_SpstDraw(void *, VG *);
+void	 ES_SpstUpdate(void *, VG *);
 __END_DECLS
 
 #include "close_code.h"

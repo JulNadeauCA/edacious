@@ -51,13 +51,10 @@ const ES_ComponentOps esResistorOps = {
 	"R",
 	ES_ResistorDraw,
 	ES_ResistorEdit,
-	NULL,
-	ES_ResistorExport,
-	NULL,			/* tick */
-	ES_ResistorResistance,
-	NULL,			/* capacitance */
-	NULL,			/* inductance */
-	NULL			/* isource */
+	NULL,			/* menu */
+	NULL,			/* connect */
+	NULL,			/* disconnect */
+	ES_ResistorExport
 };
 
 const ES_Port esResistorPinout[] = {
@@ -70,7 +67,7 @@ const ES_Port esResistorPinout[] = {
 int esResistorDispVal = 0;
 enum {
 	RESISTOR_BOX_STYLE,
-	RESISTOR_LINE_STYLE
+	RESISTOR_US_STYLE
 } esResistorStyle = 0;
 
 void
@@ -93,7 +90,7 @@ ES_ResistorDraw(void *p, VG *vg)
 		VG_Vertex2(vg, 1.09375, -0.240);
 		VG_End(vg);
 		break;
-	case RESISTOR_LINE_STYLE:
+	case RESISTOR_US_STYLE:
 		VG_Begin(vg, VG_LINE_STRIP);
 		VG_Vertex2(vg, 0.000, 0.125);
 		VG_Vertex2(vg, 0.125, 0.000);
@@ -120,17 +117,6 @@ ES_ResistorDraw(void *p, VG *vg)
 		VG_Printf(vg, "%s", AGOBJECT(r)->name);
 	}
 	VG_End(vg);
-}
-
-void
-ES_ResistorInit(void *p, const char *name)
-{
-	ES_Resistor *r = p;
-
-	ES_ComponentInit(r, "resistor", name, &esResistorOps, esResistorPinout);
-	r->resistance = 1;
-	r->power_rating = HUGE_VAL;
-	r->tolerance = 0;
 }
 
 int
@@ -189,13 +175,93 @@ double
 ES_ResistorResistance(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_Resistor *r = p;
-	double deltaT = COM(r)->Tnom - COM(r)->Tspec;
+	double deltaT = COM_T0 - COM(r)->Tspec;
 
 	return (r->resistance * (1.0 + r->Tc1*deltaT + r->Tc2*deltaT*deltaT));
 }
 
+/*
+ * Load the element into the conductance matrix. All conductances between
+ * (k,j) are added to (k,k) and (j,j), and subtracted from (k,j) and (j,k).
+ *
+ *   |  Vk    Vj  | RHS
+ *   |------------|-----
+ * k |  Gkj  -Gkj |
+ * j | -Gkj   Gkj |
+ *   |------------|-----
+ */
+static int
+ES_ResistorLoadDC_G(void *p, SC_Matrix *G)
+{
+	ES_Resistor *r = p;
+	ES_Node *n;
+	u_int k = PNODE(r,1);
+	u_int j = PNODE(r,2);
+	double g;
+
+	if (r->resistance == 0.0 || k == -1 || j == -1 || (k == 0 && j == 0)) {
+		AG_SetError("null resistance");
+		return (-1);
+	}
+	g = 1.0/r->resistance;
+	if (k != 0) {
+		G->mat[k][k] += g;
+	}
+	if (j != 0) {
+		G->mat[j][j] += g;
+	}
+	if (k != 0 && j != 0) {
+		G->mat[k][j] -= g;
+		G->mat[j][k] -= g;
+	}
+	return (0);
+}
+
+static int
+ES_ResistorLoadSP(void *p, SC_Matrix *S, SC_Matrix *N)
+{
+	ES_Resistor *res = p;
+	u_int k = PNODE(res,1);
+	u_int j = PNODE(res,2);
+	double r, z, f;
+	
+	if (res->resistance == 0.0 ||
+	    k == -1 || j == -1 || (k == 0 && j == 0)) {
+		AG_SetError("null resistance");
+		return (-1);
+	}
+
+	r = res->resistance;
+	z = r/COM_Z0;
+	S->mat[k][k] += z/(z+2);
+	S->mat[j][j] += z/(z+2);
+	S->mat[k][j] -= z/(z+2);
+	S->mat[j][k] -= z/(z+2);
+
+	f = COM(res)->Tspec*4.0*r*COM_Z0 /
+	    ((2.0*COM_Z0+r)*(2.0*COM_Z0+r)) / COM_T0;
+	N->mat[k][k] += f;
+	N->mat[j][j] += f;
+	N->mat[k][j] -= f;
+	N->mat[j][k] -= f;
+	return (0);
+}
+
+void
+ES_ResistorInit(void *p, const char *name)
+{
+	ES_Resistor *r = p;
+
+	ES_ComponentInit(r, "resistor", name, &esResistorOps, esResistorPinout);
+	r->resistance = 1;
+	r->power_rating = HUGE_VAL;
+	r->tolerance = 0;
+	COM(r)->loadDC_G = ES_ResistorLoadDC_G;
+	COM(r)->loadSP= ES_ResistorLoadSP;
+}
+
 #ifdef EDITION
-AG_Window *
+void *
 ES_ResistorEdit(void *p)
 {
 	ES_Resistor *r = p;

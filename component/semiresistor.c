@@ -51,13 +51,10 @@ const ES_ComponentOps esSemiResistorOps = {
 	"R",
 	ES_SemiResistorDraw,
 	ES_SemiResistorEdit,
+	NULL,			/* menu */
 	NULL,			/* connect */
-	ES_SemiResistorExport,
-	NULL,			/* tick */
-	ES_SemiResistorResistance,
-	NULL,			/* capacitance */
-	NULL,			/* inductance */
-	NULL			/* isource */
+	NULL,			/* disconnect */
+	ES_SemiResistorExport
 };
 
 const ES_Port esSemiResistorPinout[] = {
@@ -164,7 +161,7 @@ ES_SemiResistorExport(void *p, enum circuit_format fmt, FILE *f)
 		           "(tc1=%g tc2=%g rsh=%g defw=%g narrow=%g "
 			   "tnom=%g)\n",
 		    nRmod, r->Tc1, r->Tc2, r->rsh, r->defw, r->narrow,
-		    COM(r)->Tnom);
+		    COM_T0);
 		fprintf(f, "%s %d %d Rmod%u L=%g W=%g TEMP=%g\n",
 		    AGOBJECT(r)->name, PNODE(r,1), PNODE(r,2),
 		    nRmod, r->l, r->w, COM(r)->Tspec);
@@ -178,7 +175,7 @@ double
 ES_SemiResistorResistance(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_SemiResistor *r = p;
-	double deltaT = COM(r)->Tnom - COM(r)->Tspec;
+	double deltaT = COM_T0 - COM(r)->Tspec;
 	double R;
 
 	R = r->rsh*(r->l - r->narrow)/(r->w - r->narrow);
@@ -186,7 +183,7 @@ ES_SemiResistorResistance(void *p, ES_Port *p1, ES_Port *p2)
 }
 
 #ifdef EDITION
-AG_Window *
+void *
 ES_SemiResistorEdit(void *p)
 {
 	ES_SemiResistor *r = p;

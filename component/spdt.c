@@ -51,13 +51,10 @@ const ES_ComponentOps esSpdtOps = {
 	"Sw",
 	ES_SpdtDraw,
 	ES_SpdtEdit,
+	NULL,			/* menu */
 	NULL,			/* connect */
-	ES_SpdtExport,
-	NULL,			/* tick */
-	ES_SpdtResistance,
-	NULL,			/* capacitance */
-	NULL,			/* inductance */
-	NULL			/* isource */
+	NULL,			/* disconnect */
+	ES_SpdtExport
 };
 
 const ES_Port esSpdtPinout[] = {
@@ -220,7 +217,7 @@ toggle_state(AG_Event *event)
 	sw->state = (sw->state == 1) ? 2 : 1;
 }
 
-AG_Window *
+void *
 ES_SpdtEdit(void *p)
 {
 	ES_Spdt *sw = p;

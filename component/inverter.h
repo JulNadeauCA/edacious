@@ -21,13 +21,13 @@ typedef struct es_inverter {
 } ES_Inverter;
 
 __BEGIN_DECLS
-void		 ES_InverterInit(void *, const char *);
-int		 ES_InverterLoad(void *, AG_Netbuf *);
-int		 ES_InverterSave(void *, AG_Netbuf *);
-int		 ES_InverterExport(void *, enum circuit_format, FILE *);
-AG_Window	*ES_InverterEdit(void *);
-void		 ES_InverterTick(void *);
-void		 ES_InverterDraw(void *, VG *);
+void	 ES_InverterInit(void *, const char *);
+int	 ES_InverterLoad(void *, AG_Netbuf *);
+int	 ES_InverterSave(void *, AG_Netbuf *);
+int	 ES_InverterExport(void *, enum circuit_format, FILE *);
+void	*ES_InverterEdit(void *);
+void	 ES_InverterTick(void *);
+void	 ES_InverterDraw(void *, VG *);
 __END_DECLS
 
 #include "close_code.h"

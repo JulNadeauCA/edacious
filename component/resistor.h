@@ -17,15 +17,15 @@ typedef struct es_resistor {
 } ES_Resistor;
 
 __BEGIN_DECLS
-void		 ES_ResistorInit(void *, const char *);
-int		 ES_ResistorLoad(void *, AG_Netbuf *);
-int		 ES_ResistorSave(void *, AG_Netbuf *);
-int		 ES_ResistorExport(void *, enum circuit_format, FILE *);
-double		 ES_ResistorResistance(void *, ES_Port *, ES_Port *);
-AG_Window	*ES_ResistorEdit(void *);
-int		 ES_ResistorConnect(void *, ES_Port *, ES_Port *);
-void		 ES_ResistorDraw(void *, VG *);
-void		 ES_ResistorUpdate(void *, VG *);
+void	 ES_ResistorInit(void *, const char *);
+int	 ES_ResistorLoad(void *, AG_Netbuf *);
+int	 ES_ResistorSave(void *, AG_Netbuf *);
+int	 ES_ResistorExport(void *, enum circuit_format, FILE *);
+double	 ES_ResistorResistance(void *, ES_Port *, ES_Port *);
+void	*ES_ResistorEdit(void *);
+int	 ES_ResistorConnect(void *, ES_Port *, ES_Port *);
+void	 ES_ResistorDraw(void *, VG *);
+void	 ES_ResistorUpdate(void *, VG *);
 __END_DECLS
 
 #include "close_code.h"

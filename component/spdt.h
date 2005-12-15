@@ -16,14 +16,14 @@ typedef struct es_spdt {
 } ES_Spdt;
 
 __BEGIN_DECLS
-void		 ES_SpdtInit(void *, const char *);
-int		 ES_SpdtLoad(void *, AG_Netbuf *);
-int		 ES_SpdtSave(void *, AG_Netbuf *);
-int		 ES_SpdtExport(void *, enum circuit_format, FILE *);
-double		 ES_SpdtResistance(void *, ES_Port *, ES_Port *);
-AG_Window	*ES_SpdtEdit(void *);
-void		 ES_SpdtDraw(void *, VG *);
-void		 ES_SpdtUpdate(void *, VG *);
+void	 ES_SpdtInit(void *, const char *);
+int	 ES_SpdtLoad(void *, AG_Netbuf *);
+int	 ES_SpdtSave(void *, AG_Netbuf *);
+int	 ES_SpdtExport(void *, enum circuit_format, FILE *);
+double	 ES_SpdtResistance(void *, ES_Port *, ES_Port *);
+void	*ES_SpdtEdit(void *);
+void	 ES_SpdtDraw(void *, VG *);
+void	 ES_SpdtUpdate(void *, VG *);
 __END_DECLS
 
 #include "close_code.h"

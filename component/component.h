@@ -11,10 +11,21 @@
 #define COMPONENT_MAX_PORTS	128
 #define COMPONENT_PORT_NAME_MAX	16
 
+enum es_component_fn {
+	ES_LOAD_DC_G,		/* Load into conductance matrix */
+	ES_LOAD_SP_S,		/* Load into S-parameter matrix */
+	ES_LOAD_SP_N,		/* Load into SP noise correlation matrix */
+	ES_LOAD_AC_N,		/* Load into AC noise correlation matrix */
+	ES_LOAD_AC_Y,		/* Load into AC admittance matrix */
+	ES_LOAD_TR,		/* Transient analysis */
+	ES_LAST_FN
+};
+
 struct es_branch;
 struct es_loop;
 struct es_circuit;
 struct ag_window;
+struct ag_menu_item;
 
 /* Exportable circuit model formats. */
 enum circuit_format {
@@ -49,15 +60,12 @@ typedef struct es_component_ops {
 	const char *name;			/* Name (eg. "Resistor") */
 	const char *pfx;			/* Prefix (eg. "R") */
 
-	void		 (*draw)(void *, VG *);
-	struct ag_window *(*edit)(void *);
-	int		 (*connect)(void *, ES_Port *, ES_Port *);
-	int		 (*export_model)(void *, enum circuit_format, FILE *);
-	void		 (*tick)(void *);
-	double		 (*resistance)(void *, ES_Port *, ES_Port *);
-	double		 (*capacitance)(void *, ES_Port *, ES_Port *);
-	double		 (*inductance)(void *, ES_Port *, ES_Port *);
-	double		 (*isource)(void *, ES_Port *, ES_Port *);
+	void	 (*draw)(void *, VG *);
+	void	*(*edit)(void *);
+	void	 (*menu)(void *, struct ag_menu_item *);
+	int	 (*connect)(void *, ES_Port *, ES_Port *);
+	void	 (*disconnect)(void *, ES_Port *, ES_Port *);
+	int	 (*export_model)(void *, enum circuit_format, FILE *);
 } ES_ComponentOps;
 
 typedef struct es_component {
@@ -71,19 +79,28 @@ typedef struct es_component {
 	int highlighted;			/* Selected for selection? */
 	pthread_mutex_t lock;
 	AG_Timeout redraw_to;			/* Timer for vg updates */
-	float Tnom;				/* Model ref temp (k) */
 	float Tspec;				/* Instance temp (k) */
 	ES_Port ports[COMPONENT_MAX_PORTS];	/* Interface elements */
 	int    nports;
 	ES_Pair *pairs;				/* Port pairs */
 	int     npairs;
+
+	int (*loadDC_G)(void *, SC_Matrix *G);
+	int (*loadDC_BCD)(void *, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D);
+	int (*loadDC_RHS)(void *, SC_Vector *i, SC_Vector *e);
+	int (*loadAC)(void *, SC_Matrix *Y);
+	int (*loadSP)(void *, SC_Matrix *S, SC_Matrix *N);
+	
 	TAILQ_ENTRY(es_component) components;
 } ES_Component;
 
 #define COM(p) ((struct es_component *)(p))
 #define PORT(p,n) (&COM(p)->ports[n])
+#define PAIR(p,n) (&COM(p)->pairs[n])
 #define PNODE(p,n) (COM(p)->ports[n].node)
 #define U(p,n) (PORT((p),(n))->u)
+#define COM_Z0 50.0				/* Normalizing impedance */
+#define COM_T0 290.0				/* Reference temperature */
 
 __BEGIN_DECLS
 void	 ES_ComponentInit(void *, const char *, const char *, const void *,
@@ -92,6 +109,9 @@ void	 ES_ComponentDestroy(void *);
 int	 ES_ComponentLoad(void *, AG_Netbuf *);
 int	 ES_ComponentSave(void *, AG_Netbuf *);
 void	*ES_ComponentEdit(void *);
+void	 ES_ComponentMenu(ES_Component *, struct ag_menu_item *);
+void	 ES_ComponentOpenMenu(ES_Component *, VG_View *, int, int);
+void	 ES_ComponentCloseMenu(VG_View *);
 void	 ES_ComponentInsert(AG_Event *);
 ES_Port	*ES_ComponentPortOverlap(struct es_circuit *, ES_Component *, float,
 		                 float);
@@ -102,15 +122,8 @@ void	 ES_ComponentUnselect(ES_Component *);
 void	 ES_ComponentUnselectAll(struct es_circuit *);
 
 __inline__ int  ES_PortIsGrounded(ES_Port *);
-double		ES_PairResistance(ES_Pair *);
-double		ES_PairCapacitance(ES_Pair *);
-double		ES_PairInductance(ES_Pair *);
 __inline__ int	ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
 
-#ifdef EDITION
-void		ES_ComponentRegMenu(AG_Menu *, AG_MenuItem *,
-		                    struct es_circuit *);
-#endif
 __END_DECLS
 
 #include "close_code.h"

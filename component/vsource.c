@@ -51,13 +51,10 @@ const ES_ComponentOps esVsourceOps = {
 	"V",
 	ES_VsourceDraw,
 	ES_VsourceEdit,
-	NULL,
-	ES_VsourceExport,
-	ES_VsourceTick,
-	NULL,			/* resistance */
-	NULL,			/* capacitance */
-	NULL,			/* inductance */
-	NULL			/* isource */
+	NULL,			/* menu */
+	NULL,			/* connect */
+	NULL,			/* disconnect */
+	ES_VsourceExport
 };
 
 const ES_Port esVsourcePinout[] = {
@@ -281,25 +278,52 @@ ES_VsourceFindLoops(ES_Vsource *vs)
 	vs->nlstack = 0;
 }
 
-void
-ES_VsourceTick(void *p)
+/*
+ * Ideal voltage sources require the addition of one unknown (iE), and a
+ * branch current equation (br). Voltage sources contribute two entries to
+ * the B/C matrices and one entry to the right-hand side vector e.
+ *
+ *    |  Vk  Vj  iE  | RHS
+ *    |--------------|-----
+ *  k |           1  |
+ *  j |          -1  |
+ * br | 1   -1       | Ekj
+ *    |--------------|-----
+ */
+static int
+ES_VsourceLoadDC_BCD(void *p, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D)
 {
 	ES_Vsource *vs = p;
-	ES_Node *n1, *n2;
-	ES_Circuit *ckt = COM(vs)->ckt;
+	u_int k = PNODE(vs,1);
+	u_int j = PNODE(vs,2);
+	int v;
 
-	if (PNODE(vs,1) == -1 ||
-	    PNODE(vs,2) == -1)
-		return;
-
-	n1 = ckt->nodes[PNODE(vs,1)];
-	n2 = ckt->nodes[PNODE(vs,2)];
-
-	/* XXX */
-	if (n1->nbranches >= 2 && n2->nbranches >= 2) {
-		U(vs,1) = vs->voltage;
-		U(vs,2) = 0.0;
+	if ((v = ES_VsourceName(vs)) == -1) {
+		AG_SetError("no such vsource");
+		return (-1);
 	}
+	if (k != 0) {
+		B->mat[k][v] = +1.0;
+		C->mat[v][k] = +1.0;
+	}
+	if (j != 0) {
+		B->mat[j][v] = -1.0;
+		C->mat[v][j] = -1.0;
+	}
+	return (0);
+}
+static int
+ES_VsourceLoadDC_RHS(void *p, SC_Vector *i, SC_Vector *e)
+{
+	ES_Vsource *vs = p;
+	int v;
+
+	if ((v = ES_VsourceName(vs)) == -1 ) {
+		AG_SetError("no such vsource");
+		return (-1);
+	}
+	e->mat[v][1] = vs->voltage;
+	return (0);
 }
 
 void
@@ -313,6 +337,8 @@ ES_VsourceInit(void *p, const char *name)
 	vs->nlstack = 0;
 	TAILQ_INIT(&vs->loops);
 	vs->nloops = 0;
+	COM(vs)->loadDC_BCD = ES_VsourceLoadDC_BCD;
+	COM(vs)->loadDC_RHS = ES_VsourceLoadDC_RHS;
 }
 
 void
@@ -404,6 +430,19 @@ ES_VsourceVoltage(void *p, int p1, int p2)
 	return (p1 == 1 ? vs->voltage : -(vs->voltage));
 }
 
+int
+ES_VsourceName(ES_Vsource *vs)
+{
+	ES_Circuit *ckt = COM(vs)->ckt;
+	int i;
+
+	for (i = 1; i <= ckt->m; i++) {
+		if (VSOURCE(ckt->vsrcs[i-1]) == vs)
+			return (i);
+	}
+	return (-1);
+}
+
 #ifdef EDITION
 static void
 poll_loops(AG_Event *event)
@@ -418,7 +457,7 @@ poll_loops(AG_Event *event)
 	AG_TlistClear(tl);
 	TAILQ_FOREACH(l, &vs->loops, loops) {
 		snprintf(text, sizeof(text), "L%u", l->name);
-		it = AG_TlistAddPtr(tl, AGICON(EDA_MESH_ICON), text, l);
+		it = AG_TlistAddPtr(tl, NULL, text, l);
 		it->depth = 0;
 
 		for (i = 0; i < l->npairs; i++) {
@@ -427,7 +466,7 @@ poll_loops(AG_Event *event)
 			snprintf(text, sizeof(text), "%s:(%s,%s)",
 			    AGOBJECT(dip->com)->name, dip->p1->name,
 			    dip->p2->name);
-			it = AG_TlistAddPtr(tl, AGICON(EDA_NODE_ICON), text,
+			it = AG_TlistAddPtr(tl, NULL, text,
 			    dip);
 			it->depth = 1;
 #if 0
@@ -448,7 +487,7 @@ poll_loops(AG_Event *event)
 	AG_TlistRestore(tl);
 }
 
-AG_Window *
+void *
 ES_VsourceEdit(void *p)
 {
 	ES_Vsource *vs = p;
@@ -463,7 +502,7 @@ ES_VsourceEdit(void *p)
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &vs->voltage);
 	
 	AG_LabelNew(win, AG_LABEL_STATIC, _("Loops:"));
-	tl = AG_TlistNew(win, AG_TLIST_POLL|AG_TLIST_TREE);
+	tl = AG_TlistNew(win, AG_TLIST_POLL|AG_TLIST_TREE|AG_TLIST_EXPAND);
 	AG_SetEvent(tl, "tlist-poll", poll_loops, "%p", vs);
 	
 	return (win);

@@ -31,11 +31,9 @@
 
 #include "eda.h"
 
-extern const struct sim_ops kvl_ops;
 extern const struct sim_ops mna_ops;
 
 const struct sim_ops *sim_ops[] = {
-	&kvl_ops,
 	&mna_ops,
 	NULL
 };

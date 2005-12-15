@@ -51,13 +51,10 @@ const ES_ComponentOps esSpstOps = {
 	"Sw",
 	ES_SpstDraw,
 	ES_SpstEdit,
+	NULL,			/* menu */
 	NULL,			/* connect */
-	ES_SpstExport,
-	NULL,			/* tick */
-	ES_SpstResistance,
-	NULL,			/* capacitance */
-	NULL,			/* inductance */
-	NULL			/* isource */
+	NULL,			/* disconnect */
+	ES_SpstExport
 };
 
 const ES_Port esSpstPinout[] = {
@@ -175,7 +172,7 @@ ES_SpstResistance(void *p, ES_Port *p1, ES_Port *p2)
 }
 
 #ifdef EDITION
-AG_Window *
+void *
 ES_SpstEdit(void *p)
 {
 	ES_Spst *sw = p;

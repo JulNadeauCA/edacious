@@ -51,13 +51,10 @@ const ES_ComponentOps esConductorOps = {
 	"Cd",
 	ES_ConductorDraw,
 	NULL,			/* edit */
+	NULL,			/* menu */
 	NULL,			/* connect */
-	ES_ConductorExport,
-	NULL,			/* tick */
-	ES_ConductorResistance,
-	NULL,			/* capacitance */
-	NULL,			/* inductance */
-	NULL			/* isource */
+	NULL,			/* disconnect */
+	ES_ConductorExport
 };
 
 const ES_Port esConductorPinout[] = {
@@ -78,6 +75,27 @@ ES_ConductorDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
+static int
+ES_ConductorLoadDC_G(void *p, SC_Matrix *G)
+{
+	ES_Conductor *cd = p;
+	ES_Node *n;
+	u_int k = PNODE(cd,1);
+	u_int j = PNODE(cd,2);
+
+	if (k == -1 || j == -1 || (k == 0 && j == 0)) {
+		AG_SetError("bad conductor");
+		return (-1);
+	}
+	if (k != 0) { G->mat[k][k] += 1000000000.0; }
+	if (j != 0) { G->mat[j][j] += 1000000000.0; }
+	if (k != 0 && j != 0) {
+		G->mat[k][j] -= 1000000000.0;
+		G->mat[j][k] -= 1000000000.0;
+	}
+	return (0);
+}
+
 void
 ES_ConductorInit(void *p, const char *name)
 {
@@ -85,12 +103,7 @@ ES_ConductorInit(void *p, const char *name)
 
 	ES_ComponentInit(cd, "conductor", name, &esConductorOps,
 	    esConductorPinout);
-}
-
-double
-ES_ConductorResistance(void *p, ES_Port *p1, ES_Port *p2)
-{
-	return (0);
+	COM(cd)->loadDC_G = ES_ConductorLoadDC_G;
 }
 
 int

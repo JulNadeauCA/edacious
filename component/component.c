@@ -317,8 +317,12 @@ ES_ComponentInit(void *obj, const char *tname, const char *name,
 	com->nports = 0;
 	com->selected = 0;
 	com->highlighted = 0;
-	com->Tnom = 27+273.15;
 	com->Tspec = 27+273.15;
+	com->loadDC_G = NULL;
+	com->loadDC_BCD = NULL;
+	com->loadDC_RHS = NULL;
+	com->loadAC = NULL;
+	com->loadSP = NULL;
 	pthread_mutex_init(&com->lock, &agRecursiveMutexAttr);
 
 	/* Assign the origin and default pinout. */
@@ -386,13 +390,12 @@ int
 ES_ComponentLoad(void *p, AG_Netbuf *buf)
 {
 	ES_Component *com = p;
-	float Tnom, Tspec;
+	float Tspec;
 
 	if (AG_ReadVersion(buf, &esComponentVer, NULL) == -1)
 		return (-1);
 
 	com->flags = (u_int)AG_ReadUint32(buf);
-	com->Tnom = AG_ReadFloat(buf);
 	com->Tspec = AG_ReadFloat(buf);
 	return (0);
 }
@@ -404,62 +407,8 @@ ES_ComponentSave(void *p, AG_Netbuf *buf)
 
 	AG_WriteVersion(buf, &esComponentVer);
 	AG_WriteUint32(buf, com->flags);
-	AG_WriteFloat(buf, com->Tnom);
 	AG_WriteFloat(buf, com->Tspec);
 	return (0);
-}
-
-/* Return the effective DC resistance of a pair. */
-double
-ES_PairResistance(ES_Pair *dip)
-{
-#ifdef DEBUG
-	if (dip->p1 == dip->p2) { Fatal("p1 == p2"); }
-#endif
-	if (dip->com->ops->resistance == NULL) {
-		return (0);
-	}
-	if (dip->p1->n < dip->p2->n) {
-		return (dip->com->ops->resistance(dip->com, dip->p1, dip->p2));
-	} else {
-		return (dip->com->ops->resistance(dip->com, dip->p2, dip->p1));
-	}
-}
-
-/* Return the effective capacitance of a pair. */
-double
-ES_PairCapacitance(ES_Pair *dip)
-{
-#ifdef DEBUG
-	if (dip->p1 == dip->p2)
-		fatal("p1 == p2");
-#endif
-	if (dip->com->ops->capacitance == NULL) {
-		return (0);
-	}
-	if (dip->p1->n < dip->p2->n) {
-		return (dip->com->ops->capacitance(dip->com, dip->p1, dip->p2));
-	} else {
-		return (dip->com->ops->capacitance(dip->com, dip->p2, dip->p1));
-	}
-}
-
-/* Return the effective inductance of a pair. */
-double
-ES_PairInductance(ES_Pair *dip)
-{
-#ifdef DEBUG
-	if (dip->p1 == dip->p2)
-		fatal("p1 == p2");
-#endif
-	if (dip->com->ops->inductance == NULL) {
-		return (0);
-	}
-	if (dip->p1->n < dip->p2->n) {
-		return (dip->com->ops->inductance(dip->com, dip->p1, dip->p2));
-	} else {
-		return (dip->com->ops->inductance(dip->com, dip->p2, dip->p1));
-	}
 }
 
 /*
@@ -496,6 +445,74 @@ ES_ComponentEdit(void *p)
 	AG_WindowSetCloseAction(win, AG_WINDOW_DETACH);
 	AG_WindowShow(win);
 	return (win);
+}
+
+static void
+EditComponent(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	AG_ObjMgrOpenData(com, 1);
+}
+
+static void
+LoadComponent(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+
+	if (AG_ObjectLoad(com) == -1)
+		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
+}
+
+static void
+SaveComponent(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+
+	if (AG_ObjectSave(com) == -1)
+		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
+}
+
+void
+ES_ComponentMenu(ES_Component *com, AG_MenuItem *mi)
+{
+	AG_MenuAction(mi, _("Edit model"), EDA_COMPONENT_ICON,
+	    EditComponent, "%p", com);
+	AG_MenuSeparator(mi);
+	AG_MenuAction(mi, _("Load model"), OBJLOAD_ICON,
+	    LoadComponent, "%p", com);
+	AG_MenuAction(mi, _("Save model"), OBJSAVE_ICON,
+	    LoadComponent, "%p", com);
+}
+
+void
+ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv, int x, int y)
+{
+	if (vgv->popup.menu != NULL)
+		ES_ComponentCloseMenu(vgv);
+
+	vgv->popup.menu = Malloc(sizeof(AG_Menu), M_OBJECT);
+	AG_MenuInit(vgv->popup.menu, 0);
+
+	vgv->popup.item = AG_MenuAddItem(vgv->popup.menu, NULL);
+	if (com->ops->menu != NULL) {
+		com->ops->menu(com, vgv->popup.item);
+	} else {
+		ES_ComponentMenu(com, vgv->popup.item);
+	}
+	vgv->popup.menu->sel_item = vgv->popup.item;
+	vgv->popup.win = AG_MenuExpand(vgv->popup.menu, vgv->popup.item, x, y);
+}
+
+void
+ES_ComponentCloseMenu(VG_View *vgv)
+{
+	AG_MenuCollapse(vgv->popup.menu, vgv->popup.item);
+	AG_ObjectDestroy(vgv->popup.menu);
+	Free(vgv->popup.menu, M_OBJECT);
+
+	vgv->popup.menu = NULL;
+	vgv->popup.item = NULL;
+	vgv->popup.win = NULL;
 }
 
 /* Insert a new, floating component into a circuit. */
@@ -535,7 +552,6 @@ tryname:
 	AG_ObjectAttach(ckt, com);
 	AG_ObjectUnlinkDatafiles(com);
 	AG_ObjectPageIn(com, AG_OBJECT_DATA);
-//	AG_ObjectSave(com);
 	AG_PostEvent(ckt, com, "circuit-shown", NULL);
 
 	if ((t = VG_ViewFindTool(vgv, "Insert component")) != NULL) {
@@ -545,6 +561,8 @@ tryname:
 	}
 	AG_WidgetFocus(vgv);
 	AG_WindowFocus(AG_WidgetParentWindow(vgv));
+	
+	AG_ObjectSave(com);
 }
 
 /*
@@ -648,9 +666,4 @@ ES_ComponentHighlightPorts(ES_Circuit *ckt, ES_Component *com)
 	return (nconn);
 }
 
-void
-ES_ComponentRegMenu(AG_Menu *m, AG_MenuItem *pitem, ES_Circuit *ckt)
-{
-	/* Nothing yet */
-}
 #endif /* EDITION */

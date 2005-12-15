@@ -14,7 +14,6 @@ typedef struct es_conductor {
 
 __BEGIN_DECLS
 void	 ES_ConductorInit(void *, const char *);
-double	 ES_ConductorResistance(void *, ES_Port *, ES_Port *);
 void	 ES_ConductorDraw(void *, VG *);
 int	 ES_ConductorExport(void *, enum circuit_format, FILE *);
 void	 ES_ConductorToolReinit(void);

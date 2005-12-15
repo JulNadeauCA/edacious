@@ -51,13 +51,10 @@ const ES_ComponentOps esGroundOps = {
 	"Gnd",
 	ES_GroundDraw,
 	NULL,			/* edit */
+	NULL,			/* menu */
 	ES_GroundConnect,
-	NULL,			/* export */
-	NULL,			/* tick */
-	NULL,			/* resistance */
-	NULL,			/* capacitance */
-	NULL,			/* inductance */
-	NULL			/* isource */
+	NULL,			/* disconnect */
+	NULL			/* export */
 };
 
 const ES_Port esGroundPinout[] = {
