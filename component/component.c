@@ -30,6 +30,8 @@
 #include <agar/vg.h>
 #include <agar/gui.h>
 
+#include <string.h>
+
 #include "eda.h"
 
 const AG_Version esComponentVer = {
@@ -240,13 +242,15 @@ ES_ComponentRedraw(void *p, Uint32 ival, void *arg)
 		ES_Port *port = &com->ports[i];
 		float rho, theta;
 		float x, y;
+		VG_Element *vge;
 
 		VG_Car2Pol(vg, port->x, port->y, &rho, &theta);
 		theta -= com->block->theta;
 		VG_Pol2Car(vg, rho, theta, &x, &y);
 
 		if (com->ckt->dis_nodes) {
-			VG_Begin(vg, VG_CIRCLE);
+			vge = VG_Begin(vg, VG_CIRCLE);
+			vge->selected = 1;
 			VG_Vertex2(vg, x, y);
 			if (port->selected) {
 				VG_Color3(vg, 255, 255, 165);
@@ -259,7 +263,8 @@ ES_ComponentRedraw(void *p, Uint32 ival, void *arg)
 		}
 		if (com->ckt->dis_node_names &&
 		    port->node >= 0) {
-			VG_Begin(vg, VG_TEXT);
+			vge = VG_Begin(vg, VG_TEXT);
+			vge->selected = 1;
 			VG_Vertex2(vg, x, y);
 			VG_SetStyle(vg, "node-name");
 			VG_Color3(vg, 0, 200, 100);
@@ -273,19 +278,30 @@ ES_ComponentRedraw(void *p, Uint32 ival, void *arg)
 		}
 	}
 
-	if (com->selected) {
+	/* TODO blend */
+	if (com->selected && com->highlighted) {
 		TAILQ_FOREACH(vge, &com->block->vges, vgbmbs) {
-			VG_Select(vg, vge);
-			/* TODO blend */
-			VG_Color3(vg, 240, 240, 50);
-			VG_End(vg);
+			if (!vge->selected) {
+				VG_Select(vg, vge);
+				VG_Color3(vg, 250, 250, 180);
+				VG_End(vg);
+			}
+		}
+	} else if (com->selected) {
+		TAILQ_FOREACH(vge, &com->block->vges, vgbmbs) {
+			if (!vge->selected) {
+				VG_Select(vg, vge);
+				VG_Color3(vg, 240, 240, 50);
+				VG_End(vg);
+			}
 		}
 	} else if (com->highlighted) {
 		TAILQ_FOREACH(vge, &com->block->vges, vgbmbs) {
-			VG_Select(vg, vge);
-			/* TODO blend */
-			VG_Color3(vg, 180, 180, 120);
-			VG_End(vg);
+			if (!vge->selected) {
+				VG_Select(vg, vge);
+				VG_Color3(vg, 180, 180, 120);
+				VG_End(vg);
+			}
 		}
 	}
 
@@ -323,6 +339,8 @@ ES_ComponentInit(void *obj, const char *tname, const char *name,
 	com->loadDC_RHS = NULL;
 	com->loadAC = NULL;
 	com->loadSP = NULL;
+	com->intStep = NULL;
+	com->intUpdate = NULL;
 	pthread_mutex_init(&com->lock, &agRecursiveMutexAttr);
 
 	/* Assign the origin and default pinout. */
@@ -427,6 +445,30 @@ ES_PairIsInLoop(ES_Pair *dip, ES_Loop *loop, int *sign)
 		}
 	}
 	return (0);
+}
+
+void
+ES_ComponentLog(void *p, const char *fmt, ...)
+{
+	char buf[1024];
+	int len;
+	ES_Component *com = p;
+	AG_ConsoleLine *ln;
+	va_list args;
+
+	if (com->ckt == NULL || com->ckt->sim == NULL ||
+	    com->ckt->sim->log == NULL)
+		return;
+	
+	strlcpy(buf, AGOBJECT(com)->name, sizeof(buf));
+	
+	va_start(args, fmt);
+	ln = AG_ConsoleAppendLine(com->ckt->sim->log, NULL);
+	len = strlcat(buf, ": ", sizeof(buf));
+	vsnprintf(&buf[len], sizeof(buf)-len, fmt, args);
+	ln->text = strdup(buf);
+	ln->len = strlen(ln->text);
+	va_end(args);
 }
 
 #ifdef EDITION
