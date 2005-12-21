@@ -44,10 +44,8 @@ ES_DigitalDraw(void *p, VG *vg)
 	ES_Digital *dig = p;
 
 	VG_Begin(vg, VG_LINES);
-	VG_Vertex2(vg, 0.000, 0.000);
-	VG_Vertex2(vg, 0.156, 0.000);
-	VG_Vertex2(vg, 1.250, 0.000);
-	VG_Vertex2(vg, 1.09375, 0.000);
+	VG_HLine(vg, 0.000, 0.15600, 0.000);
+	VG_HLine(vg, 1.250, 1.09375, 0.000);
 	VG_End(vg);
 	VG_Begin(vg, VG_LINE_LOOP);
 	VG_Vertex2(vg, 0.156, -0.240);
@@ -67,12 +65,31 @@ ES_DigitalDraw(void *p, VG *vg)
 int
 ES_DigitalLoad(void *p, AG_Netbuf *buf)
 {
-	ES_Digital *r = p;
+	ES_Digital *dig = p;
 
 	if (AG_ReadVersion(buf, &esDigitalVer, NULL) == -1 ||
-	    ES_ComponentLoad(r, buf) == -1)
+	    ES_ComponentLoad(dig, buf) == -1)
 		return (-1);
 
+	dig->Vdd = SC_ReadReal(buf);
+	dig->Vi = SC_ReadReal(buf);
+	dig->Tamb = SC_ReadReal(buf);
+	dig->Idd = SC_ReadReal(buf);
+	dig->Vol = SC_ReadReal(buf);
+	dig->Voh = SC_ReadReal(buf);
+	dig->Vil = SC_ReadReal(buf);
+	dig->Vih = SC_ReadReal(buf);
+	dig->VolUB = SC_ReadReal(buf);
+	dig->VohUB = SC_ReadReal(buf);
+	dig->VilUB = SC_ReadReal(buf);
+	dig->VihUB = SC_ReadReal(buf);
+	dig->Iol = SC_ReadReal(buf);
+	dig->Ioh = SC_ReadReal(buf);
+	dig->Iin = SC_ReadReal(buf);
+	dig->Iozh = SC_ReadReal(buf);
+	dig->Iozl = SC_ReadReal(buf);
+	dig->Tthl = SC_ReadReal(buf);
+	dig->Ttlh = SC_ReadReal(buf);
 	return (0);
 }
 
@@ -85,9 +102,29 @@ ES_DigitalSave(void *p, AG_Netbuf *buf)
 	if (ES_ComponentSave(r, buf) == -1)
 		return (-1);
 
+	SC_WriteReal(buf, dig->Vdd);
+	SC_WriteReal(buf, dig->Vi);
+	SC_WriteReal(buf, dig->Tamb);
+	SC_WriteReal(buf, dig->Idd);
+	SC_WriteReal(buf, dig->Vol);
+	SC_WriteReal(buf, dig->Voh);
+	SC_WriteReal(buf, dig->Vil);
+	SC_WriteReal(buf, dig->Vih);
+	SC_WriteReal(buf, dig->VolUB);
+	SC_WriteReal(buf, dig->VohUB);
+	SC_WriteReal(buf, dig->VilUB);
+	SC_WriteReal(buf, dig->VihUB);
+	SC_WriteReal(buf, dig->Iol);
+	SC_WriteReal(buf, dig->Ioh);
+	SC_WriteReal(buf, dig->Iin);
+	SC_WriteReal(buf, dig->Iozh);
+	SC_WriteReal(buf, dig->Iozl);
+	SC_WriteReal(buf, dig->Tthl);
+	SC_WriteReal(buf, dig->Ttlh);
 	return (0);
 }
 
+/* Stamp the model conductances. */
 static int
 ES_DigitalLoadDC_G(void *p, SC_Matrix *G)
 {
@@ -95,31 +132,35 @@ ES_DigitalLoadDC_G(void *p, SC_Matrix *G)
 	ES_Node *n;
 	int i;
 
-	if (!AGOBJECT_SUBCLASS(dig, "component.digital")) {
-		abort();
-	}
-
 	for (i = 0; i < COM(dig)->npairs; i++) {
 		u_int k = PNODE(dig,1);
 		u_int j = PNODE(dig,2);
-		SC_Real g = dig->G->mat[i+1][1];
+		SC_Real g = vEnt(dig->G, i+1);
 
-		if (g == 0.0 || g == HUGE_VAL ||
+		if (g == 0.0) {
+			continue;
+		}
+		if (g == HUGE_VAL ||
 		    k == -1 || j == -1 || (k == 0 && j == 0)) {
 			continue;
 		}
 		if (k != 0) {
-			G->mat[k][k] += g;
+			mAdd(G, k, k, g);
 		}
 		if (j != 0) {
-			G->mat[j][j] += g;
+			mAdd(G, j, j, g);
 		}
 		if (k != 0 && j != 0) {
-			G->mat[k][j] -= g;
-			G->mat[j][k] -= g;
+			mSub(G, k, j, g);
+			mSub(G, j, k, g);
 		}
 	}
 	return (0);
+}
+
+void
+ES_DigitalSwitch(void *p, int port, int nstate)
+{
 }
 
 void
@@ -149,28 +190,22 @@ PollPairs(AG_Event *event)
 	for (i = 0; i < COM(dig)->npairs; i++) {
 		ES_Pair *pair = &COM(dig)->pairs[i];
 
-		AG_TableAddRow(t, "%d:%d:%f", pair->p1->n, pair->p2->n,
-		    dig->G->mat[i+1][1]);
+		AG_TableAddRow(t, "%d:%s:%s:%f", i+1, pair->p1->name,
+		    pair->p2->name, vEnt(dig->G, i+1));
 	}
 	AG_TableEnd(t);
 }
 
-void *
-ES_DigitalEdit(void *p)
+void
+ES_DigitalEdit(void *p, void *cont)
 {
 	ES_Digital *dig = p;
-	AG_Window *win;
 	AG_Table *tbl;
 
-	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, _("Digital: %s"), AGOBJECT(dig)->name);
-	AG_WindowSetPosition(win, AG_WINDOW_LOWER_LEFT, 0);
-
-	tbl = AG_TableNewPolled(win, AG_TABLE_EXPAND, PollPairs, "%p", dig);
+	tbl = AG_TableNewPolled(cont, AG_TABLE_EXPAND, PollPairs, "%p", dig);
+	AG_TableAddCol(tbl, "n", "<88>", NULL);
 	AG_TableAddCol(tbl, "p1", "<88>", NULL);
 	AG_TableAddCol(tbl, "p2", "<88>", NULL);
 	AG_TableAddCol(tbl, "G", NULL, NULL);
-
-	return (win);
 }
 #endif /* EDITION */
