@@ -40,6 +40,7 @@
 #include <component/inverter.h>
 #include <component/spst.h>
 #include <component/spdt.h>
+#include <sources/vsquare.h>
 
 extern const ES_ComponentOps esConductorOps;
 extern const ES_ComponentOps esVsourceOps;
@@ -49,6 +50,7 @@ extern const ES_ComponentOps esSemiResistorOps;
 extern const ES_ComponentOps esInverterOps;
 extern const ES_ComponentOps esSpstOps;
 extern const ES_ComponentOps esSpdtOps;
+extern const ES_ComponentOps esVSquareOps;
 
 const struct eda_type eda_models[] = {
 	{ "conductor",	sizeof(ES_Conductor),		&esConductorOps },
@@ -56,9 +58,10 @@ const struct eda_type eda_models[] = {
 	{ "ground",	sizeof(ES_Ground),		&esGroundOps },
 	{ "resistor",	sizeof(ES_Resistor),		&esResistorOps },
 	{ "semiresistor", sizeof(ES_SemiResistor),	&esSemiResistorOps },
-	{ "inverter",	sizeof(ES_Inverter),		&esInverterOps },
 	{ "spst",	sizeof(ES_Spst),		&esSpstOps },
 	{ "spdt",	sizeof(ES_Spdt),		&esSpdtOps },
+	{ "digital.inverter", sizeof(ES_Inverter),	&esInverterOps },
+	{ "vsource.square", sizeof(ES_VSquare),		&esVSquareOps },
 	{ NULL }
 };
 
@@ -109,8 +112,8 @@ main(int argc, char *argv[])
 			exit(0);
 		}
 	}
-	if (AG_InitVideo(900, 600, 32, AG_VIDEO_RESIZABLE) == -1 ||
-	    AG_InitInput(0)) {
+	if (AG_InitVideo(900, 600, 32, AG_VIDEO_RESIZABLE|AG_VIDEO_BGPOPUPMENU)
+	    == -1 || AG_InitInput(0)) {
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (-1);
 	}

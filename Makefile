@@ -4,7 +4,8 @@ TOP=	.
 include ${TOP}/Makefile.config
 
 SUBDIR=	component \
-	circuit
+	circuit \
+	sources
 
 PROG=	eda
 SRCS=	eda.c
@@ -12,6 +13,7 @@ SRCS=	eda.c
 CFLAGS+=${AGAR_SC_CFLAGS} ${AGAR_CFLAGS}
 LIBS+=	circuit/libcircuit.a \
 	component/libcomponent.a \
+	sources/libsources.a \
 	${AGAR_SC_LIBS} ${AGAR_LIBS}
 
 all: all-subdir ${PROG}
