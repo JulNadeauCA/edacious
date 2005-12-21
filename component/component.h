@@ -41,7 +41,8 @@ typedef struct es_port {
 	int node;				/* Node connection (or -1) */
 	struct es_branch *branch;		/* Branch into node */
 	int selected;				/* Port selected for edition */
-	double u;				/* Potential (fictitious) */
+	SC_Real u;				/* Calculated voltage with 
+						   respect to ground (RO) */
 } ES_Port;
 
 /* Ordered pair of ports belonging to the same component. */
@@ -73,7 +74,7 @@ typedef struct es_component {
 	const ES_ComponentOps *ops;
 	struct es_circuit *ckt;			/* Back pointer to circuit */
 	VG_Block *block;			/* Schematic block */
-	u_int flags;
+	Uint flags;
 #define COMPONENT_FLOATING	0x01		/* Not yet connected */
 	int selected;				/* Selected for edition? */
 	int highlighted;			/* Selected for selection? */
@@ -90,7 +91,9 @@ typedef struct es_component {
 	int (*loadDC_RHS)(void *, SC_Vector *i, SC_Vector *e);
 	int (*loadAC)(void *, SC_Matrix *Y);
 	int (*loadSP)(void *, SC_Matrix *S, SC_Matrix *N);
-	
+	void (*intStep)(void *, Uint);
+	void (*intUpdate)(void *);
+
 	TAILQ_ENTRY(es_component) components;
 } ES_Component;
 
@@ -98,7 +101,6 @@ typedef struct es_component {
 #define PORT(p,n) (&COM(p)->ports[n])
 #define PAIR(p,n) (&COM(p)->pairs[n])
 #define PNODE(p,n) (COM(p)->ports[n].node)
-#define U(p,n) (PORT((p),(n))->u)
 #define COM_Z0 50.0				/* Normalizing impedance */
 #define COM_T0 290.0				/* Reference temperature */
 
@@ -109,6 +111,10 @@ void	 ES_ComponentDestroy(void *);
 int	 ES_ComponentLoad(void *, AG_Netbuf *);
 int	 ES_ComponentSave(void *, AG_Netbuf *);
 void	*ES_ComponentEdit(void *);
+void	 ES_ComponentReinit(void *);
+void	 ES_ComponentFreePorts(ES_Component *);
+void	 ES_ComponentSetPorts(void *, const ES_Port *);
+
 void	 ES_ComponentMenu(ES_Component *, struct ag_menu_item *);
 void	 ES_ComponentOpenMenu(ES_Component *, VG_View *, int, int);
 void	 ES_ComponentCloseMenu(VG_View *);
@@ -120,6 +126,7 @@ void	 ES_ComponentConnect(struct es_circuit *, ES_Component *, VG_Vtx *);
 void	 ES_ComponentSelect(ES_Component *);
 void	 ES_ComponentUnselect(ES_Component *);
 void	 ES_ComponentUnselectAll(struct es_circuit *);
+void	 ES_ComponentLog(void *, const char *, ...);
 
 __inline__ int  ES_PortIsGrounded(ES_Port *);
 __inline__ int	ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);

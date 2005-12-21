@@ -40,11 +40,10 @@ const AG_Version esComponentVer = {
 };
 
 void
-ES_ComponentDestroy(void *p)
+ES_ComponentFreePorts(ES_Component *com)
 {
-	ES_Component *com = p;
 	int i;
-
+	
 	pthread_mutex_destroy(&com->lock);
 	for (i = 0; i < com->npairs; i++) {
 		ES_Pair *dip = &com->pairs[i];
@@ -53,20 +52,31 @@ ES_ComponentDestroy(void *p)
 		Free(dip->lpols, M_EDA);
 	}
 	Free(com->pairs, M_EDA);
+	com->pairs = NULL;
+}
+
+void
+ES_ComponentReinit(void *p)
+{
+	ES_ComponentFreePorts(p);
+}
+
+void
+ES_ComponentDestroy(void *p)
+{
+	ES_ComponentFreePorts(p);
 }
 
 void
 ES_ComponentSelect(ES_Component *com)
 {
 	com->selected = 1;
-//	AG_ObjMgrOpenData(com, 1);
 }
 
 void
 ES_ComponentUnselect(ES_Component *com)
 {
 	com->selected = 0;
-//	AG_ObjMgrCloseData(com);
 }
 		
 void
@@ -269,11 +279,7 @@ ES_ComponentRedraw(void *p, Uint32 ival, void *arg)
 			VG_SetStyle(vg, "node-name");
 			VG_Color3(vg, 0, 200, 100);
 			VG_TextAlignment(vg, VG_ALIGN_BR);
-			if (port->node == 0) {
-				VG_Printf(vg, "gnd");
-			} else {
-				VG_Printf(vg, "n%d", port->node);
-			}
+			VG_Printf(vg, "n%d", port->node);
 			VG_End(vg);
 		}
 	}
@@ -315,25 +321,25 @@ ES_ComponentRedraw(void *p, Uint32 ival, void *arg)
 }
 
 void
-ES_ComponentInit(void *obj, const char *tname, const char *name,
-    const void *ops, const ES_Port *pinout)
+ES_ComponentInit(void *obj, const char *tName, const char *name,
+    const void *ops, const ES_Port *ports)
 {
-	char cname[AG_OBJECT_NAME_MAX];
+	char clName[AG_OBJECT_NAME_MAX];
 	ES_Component *com = obj;
-	const ES_Port *pinoutp;
-	ES_Pair *dip;
-	int i, j, k;
 
-	strlcpy(cname, "component.", sizeof(cname));
-	strlcat(cname, tname, sizeof(cname));
-	AG_ObjectInit(com, cname, name, ops);
+	strlcpy(clName, "component.", sizeof(clName));
+	strlcat(clName, tName, sizeof(clName));
+	AG_ObjectInit(com, clName, name, ops);
 	com->ops = ops;
 	com->ckt = NULL;
 	com->block = NULL;
-	com->nports = 0;
 	com->selected = 0;
 	com->highlighted = 0;
 	com->Tspec = 27+273.15;
+	com->nports = 0;
+	com->pairs = NULL;
+	com->npairs = 0;
+	
 	com->loadDC_G = NULL;
 	com->loadDC_BCD = NULL;
 	com->loadDC_RHS = NULL;
@@ -341,20 +347,42 @@ ES_ComponentInit(void *obj, const char *tname, const char *name,
 	com->loadSP = NULL;
 	com->intStep = NULL;
 	com->intUpdate = NULL;
-	pthread_mutex_init(&com->lock, &agRecursiveMutexAttr);
 
-	/* Assign the origin and default pinout. */
-	com->ports[0].x = pinout[0].x;
-	com->ports[0].y = pinout[0].y;
-	for (i = 1, pinoutp = &pinout[1];
-	     i < COMPONENT_MAX_PORTS && pinoutp->n >= 0;
-	     i++, pinoutp++) {
+	pthread_mutex_init(&com->lock, &agRecursiveMutexAttr);
+	ES_ComponentSetPorts(com, ports);
+
+	AG_SetEvent(com, "attached", ES_ComponentAttached, NULL);
+	AG_SetEvent(com, "detached", ES_ComponentDetached, NULL);
+	AG_SetEvent(com, "renamed", ES_ComponentRenamed, NULL);
+	AG_SetEvent(com, "circuit-shown", ES_ComponentShown, NULL);
+	AG_SetEvent(com, "circuit-hidden", ES_ComponentHidden, NULL);
+	AG_SetTimeout(&com->redraw_to, ES_ComponentRedraw, NULL,
+	    AG_TIMEOUT_LOADABLE);
+}
+
+/* Initialize the ports of a component instance from a given model. */
+void
+ES_ComponentSetPorts(void *p, const ES_Port *ports)
+{
+	ES_Component *com = p;
+	const ES_Port *pPort;
+	ES_Pair *dip;
+	int i, j, k;
+
+	/* Instantiate the port array. */
+	ES_ComponentFreePorts(com);
+	com->nports = 0;
+	com->ports[0].x = ports[0].x;
+	com->ports[0].y = ports[0].y;
+	for (i = 1, pPort = &ports[1];
+	     i < COMPONENT_MAX_PORTS && pPort->n >= 0;
+	     i++, pPort++) {
 		ES_Port *port = &com->ports[i];
 
-		strlcpy(port->name, pinoutp->name, sizeof(port->name));
+		strlcpy(port->name, pPort->name, sizeof(port->name));
 		port->n = i;
-		port->x = pinoutp->x;
-		port->y = pinoutp->y;
+		port->x = pPort->x;
+		port->y = pPort->y;
 		port->com = com;
 		port->node = -1;
 		port->branch = NULL;
@@ -363,7 +391,7 @@ ES_ComponentInit(void *obj, const char *tname, const char *name,
 		com->nports++;
 	}
 
-	/* Find the port pairs . */
+	/* Find the port pairs. */
 	com->pairs = Malloc(sizeof(ES_Pair), M_EDA);
 	com->npairs = 0;
 	for (i = 1; i <= com->nports; i++) {
@@ -371,14 +399,13 @@ ES_ComponentInit(void *obj, const char *tname, const char *name,
 			if (i == j)
 				continue;
 			
-			/* Skip redundant pairs . */
+			/* Skip the redundant pairs. */
 			for (k = 0; k < com->npairs; k++) {
 				ES_Pair *dip = &com->pairs[k];
 
 				if (dip->p2 == &com->ports[i] &&
-				    dip->p1 == &com->ports[j]) {
+				    dip->p1 == &com->ports[j])
 					break;
-				}
 			}
 			if (k < com->npairs)
 				continue;
@@ -394,14 +421,6 @@ ES_ComponentInit(void *obj, const char *tname, const char *name,
 			dip->nloops = 0;
 		}
 	}
-
-	AG_SetEvent(com, "attached", ES_ComponentAttached, NULL);
-	AG_SetEvent(com, "detached", ES_ComponentDetached, NULL);
-	AG_SetEvent(com, "renamed", ES_ComponentRenamed, NULL);
-	AG_SetEvent(com, "circuit-shown", ES_ComponentShown, NULL);
-	AG_SetEvent(com, "circuit-hidden", ES_ComponentHidden, NULL);
-	AG_SetTimeout(&com->redraw_to, ES_ComponentRedraw, NULL,
-	    AG_TIMEOUT_LOADABLE);
 }
 
 int
@@ -514,16 +533,38 @@ SaveComponent(AG_Event *event)
 		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
 }
 
+static void
+SaveComponentTo(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+
+	AG_ObjMgrSaveTo(com, _(com->ops->name));
+}
+
+static void
+LoadComponentFrom(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+
+	AG_ObjMgrLoadFrom(com, _(com->ops->name));
+}
+
 void
 ES_ComponentMenu(ES_Component *com, AG_MenuItem *mi)
 {
 	AG_MenuAction(mi, _("Edit model"), EDA_COMPONENT_ICON,
 	    EditComponent, "%p", com);
+
 	AG_MenuSeparator(mi);
-	AG_MenuAction(mi, _("Load model"), OBJLOAD_ICON,
-	    LoadComponent, "%p", com);
+
 	AG_MenuAction(mi, _("Save model"), OBJSAVE_ICON,
 	    LoadComponent, "%p", com);
+	AG_MenuAction(mi, _("Load model"), OBJLOAD_ICON,
+	    LoadComponent, "%p", com);
+	AG_MenuAction(mi, _("Export model to..."), OBJSAVE_ICON,
+	    SaveComponentTo, "%p", com);
+	AG_MenuAction(mi, _("Import model from..."), OBJLOAD_ICON,
+	    LoadComponentFrom, "%p", com);
 }
 
 void
@@ -604,7 +645,8 @@ tryname:
 	AG_WidgetFocus(vgv);
 	AG_WindowFocus(AG_WidgetParentWindow(vgv));
 	
-	AG_ObjectSave(com);
+	if (AG_ObjectSave(com) == -1)
+		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
 }
 
 /*
