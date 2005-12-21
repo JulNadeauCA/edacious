@@ -303,12 +303,12 @@ ES_VsourceLoadDC_BCD(void *p, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D)
 		return (-1);
 	}
 	if (k != 0) {
-		B->mat[k][v] = +1.0;
-		C->mat[v][k] = +1.0;
+		mSet(B,k,v, 1.0);
+		mSet(C,v,k, 1.0);
 	}
 	if (j != 0) {
-		B->mat[j][v] = -1.0;
-		C->mat[v][j] = -1.0;
+		mSet(B,j,v, -1.0);
+		mSet(C,v,j, -1.0);
 	}
 	return (0);
 }
@@ -322,7 +322,7 @@ ES_VsourceLoadDC_RHS(void *p, SC_Vector *i, SC_Vector *e)
 		AG_SetError("no such vsource");
 		return (-1);
 	}
-	e->mat[v][1] = vs->voltage;
+	vSet(e,v, vs->voltage);
 	return (0);
 }
 
@@ -453,11 +453,18 @@ poll_loops(AG_Event *event)
 	AG_TlistItem *it;
 	ES_Loop *l;
 	unsigned int i, j;
+	int k;
 
 	AG_TlistClear(tl);
+
+	k = ES_VsourceName(vs);
+	it = AG_TlistAdd(tl, NULL, "I(%d)=%.04fA", k,
+	    ES_BranchCurrent(COM(vs)->ckt, k));
+	it->depth = 0;
+
 	TAILQ_FOREACH(l, &vs->loops, loops) {
-		snprintf(text, sizeof(text), "L%u", l->name);
-		it = AG_TlistAddPtr(tl, NULL, text, l);
+		it = AG_TlistAdd(tl, NULL, "L%u", l->name);
+		it->p1 = l;
 		it->depth = 0;
 
 		for (i = 0; i < l->npairs; i++) {
@@ -469,19 +476,6 @@ poll_loops(AG_Event *event)
 			it = AG_TlistAddPtr(tl, NULL, text,
 			    dip);
 			it->depth = 1;
-#if 0
-			for (j = 0; j < dip->nloops; j++) {
-				ES_Loop *dloop = dip->loops[j];
-				int dpol = dip->lpols[j];
-
-				snprintf(text, sizeof(text), "%s:L%d (%s)",
-				    AGOBJECT(dloop->origin)->name, dloop->name,
-				    dpol == 1 ? "+" : "-");
-				it = AG_TlistAddPtr(tl, NULL, text,
-				    &dip->loops[j]);
-				it->depth = 2;
-			}
-#endif
 		}
 	}
 	AG_TlistRestore(tl);
