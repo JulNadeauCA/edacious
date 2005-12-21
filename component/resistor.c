@@ -171,11 +171,11 @@ ES_ResistorExport(void *p, enum circuit_format fmt, FILE *f)
 	return (0);
 }
 
-double
+SC_Real
 ES_ResistorResistance(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_Resistor *r = p;
-	double deltaT = COM_T0 - COM(r)->Tspec;
+	SC_Real deltaT = COM_T0 - COM(r)->Tspec;
 
 	return (r->resistance * (1.0 + r->Tc1*deltaT + r->Tc2*deltaT*deltaT));
 }
@@ -197,7 +197,7 @@ ES_ResistorLoadDC_G(void *p, SC_Matrix *G)
 	ES_Node *n;
 	u_int k = PNODE(r,1);
 	u_int j = PNODE(r,2);
-	double g;
+	SC_Real g;
 
 	if (r->resistance == 0.0 || k == -1 || j == -1 || (k == 0 && j == 0)) {
 		AG_SetError("null resistance");
@@ -223,7 +223,7 @@ ES_ResistorLoadSP(void *p, SC_Matrix *S, SC_Matrix *N)
 	ES_Resistor *res = p;
 	u_int k = PNODE(res,1);
 	u_int j = PNODE(res,2);
-	double r, z, f;
+	SC_Real r, z, f;
 	
 	if (res->resistance == 0.0 ||
 	    k == -1 || j == -1 || (k == 0 && j == 0)) {

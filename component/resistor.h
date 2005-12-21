@@ -10,8 +10,8 @@
 
 typedef struct es_resistor {
 	struct es_component com;
-	double resistance;	/* Resistance at Tnom */
-	double power_rating;	/* Power rating in watts */
+	SC_Real resistance;	/* Resistance at Tnom */
+	SC_Real power_rating;	/* Power rating in watts */
 	int tolerance;		/* Tolerance in % */
 	float Tc1, Tc2;		/* Resistance/temperature coefficients */
 } ES_Resistor;
@@ -21,7 +21,7 @@ void	 ES_ResistorInit(void *, const char *);
 int	 ES_ResistorLoad(void *, AG_Netbuf *);
 int	 ES_ResistorSave(void *, AG_Netbuf *);
 int	 ES_ResistorExport(void *, enum circuit_format, FILE *);
-double	 ES_ResistorResistance(void *, ES_Port *, ES_Port *);
+SC_Real	 ES_ResistorResistance(void *, ES_Port *, ES_Port *);
 void	*ES_ResistorEdit(void *);
 int	 ES_ResistorConnect(void *, ES_Port *, ES_Port *);
 void	 ES_ResistorDraw(void *, VG *);
