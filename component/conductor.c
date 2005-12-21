@@ -218,7 +218,6 @@ ES_ConductorToolMousemotion(void *p, float x, float y, float xrel, float yrel,
 			vg->origin[2].y = y;
 		}
 	}
-	vg->redraw++;
 	return (0);
 }
 

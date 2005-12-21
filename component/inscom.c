@@ -152,7 +152,6 @@ InscomMousemotion(void *p, float x, float y, float xrel, float yrel, int b)
 	if (esInscomCur != NULL) {
 		VG_MoveBlock(vg, esInscomCur->block, x, y, -1);
 		nconn = ES_ComponentHighlightPorts(ckt, esInscomCur);
-		vg->redraw++;
 		return (1);
 	}
 	return (0);
