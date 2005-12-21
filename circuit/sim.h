@@ -6,30 +6,35 @@
 #include "begin_code.h"
 
 struct es_circuit;
+struct ag_console;
 
-struct sim {
-	struct es_circuit *ckt;
-	const struct sim_ops *ops;
-	AG_Window *win;
-	int running;
-};
-
-struct sim_ops {
+typedef struct es_sim_ops {
 	char *name;
 	int icon;
 	size_t size;
 	void (*init)(void *);
 	void (*destroy)(void *);
 	void (*cktmod)(void *, struct es_circuit *);
+	SC_Real (*node_voltage)(void *, int);
+	SC_Real (*branch_current)(void *, int);
 	AG_Window *(*edit)(void *, struct es_circuit *);
-};
+} ES_SimOps;
 
-#define SIM(p) ((struct sim *)p)
+typedef struct es_sim {
+	struct es_circuit *ckt;		/* Circuit being analyzed */
+	const ES_SimOps *ops;		/* Generic operations */
+	AG_Window *win;			/* Settings window */
+	struct ag_console *log;		/* Log message display */
+	int running;			/* Don't interrupt */
+} ES_Sim;
+
+#define SIM(p) ((ES_Sim *)p)
 
 __BEGIN_DECLS
-void sim_init(void *, const struct sim_ops *);
-void sim_destroy(void *);
-void sim_edit(AG_Event *);
+void ES_SimInit(void *, const ES_SimOps *);
+void ES_SimDestroy(void *);
+void ES_SimEdit(AG_Event *);
+void ES_SimLog(void *, const char *, ...);
 __END_DECLS
 
 #include "close_code.h"

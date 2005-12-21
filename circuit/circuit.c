@@ -56,7 +56,7 @@ ES_CircuitDetached(AG_Event *event)
 	ES_Circuit *ckt = AG_SELF();
 
 	if (ckt->sim != NULL) {
-		sim_destroy(ckt->sim);
+		ES_SimDestroy(ckt->sim);
 		ckt->sim = NULL;
 	}
 }
@@ -83,7 +83,7 @@ ES_CircuitClosed(AG_Event *event)
 	ES_Component *com;
 
 	if (ckt->sim != NULL) {
-		sim_destroy(ckt->sim);
+		ES_SimDestroy(ckt->sim);
 		ckt->sim = NULL;
 	}
 
@@ -181,6 +181,7 @@ ES_CircuitInit(void *p, const char *name)
 	vg->origin[0].y = 4.25;
 	VG_OriginRadius(vg, 2, 0.09375);
 	VG_OriginColor(vg, 2, 255, 255, 165);
+	VG_SetSnapMode(vg, VG_GRID);
 
 	vgs = VG_CreateStyle(vg, VG_TEXT_STYLE, "component-name");
 	vgs->vg_text_st.size = 10;
@@ -200,7 +201,7 @@ ES_CircuitReinit(void *p)
 	u_int i;
 	
 	if (ckt->sim != NULL) {
-		sim_destroy(ckt->sim);
+		ES_SimDestroy(ckt->sim);
 		ckt->sim = NULL;
 	}
 
@@ -452,9 +453,8 @@ ES_NodeGrounded(ES_Circuit *ckt, u_int n)
 }
 
 /*
- * Evaluate whether the given node is connected to the given voltage source.
- * If that is the case, return the polarity of the node with respect to
- * the source.
+ * Evaluate whether node n is connected to the voltage source m. If that
+ * is the case, return the polarity.
  */
 int
 ES_NodeVsource(ES_Circuit *ckt, u_int n, u_int m, int *sign)
@@ -484,6 +484,27 @@ ES_NodeVsource(ES_Circuit *ckt, u_int n, u_int m, int *sign)
 	return (0);
 }
 
+/* Return the DC voltage for the node j from the last simulation. */
+SC_Real
+ES_NodeVoltage(ES_Circuit *ckt, int j)
+{
+	if (ckt->sim == NULL || ckt->sim->ops->node_voltage == NULL) {
+		ES_CircuitLog(ckt, _("Cannot get node %d voltage"), j);
+		return (0.0);
+	}
+	return (ckt->sim->ops->node_voltage(ckt->sim, j));
+}
+
+/* Return the last simulated branch current for the voltage source k. */
+SC_Real
+ES_BranchCurrent(ES_Circuit *ckt, int k)
+{
+	if (ckt->sim == NULL || ckt->sim->ops->branch_current == NULL) {
+		ES_CircuitLog(ckt, _("Cannot get branch %d current"), k);
+		return (0.0);
+	}
+	return (ckt->sim->ops->branch_current(ckt->sim, k));
+}
 
 void
 ES_CircuitDestroyNode(ES_Node *node)
@@ -590,13 +611,13 @@ ES_CircuitDestroy(void *p)
 }
 
 /* Select the simulation mode. */
-struct sim *
-ES_CircuitSetSimMode(ES_Circuit *ckt, const struct sim_ops *sops)
+ES_Sim *
+ES_CircuitSetSimMode(ES_Circuit *ckt, const ES_SimOps *sops)
 {
-	struct sim *sim;
+	ES_Sim *sim;
 
 	if (ckt->sim != NULL) {
-		sim_destroy(ckt->sim);
+		ES_SimDestroy(ckt->sim);
 		ckt->sim = NULL;
 	}
 	ckt->sim = sim = Malloc(sops->size, M_EDA);
@@ -615,6 +636,23 @@ ES_CircuitSetSimMode(ES_Circuit *ckt, const struct sim_ops *sops)
 		AG_WindowShow(sim->win);
 	}
 	return (sim);
+}
+
+void
+ES_CircuitLog(void *p, const char *fmt, ...)
+{
+	ES_Circuit *ckt = p;
+	AG_ConsoleLine *ln;
+	va_list args;
+
+	if (ckt->sim == NULL || ckt->sim->log == NULL)
+		return;
+
+	ln = AG_ConsoleAppendLine(ckt->sim->log, NULL);
+	va_start(args, fmt);
+	AG_Vasprintf(&ln->text, fmt, args);
+	va_end(args);
+	ln->len = strlen(ln->text);
 }
 
 #ifdef EDITION
@@ -894,9 +932,18 @@ static void
 CircuitSelectSim(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
-	struct sim_ops *sops = AG_PTR(2);
+	ES_SimOps *sops = AG_PTR(2);
 	AG_Window *pwin = AG_PTR(3);
-	struct sim *sim;
+	ES_Sim *sim;
+
+	if (ckt->sim != NULL && ckt->sim->running) {
+		if (ckt->sim->win != NULL) {
+			AG_WindowShow(ckt->sim->win);
+		}
+		AG_TextMsg(AG_MSG_ERROR, _("%s: simulation in progress"),
+		    AGOBJECT(ckt)->name);
+		return;
+	}
 
 	sim = ES_CircuitSetSimMode(ckt, sops);
 	if (sim->win != NULL)
@@ -990,8 +1037,9 @@ PollComponentPorts(AG_Event *event)
 		char text[AG_TLIST_LABEL_MAX];
 		ES_Port *port = &com->ports[i];
 
-		snprintf(text, sizeof(text), "%d (%s) -> n%d",
-		    port->n, port->name, port->node);
+		snprintf(text, sizeof(text), "%d (%s) -> n%d [%.03fV]",
+		    port->n, port->name, port->node,
+		    ES_NodeVoltage(ckt, port->node));
 		AG_TlistAddPtr(tl, NULL, text, port);
 	}
 	pthread_mutex_unlock(&com->lock);
@@ -1117,10 +1165,10 @@ ES_CircuitEdit(void *p)
 		
 	pitem = AG_MenuAddItem(menu, _("Simulation"));
 	{
-		extern const struct sim_ops *sim_ops[];
-		const struct sim_ops **ops;
+		extern const ES_SimOps *esSimOps[];
+		const ES_SimOps **ops;
 
-		for (ops = &sim_ops[0]; *ops != NULL; ops++) {
+		for (ops = &esSimOps[0]; *ops != NULL; ops++) {
 			AG_MenuTool(pitem, toolbar, _((*ops)->name),
 			    (*ops)->icon, 0, 0,
 			    CircuitSelectSim, "%p,%p,%p", ckt, *ops, win);

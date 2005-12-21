@@ -50,7 +50,7 @@ typedef struct es_circuit {
 	AG_Object obj;
 	char descr[CIRCUIT_DESCR_MAX];	/* Short description */
 	VG *vg;				/* Schematics drawing */
-	struct sim *sim;		/* Current simulation mode */
+	ES_Sim *sim;			/* Current simulation mode */
 
 	pthread_mutex_t lock;
 	int dis_nodes;			/* Display node indications */
@@ -65,6 +65,8 @@ typedef struct es_circuit {
 	u_int n;			/* Number of nodes (except ground) */
 } ES_Circuit;
 
+#define U(com,n) ES_NodeVoltage(COM(com)->ckt,(n))
+
 __BEGIN_DECLS
 void		 ES_CircuitInit(void *, const char *);
 void		 ES_CircuitReinit(void *);
@@ -73,6 +75,7 @@ int		 ES_CircuitSave(void *, AG_Netbuf *);
 void		 ES_CircuitDestroy(void *);
 void		 ES_CircuitFreeComponents(ES_Circuit *);
 void		*ES_CircuitEdit(void *);
+void		 ES_CircuitLog(void *, const char *, ...);
 
 int		 ES_CircuitAddNode(ES_Circuit *, u_int);
 void		 ES_CircuitDelNode(ES_Circuit *, u_int);
@@ -83,10 +86,12 @@ void		 ES_CircuitDelBranch(ES_Circuit *, u_int, ES_Branch *);
 
 __inline__ ES_Branch *ES_CircuitGetBranch(ES_Circuit *, u_int, ES_Port *);
 
-__inline__ int	 ES_NodeGrounded(ES_Circuit *, u_int);
-__inline__ int	 ES_NodeVsource(ES_Circuit *, u_int, u_int, int *);
+__inline__ int	   ES_NodeGrounded(ES_Circuit *, u_int);
+__inline__ int	   ES_NodeVsource(ES_Circuit *, u_int, u_int, int *);
+__inline__ SC_Real ES_NodeVoltage(ES_Circuit *, int);
+__inline__ SC_Real ES_BranchCurrent(ES_Circuit *, int);
 
-struct sim	*ES_CircuitSetSimMode(ES_Circuit *, const struct sim_ops *);
+ES_Sim		*ES_CircuitSetSimMode(ES_Circuit *, const ES_SimOps *);
 void		 ES_CircuitModified(ES_Circuit *);
 __END_DECLS
 

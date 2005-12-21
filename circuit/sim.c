@@ -29,29 +29,32 @@
 #include <agar/core.h>
 #include <agar/gui.h>
 
+#include <stdarg.h>
+
 #include "eda.h"
 
-extern const struct sim_ops mna_ops;
+extern const ES_SimOps esMnaOps;
 
-const struct sim_ops *sim_ops[] = {
-	&mna_ops,
+const ES_SimOps *esSimOps[] = {
+	&esMnaOps,
 	NULL
 };
 
 void
-sim_init(void *p, const struct sim_ops *ops)
+ES_SimInit(void *p, const ES_SimOps *ops)
 {
-	struct sim *sim = p;
+	ES_Sim *sim = p;
 
 	sim->ops = ops;
 	sim->running = 0;
 	sim->win = NULL;
+	sim->log = NULL;
 }
 
 void
-sim_destroy(void *p)
+ES_SimDestroy(void *p)
 {
-	struct sim *sim = p;
+	ES_Sim *sim = p;
 
 	if (sim->win != NULL) {
 		AG_ViewDetach(sim->win);
@@ -63,15 +66,14 @@ sim_destroy(void *p)
 }
 
 void
-sim_edit(AG_Event *event)
+ES_SimEdit(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
 	AG_Window *pwin = AG_PTR(2);
-	struct sim *sim = ckt->sim;
+	ES_Sim *sim = ckt->sim;
 	AG_Window *win;
 
 	if (sim == NULL) {
-		AG_SetError(_("No sim mode selected."));
 		return;
 	}
 	if (sim->ops->edit != NULL &&
@@ -80,5 +82,22 @@ sim_edit(AG_Event *event)
 		AG_WindowAttach(pwin, win);
 		AG_WindowShow(win);
 	}
+}
+
+void
+ES_SimLog(void *p, const char *fmt, ...)
+{
+	ES_Sim *sim = p;
+	AG_ConsoleLine *ln;
+	va_list args;
+
+	if (sim->log == NULL)
+		return;
+
+	ln = AG_ConsoleAppendLine(sim->log, NULL);
+	va_start(args, fmt);
+	AG_Vasprintf(&ln->text, fmt, args);
+	va_end(args);
+	ln->len = strlen(ln->text);
 }
 
