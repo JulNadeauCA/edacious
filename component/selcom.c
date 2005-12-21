@@ -161,7 +161,7 @@ VG_ToolOps esSelcomOps = {
 	N_("Select one or more component in the circuit."),
 	EDA_COMPONENT_ICON,
 	sizeof(VG_Tool),
-	0,
+	VG_NOSNAP,
 	SelcomInit,
 	NULL,			/* destroy */
 	NULL,			/* edit */
