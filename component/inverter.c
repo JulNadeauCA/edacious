@@ -54,13 +54,15 @@ const ES_ComponentOps esInverterOps = {
 	NULL,			/* menu */
 	NULL,			/* connect */
 	NULL,			/* disconnect */
-	ES_InverterExport
+	NULL			/* export */
 };
 
 const ES_Port esInverterPinout[] = {
 	{ 0, "",	0.0, 1.0 },
 	{ 1, "A",	0.0, 0.0 },
 	{ 2, "A-bar",	2.0, 0.0 },
+	{ 3, "Vcc",	1.0, -1.0 },
+	{ 4, "Gnd",	1.0, 1.0 },
 	{ -1 },
 };
 
@@ -72,23 +74,22 @@ ES_InverterDraw(void *p, VG *vg)
 	VG_Block *block;
 
 	VG_Begin(vg, VG_LINES);
-	VG_Vertex2(vg, 0.000, 0.000);
-	VG_Vertex2(vg, 0.250, 0.000);
-	VG_Vertex2(vg, 2.000, 0.000);
-	VG_Vertex2(vg, 1.750, 0.000);
+	VG_HLine(vg, 0.00, 0.25, 0.0);
+	VG_HLine(vg, 1.75, 2.00, 0.0);
 	VG_End(vg);
-
 	VG_Begin(vg, VG_LINE_LOOP);
-	VG_Vertex2(vg, 0.250, +0.625);
-	VG_Vertex2(vg, 1.750,  0.000);
-	VG_Vertex2(vg, 0.250, -0.625);
+	VG_Vertex2(vg, 0.25, +0.625);
+	VG_Vertex2(vg, 1.75,  0.000);
+	VG_Vertex2(vg, 0.25, -0.625);
 	VG_End(vg);
-
+	VG_Begin(vg, VG_LINES);
+	VG_VintVLine2(vg, 1.000, -1.000, 1.75, 0.0, 0.25, -0.625);
+	VG_VintVLine2(vg, 1.000, +1.000, 1.75, 0.0, 0.25, +0.625);
+	VG_End(vg);
 	VG_Begin(vg, VG_CIRCLE);
 	VG_Vertex2(vg, 1.750, 0.0000);
 	VG_CircleRadius(vg, 0.0625);
 	VG_End(vg);
-
 	VG_Begin(vg, VG_TEXT);
 	VG_SetStyle(vg, "component-name");
 	VG_Vertex2(vg, 0.750, 0);
@@ -97,50 +98,21 @@ ES_InverterDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-/* Initiate a LTH/HTL transition on a given port. */
-static void
-switch_port(AG_Event *event)
-{
-	ES_Inverter *inv = AG_SELF();
-	int port = AG_INT(1);
-	int level = AG_INT(2);
-	float dv;
-
-	printf("port = %d, level = %d\n", port, level);
-
-	switch (level) {
-	case 1:
-		if (U(inv,1) >= inv->Vih &&
-		    U(inv,2) <  inv->Voh) {
-			dv = inv->Voh/inv->Ttlh;
-			U(inv,2) += dv;
-			AG_SchedEvent(NULL, inv, 1, "Abar->1", NULL);
-		}
-		break;
-	case 0:
-		if (U(inv,1) <  inv->Vih &&
-		    U(inv,2) >= inv->Voh) {
-			dv = inv->Voh/inv->Tthl;
-			U(inv,2) -= dv;
-			AG_SchedEvent(NULL, inv, 1, "Abar->0", NULL);
-		}
-		break;
-	}
-}
-
 void
 ES_InverterInit(void *p, const char *name)
 {
 	ES_Inverter *inv = p;
 
-	/* Default parameters: CD4069UBC (Fairchild 04/2002). */
-	ES_ComponentInit(inv, "inverter", name, &esInverterOps,
+	ES_DigitalInit(inv, "digital.inverter", name, &esInverterOps,
 	    esInverterPinout);
-	inv->Tphl = 50e-9;
-	inv->Tplh = 50e-9;
-	inv->Tthl = 80e-9;
-	inv->Ttlh = 80e-9;
-	inv->Thold = 40e-9;				/* XXX */
+	COM(inv)->intStep = ES_InverterStep;
+	COM(inv)->intUpdate = ES_InverterUpdate;
+
+	inv->Tphl = 50;
+	inv->Tplh = 50;
+	inv->Tthl = 80;
+	inv->Ttlh = 80;
+	inv->Thold = 40;				/* XXX */
 	inv->Tehl = 0;
 	inv->Telh = 0;
 	inv->Cin = 6e-12;
@@ -149,40 +121,67 @@ ES_InverterInit(void *p, const char *name)
 	inv->Vil = 0;
 	inv->Voh = 5;
 	inv->Vol = 0;
-	AG_SetEvent(inv, "Abar->1", switch_port, "%i, %i", 2, 1);
-	AG_SetEvent(inv, "Abar->0", switch_port, "%i, %i", 2, 0);
+
+	digG(inv,4) = 0.900;
+	digG(inv,5) = 0.001;
 }
 
+/* Increment the counters in response to a simulation step. */
 void
-ES_InverterTick(void *p)
+ES_InverterStep(void *p, Uint ticks)
 {
 	ES_Inverter *inv = p;
-	ES_Component *com = p;
-
-#if 0
-	/*
-	 * Initiate the transition of A-bar in Tphl/Tplh ns if the voltage 
-	 * at A is maintained at >=Vih during at least Thold ns.
-	 */
-	if (U(com,1) >= inv->Vih &&
-	    U(com,2) <  inv->Voh) {
-		if (++inv->Telh >= inv->Thold) {
-			AG_SchedEvent(NULL, inv, inv->Tplh, "Abar->1", NULL);
-			inv->Telh = 0;
-		}
-	}
-
-	/* Same for the HIGH-to-LOW transition of A-bar. */
-	if (U(com,1) <= inv->Vil &&
-	    U(com,2) >  inv->Vol) {
-		if (++inv->Tehl >= inv->Thold) {
-			AG_SchedEvent(NULL, inv, inv->Tphl, "Abar->0", NULL);
-			inv->Tehl = 0;
-		}
+	
+	if (U(inv,1) >= inv->Vih &&
+	    U(inv,2) <  inv->Voh) {
+		ES_ComponentLog(inv, "H->L hold delay (%u/%u ns)",
+		    inv->Tehl, inv->Thold);
+		inv->Tehl++;
+		inv->Telh = 0;
+	} else if (
+	    U(inv,1) <= inv->Vil &&
+	    U(inv,2) >  inv->Vol) {
+		ES_ComponentLog(inv, "L->H hold delay (%.0f/%.0f ns)",
+		    inv->Telh*1e9, inv->Thold*1e9);
+		inv->Telh++;
+		inv->Tehl = 0;
 	} else {
 		inv->Tehl = 0;
+		inv->Telh = 0;
 	}
-#endif
+}
+
+/*
+ * Update the circuit. This operation might get called multiple times in
+ * a single simulation step until stability is reached. It is not allowed
+ * to modify the circuit more than once per integration step.
+ */
+void
+ES_InverterUpdate(void *p)
+{
+	ES_Inverter *inv = p;
+
+	ES_ComponentLog(inv, "u1=%f, u2=%f", U(inv,1), U(inv,2));
+
+	/* Switch OUT when IN != OUT for at least Thold time. */
+	if (U(inv,1) >= inv->Vih &&
+	    U(inv,2) <  inv->Voh &&
+	    inv->Tehl >= inv->Thold) {
+		printf("%s: switch OUT to LOW\n", AGOBJECT(inv)->name);
+		if (digG(inv,4) > 0.001) { digG(inv,4) -= 0.1; }
+		else { inv->Tehl = 0; }
+		if (digG(inv,5) < 0.900) { digG(inv,5) += 0.1; }
+		else { inv->Tehl = 0; }
+	}
+	if (U(inv,1) <= inv->Vil &&
+	    U(inv,2) >  inv->Vol &&
+	    inv->Telh >= inv->Thold) {
+		printf("%s: switch OUT to HIGH\n", AGOBJECT(inv)->name);
+		if (digG(inv,5) > 0.001) { digG(inv,5) -= 0.1; }
+		else { inv->Tehl = 0; }
+		if (digG(inv,4) < 0.900) { digG(inv,4) += 0.1; }
+		else { inv->Tehl = 0; }
+	}
 }
 
 int
@@ -194,16 +193,16 @@ ES_InverterLoad(void *p, AG_Netbuf *buf)
 	    ES_ComponentLoad(inv, buf) == -1) {
 		return (-1);
 	}
-	inv->Tphl = AG_ReadFloat(buf);
-	inv->Tplh = AG_ReadFloat(buf);
-	inv->Tthl = AG_ReadFloat(buf);
-	inv->Ttlh = AG_ReadFloat(buf);
-	inv->Cin = AG_ReadFloat(buf);
-	inv->Cpd = AG_ReadFloat(buf);
-	inv->Vih = AG_ReadFloat(buf);
-	inv->Vil = AG_ReadFloat(buf);
-	inv->Voh = AG_ReadFloat(buf);
-	inv->Vol = AG_ReadFloat(buf);
+	inv->Tphl = SC_ReadQTime(buf);
+	inv->Tplh = SC_ReadQTime(buf);
+	inv->Tthl = SC_ReadQTime(buf);
+	inv->Ttlh = SC_ReadQTime(buf);
+	inv->Cin = SC_ReadReal(buf);
+	inv->Cpd = SC_ReadReal(buf);
+	inv->Vih = SC_ReadReal(buf);
+	inv->Vil = SC_ReadReal(buf);
+	inv->Voh = SC_ReadReal(buf);
+	inv->Vol = SC_ReadReal(buf);
 	return (0);
 }
 
@@ -216,33 +215,16 @@ ES_InverterSave(void *p, AG_Netbuf *buf)
 	if (ES_ComponentSave(inv, buf) == -1) {
 		return (-1);
 	}
-	AG_WriteFloat(buf, inv->Tphl);
-	AG_WriteFloat(buf, inv->Tplh);
-	AG_WriteFloat(buf, inv->Tthl);
-	AG_WriteFloat(buf, inv->Ttlh);
-	AG_WriteFloat(buf, inv->Cin);
-	AG_WriteFloat(buf, inv->Cpd);
-	AG_WriteFloat(buf, inv->Vih);
-	AG_WriteFloat(buf, inv->Vil);
-	AG_WriteFloat(buf, inv->Voh);
-	AG_WriteFloat(buf, inv->Vol);
-	return (0);
-}
-
-int
-ES_InverterExport(void *p, enum circuit_format fmt, FILE *f)
-{
-	ES_Inverter *inv = p;
-	
-	if (PNODE(inv,1) == -1 ||
-	    PNODE(inv,2) == -1)
-		return (0);
-	
-	switch (fmt) {
-	case CIRCUIT_SPICE3:
-		/* ... */
-		break;
-	}
+	SC_WriteQTime(buf, inv->Tphl);
+	SC_WriteQTime(buf, inv->Tplh);
+	SC_WriteQTime(buf, inv->Tthl);
+	SC_WriteQTime(buf, inv->Ttlh);
+	SC_WriteReal(buf, inv->Cin);
+	SC_WriteReal(buf, inv->Cpd);
+	SC_WriteReal(buf, inv->Vih);
+	SC_WriteReal(buf, inv->Vil);
+	SC_WriteReal(buf, inv->Voh);
+	SC_WriteReal(buf, inv->Vol);
 	return (0);
 }
 
@@ -251,33 +233,58 @@ void *
 ES_InverterEdit(void *p)
 {
 	ES_Inverter *inv = p;
-	AG_Window *win;
+	AG_Window *win, *wDig;
 	AG_FSpinbutton *fsb;
+	AG_Notebook *nb;
+	AG_NotebookTab *ntab;
+	AG_Box *box;
 
 	win = AG_WindowNew(0);
 
-	fsb = AG_FSpinbuttonNew(win, 0, "ns", "Tphl: ");
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Tphl);
-	fsb = AG_FSpinbuttonNew(win, 0, "ns", "Tplh: ");
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Tplh);
-	fsb = AG_FSpinbuttonNew(win, 0, "ns", "Tthl: ");
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Tthl);
-	fsb = AG_FSpinbuttonNew(win, 0, "ns", "Ttlh: ");
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Ttlh);
+	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
+	ntab = AG_NotebookAddTab(nb, _("Timings"), AG_BOX_VERT);
+	{
+		AG_LabelNew(ntab, AG_LABEL_POLLED, "Telh: %uns, Tehl: %uns",
+		    &inv->Telh, &inv->Tehl);
+		AG_LabelNew(ntab, AG_LABEL_POLLED, "Tplh: %uns, Tphl: %uns",
+		    &inv->Tplh, &inv->Tphl);
+		AG_LabelNew(ntab, AG_LABEL_POLLED, "Ttlh: %uns, Tthl: %uns",
+		    &inv->Ttlh, &inv->Tthl);
+
+		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Thold: ");
+		AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &inv->Thold);
+		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Tphl: ");
+		AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &inv->Tphl);
+		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Tplh: ");
+		AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &inv->Tplh);
+		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Tthl: ");
+		AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &inv->Tthl);
+		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Ttlh: ");
+		AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &inv->Ttlh);
+	}
+
+	ntab = AG_NotebookAddTab(nb, _("Voltages"), AG_BOX_VERT);
+	{
+		fsb = AG_FSpinbuttonNew(ntab, 0, "V", "Vih: ");
+		AG_WidgetBind(fsb, "value", SC_WIDGET_REAL, &inv->Vih);
+		fsb = AG_FSpinbuttonNew(ntab, 0, "V", "Vil: ");
+		AG_WidgetBind(fsb, "value", SC_WIDGET_REAL, &inv->Vil);
+		fsb = AG_FSpinbuttonNew(ntab, 0, "V", "Voh: ");
+		AG_WidgetBind(fsb, "value", SC_WIDGET_REAL, &inv->Voh);
+		fsb = AG_FSpinbuttonNew(ntab, 0, "V", "Vol: ");
+		AG_WidgetBind(fsb, "value", SC_WIDGET_REAL, &inv->Vol);
+	}
 	
-	fsb = AG_FSpinbuttonNew(win, 0, "pF", "Cin: ");
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Cin);
-	fsb = AG_FSpinbuttonNew(win, 0, "pF", "Cpd: ");
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Cpd);
+	ntab = AG_NotebookAddTab(nb, _("Capacitances"), AG_BOX_VERT);
+	{
+		fsb = AG_FSpinbuttonNew(ntab, 0, "pF", "Cin: ");
+		AG_WidgetBind(fsb, "value", SC_WIDGET_REAL, &inv->Cin);
+		fsb = AG_FSpinbuttonNew(ntab, 0, "pF", "Cpd: ");
+		AG_WidgetBind(fsb, "value", SC_WIDGET_REAL, &inv->Cpd);
+	}
 	
-	fsb = AG_FSpinbuttonNew(win, 0, "V", "Vih: ");
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Vih);
-	fsb = AG_FSpinbuttonNew(win, 0, "V", "Vil: ");
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Vil);
-	fsb = AG_FSpinbuttonNew(win, 0, "V", "Voh: ");
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Voh);
-	fsb = AG_FSpinbuttonNew(win, 0, "V", "Vol: ");
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &inv->Vol);
+	ntab = AG_NotebookAddTab(nb, _("Digital"), AG_BOX_VERT);
+	ES_DigitalEdit(inv, ntab);
 
 	return (win);
 }
