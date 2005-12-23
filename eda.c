@@ -41,6 +41,7 @@
 #include <component/spst.h>
 #include <component/spdt.h>
 #include <sources/vsquare.h>
+#include <sources/vsine.h>
 
 extern const ES_ComponentOps esConductorOps;
 extern const ES_ComponentOps esVsourceOps;
@@ -51,6 +52,7 @@ extern const ES_ComponentOps esInverterOps;
 extern const ES_ComponentOps esSpstOps;
 extern const ES_ComponentOps esSpdtOps;
 extern const ES_ComponentOps esVSquareOps;
+extern const ES_ComponentOps esVSineOps;
 
 const struct eda_type eda_models[] = {
 	{ "conductor",	sizeof(ES_Conductor),		&esConductorOps },
@@ -62,6 +64,7 @@ const struct eda_type eda_models[] = {
 	{ "spdt",	sizeof(ES_Spdt),		&esSpdtOps },
 	{ "digital.inverter", sizeof(ES_Inverter),	&esInverterOps },
 	{ "vsource.square", sizeof(ES_VSquare),		&esVSquareOps },
+	{ "vsource.sine", sizeof(ES_VSine),		&esVSineOps },
 	{ NULL }
 };
 
