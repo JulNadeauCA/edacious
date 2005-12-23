@@ -549,6 +549,7 @@ RemoveComponent(AG_Event *event)
 		AG_TextMsg(AG_MSG_ERROR, _("%s: component is in use."),
 		    AGOBJECT(com)->name);
 	}
+	ES_CircuitModified(ckt);
 	ES_UnlockCircuit(ckt);
 }
 
