@@ -39,6 +39,7 @@ const ES_SimOps esMnaOps;
 typedef struct es_mna {
 	ES_Sim sim;
 	Uint32 Telapsed;	/* Simulated time elapsed (ns) */
+	Uint32 TavgReal;	/* Average step real time */
 	int speed;		/* Simulation speed (updates/sec) */
 	AG_Timeout update_to;	/* Timer for simulation updates */
 
@@ -59,6 +60,8 @@ typedef struct es_mna {
 	
 	SC_Ivector *piv;	/* Pivot information from last factorization */
 } ES_MNA;
+
+static void ES_MnaResize(void *, ES_Circuit *);
 
 /* Formulate the KCL/branch equations and compute A=LU. */
 static int
@@ -111,27 +114,20 @@ ES_MnaSolve(ES_MNA *mna, ES_Circuit *ckt)
 	return (0);
 }
 
-static void
-ES_MnaDumpX(ES_Circuit *ckt, ES_MNA *mna)
-{
-	//ES_CircuitLog()
-}
-
 static Uint32
 ES_MnaStep(void *obj, Uint32 ival, void *arg)
 {
 	ES_Circuit *ckt = obj;
 	ES_MNA *mna = arg;
 	ES_Component *com;
+	static Uint32 t1 = 0;
 	int i;
 
 	if (mna->Telapsed == 0) {
 		if (ES_MnaFactorize(mna, ckt) == -1) {
-			AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
-			return (0);
+			goto halt;
 		}
 		ES_MnaSolve(mna, ckt);
-		ES_MnaDumpX(ckt, mna);
 	}
 
 	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
@@ -144,13 +140,20 @@ ES_MnaStep(void *obj, Uint32 ival, void *arg)
 			com->intUpdate(com);
 	}
 	if (ES_MnaFactorize(mna, ckt) == -1) {
-		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
-		return (0);
+		goto halt;
 	}
 	ES_MnaSolve(mna, ckt);
 
+	/* TODO loop until stable */
+
+	mna->TavgReal = SDL_GetTicks() - t1;
+	t1 = SDL_GetTicks();
 	mna->Telapsed++;
 	return (ival);
+halt:
+	AG_TextMsg(AG_MSG_ERROR, _("%s; simulation stopped"), AG_GetError());
+	SIM(mna)->running = 0;
+	return (0);
 }
 
 static void
@@ -160,7 +163,8 @@ ES_MnaInit(void *p)
 
 	ES_SimInit(mna, &esMnaOps);
 	mna->Telapsed = 0;
-	mna->speed = 10;
+	mna->TavgReal = 0;
+	mna->speed = 500;
 	AG_SetTimeout(&mna->update_to, ES_MnaStep, mna, AG_TIMEOUT_LOADABLE);
 
 	mna->A = SC_MatrixNew(0, 0);
@@ -182,23 +186,30 @@ ES_MnaInit(void *p)
 }
 
 static void
-ES_MnaStartContinuous(ES_MNA *mna)
+ES_MnaStart(void *p)
 {
+	ES_MNA *mna = p;
 	ES_Circuit *ckt = SIM(mna)->ckt;
-
+		
+	ES_MnaResize(mna, ckt);
+	
+	SIM(mna)->running = 1;
 	AG_LockTimeouts(ckt);
 	if (AG_TimeoutIsScheduled(ckt, &mna->update_to)) {
 		AG_DelTimeout(ckt, &mna->update_to);
 	}
 	AG_AddTimeout(ckt, &mna->update_to, 1000/mna->speed);
 	AG_UnlockTimeouts(ckt);
-
 	mna->Telapsed = 0;
+	
+	ES_SimLog(mna, _("Simulation started (m=%u, n=%u)"),
+	    ckt->m, ckt->n);
 }
 
 static void
-ES_MnaStopContinuous(ES_MNA *mna)
+ES_MnaStop(void *p)
 {
+	ES_MNA *mna = p;
 	ES_Circuit *ckt = SIM(mna)->ckt;
 
 	AG_LockTimeouts(ckt);
@@ -206,6 +217,9 @@ ES_MnaStopContinuous(ES_MNA *mna)
 		AG_DelTimeout(ckt, &mna->update_to);
 	}
 	AG_UnlockTimeouts(ckt);
+	SIM(mna)->running = 0;
+	
+	ES_SimLog(mna, _("Simulation stopped at %uns."), mna->Telapsed);
 }
 
 static void
@@ -213,7 +227,7 @@ ES_MnaDestroy(void *p)
 {
 	ES_MNA *mna = p;
 	
-	ES_MnaStopContinuous(mna);
+	ES_MnaStop(mna);
 
 	SC_MatrixFree(mna->A);
 	SC_MatrixFree(mna->G);
@@ -267,22 +281,18 @@ ES_MnaResize(void *p, ES_Circuit *ckt)
 }
 
 static void
-ES_MnaContinuous(AG_Event *event)
+ES_MnaRunContinuous(AG_Event *event)
 {
 	AG_Button *bu = AG_SELF();
-	ES_Sim *sim = AG_PTR(1);
+	ES_Sim *mna = AG_PTR(1);
 	int state = AG_INT(2);
-	ES_MNA *mna = (ES_MNA *)sim;
+
+	SIM(mna)->ckt->simlock = 0;
 
 	if (state) {
-		ES_MnaResize(sim, sim->ckt);
-		ES_MnaStartContinuous(mna);
-		sim->running = 1;
-		ES_SimLog(mna, _("Simulation started."));
+		ES_MnaStart(mna);
 	} else {
-		ES_MnaStopContinuous(mna);
-		sim->running = 0;
-		ES_SimLog(mna, _("Simulation stopped at %uns."), mna->Telapsed);
+		ES_MnaStop(mna);
 	}
 }
 
@@ -305,7 +315,7 @@ ES_MnaEdit(void *p, ES_Circuit *ckt)
 	{
 		AG_ButtonAct(ntab, AG_BUTTON_HFILL|AG_BUTTON_STICKY,
 		    _("Run simulation"),
-		    ES_MnaContinuous, "%p", mna);
+		    ES_MnaRunContinuous, "%p", mna);
 	
 		AG_SeparatorNew(ntab, AG_SEPARATOR_HORIZ);
 
@@ -313,8 +323,12 @@ ES_MnaEdit(void *p, ES_Circuit *ckt)
 		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT32, &mna->speed);
 		AG_SpinbuttonSetRange(sbu, 1, 1000);
 		
-		AG_LabelNew(ntab, AG_LABEL_POLLED, _("Elapsed time: %[u32]ns"),
+		AG_LabelNew(ntab, AG_LABEL_POLLED,
+		    _("Simulated time: %[u32]ns"),
 		    &mna->Telapsed);
+		AG_LabelNew(ntab, AG_LABEL_POLLED,
+		    _("Step real-time average: %[u32]ms"),
+		    &mna->TavgReal);
 
 		SIM(mna)->log = AG_ConsoleNew(ntab, AG_CONSOLE_EXPAND);
 	}
@@ -322,17 +336,17 @@ ES_MnaEdit(void *p, ES_Circuit *ckt)
 	ntab = AG_NotebookAddTab(nb, "[A]", AG_BOX_VERT);
 	mv = AG_MatviewNew(ntab, mna->A, 0);
 	AG_MatviewPrescale(mv, "-0.000", 10, 5);
-	AG_MatviewSetNumericalFmt(mv, "%.03f");
+	AG_MatviewSetNumericalFmt(mv, "%.02f");
 	
 	ntab = AG_NotebookAddTab(nb, "[LU]", AG_BOX_VERT);
 	mv = AG_MatviewNew(ntab, mna->LU, 0);
 	AG_MatviewPrescale(mv, "-0.000", 10, 5);
-	AG_MatviewSetNumericalFmt(mv, "%.03f");
+	AG_MatviewSetNumericalFmt(mv, "%.02f");
 
 	ntab = AG_NotebookAddTab(nb, "[G]", AG_BOX_VERT);
 	mv = AG_MatviewNew(ntab, mna->G, 0);
 	AG_MatviewPrescale(mv, "-0.000", 10, 5);
-	AG_MatviewSetNumericalFmt(mv, "%.03f");
+	AG_MatviewSetNumericalFmt(mv, "%.02f");
 	
 	ntab = AG_NotebookAddTab(nb, "[B]", AG_BOX_VERT);
 	mv = AG_MatviewNew(ntab, mna->B, 0);
@@ -352,12 +366,12 @@ ES_MnaEdit(void *p, ES_Circuit *ckt)
 	ntab = AG_NotebookAddTab(nb, "[z]", AG_BOX_VERT);
 	mv = AG_MatviewNew(ntab, mna->z, 0);
 	AG_MatviewPrescale(mv, "-0000.0000", 10, 5);
-	AG_MatviewSetNumericalFmt(mv, "%.03f");
+	AG_MatviewSetNumericalFmt(mv, "%.04f");
 	
 	ntab = AG_NotebookAddTab(nb, "[x]", AG_BOX_VERT);
 	mv = AG_MatviewNew(ntab, mna->x, 0);
 	AG_MatviewPrescale(mv, "-0000.0000", 10, 5);
-	AG_MatviewSetNumericalFmt(mv, "%.03f");
+	AG_MatviewSetNumericalFmt(mv, "%.04f");
 	
 	return (win);
 }
@@ -367,23 +381,16 @@ ES_MnaNodeVoltage(void *p, int j)
 {
 	ES_MNA *mna = p;
 
-	if (j > 0 && j <= SIM(mna)->ckt->n) {
-		return (mna->x->mat[j][1]);
-	} else {
-		return (0.0);
-	}
+	return (vExists(mna->x,j) ? vEnt(mna->x,j) : 0.0);
 }
 
 static SC_Real
 ES_MnaBranchCurrent(void *p, int k)
 {
 	ES_MNA *mna = p;
-	
-	if (k > 0 && k <= SIM(mna)->ckt->n + SIM(mna)->ckt->m) {
-		return (mna->x->mat[SIM(mna)->ckt->n + k][1]);
-	} else {
-		return (0.0);
-	}
+	int i = SIM(mna)->ckt->n + k;
+
+	return (vExists(mna->x,i) ? vEnt(mna->x,i) : 0.0);
 }
 
 const ES_SimOps esMnaOps = {
@@ -392,6 +399,8 @@ const ES_SimOps esMnaOps = {
 	sizeof(ES_MNA),
 	ES_MnaInit,
 	ES_MnaDestroy,
+	ES_MnaStart,
+	ES_MnaStop,
 	ES_MnaResize,
 	ES_MnaNodeVoltage,
 	ES_MnaBranchCurrent,

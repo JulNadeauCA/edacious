@@ -14,6 +14,8 @@ typedef struct es_sim_ops {
 	size_t size;
 	void (*init)(void *);
 	void (*destroy)(void *);
+	void (*start)(void *);
+	void (*stop)(void *);
 	void (*cktmod)(void *, struct es_circuit *);
 	SC_Real (*node_voltage)(void *, int);
 	SC_Real (*branch_current)(void *, int);
@@ -25,7 +27,7 @@ typedef struct es_sim {
 	const ES_SimOps *ops;		/* Generic operations */
 	AG_Window *win;			/* Settings window */
 	struct ag_console *log;		/* Log message display */
-	int running;			/* Don't interrupt */
+	int running;			/* Continous simulation in process */
 } ES_Sim;
 
 #define SIM(p) ((ES_Sim *)p)

@@ -50,15 +50,26 @@ const AG_ObjectOps esCircuitOps = {
 static void InitNode(ES_Node *, u_int);
 static void InitGround(ES_Circuit *);
 
+void
+ES_ResumeSimulation(ES_Circuit *ckt)
+{
+	if (ckt->sim != NULL && ckt->sim->ops->start != NULL)
+		ckt->sim->ops->start(ckt->sim);
+}
+
+void
+ES_SuspendSimulation(ES_Circuit *ckt)
+{
+	if (ckt->sim != NULL && ckt->sim->ops->stop != NULL)
+		ckt->sim->ops->stop(ckt->sim);
+}
+
 static void
 ES_CircuitDetached(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_SELF();
 
-	if (ckt->sim != NULL) {
-		ES_SimDestroy(ckt->sim);
-		ckt->sim = NULL;
-	}
+	ES_DestroySimulation(ckt);
 }
 
 static void
@@ -82,10 +93,7 @@ ES_CircuitClosed(AG_Event *event)
 	ES_Circuit *ckt = AG_SELF();
 	ES_Component *com;
 
-	if (ckt->sim != NULL) {
-		ES_SimDestroy(ckt->sim);
-		ckt->sim = NULL;
-	}
+	ES_DestroySimulation(ckt);
 
 	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (!AGOBJECT_SUBCLASS(com, "component"))
@@ -158,6 +166,7 @@ ES_CircuitInit(void *p, const char *name)
 	VG *vg;
 
 	AG_ObjectInit(ckt, "circuit", name, &esCircuitOps);
+	ckt->simlock = 0;
 	ckt->descr[0] = '\0';
 	ckt->sim = NULL;
 	ckt->dis_nodes = 1;
@@ -199,11 +208,8 @@ ES_CircuitReinit(void *p)
 	ES_Circuit *ckt = p;
 	ES_Component *com;
 	u_int i;
-	
-	if (ckt->sim != NULL) {
-		ES_SimDestroy(ckt->sim);
-		ckt->sim = NULL;
-	}
+
+	ES_DestroySimulation(ckt);
 
 	Free(ckt->loops, M_EDA);
 	ckt->loops = NULL;
@@ -602,6 +608,16 @@ ES_CircuitFreeComponents(ES_Circuit *ckt)
 }
 
 void
+ES_DestroySimulation(ES_Circuit *ckt)
+{
+	if (ckt->sim != NULL) {
+		ES_SuspendSimulation(ckt);
+		ES_SimDestroy(ckt->sim);
+		ckt->sim = NULL;
+	}
+}
+
+void
 ES_CircuitDestroy(void *p)
 {
 	ES_Circuit *ckt = p;
@@ -612,14 +628,12 @@ ES_CircuitDestroy(void *p)
 
 /* Select the simulation mode. */
 ES_Sim *
-ES_CircuitSetSimMode(ES_Circuit *ckt, const ES_SimOps *sops)
+ES_SetSimulationMode(ES_Circuit *ckt, const ES_SimOps *sops)
 {
 	ES_Sim *sim;
 
-	if (ckt->sim != NULL) {
-		ES_SimDestroy(ckt->sim);
-		ckt->sim = NULL;
-	}
+	ES_DestroySimulation(ckt);
+
 	ckt->sim = sim = Malloc(sops->size, M_EDA);
 	sim->ckt = ckt;
 	sim->ops = sops;
@@ -653,6 +667,28 @@ ES_CircuitLog(void *p, const char *fmt, ...)
 	AG_Vasprintf(&ln->text, fmt, args);
 	va_end(args);
 	ln->len = strlen(ln->text);
+}
+
+/* Lock the circuit and suspend any continuous simulation in progress. */
+void
+ES_LockCircuit(ES_Circuit *ckt)
+{
+	AG_MutexLock(&ckt->lock);
+	if (ckt->sim != NULL && ckt->sim->running) {
+		if (ckt->simlock++ == 0)
+			ES_SuspendSimulation(ckt);
+	}
+}
+
+/* Resume any previously suspended simulation and unlock the circuit. */
+void
+ES_UnlockCircuit(ES_Circuit *ckt)
+{
+	if (ckt->sim != NULL && !ckt->sim->running) {
+		if (--ckt->simlock == 0)
+			ES_ResumeSimulation(ckt);
+	}
+	AG_MutexUnlock(&ckt->lock);
 }
 
 #ifdef EDITION
@@ -945,7 +981,7 @@ CircuitSelectSim(AG_Event *event)
 		return;
 	}
 
-	sim = ES_CircuitSetSimMode(ckt, sops);
+	sim = ES_SetSimulationMode(ckt, sops);
 	if (sim->win != NULL)
 		AG_WindowAttach(pwin, sim->win);
 }

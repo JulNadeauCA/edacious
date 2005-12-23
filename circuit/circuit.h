@@ -53,6 +53,7 @@ typedef struct es_circuit {
 	ES_Sim *sim;			/* Current simulation mode */
 
 	pthread_mutex_t lock;
+	int simlock;			/* Simulation is locked */
 	int dis_nodes;			/* Display node indications */
 	int dis_node_names;		/* Display node names */
 
@@ -65,6 +66,7 @@ typedef struct es_circuit {
 	u_int n;			/* Number of nodes (except ground) */
 } ES_Circuit;
 
+#define ES_CIRCUIT(p) ((ES_Circuit *)(p))
 #define U(com,n) ES_NodeVoltage(COM(com)->ckt,(n))
 
 __BEGIN_DECLS
@@ -76,6 +78,8 @@ void		 ES_CircuitDestroy(void *);
 void		 ES_CircuitFreeComponents(ES_Circuit *);
 void		*ES_CircuitEdit(void *);
 void		 ES_CircuitLog(void *, const char *, ...);
+__inline__ void	 ES_LockCircuit(ES_Circuit *);
+__inline__ void	 ES_UnlockCircuit(ES_Circuit *);
 
 int		 ES_CircuitAddNode(ES_Circuit *, u_int);
 void		 ES_CircuitDelNode(ES_Circuit *, u_int);
@@ -91,8 +95,12 @@ __inline__ int	   ES_NodeVsource(ES_Circuit *, u_int, u_int, int *);
 __inline__ SC_Real ES_NodeVoltage(ES_Circuit *, int);
 __inline__ SC_Real ES_BranchCurrent(ES_Circuit *, int);
 
-ES_Sim		*ES_CircuitSetSimMode(ES_Circuit *, const ES_SimOps *);
+__inline__ void	 ES_ResumeSimulation(ES_Circuit *);
+__inline__ void	 ES_SuspendSimulation(ES_Circuit *);
+ES_Sim		*ES_SetSimulationMode(ES_Circuit *, const ES_SimOps *);
 void		 ES_CircuitModified(ES_Circuit *);
+void		 ES_DestroySimulation(ES_Circuit *);
+
 __END_DECLS
 
 #include "close_code.h"
