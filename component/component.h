@@ -103,6 +103,7 @@ typedef struct es_component {
 #define PNODE(p,n) (COM(p)->ports[n].node)
 #define COM_Z0 50.0				/* Normalizing impedance */
 #define COM_T0 290.0				/* Reference temperature */
+#define comU(p,n) ES_NodeVoltage(COM(p)->ckt,PNODE(p,n))
 
 __BEGIN_DECLS
 void	 ES_ComponentInit(void *, const char *, const char *, const void *,
@@ -113,7 +114,9 @@ int	 ES_ComponentSave(void *, AG_Netbuf *);
 void	*ES_ComponentEdit(void *);
 void	 ES_ComponentReinit(void *);
 void	 ES_ComponentFreePorts(ES_Component *);
+void	 ES_ComponentSetOps(void *, const void *);
 void	 ES_ComponentSetPorts(void *, const ES_Port *);
+void	 ES_ComponentSetType(void *, const char *);
 
 void	 ES_ComponentMenu(ES_Component *, struct ag_menu_item *);
 void	 ES_ComponentOpenMenu(ES_Component *, VG_View *, int, int);

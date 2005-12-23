@@ -122,8 +122,7 @@ ES_InverterInit(void *p, const char *name)
 	inv->Voh = 5;
 	inv->Vol = 0;
 
-	digG(inv,4) = 0.900;
-	digG(inv,5) = 0.001;
+	digG(inv,4) = 0.999;
 }
 
 /* Increment the counters in response to a simulation step. */
@@ -131,24 +130,35 @@ void
 ES_InverterStep(void *p, Uint ticks)
 {
 	ES_Inverter *inv = p;
-	
-	if (U(inv,1) >= inv->Vih &&
-	    U(inv,2) <  inv->Voh) {
-		ES_ComponentLog(inv, "H->L hold delay (%u/%u ns)",
-		    inv->Tehl, inv->Thold);
-		inv->Tehl++;
-		inv->Telh = 0;
-	} else if (
-	    U(inv,1) <= inv->Vil &&
-	    U(inv,2) >  inv->Vol) {
-		ES_ComponentLog(inv, "L->H hold delay (%.0f/%.0f ns)",
-		    inv->Telh*1e9, inv->Thold*1e9);
-		inv->Telh++;
-		inv->Tehl = 0;
+
+#if 0
+	if (U(inv,1) >= inv->Vih && U(inv,2) < inv->Voh) {
+		if (inv->Tehl < inv->Thold) {
+			inv->Tehl++;
+			inv->Telh = 0;
+		}
+	} else if (U(inv,1) <= inv->Vil && U(inv,2) > inv->Vol) {
+		if (inv->Telh < inv->Thold) {
+			inv->Telh++;
+			inv->Tehl = 0;
+		}
 	} else {
 		inv->Tehl = 0;
 		inv->Telh = 0;
 	}
+#else
+	if (comU(inv,1) >= inv->Vih) {
+		ES_ComponentLog(inv, "Sw H>L (v1=%f,vih=%f)",
+		    comU(inv,1), inv->Vih);
+		digG(inv,4) = 0.001;
+		digG(inv,5) = 0.999;
+	} else {
+		ES_ComponentLog(inv, "Sw L>H (v1=%f,vih=%f)",
+		    comU(inv,1), inv->Vih);
+		digG(inv,4) = 0.999;
+		digG(inv,5) = 0.001;
+	}
+#endif
 }
 
 /*
@@ -161,26 +171,22 @@ ES_InverterUpdate(void *p)
 {
 	ES_Inverter *inv = p;
 
-	ES_ComponentLog(inv, "u1=%f, u2=%f", U(inv,1), U(inv,2));
-
 	/* Switch OUT when IN != OUT for at least Thold time. */
 	if (U(inv,1) >= inv->Vih &&
 	    U(inv,2) <  inv->Voh &&
 	    inv->Tehl >= inv->Thold) {
-		printf("%s: switch OUT to LOW\n", AGOBJECT(inv)->name);
-		if (digG(inv,4) > 0.001) { digG(inv,4) -= 0.1; }
-		else { inv->Tehl = 0; }
-		if (digG(inv,5) < 0.900) { digG(inv,5) += 0.1; }
-		else { inv->Tehl = 0; }
+		ES_ComponentLog(inv, "Sw H>L (%u/%u)", inv->Tehl, inv->Thold);
+		digG(inv,4) = 0.01;
+		digG(inv,5) = 0.99;
+		inv->Tehl = 0;
 	}
 	if (U(inv,1) <= inv->Vil &&
 	    U(inv,2) >  inv->Vol &&
 	    inv->Telh >= inv->Thold) {
-		printf("%s: switch OUT to HIGH\n", AGOBJECT(inv)->name);
-		if (digG(inv,5) > 0.001) { digG(inv,5) -= 0.1; }
-		else { inv->Tehl = 0; }
-		if (digG(inv,4) < 0.900) { digG(inv,4) += 0.1; }
-		else { inv->Tehl = 0; }
+		ES_ComponentLog(inv, "Sw L>H (%u/%u)", inv->Tehl, inv->Thold);
+		digG(inv,4) = 0.99;
+		digG(inv,5) = 0.01;
+		inv->Telh = 0;
 	}
 }
 

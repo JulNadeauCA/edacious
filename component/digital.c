@@ -71,56 +71,56 @@ ES_DigitalLoad(void *p, AG_Netbuf *buf)
 	    ES_ComponentLoad(dig, buf) == -1)
 		return (-1);
 
-	dig->Vdd = SC_ReadReal(buf);
-	dig->Vi = SC_ReadReal(buf);
-	dig->Tamb = SC_ReadReal(buf);
-	dig->Idd = SC_ReadReal(buf);
-	dig->Vol = SC_ReadReal(buf);
-	dig->Voh = SC_ReadReal(buf);
-	dig->Vil = SC_ReadReal(buf);
-	dig->Vih = SC_ReadReal(buf);
-	dig->VolUB = SC_ReadReal(buf);
-	dig->VohUB = SC_ReadReal(buf);
-	dig->VilUB = SC_ReadReal(buf);
-	dig->VihUB = SC_ReadReal(buf);
-	dig->Iol = SC_ReadReal(buf);
-	dig->Ioh = SC_ReadReal(buf);
-	dig->Iin = SC_ReadReal(buf);
-	dig->Iozh = SC_ReadReal(buf);
-	dig->Iozl = SC_ReadReal(buf);
-	dig->Tthl = SC_ReadReal(buf);
-	dig->Ttlh = SC_ReadReal(buf);
+	dig->Vdd = SC_ReadRange(buf);
+	dig->Vi = SC_ReadRange(buf);
+	dig->Tamb = SC_ReadRange(buf);
+	dig->Idd = SC_ReadRange(buf);
+	dig->Vol = SC_ReadRange(buf);
+	dig->Voh = SC_ReadRange(buf);
+	dig->Vil = SC_ReadRange(buf);
+	dig->Vih = SC_ReadRange(buf);
+	dig->VolUB = SC_ReadRange(buf);
+	dig->VohUB = SC_ReadRange(buf);
+	dig->VilUB = SC_ReadRange(buf);
+	dig->VihUB = SC_ReadRange(buf);
+	dig->Iol = SC_ReadRange(buf);
+	dig->Ioh = SC_ReadRange(buf);
+	dig->Iin = SC_ReadRange(buf);
+	dig->Iozh = SC_ReadRange(buf);
+	dig->Iozl = SC_ReadRange(buf);
+	dig->Tthl = SC_ReadQTimeRange(buf);
+	dig->Ttlh = SC_ReadQTimeRange(buf);
 	return (0);
 }
 
 int
 ES_DigitalSave(void *p, AG_Netbuf *buf)
 {
-	ES_Digital *r = p;
+	ES_Digital *dig = p;
 
 	AG_WriteVersion(buf, &esDigitalVer);
-	if (ES_ComponentSave(r, buf) == -1)
+	if (ES_ComponentSave(dig, buf) == -1)
 		return (-1);
 
-	SC_WriteReal(buf, dig->Vdd);
-	SC_WriteReal(buf, dig->Vi);
-	SC_WriteReal(buf, dig->Tamb);
-	SC_WriteReal(buf, dig->Idd);
-	SC_WriteReal(buf, dig->Vol);
-	SC_WriteReal(buf, dig->Voh);
-	SC_WriteReal(buf, dig->Vil);
-	SC_WriteReal(buf, dig->Vih);
-	SC_WriteReal(buf, dig->VolUB);
-	SC_WriteReal(buf, dig->VohUB);
-	SC_WriteReal(buf, dig->VilUB);
-	SC_WriteReal(buf, dig->VihUB);
-	SC_WriteReal(buf, dig->Iol);
-	SC_WriteReal(buf, dig->Ioh);
-	SC_WriteReal(buf, dig->Iin);
-	SC_WriteReal(buf, dig->Iozh);
-	SC_WriteReal(buf, dig->Iozl);
-	SC_WriteReal(buf, dig->Tthl);
-	SC_WriteReal(buf, dig->Ttlh);
+	SC_WriteRange(buf, dig->Vdd);
+	SC_WriteRange(buf, dig->Vi);
+	SC_WriteRange(buf, dig->Tamb);
+	SC_WriteRange(buf, dig->Idd);
+	SC_WriteRange(buf, dig->Vol);
+	SC_WriteRange(buf, dig->Voh);
+	SC_WriteRange(buf, dig->Vil);
+	SC_WriteRange(buf, dig->Vih);
+	SC_WriteRange(buf, dig->VolUB);
+	SC_WriteRange(buf, dig->VohUB);
+	SC_WriteRange(buf, dig->VilUB);
+	SC_WriteRange(buf, dig->VihUB);
+	SC_WriteRange(buf, dig->Iol);
+	SC_WriteRange(buf, dig->Ioh);
+	SC_WriteRange(buf, dig->Iin);
+	SC_WriteRange(buf, dig->Iozh);
+	SC_WriteRange(buf, dig->Iozl);
+	SC_WriteQTimeRange(buf, dig->Tthl);
+	SC_WriteQTimeRange(buf, dig->Ttlh);
 	return (0);
 }
 
@@ -133,8 +133,9 @@ ES_DigitalLoadDC_G(void *p, SC_Matrix *G)
 	int i;
 
 	for (i = 0; i < COM(dig)->npairs; i++) {
-		u_int k = PNODE(dig,1);
-		u_int j = PNODE(dig,2);
+		ES_Pair *pair = PAIR(dig,i);
+		u_int k = pair->p1->node;
+		u_int j = pair->p2->node;
 		SC_Real g = vEnt(dig->G, i+1);
 
 		if (g == 0.0) {
@@ -144,6 +145,9 @@ ES_DigitalLoadDC_G(void *p, SC_Matrix *G)
 		    k == -1 || j == -1 || (k == 0 && j == 0)) {
 			continue;
 		}
+		ES_ComponentLog(dig, "pair=(%s,%s) kj=%d,%d, g=%f (idx %d)",
+		    pair->p1->name, pair->p2->name, k, j, g, i);
+
 		if (k != 0) {
 			mAdd(G, k, k, g);
 		}

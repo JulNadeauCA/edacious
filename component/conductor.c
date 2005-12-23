@@ -87,11 +87,11 @@ ES_ConductorLoadDC_G(void *p, SC_Matrix *G)
 		AG_SetError("bad conductor");
 		return (-1);
 	}
-	if (k != 0) { G->mat[k][k] += 1000000000.0; }
-	if (j != 0) { G->mat[j][j] += 1000000000.0; }
+	if (k != 0) { G->mat[k][k] += 0.999; }
+	if (j != 0) { G->mat[j][j] += 0.999; }
 	if (k != 0 && j != 0) {
-		G->mat[k][j] -= 1000000000.0;
-		G->mat[j][k] -= 1000000000.0;
+		G->mat[k][j] -= 0.999;
+		G->mat[j][k] -= 0.999;
 	}
 	return (0);
 }

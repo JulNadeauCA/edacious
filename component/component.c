@@ -143,7 +143,9 @@ ES_ComponentDetached(AG_Event *event)
 
 	if (!AGOBJECT_SUBCLASS(ckt, "circuit"))
 		return;
-	
+
+	ES_LockCircuit(ckt);
+
 	if (AGOBJECT_SUBCLASS(com, "component.vsource")) {
 		for (i = 0; i < ckt->m; i++) {
 			if (ckt->vsrcs[i] == (ES_Vsource *)com) {
@@ -164,14 +166,13 @@ ES_ComponentDetached(AG_Event *event)
 		     br != TAILQ_END(&node->branches);
 		     br = nbr) {
 			nbr = TAILQ_NEXT(br, branches);
-			if (br->port != NULL && br->port->com == com) {
+			if (br->port != NULL && br->port->com == com)
 				ES_CircuitDelBranch(ckt, i, br);
-			}
 		}
 	}
 
 del_nodes:
-	/* XXX widely inefficient */
+	/* XXX hack */
 	for (i = 1; i <= ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
 		ES_Branch *br;
@@ -198,6 +199,8 @@ del_nodes:
 		com->block = NULL;
 	}
 	com->ckt = NULL;
+	
+	ES_UnlockCircuit(ckt);
 }
 
 static void
@@ -318,6 +321,21 @@ ES_ComponentRedraw(void *p, Uint32 ival, void *arg)
 	VG_SelectBlock(vg, block_save);
 	pthread_mutex_unlock(&vg->lock);
 	return (ival);
+}
+
+void
+ES_ComponentSetOps(void *p, const void *ops)
+{
+	ES_Component *com = p;
+
+	AGOBJECT(com)->ops = ops;
+	com->ops = ops;
+}
+
+void
+ES_ComponentSetType(void *p, const char *type)
+{
+	AG_ObjectSetType(p, type);
 }
 
 void
@@ -516,6 +534,25 @@ EditComponent(AG_Event *event)
 }
 
 static void
+RemoveComponent(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	ES_Circuit *ckt = com->ckt;
+
+	ES_LockCircuit(ckt);
+	AG_ObjectDetach(com);
+	if (!AG_ObjectInUse(com)) {
+		AG_TextTmsg(AG_MSG_INFO, 250, _("Removed component %s."),
+		    AGOBJECT(com)->name);
+		AG_ObjectDestroy(com);
+	} else {
+		AG_TextMsg(AG_MSG_ERROR, _("%s: component is in use."),
+		    AGOBJECT(com)->name);
+	}
+	ES_UnlockCircuit(ckt);
+}
+
+static void
 LoadComponent(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
@@ -554,6 +591,11 @@ ES_ComponentMenu(ES_Component *com, AG_MenuItem *mi)
 {
 	AG_MenuAction(mi, _("Edit model"), EDA_COMPONENT_ICON,
 	    EditComponent, "%p", com);
+	
+	AG_MenuSeparator(mi);
+	
+	AG_MenuAction(mi, _("Delete component"), TRASH_ICON,
+	    RemoveComponent, "%p", com);
 
 	AG_MenuSeparator(mi);
 
@@ -632,6 +674,9 @@ tryname:
 	com = Malloc(comtype->size, M_OBJECT);
 	comtype->ops->init(com, name);
 	com->flags |= COMPONENT_FLOATING;
+
+	ES_LockCircuit(ckt);
+
 	AG_ObjectAttach(ckt, com);
 	AG_ObjectUnlinkDatafiles(com);
 	AG_ObjectPageIn(com, AG_OBJECT_DATA);
@@ -647,6 +692,8 @@ tryname:
 	
 	if (AG_ObjectSave(com) == -1)
 		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
+	
+	ES_UnlockCircuit(ckt);
 }
 
 /*
@@ -695,6 +742,7 @@ ES_ComponentConnect(ES_Circuit *ckt, ES_Component *com, VG_Vtx *vtx)
 	ES_Branch *br;
 	int i;
 
+	ES_LockCircuit(ckt);
 	for (i = 1; i <= com->nports; i++) {
 		ES_Port *port = &com->ports[i];
 
@@ -705,8 +753,7 @@ ES_ComponentConnect(ES_Circuit *ckt, ES_Component *com, VG_Vtx *vtx)
 		    com->ops->connect(com, port, oport) == -1) {
 			if (oport != NULL) {
 #ifdef DEBUG
-				if (port->node > 0)
-					fatal("spurious node");
+				if (port->node > 0) { fatal("spurious node"); }
 #endif
 				port->node = oport->node;
 				port->branch = ES_CircuitAddBranch(ckt,
@@ -722,6 +769,7 @@ ES_ComponentConnect(ES_Circuit *ckt, ES_Component *com, VG_Vtx *vtx)
 	com->flags &= ~(COMPONENT_FLOATING);
 
 	ES_CircuitModified(ckt);
+	ES_UnlockCircuit(ckt);
 }
 
 /*

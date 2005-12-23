@@ -26,7 +26,7 @@ typedef struct es_digital {
 	SC_Vector *G;		/* Current conductive state */
 	SC_Range Vdd;		/* Supply voltage */
 	SC_Range Vi;		/* Voltage on any input */
-	SC_Range TAmb;		/* Operating ambient temperature */
+	SC_Range Tamb;		/* Operating ambient temperature */
 	SC_Range Idd;		/* Quiescent current */
 	SC_Range Vol, Voh;	/* Output voltage LOW/HIGH (buffered) */
 	SC_Range Vil, Vih;	/* Input voltage LOW/HIGH (buffered) */
@@ -43,6 +43,10 @@ typedef struct es_digital {
 
 #define DIG(p) ((ES_Digital *)(p))
 #define digG(p,j) (DIG(p)->G->mat[j][1])
+#define digInHI(p,j) (U(p,j) >= DIG(p)->Vih)
+#define digInLO(p,j) (U(p,j) <= DIG(p)->Vil)
+#define digOutHI(p,j) (U(p,j) >= DIG(p)->Voh)
+#define digOutLO(p,j) (U(p,j) <= DIG(p)->Vol)
 
 __BEGIN_DECLS
 void	 ES_DigitalInit(void *, const char *, const char *, const void *,
