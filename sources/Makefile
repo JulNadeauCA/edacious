@@ -4,7 +4,7 @@ TOP=	..
 include ${TOP}/Makefile.config
 
 LIB=	sources
-SRCS=	vsquare.c
+SRCS=	vsource.c vsquare.c vsine.c
 
 CFLAGS+=${AGAR_SC_CFLAGS} ${AGAR_CFLAGS}
 
