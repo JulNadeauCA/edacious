@@ -19,7 +19,7 @@
 #define Malloc(s,c) AG_Malloc((s),(c))
 #define Free(p,c) AG_Free(p,c)
 #define Realloc(p,s) AG_Realloc((p),(s))
-#define Fatal(msg) do { fprintf(stderr, "%s\n", msg); abort(); } while (0)
+#define Fatal AG_FatalError
 
 #define _(s) (s)
 #define N_(s) (s)

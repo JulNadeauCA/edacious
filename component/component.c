@@ -508,6 +508,19 @@ ES_ComponentLog(void *p, const char *fmt, ...)
 	va_end(args);
 }
 
+Uint
+ES_PortNode(ES_Component *com, int port)
+{
+	if (port >= com->nports) {
+		Fatal("%s: bad port %d/%u", AGOBJECT(com)->name, port,
+		    com->nports);
+	}
+	if (com->ports[port].node < 0 || com->ports[port].node > com->ckt->n) {
+		Fatal("%s:%d: bad node", AGOBJECT(com)->name, port);
+	}
+	return (com->ports[port].node);
+}
+
 #ifdef EDITION
 void *
 ES_ComponentEdit(void *p)
@@ -754,7 +767,7 @@ ES_ComponentConnect(ES_Circuit *ckt, ES_Component *com, VG_Vtx *vtx)
 		    com->ops->connect(com, port, oport) == -1) {
 			if (oport != NULL) {
 #ifdef DEBUG
-				if (port->node > 0) { fatal("spurious node"); }
+				if (port->node > 0) { Fatal("bad node"); }
 #endif
 				port->node = oport->node;
 				port->branch = ES_CircuitAddBranch(ckt,

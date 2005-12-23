@@ -100,10 +100,15 @@ typedef struct es_component {
 #define COM(p) ((struct es_component *)(p))
 #define PORT(p,n) (&COM(p)->ports[n])
 #define PAIR(p,n) (&COM(p)->pairs[n])
-#define PNODE(p,n) (COM(p)->ports[n].node)
 #define COM_Z0 50.0				/* Normalizing impedance */
 #define COM_T0 290.0				/* Reference temperature */
-#define comU(p,n) ES_NodeVoltage(COM(p)->ckt,PNODE(p,n))
+#define PVOLTAGE(p,n) ES_NodeVoltage(COM(p)->ckt,PNODE((p),(n)))
+
+#ifdef DEBUG
+#define PNODE(p,n) ES_PortNode(COM(p),(n))
+#else
+#define PNODE(p,n) (COM(p)->ports[n].node)
+#endif
 
 __BEGIN_DECLS
 void	 ES_ComponentInit(void *, const char *, const char *, const void *,
@@ -131,6 +136,7 @@ void	 ES_ComponentUnselect(ES_Component *);
 void	 ES_ComponentUnselectAll(struct es_circuit *);
 void	 ES_ComponentLog(void *, const char *, ...);
 
+__inline__ Uint ES_PortNode(ES_Component *, int);
 __inline__ int  ES_PortIsGrounded(ES_Port *);
 __inline__ int	ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
 

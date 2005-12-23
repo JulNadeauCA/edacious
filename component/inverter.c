@@ -147,14 +147,14 @@ ES_InverterStep(void *p, Uint ticks)
 		inv->Telh = 0;
 	}
 #else
-	if (comU(inv,1) >= inv->Vih) {
-		ES_ComponentLog(inv, "Sw H>L (v1=%f,vih=%f)",
-		    comU(inv,1), inv->Vih);
+	if (PVOLTAGE(inv,1) >= inv->Vih) {
+		ES_ComponentLog(inv, "Sw H>L (v1=%f,vih=%f)", PVOLTAGE(inv,1),
+		    inv->Vih);
 		digG(inv,4) = 0.001;
 		digG(inv,5) = 0.999;
 	} else {
-		ES_ComponentLog(inv, "Sw L>H (v1=%f,vih=%f)",
-		    comU(inv,1), inv->Vih);
+		ES_ComponentLog(inv, "Sw L>H (v1=%f,vih=%f)", PVOLTAGE(inv,1),
+		    inv->Vih);
 		digG(inv,4) = 0.999;
 		digG(inv,5) = 0.001;
 	}
