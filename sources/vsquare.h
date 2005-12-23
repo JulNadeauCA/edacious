@@ -4,8 +4,7 @@
 #ifndef _SOURCES_VSQUARE_H_
 #define _SOURCES_VSQUARE_H_
 
-#include <component/component.h>
-#include <component/vsource.h>
+#include <sources/vsource.h>
 
 #include "begin_code.h"
 
@@ -29,6 +28,8 @@ int	 ES_VSquareSave(void *, AG_Netbuf *);
 int	 ES_VSquareExport(void *, enum circuit_format, FILE *);
 void	*ES_VSquareEdit(void *);
 void	 ES_VSquareDraw(void *, VG *);
+void	 ES_VSquareStep(void *, Uint);
+void	 ES_VSquareUpdate(void *);
 __END_DECLS
 
 #include "close_code.h"

@@ -58,83 +58,49 @@ const ES_ComponentOps esVSquareOps = {
 };
 
 const ES_Port esVSquarePorts[] = {
-	{ 0, "",  0.0, 0.0 },
-	{ 1, "v+", 0.0, 0.0 },
-	{ 2, "v-", 0.0, 2.0 },
+	{  0, "",   0.0, 0.0 },
+	{  1, "v+", 0.0, 0.0 },
+	{  2, "v-", 0.0, 2.0 },
 	{ -1 },
 };
-
-enum {
-	VSOURCE_SYM_LINEAR,
-	VSOURCE_SYM_CIRCULAR
-} esVSquareStyle = 1;
 
 void
 ES_VSquareDraw(void *p, VG *vg)
 {
 	ES_VSquare *vs = p;
 	
-	switch (esVSquareStyle) {
-	case VSOURCE_SYM_LINEAR:
-		VG_Begin(vg, VG_LINES);
-		VG_Vertex2(vg, 0.0000, 0.0000);
-		VG_Vertex2(vg, 0.0000, 0.3125);
-		VG_Vertex2(vg, 0.0000, 0.6875);
-		VG_Vertex2(vg, 0.0000, 1.0000);
-		VG_Vertex2(vg, -0.0937, 0.3125);
-		VG_Vertex2(vg, +0.0937, 0.3125);
-		VG_Vertex2(vg, -0.1875, 0.4375);
-		VG_Vertex2(vg, +0.1875, 0.4375);
-		VG_Vertex2(vg, -0.0937, 0.5625);
-		VG_Vertex2(vg, +0.0937, 0.5625);
-		VG_Vertex2(vg, -0.1875, 0.6875);
-		VG_Vertex2(vg, +0.1875, 0.6875);
-		VG_End(vg);
+	VG_Begin(vg, VG_LINES);
+	VG_Vertex2(vg, 0.000, 0.000);
+	VG_Vertex2(vg, 0.000, 0.400);
+	VG_Vertex2(vg, 0.000, 1.600);
+	VG_Vertex2(vg, 0.000, 2.000);
+	VG_End(vg);
 
-		VG_Begin(vg, VG_TEXT);
-		VG_SetStyle(vg, "component-name");
-		VG_Vertex2(vg, -0.0468, 0.0625);
-		VG_TextAlignment(vg, VG_ALIGN_TR);
-		VG_Printf(vg, "%s\n%.2f/%.2fV\n", AGOBJECT(vs)->name,
-		    vs->vL, vs->vH);
-		VG_End(vg);
-		break;
-	case VSOURCE_SYM_CIRCULAR:
-		VG_Begin(vg, VG_LINES);
-		VG_Vertex2(vg, 0.000, 0.000);
-		VG_Vertex2(vg, 0.000, 0.400);
-		VG_Vertex2(vg, 0.000, 1.600);
-		VG_Vertex2(vg, 0.000, 2.000);
-		VG_End(vg);
+	VG_Begin(vg, VG_CIRCLE);
+	VG_Vertex2(vg, 0.0, 1.0);
+	VG_CircleRadius(vg, 0.6);
+	VG_End(vg);
 
-		VG_Begin(vg, VG_CIRCLE);
-		VG_Vertex2(vg, 0.0, 1.0);
-		VG_CircleRadius(vg, 0.6);
-		VG_End(vg);
-
-		VG_Begin(vg, VG_TEXT);
-		VG_SetStyle(vg, "component-name");
-		VG_Vertex2(vg, 0.0, 1.0);
-		VG_TextAlignment(vg, VG_ALIGN_MC);
-		VG_Printf(vg, "%s (%.2f/%.2f)", AGOBJECT(vs)->name,
-		    vs->vL, vs->vH);
-		VG_End(vg);
+	VG_Begin(vg, VG_TEXT);
+	VG_SetStyle(vg, "component-name");
+	VG_Vertex2(vg, 0.0, 1.0);
+	VG_TextAlignment(vg, VG_ALIGN_MC);
+	VG_Printf(vg, "%s", AGOBJECT(vs)->name);
+	VG_End(vg);
 		
-		VG_Begin(vg, VG_TEXT);
-		VG_SetStyle(vg, "component-name");
-		VG_Vertex2(vg, 0.0, 0.6);
-		VG_TextAlignment(vg, VG_ALIGN_MC);
-		VG_Printf(vg, "+");
-		VG_End(vg);
+	VG_Begin(vg, VG_TEXT);
+	VG_SetStyle(vg, "component-name");
+	VG_Vertex2(vg, 0.0, 0.6);
+	VG_TextAlignment(vg, VG_ALIGN_MC);
+	VG_Printf(vg, "+");
+	VG_End(vg);
 		
-		VG_Begin(vg, VG_TEXT);
-		VG_SetStyle(vg, "component-name");
-		VG_Vertex2(vg, 0.0, 1.4);
-		VG_TextAlignment(vg, VG_ALIGN_MC);
-		VG_Printf(vg, "-");
-		VG_End(vg);
-		break;
-	}
+	VG_Begin(vg, VG_TEXT);
+	VG_SetStyle(vg, "component-name");
+	VG_Vertex2(vg, 0.0, 1.4);
+	VG_TextAlignment(vg, VG_ALIGN_MC);
+	VG_Printf(vg, "-");
+	VG_End(vg);
 }
 
 void
@@ -143,14 +109,17 @@ ES_VSquareInit(void *p, const char *name)
 	ES_VSquare *vs = p;
 
 	ES_VsourceInit(vs, name);
-	AG_ObjectSetType(vs, "component.vsource.square");
-	AG_ObjectSetOps(vs, &esVSquareOps);
+	ES_ComponentSetType(vs, "component.vsource.square");
+	ES_ComponentSetOps(vs, &esVSquareOps);
 	ES_ComponentSetPorts(vs, esVSquarePorts);
 	vs->vH = 5.0;
 	vs->vL = 0.0;
-	vs->tH = 1000;
-	vs->tL = 1000;
 	vs->t = 0;
+	vs->tH = 100;
+	vs->tL = 100;
+
+	COM(vs)->intStep = ES_VSquareStep;
+	COM(vs)->intUpdate = ES_VSquareUpdate;
 }
 
 int
@@ -159,7 +128,7 @@ ES_VSquareLoad(void *p, AG_Netbuf *buf)
 	ES_VSquare *vs = p;
 
 	if (AG_ReadVersion(buf, &esVSquareVer, NULL) == -1 ||
-	    ES_ComponentLoad(vs, buf) == -1)
+	    ES_VsourceLoad(vs, buf) == -1)
 		return (-1);
 
 	vs->vH = SC_ReadReal(buf);
@@ -175,7 +144,7 @@ ES_VSquareSave(void *p, AG_Netbuf *buf)
 	ES_VSquare *vs = p;
 
 	AG_WriteVersion(buf, &esVSquareVer);
-	if (ES_ComponentSave(vs, buf) == -1)
+	if (ES_VsourceSave(vs, buf) == -1)
 		return (-1);
 
 	SC_WriteReal(buf, vs->vH);
@@ -194,6 +163,30 @@ ES_VSquareExport(void *p, enum circuit_format fmt, FILE *f)
 	return (0);
 }
 
+void
+ES_VSquareStep(void *p, Uint ticks)
+{
+	ES_VSquare *vs = p;
+
+	if (VSOURCE(vs)->voltage == vs->vH && ++vs->t > vs->tH) {
+		VSOURCE(vs)->voltage = vs->vL;
+		vs->t = 0;
+	} else if (VSOURCE(vs)->voltage == vs->vL && ++vs->t > vs->tL) {
+		VSOURCE(vs)->voltage = vs->vH;
+		vs->t = 0;
+	} else if (VSOURCE(vs)->voltage != vs->vL &&
+	           VSOURCE(vs)->voltage != vs->vH) {
+		VSOURCE(vs)->voltage = vs->vL;
+	}
+}
+
+void
+ES_VSquareUpdate(void *p)
+{
+	ES_VSquare *vs = p;
+
+}
+
 #ifdef EDITION
 void *
 ES_VSquareEdit(void *p)
@@ -210,7 +203,7 @@ ES_VSquareEdit(void *p)
 	fsb = AG_FSpinbuttonNew(win, 0, "ns", _("Time (high): "));
 	AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &vs->tH);
 	fsb = AG_FSpinbuttonNew(win, 0, "ns", _("Time (low): "));
-	AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &vs->tH);
+	AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &vs->tL);
 	return (win);
 }
 #endif /* EDITION */
