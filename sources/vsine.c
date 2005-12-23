@@ -155,7 +155,7 @@ ES_VSineStep(void *p, Uint ticks)
 
 	VSOURCE(vs)->voltage = vs->vPeak*SC_Sin(vs->phase);
 	vs->phase += 1e-3*vs->f;
-	if (vs->phase > 1.0) { vs->phase -= 1.0; }
+	if (vs->phase > M_PI*2) { vs->phase -= M_PI*2; }
 }
 
 void
