@@ -404,7 +404,6 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 		port->com = com;
 		port->node = -1;
 		port->branch = NULL;
-		port->u = 0;
 		port->selected = 0;
 		com->nports++;
 	}
@@ -601,57 +600,31 @@ LoadComponentFrom(AG_Event *event)
 }
 
 void
-ES_ComponentMenu(ES_Component *com, AG_MenuItem *mi)
+ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 {
-	AG_MenuAction(mi, _("Edit model"), EDA_COMPONENT_ICON,
-	    EditComponent, "%p", com);
-	
-	AG_MenuSeparator(mi);
-	
-	AG_MenuAction(mi, _("Delete component"), TRASH_ICON,
-	    RemoveComponent, "%p", com);
+	AG_PopupMenu *pm;
 
-	AG_MenuSeparator(mi);
-
-	AG_MenuAction(mi, _("Save model"), OBJSAVE_ICON,
-	    LoadComponent, "%p", com);
-	AG_MenuAction(mi, _("Load model"), OBJLOAD_ICON,
-	    LoadComponent, "%p", com);
-	AG_MenuAction(mi, _("Export model to..."), OBJSAVE_ICON,
-	    SaveComponentTo, "%p", com);
-	AG_MenuAction(mi, _("Import model from..."), OBJLOAD_ICON,
-	    LoadComponentFrom, "%p", com);
-}
-
-void
-ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv, int x, int y)
-{
-	if (vgv->popup.menu != NULL)
-		ES_ComponentCloseMenu(vgv);
-
-	vgv->popup.menu = Malloc(sizeof(AG_Menu), M_OBJECT);
-	AG_MenuInit(vgv->popup.menu, 0);
-
-	vgv->popup.item = AG_MenuAddItem(vgv->popup.menu, NULL);
+	pm = AG_PopupNew(vgv);
 	if (com->ops->menu != NULL) {
-		com->ops->menu(com, vgv->popup.item);
-	} else {
-		ES_ComponentMenu(com, vgv->popup.item);
+		com->ops->menu(com, pm->item);
+		AG_MenuSeparator(pm->item);
 	}
-	vgv->popup.menu->sel_item = vgv->popup.item;
-	vgv->popup.win = AG_MenuExpand(vgv->popup.menu, vgv->popup.item, x, y);
-}
+	AG_MenuAction(pm->item, _("Edit component"), EDA_COMPONENT_ICON,
+	    EditComponent, "%p", com);
+	AG_MenuSeparator(pm->item);
+	AG_MenuAction(pm->item, _("Delete component"), TRASH_ICON,
+	    RemoveComponent, "%p", com);
+	AG_MenuSeparator(pm->item);
+	AG_MenuAction(pm->item, _("Save model"), OBJSAVE_ICON,
+	    LoadComponent, "%p", com);
+	AG_MenuAction(pm->item, _("Load model"), OBJLOAD_ICON,
+	    LoadComponent, "%p", com);
+	AG_MenuAction(pm->item, _("Export model to..."), OBJSAVE_ICON,
+	    SaveComponentTo, "%p", com);
+	AG_MenuAction(pm->item, _("Import model from..."), OBJLOAD_ICON,
+	    LoadComponentFrom, "%p", com);
 
-void
-ES_ComponentCloseMenu(VG_View *vgv)
-{
-	AG_MenuCollapse(vgv->popup.menu, vgv->popup.item);
-	AG_ObjectDestroy(vgv->popup.menu);
-	Free(vgv->popup.menu, M_OBJECT);
-
-	vgv->popup.menu = NULL;
-	vgv->popup.item = NULL;
-	vgv->popup.win = NULL;
+	AG_PopupShow(pm);
 }
 
 /* Insert a new, floating component into a circuit. */

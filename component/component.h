@@ -41,8 +41,6 @@ typedef struct es_port {
 	int node;				/* Node connection (or -1) */
 	struct es_branch *branch;		/* Branch into node */
 	int selected;				/* Port selected for edition */
-	SC_Real u;				/* Calculated voltage with 
-						   respect to ground (RO) */
 } ES_Port;
 
 /* Ordered pair of ports belonging to the same component. */
@@ -123,8 +121,7 @@ void	 ES_ComponentSetOps(void *, const void *);
 void	 ES_ComponentSetPorts(void *, const ES_Port *);
 void	 ES_ComponentSetType(void *, const char *);
 
-void	 ES_ComponentMenu(ES_Component *, struct ag_menu_item *);
-void	 ES_ComponentOpenMenu(ES_Component *, VG_View *, int, int);
+void	 ES_ComponentOpenMenu(ES_Component *, VG_View *);
 void	 ES_ComponentCloseMenu(VG_View *);
 void	 ES_ComponentInsert(AG_Event *);
 ES_Port	*ES_ComponentPortOverlap(struct es_circuit *, ES_Component *, float,
