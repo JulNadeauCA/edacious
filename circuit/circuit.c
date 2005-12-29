@@ -30,8 +30,11 @@
 #include <agar/gui.h>
 #include <agar/vg.h>
 
+#include <agar/sc/sc_plotter.h>
+
 #include "eda.h"
 #include "spice.h"
+#include "scope.h"
 
 const AG_Version esCircuitVer = {
 	"agar-eda circuit",
@@ -104,14 +107,28 @@ ES_CircuitClosed(AG_Event *event)
 	}
 }
 
+static SC_Real
+ES_CircuitReadNodeVoltage(void *p, AG_Prop *pr)
+{
+	return (ES_NodeVoltage(p, atoi(&pr->key[1])));
+}
+
+static SC_Real
+ES_CircuitReadBranchCurrent(void *p, AG_Prop *pr)
+{
+	return (ES_BranchCurrent(p, atoi(&pr->key[1])));
+}
+
 /* Effect a change in the circuit topology.  */
 void
 ES_CircuitModified(ES_Circuit *ckt)
 {
+	char key[32];
 	ES_Component *com;
 	ES_Vsource *vs;
 	ES_Loop *loop;
-	u_int i;
+	Uint i;
+	AG_Prop *pr;
 
 	/* Regenerate loop and pair information. */
 	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
@@ -156,12 +173,25 @@ ES_CircuitModified(ES_Circuit *ckt)
 	if (ckt->sim != NULL &&
 	    ckt->sim->ops->cktmod != NULL)
 		ckt->sim->ops->cktmod(ckt->sim, ckt);
+
+	AG_ObjectFreeProps(AGOBJECT(ckt));
+	for (i = 1; i <= ckt->n; i++) {
+		snprintf(key, sizeof(key), "v%u", i);
+		pr = SC_SetReal(ckt, key, 0.0);
+		SC_SetRealRdFn(pr, ES_CircuitReadNodeVoltage);
+	}
+	for (i = 1; i <= ckt->m; i++) {
+		snprintf(key, sizeof(key), "I%u", i);
+		pr = SC_SetReal(ckt, key, 0.0);
+		SC_SetRealRdFn(pr, ES_CircuitReadBranchCurrent);
+	}
 }
 
 void
 ES_CircuitInit(void *p, const char *name)
 {
 	ES_Circuit *ckt = p;
+	AG_Event *ev;
 	VG_Style *vgs;
 	VG *vg;
 
@@ -200,6 +230,12 @@ ES_CircuitInit(void *p, const char *name)
 	
 	AG_SetEvent(ckt, "edit-open", ES_CircuitOpened, NULL);
 	AG_SetEvent(ckt, "edit-close", ES_CircuitClosed, NULL);
+
+	/* Notify visualization objects of simulation progress. */
+	ev = AG_SetEvent(ckt, "circuit-step-begin", NULL, NULL);
+	ev->flags |= AG_EVENT_PROPAGATE;
+	ev = AG_SetEvent(ckt, "circuit-step-end", NULL, NULL);
+	ev->flags |= AG_EVENT_PROPAGATE;
 }
 
 void
@@ -238,7 +274,6 @@ ES_CircuitReinit(void *p)
 			port->node = -1;
 			port->branch = NULL;
 			port->selected = 0;
-			port->u = 0;
 		}
 		com->block = NULL;
 	}
@@ -924,10 +959,8 @@ CircuitViewButtondown(AG_Event *event)
 		VG_BlockExtent(ckt->vg, com->block, &rExt);
 		if (x > rExt.x && y > rExt.y &&
 		    x < rExt.x+rExt.w && y < rExt.y+rExt.h) {
-			int mx, my;
-
-			SDL_GetMouseState(&mx, &my);
-			ES_ComponentOpenMenu(com, vgv, mx, my);
+			ES_ComponentOpenMenu(com, vgv);
+			break;
 		}
 	}
 }
@@ -1126,6 +1159,23 @@ PollComponentPairs(AG_Event *event)
 	pthread_mutex_unlock(&com->lock);
 out:
 	AG_TlistRestore(tl);
+}
+
+static void
+CreateScope(AG_Event *event)
+{
+	char name[AG_OBJECT_NAME_MAX];
+	ES_Circuit *ckt = AG_PTR(1);
+	ES_Scope *scope;
+	Uint nscope = 0;
+
+tryname:
+	snprintf(name, sizeof(name), _("Scope #%u"), nscope++);
+	if (AG_ObjectFindChild(ckt, name) != NULL) {
+		goto tryname;
+	}
+	scope = ES_ScopeNew(ckt, name);
+	AG_ObjMgrOpenData(scope, 1);
 }
 
 void *
@@ -1349,6 +1399,12 @@ ES_CircuitEdit(void *p)
 		AG_MenuTool(pitem, toolbar, _("Insert conductor"),
 		    tool->ops->icon, 0, 0,
 		    CircuitSelectTool, "%p,%p,%p", vgv, tool, ckt);
+	}
+	
+	pitem = AG_MenuAddItem(menu, _("Visualization"));
+	{
+		AG_MenuAction(pitem, _("Create scope"), -1, CreateScope,
+		    "%p", ckt);
 	}
 
 	AG_WindowScale(win, -1, -1);

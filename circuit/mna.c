@@ -123,6 +123,8 @@ ES_MnaStep(void *obj, Uint32 ival, void *arg)
 	static Uint32 t1 = 0;
 	int i;
 
+	AG_PostEvent(NULL, ckt, "circuit-step-begin", NULL);
+
 	if (mna->Telapsed == 0) {
 		if (ES_MnaFactorize(mna, ckt) == -1) {
 			goto halt;
@@ -149,6 +151,7 @@ ES_MnaStep(void *obj, Uint32 ival, void *arg)
 	mna->TavgReal = SDL_GetTicks() - t1;
 	t1 = SDL_GetTicks();
 	mna->Telapsed++;
+	AG_PostEvent(NULL, ckt, "circuit-step-end", NULL);
 	return (ival);
 halt:
 	AG_TextMsg(AG_MSG_ERROR, _("%s; simulation stopped"), AG_GetError());
