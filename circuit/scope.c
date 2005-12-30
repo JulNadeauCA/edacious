@@ -136,13 +136,15 @@ PollCktValues(AG_Event *event)
 static void
 AddCktPlot(AG_Event *event)
 {
+	char prop_path[AG_PROP_PATH_MAX];
 	ES_Circuit *ckt = AG_PTR(1);
 	SC_Plotter *ptr = AG_PTR(2);
 	AG_TlistItem *it = AG_PTR(3);
 	AG_Prop *prop = it->p1;
 	SC_Plot *pl;
 
-	pl = SC_PlotFromProp(ptr, SC_PLOT_LINEAR, prop->key, ckt, prop->key);
+	AG_PropPath(prop_path, sizeof(prop_path), ckt, prop->key);
+	pl = SC_PlotFromProp(ptr, SC_PLOT_LINEAR, prop->key, prop_path);
 	SC_PlotSetXoffs(pl, ptr->xMax-1);
 	SC_PlotSetScale(pl, 0.0, 15.0);
 }
