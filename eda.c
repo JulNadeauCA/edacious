@@ -35,11 +35,15 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <circuit/circuit.h>
+#include <circuit/scope.h>
+
 #include <component/resistor.h>
 #include <component/semiresistor.h>
 #include <component/inverter.h>
 #include <component/spst.h>
 #include <component/spdt.h>
+
 #include <sources/vsquare.h>
 #include <sources/vsine.h>
 
@@ -72,6 +76,7 @@ int
 main(int argc, char *argv[])
 {
 	extern const AG_ObjectOps esCircuitOps;
+	extern const AG_ObjectOps esScopeOps;
 	const struct eda_type *ty;
 	int c, i, fps = -1;
 	char *s;
@@ -134,6 +139,8 @@ main(int argc, char *argv[])
 		AG_RegisterType(tname, ty->size, ty->ops, EDA_COMPONENT_ICON);
 	}
 	AG_RegisterType("circuit", sizeof(ES_Circuit), &esCircuitOps,
+	    EDA_CIRCUIT_ICON);
+	AG_RegisterType("scope", sizeof(ES_Scope), &esScopeOps,
 	    EDA_CIRCUIT_ICON);
 	
 	/* Initialize the object manager. */
