@@ -46,10 +46,10 @@ ES_ComponentFreePorts(ES_Component *com)
 	
 	pthread_mutex_destroy(&com->lock);
 	for (i = 0; i < com->npairs; i++) {
-		ES_Pair *dip = &com->pairs[i];
+		ES_Pair *pair = &com->pairs[i];
 
-		Free(dip->loops, M_EDA);
-		Free(dip->lpols, M_EDA);
+		Free(pair->loops, M_EDA);
+		Free(pair->lpols, M_EDA);
 	}
 	Free(com->pairs, M_EDA);
 	com->pairs = NULL;
@@ -357,6 +357,8 @@ ES_ComponentInit(void *obj, const char *tName, const char *name,
 	com->nports = 0;
 	com->pairs = NULL;
 	com->npairs = 0;
+	com->specs = NULL;
+	com->nspecs = 0;
 	
 	com->loadDC_G = NULL;
 	com->loadDC_BCD = NULL;
@@ -384,7 +386,7 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 {
 	ES_Component *com = p;
 	const ES_Port *pPort;
-	ES_Pair *dip;
+	ES_Pair *pair;
 	int i, j, k;
 
 	/* Instantiate the port array. */
@@ -418,10 +420,10 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 			
 			/* Skip the redundant pairs. */
 			for (k = 0; k < com->npairs; k++) {
-				ES_Pair *dip = &com->pairs[k];
+				ES_Pair *pair = &com->pairs[k];
 
-				if (dip->p2 == &com->ports[i] &&
-				    dip->p1 == &com->ports[j])
+				if (pair->p2 == &com->ports[i] &&
+				    pair->p1 == &com->ports[j])
 					break;
 			}
 			if (k < com->npairs)
@@ -429,13 +431,13 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 
 			com->pairs = Realloc(com->pairs,
 			    (com->npairs+1)*sizeof(ES_Pair));
-			dip = &com->pairs[com->npairs++];
-			dip->com = com;
-			dip->p1 = &com->ports[i];
-			dip->p2 = &com->ports[j];
-			dip->loops = Malloc(sizeof(ES_Loop *), M_EDA);
-			dip->lpols = Malloc(sizeof(int), M_EDA);
-			dip->nloops = 0;
+			pair = &com->pairs[com->npairs++];
+			pair->com = com;
+			pair->p1 = &com->ports[i];
+			pair->p2 = &com->ports[j];
+			pair->loops = Malloc(sizeof(ES_Loop *), M_EDA);
+			pair->lpols = Malloc(sizeof(int), M_EDA);
+			pair->nloops = 0;
 		}
 	}
 }
@@ -470,13 +472,13 @@ ES_ComponentSave(void *p, AG_Netbuf *buf)
  * its polarity with respect to the loop direction.
  */
 int
-ES_PairIsInLoop(ES_Pair *dip, ES_Loop *loop, int *sign)
+ES_PairIsInLoop(ES_Pair *pair, ES_Loop *loop, int *sign)
 {
 	unsigned int i;
 
-	for (i = 0; i < dip->nloops; i++) {
-		if (dip->loops[i] == loop) {
-			*sign = dip->lpols[i];
+	for (i = 0; i < pair->nloops; i++) {
+		if (pair->loops[i] == loop) {
+			*sign = pair->lpols[i];
 			return (1);
 		}
 	}
@@ -518,6 +520,22 @@ ES_PortNode(ES_Component *com, int port)
 		Fatal("%s:%d: bad node", AGOBJECT(com)->name, port);
 	}
 	return (com->ports[port].node);
+}
+
+ES_Port *
+ES_FindPort(void *p, const char *portname)
+{
+	ES_Component *com = p;
+	int i;
+
+	for (i = 1; i <= com->nports; i++) {
+		ES_Port *port = &com->ports[i];
+
+		if (strcmp(port->name, portname) == 0)
+			return (port);
+	}
+	AG_SetError(_("%s: no such port: `%s'"), AGOBJECT(com)->name, portname);
+	return (NULL);
 }
 
 #ifdef EDITION

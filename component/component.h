@@ -53,6 +53,20 @@ typedef struct es_pair {
 	unsigned int nloops;
 } ES_Pair;
 
+typedef struct es_spec_condition {
+	char name[16];		/* Name of required specification */
+	SC_Real min, max;	/* Range of values */
+	SLIST_ENTRY(es_spec_condition) conds;
+} ES_SpecCondition;
+
+/* Model specification. */
+typedef struct es_spec {
+	char name[16];				/* Symbol */
+	char descr[64];				/* Description */
+	SC_Real min, typ, max;			/* Specification values */
+	SLIST_HEAD(,es_spec_condition) conds;	/* Test conditions */
+} ES_Spec;
+
 /* Generic component description and operation vector. */
 typedef struct es_component_ops {
 	AG_ObjectOps ops;			/* Generic object ops */
@@ -83,6 +97,8 @@ typedef struct es_component {
 	int    nports;
 	ES_Pair *pairs;				/* Port pairs */
 	int     npairs;
+	ES_Spec	*specs;				/* Model specifications */
+	int	nspecs;
 
 	int (*loadDC_G)(void *, SC_Matrix *G);
 	int (*loadDC_BCD)(void *, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D);
@@ -133,9 +149,10 @@ void	 ES_ComponentUnselect(ES_Component *);
 void	 ES_ComponentUnselectAll(struct es_circuit *);
 void	 ES_ComponentLog(void *, const char *, ...);
 
-__inline__ Uint ES_PortNode(ES_Component *, int);
-__inline__ int  ES_PortIsGrounded(ES_Port *);
-__inline__ int	ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
+__inline__ Uint		 ES_PortNode(ES_Component *, int);
+__inline__ int		 ES_PortIsGrounded(ES_Port *);
+__inline__ int		 ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
+__inline__ ES_Port	*ES_FindPort(void *, const char *);
 
 __END_DECLS
 
