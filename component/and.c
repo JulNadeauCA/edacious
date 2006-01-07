@@ -1,7 +1,7 @@
 /*	$Csoft: inverter.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
 
 /*
- * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
+ * Copyright (c) 2006 CubeSoft Communications, Inc.
  * <http://www.winds-triton.com>
  * All rights reserved.
  *
@@ -31,45 +31,46 @@
 #include <agar/gui.h>
 
 #include "eda.h"
-#include "inverter.h"
+#include "and.h"
 
-const AG_Version esInverterVer = {
-	"agar-eda inverter",
+const AG_Version esAndVer = {
+	"agar-eda and gate",
 	0, 0
 };
 
-const ES_ComponentOps esInverterOps = {
+const ES_ComponentOps esAndOps = {
 	{
-		ES_InverterInit,
+		ES_AndInit,
 		NULL,			/* reinit */
 		ES_ComponentDestroy,
 		ES_ComponentLoad,
 		ES_ComponentSave,
 		ES_ComponentEdit
 	},
-	N_("Inverter"),
-	"Inv",
-	ES_InverterDraw,
-	ES_InverterEdit,
+	N_("AND Gate"),
+	"And",
+	ES_AndDraw,
+	ES_AndEdit,
 	NULL,			/* menu */
 	NULL,			/* connect */
 	NULL,			/* disconnect */
 	NULL			/* export */
 };
 
-const ES_Port esInverterPinout[] = {
+const ES_Port esAndPinout[] = {
 	{ 0, "",	0.0, 1.0 },
 	{ 1, "Vcc",	1.0, -1.0 },
-	{ 2, "Gnd",	1.0, 1.0 },
-	{ 3, "A",	0.0, 0.0 },
-	{ 4, "A-bar",	2.0, 0.0 },
+	{ 2, "Gnd",	1.0, +1.0 },
+	{ 3, "A",	0.0, -0.75 },
+	{ 4, "B",	0.0, +0.75 },
+	{ 5, "A&B",	2.0, 0.0 },
 	{ -1 },
 };
 
 void
-ES_InverterDraw(void *p, VG *vg)
+ES_AndDraw(void *p, VG *vg)
 {
-	ES_Inverter *inv = p;
+	ES_And *gate = p;
 	ES_Component *com = p;
 	VG_Block *block;
 
@@ -99,65 +100,33 @@ ES_InverterDraw(void *p, VG *vg)
 }
 
 void
-ES_InverterInit(void *p, const char *name)
+ES_AndInit(void *p, const char *name)
 {
-	ES_Inverter *inv = p;
+	ES_And *gate = p;
 
-	ES_DigitalInit(inv, "digital.inverter", name, &esInverterOps,
-	    esInverterPinout);
-	COM(inv)->intStep = ES_InverterStep;
-#if 0
-	ES_SetSpec(inv, "Tp", _("Propagation delay from A to A-bar"),
-	    "Vcc=5;Tamb=25",	0, 50, 90,
-	    "Vcc=10;Tamb=25",	0, 30, 60,
-	    "Vcc=15;Tamb=25",	0, 25, 50,
-	    NULL);
-	ES_SetSpec(inv, "Tt", _("Transition time for A-bar"),
-	    "Vcc=5;Tamb=25",	0, 80, 150,
-	    "Vcc=10;Tamb=25",	0, 50, 100,
-	    "Vcc=15;Tamb=25",	0, 40, 80,
-	    NULL);
-	ES_SetSpec(inv, "Cin", _("Input capacitance"),
-	    "Tamb=25", 0, 6, 15,
-	    NULL);
-	ES_SetSpec(inv, "Cpd", _("Power dissipation capacitance"),
-	    "Tamb=25", 0, 6, 15,
-	    NULL);
-	ES_SetSpec(inv, "Idd", _("Quiescent device current"),
-	    "Vcc=5;Tamb=-55",	0, 0, 0.25,
-	    "Vcc=10;Tamb=-55",	0, 0, 0.5,
-	    "Vcc=15;Tamb=-55",	0, 0, 1.0,
-	    "Vcc=5;Tamb=25",	0, 0, 0.25,
-	    "Vcc=10;Tamb=25",	0, 0, 0.5,
-	    "Vcc=15;Tamb=25",	0, 0, 1.0,
-	    "Vcc=5;Tamb=125",	0, 0, 7.5,
-	    "Vcc=10;Tamb=125",	0, 0, 15.0,
-	    "Vcc=15;Tamb=125",	0, 0, 30.0,
-	    NULL);
-#endif
-	ES_LogicOutput(inv, "A-bar", ES_HI_Z);
+	ES_DigitalInit(gate, "digital.and", name, &esAndOps, esAndPinout);
+	COM(gate)->intStep = ES_AndStep;
+	ES_LogicOutput(gate, "A&B", ES_HI_Z);
 }
 
 void
-ES_InverterStep(void *p, Uint ticks)
+ES_AndStep(void *p, Uint ticks)
 {
-	ES_Inverter *inv = p;
+	ES_And *gate = p;
 
-	switch (ES_LogicInput(inv, "A")) {
-	case ES_HIGH:
-		ES_LogicOutput(inv, "A-bar", ES_LOW);
-		break;
-	case ES_LOW:
-		ES_LogicOutput(inv, "A-bar", ES_HIGH);
-		break;
+	if (ES_LogicInput(gate, "A") == ES_HIGH &&
+	    ES_LogicInput(gate, "B") == ES_HIGH) {
+		ES_LogicOutput(gate, "A&B", ES_HIGH);
+	} else {
+		ES_LogicOutput(gate, "A&B", ES_LOW);
 	}
 }
 
 #ifdef EDITION
 void *
-ES_InverterEdit(void *p)
+ES_AndEdit(void *p)
 {
-	ES_Inverter *inv = p;
+	ES_And *gate = p;
 	AG_Window *win, *wDig;
 	AG_FSpinbutton *fsb;
 	AG_Notebook *nb;
@@ -167,24 +136,8 @@ ES_InverterEdit(void *p)
 	win = AG_WindowNew(0);
 
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
-#if 0
-	ntab = AG_NotebookAddTab(nb, _("Timings"), AG_BOX_VERT);
-	{
-		AG_LabelNew(ntab, AG_LABEL_POLLED, "Telh: %uns, Tehl: %uns",
-		    &inv->Telh, &inv->Tehl);
-		AG_LabelNew(ntab, AG_LABEL_POLLED, "Tplh: %uns, Tphl: %uns",
-		    &inv->Tplh, &inv->Tphl);
-
-		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Thold: ");
-		AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &inv->Thold);
-		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Tphl: ");
-		AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &inv->Tphl);
-		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Tplh: ");
-		AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &inv->Tplh);
-	}
-#endif
 	ntab = AG_NotebookAddTab(nb, _("Digital"), AG_BOX_VERT);
-	ES_DigitalEdit(inv, ntab);
+	ES_DigitalEdit(gate, ntab);
 	return (win);
 }
 #endif /* EDITION */

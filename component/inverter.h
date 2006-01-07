@@ -9,17 +9,7 @@
 
 #include "begin_code.h"
 
-typedef struct es_inverter {
-	struct es_digital com;
-	SC_QTime Tphl, Tplh;	/* Propagation delays for A -> A-bar */
-	SC_QTime Tthl, Ttlh;	/* Transition delay for A-bar */
-	SC_QTime Thold;		/* Minimum hold time for A */
-	SC_QTime Tehl, Telh;	/* Elapsed hold times */
-	SC_Real Cin;		/* Average input capacitance (pF) */
-	SC_Real Cpd;		/* Power dissipation capacitance (pF) */
-	SC_Real Vih, Vil;	/* Input logic threshold */
-	SC_Real Voh, Vol;	/* Output logic threshold */
-} ES_Inverter;
+typedef ES_Digital ES_Inverter;
 
 __BEGIN_DECLS
 void	 ES_InverterInit(void *, const char *);
