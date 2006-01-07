@@ -71,18 +71,13 @@ ES_DigitalLoad(void *p, AG_Netbuf *buf)
 	    ES_ComponentLoad(dig, buf) == -1)
 		return (-1);
 
-	dig->Vdd = SC_ReadRange(buf);
-	dig->Vi = SC_ReadRange(buf);
+	dig->Vcc = SC_ReadRange(buf);
 	dig->Tamb = SC_ReadRange(buf);
 	dig->Idd = SC_ReadRange(buf);
 	dig->Vol = SC_ReadRange(buf);
 	dig->Voh = SC_ReadRange(buf);
 	dig->Vil = SC_ReadRange(buf);
 	dig->Vih = SC_ReadRange(buf);
-	dig->VolUB = SC_ReadRange(buf);
-	dig->VohUB = SC_ReadRange(buf);
-	dig->VilUB = SC_ReadRange(buf);
-	dig->VihUB = SC_ReadRange(buf);
 	dig->Iol = SC_ReadRange(buf);
 	dig->Ioh = SC_ReadRange(buf);
 	dig->Iin = SC_ReadRange(buf);
@@ -102,18 +97,13 @@ ES_DigitalSave(void *p, AG_Netbuf *buf)
 	if (ES_ComponentSave(dig, buf) == -1)
 		return (-1);
 
-	SC_WriteRange(buf, dig->Vdd);
-	SC_WriteRange(buf, dig->Vi);
+	SC_WriteRange(buf, dig->Vcc);
 	SC_WriteRange(buf, dig->Tamb);
 	SC_WriteRange(buf, dig->Idd);
 	SC_WriteRange(buf, dig->Vol);
 	SC_WriteRange(buf, dig->Voh);
 	SC_WriteRange(buf, dig->Vil);
 	SC_WriteRange(buf, dig->Vih);
-	SC_WriteRange(buf, dig->VolUB);
-	SC_WriteRange(buf, dig->VohUB);
-	SC_WriteRange(buf, dig->VilUB);
-	SC_WriteRange(buf, dig->VihUB);
 	SC_WriteRange(buf, dig->Iol);
 	SC_WriteRange(buf, dig->Ioh);
 	SC_WriteRange(buf, dig->Iin);
@@ -163,8 +153,70 @@ ES_DigitalLoadDC_G(void *p, SC_Matrix *G)
 }
 
 void
-ES_DigitalSwitch(void *p, int port, int nstate)
+ES_DigitalSetVccPort(void *p, int port)
 {
+	DIG(p)->VccPort = port;
+}
+
+void
+ES_DigitalSetGndPort(void *p, int port)
+{
+	DIG(p)->GndPort = port;
+}
+
+int
+ES_LogicOutput(void *p, const char *portname, ES_LogicState nstate)
+{
+	ES_Digital *dig = p;
+	ES_Port *port;
+	int i;
+
+	if ((port = ES_FindPort(dig, portname)) == NULL) {
+		AG_FatalError(AG_GetError());
+		return (-1);
+	}
+	for (i = 0; i < COM(dig)->npairs; i++) {
+		ES_Pair *pair = &COM(dig)->pairs[i];
+
+		if ((pair->p1 == port && pair->p2->n == dig->VccPort) ||
+		    (pair->p2 == port && pair->p1->n == dig->VccPort)) {
+			dig->G->mat[i+1][1] = (nstate == ES_LOW) ?
+			    0.001 : 0.999;
+		}
+		if ((pair->p1 == port && pair->p2->n == dig->GndPort) ||
+		    (pair->p2 == port && pair->p1->n == dig->GndPort)) {
+			dig->G->mat[i+1][1] = (nstate == ES_HIGH) ?
+			    0.001 : 0.999;
+		}
+	}
+	ES_ComponentLog(dig, "%s -> %s", portname,
+	    nstate == ES_LOW ? "low" :
+	    nstate == ES_HIGH ? "high" : "hi-Z");
+	return (0);
+}
+
+int
+ES_LogicInput(void *p, const char *portname)
+{
+	ES_Digital *dig = p;
+	ES_Port *port;
+	SC_Real v;
+	
+	if ((port = ES_FindPort(dig, portname)) == NULL) {
+		AG_FatalError(AG_GetError());
+		return (-1);
+	}
+	v = ES_NodeVoltage(COM(dig)->ckt, port->node);
+	printf("[%s:%s]: %f\n", AGOBJECT(dig)->name, portname, v);
+	if (v >= dig->Vih.min) {
+		return (ES_HIGH);
+	} else if (v <= dig->Vil.max) {
+		return (ES_LOW);
+	} else {
+		ES_ComponentLog(dig, "%s: invalid logic level (%fV)",
+		    portname, v);
+		return (ES_INVALID);
+	}
 }
 
 void
@@ -175,11 +227,21 @@ ES_DigitalInit(void *p, const char *type, const char *name, const void *ops,
 
 	ES_ComponentInit(dig, type, name, ops, pinout);
 	AG_ObjectSetOps(dig, ops);
+	dig->VccPort = 1;
+	dig->GndPort = 2;
+	dig->G = SC_VectorNew(COM(dig)->npairs);
+	SC_VectorSetZero(dig->G);
 
 	COM(dig)->loadDC_G = ES_DigitalLoadDC_G;
 
-	dig->G = SC_VectorNew(COM(dig)->npairs);
-	SC_VectorSetZero(dig->G);
+	dig->Vcc.min = 3.0;	dig->Vcc.typ = 5.0;	dig->Vcc.max = 15.0;
+	dig->Vol.min = 0.0;	dig->Vol.typ = 0.0;	dig->Vol.max = 0.05;
+	dig->Voh.min = 4.95;	dig->Voh.typ = 5.0;	dig->Voh.max = HUGE_VAL;
+	dig->Vil.min = 0.0;	dig->Vil.typ = 0.0;	dig->Vil.max = 1.0;
+	dig->Vih.min = 4.0;	dig->Vih.typ = 5.0;	dig->Vih.max = HUGE_VAL;
+	dig->Iol.min = 0.51;	dig->Iol.typ = 0.88;	dig->Iol.max = HUGE_VAL;
+	dig->Ioh.min = -0.51;	dig->Ioh.typ = -0.88;	dig->Ioh.max = HUGE_VAL;
+	dig->Iin.min = 0.0;	dig->Iin.typ = -10.0e-5; dig->Iin.max = -0.1;
 }
 
 #ifdef EDITION
