@@ -291,7 +291,7 @@ ES_VsourceFindLoops(ES_Vsource *vs)
  *    |--------------|-----
  */
 static int
-ES_VsourceLoadDC_BCD(void *p, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D)
+LoadDC_BCD(void *p, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D)
 {
 	ES_Vsource *vs = p;
 	u_int k = PNODE(vs,1);
@@ -313,7 +313,7 @@ ES_VsourceLoadDC_BCD(void *p, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D)
 	return (0);
 }
 static int
-ES_VsourceLoadDC_RHS(void *p, SC_Vector *i, SC_Vector *e)
+LoadDC_RHS(void *p, SC_Vector *i, SC_Vector *e)
 {
 	ES_Vsource *vs = p;
 	int v;
@@ -324,6 +324,38 @@ ES_VsourceLoadDC_RHS(void *p, SC_Vector *i, SC_Vector *e)
 	}
 	vSet(e,v, vs->voltage);
 	return (0);
+}
+
+static void
+Connected(AG_Event *event)
+{
+	ES_Circuit *ckt = AG_SENDER();
+	ES_Vsource *vs = AG_SELF();
+
+	ckt->vsrcs = Realloc(ckt->vsrcs, (ckt->m+1)*sizeof(ES_Vsource *));
+	ckt->vsrcs[ckt->m] = vs;
+	ckt->m++;
+
+	ES_CircuitLog(ckt, "added vsource: %d", ckt->m-1);
+}
+
+static void
+Disconnected(AG_Event *event)
+{
+	ES_Circuit *ckt = AG_SENDER();
+	ES_Vsource *vs = AG_SELF();
+	u_int i, j;
+	
+	for (i = 0; i < ckt->m; i++) {
+		if (ckt->vsrcs[i] == vs) {
+			if (i < --ckt->m) {
+				for (; i < ckt->m; i++)
+					ckt->vsrcs[i] = ckt->vsrcs[i+1];
+			}
+			ES_CircuitLog(ckt, "removed vsource: %d", i);
+			break;
+		}
+	}
 }
 
 void
@@ -337,8 +369,11 @@ ES_VsourceInit(void *p, const char *name)
 	vs->nlstack = 0;
 	TAILQ_INIT(&vs->loops);
 	vs->nloops = 0;
-	COM(vs)->loadDC_BCD = ES_VsourceLoadDC_BCD;
-	COM(vs)->loadDC_RHS = ES_VsourceLoadDC_RHS;
+
+	COM(vs)->loadDC_BCD = LoadDC_BCD;
+	COM(vs)->loadDC_RHS = LoadDC_RHS;
+	AG_SetEvent(vs, "circuit-connected", Connected, NULL);
+	AG_SetEvent(vs, "circuit-disconnected", Disconnected, NULL);
 }
 
 void

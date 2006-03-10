@@ -119,7 +119,6 @@ ES_VSquareInit(void *p, const char *name)
 	vs->tL = 100;
 
 	COM(vs)->intStep = ES_VSquareStep;
-	COM(vs)->intUpdate = ES_VSquareUpdate;
 }
 
 int
@@ -178,13 +177,6 @@ ES_VSquareStep(void *p, Uint ticks)
 	           VSOURCE(vs)->voltage != vs->vH) {
 		VSOURCE(vs)->voltage = vs->vL;
 	}
-}
-
-void
-ES_VSquareUpdate(void *p)
-{
-	ES_VSquare *vs = p;
-
 }
 
 #ifdef EDITION

@@ -117,7 +117,6 @@ ES_VSineInit(void *p, const char *name)
 	vs->phase = 0.0;
 
 	COM(vs)->intStep = ES_VSineStep;
-	COM(vs)->intUpdate = ES_VSineUpdate;
 }
 
 int
@@ -156,13 +155,6 @@ ES_VSineStep(void *p, Uint ticks)
 	VSOURCE(vs)->voltage = vs->vPeak*SC_Sin(vs->phase);
 	vs->phase += 1e-3*vs->f;
 	if (vs->phase > M_PI*2) { vs->phase -= M_PI*2; }
-}
-
-void
-ES_VSineUpdate(void *p)
-{
-	ES_VSine *vs = p;
-
 }
 
 #ifdef EDITION
