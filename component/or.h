@@ -17,7 +17,6 @@ int	 ES_OrLoad(void *, AG_Netbuf *);
 int	 ES_OrSave(void *, AG_Netbuf *);
 void	*ES_OrEdit(void *);
 void	 ES_OrDraw(void *, VG *);
-void	 ES_OrStep(void *, Uint);
 void	 ES_OrUpdate(void *);
 __END_DECLS
 

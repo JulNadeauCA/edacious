@@ -49,11 +49,10 @@ ES_SelcomButtondown(void *p, float x, float y, int b)
 	if (!multi) {
 		ES_ComponentUnselectAll(ckt);
 	}
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
 		VG_Rect rext;
 
-		if (!AGOBJECT_SUBCLASS(com, "component") ||
-		    com->flags & COMPONENT_FLOATING) {
+		if (com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		VG_BlockExtent(vg, com->block, &rext);
@@ -94,11 +93,10 @@ ES_SelcomLeftButton(VG_Tool *t, int button, int state, float x, float y,
 	if (!multi) {
 		ES_ComponentUnselectAll(ckt);
 	}
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
 		VG_Rect rext;
 
-		if (!AGOBJECT_SUBCLASS(com, "component") ||
-		    com->flags & COMPONENT_FLOATING) {
+		if (com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		VG_BlockExtent(vg, com->block, &rext);
@@ -128,23 +126,17 @@ ES_SelcomMousemotion(void *p, float x, float y, float xrel, float yrel, int b)
 	VG *vg = ckt->vg;
 	ES_Component *com;
 	VG_Rect rext;
-
+	VG_Block *closest_blk;
+	
 	vg->origin[1].x = x;
 	vg->origin[1].y = y;
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component") ||
-		    com->flags & COMPONENT_FLOATING) {
+	closest_blk = VG_BlockClosest(vg, x, y);
+	
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+		if (com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
-		VG_BlockExtent(vg, com->block, &rext);
-		if (x > rext.x &&
-		    y > rext.y &&
-		    x < rext.x+rext.w &&
-		    y < rext.y+rext.h) {
-			com->highlighted = 1;
-		} else {
-			com->highlighted = 0;
-		}
+		com->highlighted = (com->block == closest_blk);
 	}
 	return (0);
 }

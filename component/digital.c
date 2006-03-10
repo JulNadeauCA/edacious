@@ -181,12 +181,12 @@ ES_LogicOutput(void *p, const char *portname, ES_LogicState nstate)
 		if ((pair->p1 == port && pair->p2->n == dig->VccPort) ||
 		    (pair->p2 == port && pair->p1->n == dig->VccPort)) {
 			dig->G->mat[i+1][1] = (nstate == ES_LOW) ?
-			    0.001 : 0.999;
+			    1e-9 : 1.0 - 1e-9;
 		}
 		if ((pair->p1 == port && pair->p2->n == dig->GndPort) ||
 		    (pair->p2 == port && pair->p1->n == dig->GndPort)) {
 			dig->G->mat[i+1][1] = (nstate == ES_HIGH) ?
-			    0.001 : 0.999;
+			    1e-9 : 1.0 - 1e-9;
 		}
 	}
 	ES_ComponentLog(dig, "%s -> %s", portname,

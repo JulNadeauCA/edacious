@@ -105,7 +105,7 @@ ES_InverterInit(void *p, const char *name)
 
 	ES_DigitalInit(inv, "digital.inverter", name, &esInverterOps,
 	    esInverterPinout);
-	COM(inv)->intStep = ES_InverterStep;
+	COM(inv)->intUpdate = ES_InverterUpdate;
 #if 0
 	ES_SetSpec(inv, "Tp", _("Propagation delay from A to A-bar"),
 	    "Vcc=5;Tamb=25",	0, 50, 90,
@@ -139,7 +139,7 @@ ES_InverterInit(void *p, const char *name)
 }
 
 void
-ES_InverterStep(void *p, Uint ticks)
+ES_InverterUpdate(void *p)
 {
 	ES_Inverter *inv = p;
 

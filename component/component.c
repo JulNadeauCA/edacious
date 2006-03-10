@@ -84,10 +84,7 @@ ES_ComponentUnselectAll(ES_Circuit *ckt)
 {
 	ES_Component *com;
 
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component")) {
-			continue;
-		}
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
 		ES_ComponentUnselect(com);
 	}
 }
@@ -125,13 +122,6 @@ ES_ComponentAttached(AG_Event *event)
 	com->block = VG_BeginBlock(vg, blkname, 0);
 	VG_Origin(vg, 0, com->ports[0].x, com->ports[0].y);
 	VG_EndBlock(vg);
-
-	if (AGOBJECT_SUBCLASS(com, "component.vsource")) {
-		ckt->vsrcs = Realloc(ckt->vsrcs,
-		    (ckt->m+1)*sizeof(ES_Vsource *));
-		ckt->vsrcs[ckt->m] = (ES_Vsource *)com;
-		ckt->m++;
-	}
 }
 
 static void
@@ -139,24 +129,13 @@ ES_ComponentDetached(AG_Event *event)
 {
 	ES_Component *com = AG_SELF();
 	ES_Circuit *ckt = AG_SENDER();
-	u_int i, j;
+	u_int i;
 
 	if (!AGOBJECT_SUBCLASS(ckt, "circuit"))
 		return;
 
 	ES_LockCircuit(ckt);
-
-	if (AGOBJECT_SUBCLASS(com, "component.vsource")) {
-		for (i = 0; i < ckt->m; i++) {
-			if (ckt->vsrcs[i] == (ES_Vsource *)com) {
-				if (i < --ckt->m) {
-					for (; i < ckt->m; i++)
-						ckt->vsrcs[i] = ckt->vsrcs[i+1];
-				}
-				break;
-			}
-		}
-	}
+	AG_PostEvent(ckt, com, "circuit-disconnected", NULL);
 
 	for (i = 0; i <= ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
@@ -228,9 +207,10 @@ static Uint32
 ES_ComponentRedraw(void *p, Uint32 ival, void *arg)
 {
 	ES_Component *com = p;
+	ES_Circuit *ckt = com->ckt;
 	VG_Block *block_save;
 	VG_Element *element_save;
-	VG *vg = com->ckt->vg;
+	VG *vg = ckt->vg;
 	VG_Element *vge;
 	int i;
 	
@@ -261,7 +241,7 @@ ES_ComponentRedraw(void *p, Uint32 ival, void *arg)
 		theta -= com->block->theta;
 		VG_Pol2Car(vg, rho, theta, &x, &y);
 
-		if (com->ckt->dis_nodes) {
+		if (ckt->show_nodes) {
 			vge = VG_Begin(vg, VG_CIRCLE);
 			vge->selected = 1;
 			VG_Vertex2(vg, x, y);
@@ -274,16 +254,23 @@ ES_ComponentRedraw(void *p, Uint32 ival, void *arg)
 			}
 			VG_End(vg);
 		}
-		if (com->ckt->dis_node_names &&
-		    port->node >= 0) {
-			vge = VG_Begin(vg, VG_TEXT);
-			vge->selected = 1;
-			VG_Vertex2(vg, x, y);
-			VG_SetStyle(vg, "node-name");
-			VG_Color3(vg, 0, 200, 100);
-			VG_TextAlignment(vg, VG_ALIGN_BR);
-			VG_Printf(vg, "n%d", port->node);
-			VG_End(vg);
+		if (port->node >= 0) {
+			if (ckt->show_node_names || ckt->show_node_syms) {
+				vge = VG_Begin(vg, VG_TEXT);
+				vge->selected = 1;
+				VG_Vertex2(vg, x, y);
+				VG_SetStyle(vg, "node-name");
+				VG_Color3(vg, 0, 200, 100);
+				VG_TextAlignment(vg, VG_ALIGN_BR);
+				if (ckt->show_node_syms &&
+				    ckt->nodes[port->node]->sym[0] != '\0') {
+					VG_Printf(vg, "%s",
+					    ckt->nodes[port->node]->sym);
+				} else if (ckt->show_node_names) {
+					VG_Printf(vg, "n%d", port->node);
+				}
+				VG_End(vg);
+			}
 		}
 	}
 
@@ -713,10 +700,8 @@ ES_ComponentPortOverlap(ES_Circuit *ckt, ES_Component *ncom, float x,
 	int i;
 	
 	/* XXX use bounding boxes */
-	AGOBJECT_FOREACH_CHILD(ocom, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(ocom, "component") ||
-		    ocom == ncom ||
-		    ocom->flags & COMPONENT_FLOATING) {
+	AGOBJECT_FOREACH_CLASS(ocom, ckt, es_component, "component") {
+		if ((ocom == ncom) || (ocom->flags & COMPONENT_FLOATING)) {
 			continue;
 		}
 		for (i = 1; i <= ocom->nports; i++) {
@@ -773,6 +758,7 @@ ES_ComponentConnect(ES_Circuit *ckt, ES_Component *com, VG_Vtx *vtx)
 	}
 	com->flags &= ~(COMPONENT_FLOATING);
 
+	AG_PostEvent(ckt, com, "circuit-connected", NULL);
 	ES_CircuitModified(ckt);
 	ES_UnlockCircuit(ckt);
 }

@@ -105,12 +105,12 @@ ES_AndInit(void *p, const char *name)
 	ES_And *gate = p;
 
 	ES_DigitalInit(gate, "digital.and", name, &esAndOps, esAndPinout);
-	COM(gate)->intStep = ES_AndStep;
+	COM(gate)->intUpdate = ES_AndUpdate;
 	ES_LogicOutput(gate, "A&B", ES_HI_Z);
 }
 
 void
-ES_AndStep(void *p, Uint ticks)
+ES_AndUpdate(void *p)
 {
 	ES_And *gate = p;
 

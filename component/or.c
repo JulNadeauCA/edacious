@@ -105,12 +105,12 @@ ES_OrInit(void *p, const char *name)
 	ES_Or *gate = p;
 
 	ES_DigitalInit(gate, "digital.or", name, &esOrOps, esOrPinout);
-	COM(gate)->intStep = ES_OrStep;
+	COM(gate)->intUpdate = ES_OrUpdate;
 	ES_LogicOutput(gate, "A|B", ES_HI_Z);
 }
 
 void
-ES_OrStep(void *p, Uint ticks)
+ES_OrUpdate(void *p)
 {
 	ES_Or *gate = p;
 

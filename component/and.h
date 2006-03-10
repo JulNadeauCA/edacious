@@ -17,7 +17,6 @@ int	 ES_AndLoad(void *, AG_Netbuf *);
 int	 ES_AndSave(void *, AG_Netbuf *);
 void	*ES_AndEdit(void *);
 void	 ES_AndDraw(void *, VG *);
-void	 ES_AndStep(void *, Uint);
 void	 ES_AndUpdate(void *);
 __END_DECLS
 
