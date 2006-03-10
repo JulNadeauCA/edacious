@@ -1,8 +1,7 @@
 /*	$Csoft: mna.c,v 1.6 2005/09/29 00:22:34 vedge Exp $	*/
 
 /*
- * Copyright (c) 2005 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2006 Hypertriton, Inc. <http://hypertriton.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,6 +41,9 @@ typedef struct es_mna {
 	Uint32 TavgReal;	/* Average step real time */
 	int speed;		/* Simulation speed (updates/sec) */
 	AG_Timeout update_to;	/* Timer for simulation updates */
+	Uint max_iters;		/* Maximum solver iterations per step */
+	Uint iters_hiwat;
+	Uint iters_lowat;
 
 	SC_Matrix *A;		/* Block matrix [G,B; C,D] */
 	SC_Matrix *G;		/* Reduced conductance matrix */
@@ -79,10 +81,7 @@ ES_MnaFactorize(ES_MNA *mna, ES_Circuit *ckt)
 	SC_MatrixSetZero(mna->e);
 
 	/* Formulate the general equations. */
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component")) {
-			continue;
-		}
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
 		if (com->loadDC_G != NULL)
 			com->loadDC_G(com, mna->G);
 		if (com->loadDC_BCD != NULL)
@@ -121,30 +120,57 @@ ES_MnaStep(void *obj, Uint32 ival, void *arg)
 	ES_MNA *mna = arg;
 	ES_Component *com;
 	static Uint32 t1 = 0;
-	int i;
+	SC_Matrix Aprev;
+	Uint i = 1;
+
+	if (ckt->m == 0) {
+		AG_SetError(_("Circuit has no voltage sources"));
+		goto halt;
+	}
+	if (ckt->n == 0) {
+		AG_SetError(_("Circuit has no nodes to evaluate"));
+		goto halt;
+	}
 
 	AG_PostEvent(NULL, ckt, "circuit-step-begin", NULL);
 
-	if (mna->Telapsed == 0) {
-		if (ES_MnaFactorize(mna, ckt) == -1) {
-			goto halt;
-		}
-		ES_MnaSolve(mna, ckt);
-	}
-
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component")) {
-			continue;
-		}
+	/* Invoke the time step function of all models. */
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
 		if (com->intStep != NULL)
 			com->intStep(com, mna->Telapsed);
+	}
+solve:
+	/* Find the initial DC operating point. */
+	if (ES_MnaFactorize(mna, ckt) == -1 ||
+	    ES_MnaSolve(mna, ckt) == -1) {
+		goto halt;
+	}
+	/*
+	 * Save the A matrix and execute per-component procedural update
+	 * functions. The intUpdate function can modify either A or the
+	 * RHS vector in response to calculated node voltages.
+	 */
+	SC_MatrixAlloc(&Aprev, mna->A->m, mna->A->n);
+	SC_MatrixCopy(mna->A, &Aprev);
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
 		if (com->intUpdate != NULL)
 			com->intUpdate(com);
 	}
-	if (ES_MnaFactorize(mna, ckt) == -1) {
+	if (ES_MnaFactorize(mna, ckt) == -1 ||
+	    ES_MnaSolve(mna, ckt) == -1) {
 		goto halt;
 	}
-	ES_MnaSolve(mna, ckt);
+	/* Loop until stability is reached. */
+	/* TODO examine pattern changes to detect unstability. */
+	if (SC_MatrixCompare(mna->A, &Aprev) != 0) {
+		if (++i > mna->max_iters) {
+			AG_SetError(_("No stability after %u iterations"), i);
+			goto halt;
+		}
+		goto solve;
+	}
+	if (i > mna->iters_hiwat) { mna->iters_hiwat = i; }
+	else if (i < mna->iters_lowat) { mna->iters_lowat = i; }
 
 	/* TODO loop until stable */
 
@@ -168,6 +194,9 @@ ES_MnaInit(void *p)
 	mna->Telapsed = 0;
 	mna->TavgReal = 0;
 	mna->speed = 500;
+	mna->max_iters = 100000;
+	mna->iters_hiwat = 1;
+	mna->iters_lowat = 1;
 	AG_SetTimeout(&mna->update_to, ES_MnaStep, mna, AG_TIMEOUT_LOADABLE);
 
 	mna->A = SC_MatrixNew(0, 0);
@@ -205,8 +234,7 @@ ES_MnaStart(void *p)
 	AG_UnlockTimeouts(ckt);
 	mna->Telapsed = 0;
 	
-	ES_SimLog(mna, _("Simulation started (m=%u, n=%u)"),
-	    ckt->m, ckt->n);
+	ES_SimLog(mna, _("Simulation started (m=%u, n=%u)"), ckt->m, ckt->n);
 }
 
 static void
@@ -216,9 +244,7 @@ ES_MnaStop(void *p)
 	ES_Circuit *ckt = SIM(mna)->ckt;
 
 	AG_LockTimeouts(ckt);
-	if (AG_TimeoutIsScheduled(ckt, &mna->update_to)) {
-		AG_DelTimeout(ckt, &mna->update_to);
-	}
+	AG_DelTimeout(ckt, &mna->update_to);
 	AG_UnlockTimeouts(ckt);
 	SIM(mna)->running = 0;
 	
@@ -321,17 +347,25 @@ ES_MnaEdit(void *p, ES_Circuit *ckt)
 		    ES_MnaRunContinuous, "%p", mna);
 	
 		AG_SeparatorNew(ntab, AG_SEPARATOR_HORIZ);
+		
+		sbu = AG_SpinbuttonNew(ntab, 0,
+		    _("Maximum iterations per step: "));
+		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT,
+		    &mna->max_iters);
 
 		sbu = AG_SpinbuttonNew(ntab, 0, _("Speed (updates/sec): "));
 		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT32, &mna->speed);
 		AG_SpinbuttonSetRange(sbu, 1, 1000);
 		
 		AG_LabelNew(ntab, AG_LABEL_POLLED,
-		    _("Simulated time: %[u32]ns"),
+		    _("Total simulated time: %[u32]ns"),
 		    &mna->Telapsed);
 		AG_LabelNew(ntab, AG_LABEL_POLLED,
-		    _("Step real-time average: %[u32]ms"),
+		    _("Realtime/step average: %[u32]ms"),
 		    &mna->TavgReal);
+		AG_LabelNew(ntab, AG_LABEL_POLLED,
+		    _("Iterations/step watermark: %u-%u"),
+		    &mna->iters_lowat, &mna->iters_hiwat);
 
 		SIM(mna)->log = AG_ConsoleNew(ntab, AG_CONSOLE_EXPAND);
 	}
