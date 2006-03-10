@@ -17,6 +17,7 @@
 #define CIRCUIT_DESCR_MAX	256
 #define CIRCUIT_MAX_BRANCHES	32
 #define CIRCUIT_MAX_NODES	(0xffff-1)
+#define CKTNODE_SYM_MAX		24
 
 /* Connection to one component. */
 typedef struct es_branch {
@@ -26,6 +27,7 @@ typedef struct es_branch {
 
 /* Connection between two or more components. */
 typedef struct es_node {
+	char sym[CKTNODE_SYM_MAX];	/* Symbolic name */
 	u_int flags;
 #define CKTNODE_EXAM		0x01	/* Branches are being examined
 					   (used to avoid redundancies) */
@@ -54,8 +56,9 @@ typedef struct es_circuit {
 
 	pthread_mutex_t lock;
 	int simlock;			/* Simulation is locked */
-	int dis_nodes;			/* Display node indications */
-	int dis_node_names;		/* Display node names */
+	int show_nodes;			/* Display node indications */
+	int show_node_names;		/* Display node names */
+	int show_node_syms;		/* Display node symbols */
 
 	ES_Node **nodes;		/* Nodes (element 0 is ground) */
 	ES_Loop **loops;		/* Closed loops */
@@ -88,7 +91,8 @@ void		 ES_CircuitDestroyNode(ES_Node *);
 ES_Branch	*ES_CircuitAddBranch(ES_Circuit *, u_int, ES_Port *);
 void		 ES_CircuitDelBranch(ES_Circuit *, u_int, ES_Branch *);
 
-__inline__ ES_Branch *ES_CircuitGetBranch(ES_Circuit *, u_int, ES_Port *);
+__inline__ ES_Node	*ES_CircuitFindNode(ES_Circuit *, const char *);
+__inline__ ES_Branch	*ES_CircuitGetBranch(ES_Circuit *, u_int, ES_Port *);
 
 __inline__ int	   ES_NodeGrounded(ES_Circuit *, u_int);
 __inline__ int	   ES_NodeVsource(ES_Circuit *, u_int, u_int, int *);

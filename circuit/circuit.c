@@ -1,8 +1,7 @@
 /*	$Csoft: circuit.c,v 1.11 2005/09/29 00:22:33 vedge Exp $	*/
 
 /*
- * Copyright (c) 2004, 2005 CubeSoft Communications Inc
- * <http://www.winds-triton.com>
+ * Copyright (c) 2006 Hypertriton, Inc. <http://hypertriton.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -81,10 +80,7 @@ ES_CircuitOpened(AG_Event *event)
 	ES_Circuit *ckt = AG_SELF();
 	ES_Component *com;
 
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component"))
-			continue;
-
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
 		AG_PostEvent(ckt, com, "circuit-shown", NULL);
 		AG_ObjectPageIn(com, AG_OBJECT_DATA);
 	}
@@ -98,10 +94,7 @@ ES_CircuitClosed(AG_Event *event)
 
 	ES_DestroySimulation(ckt);
 
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component"))
-			continue;
-
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
 		AG_PostEvent(ckt, com, "circuit-hidden", NULL);
 		AG_ObjectPageOut(com, AG_OBJECT_DATA);
 	}
@@ -131,17 +124,15 @@ ES_CircuitModified(ES_Circuit *ckt)
 	AG_Prop *pr;
 
 	/* Regenerate loop and pair information. */
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component") ||
-		    com->flags & COMPONENT_FLOATING)
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+		if (com->flags & COMPONENT_FLOATING) {
 			continue;
-
+		}
 		for (i = 0; i < com->npairs; i++)
 			com->pairs[i].nloops = 0;
 	}
-	AGOBJECT_FOREACH_CHILD(vs, ckt, es_vsource) {
-		if (!AGOBJECT_SUBCLASS(vs, "component.vsource") ||
-		    COM(vs)->flags & COMPONENT_FLOATING ||
+	AGOBJECT_FOREACH_CLASS(vs, ckt, es_vsource, "component.vsource") {
+		if (COM(vs)->flags & COMPONENT_FLOATING ||
 		    PORT(vs,1)->node == -1 ||
 		    PORT(vs,2)->node == -1) {
 			continue;
@@ -157,9 +148,8 @@ ES_CircuitModified(ES_Circuit *ckt)
 		ckt->loops = Malloc(sizeof(ES_Loop *), M_EDA);
 	}
 	ckt->l = 0;
-	AGOBJECT_FOREACH_CHILD(vs, ckt, es_vsource) {
-		if (!AGOBJECT_SUBCLASS(vs, "component.vsource") ||
-		    COM(vs)->flags & COMPONENT_FLOATING) {
+	AGOBJECT_FOREACH_CLASS(vs, ckt, es_vsource, "component.vsource") {
+		if (COM(vs)->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		TAILQ_FOREACH(loop, &vs->loops, loops) {
@@ -199,8 +189,8 @@ ES_CircuitInit(void *p, const char *name)
 	ckt->simlock = 0;
 	ckt->descr[0] = '\0';
 	ckt->sim = NULL;
-	ckt->dis_nodes = 1;
-	ckt->dis_node_names = 1;
+	ckt->show_nodes = 1;
+	ckt->show_node_names = 1;
 	pthread_mutex_init(&ckt->lock, &agRecursiveMutexAttr);
 
 	ckt->loops = NULL;
@@ -263,9 +253,8 @@ ES_CircuitReinit(void *p)
 	ckt->n = 0;
 	InitGround(ckt);
 
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component") ||
-		    com->flags & COMPONENT_FLOATING) {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+		if (com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		for (i = 1; i <= com->nports; i++) {
@@ -309,6 +298,9 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 		} else {
 			name = ES_CircuitAddNode(ckt, flags & ~(CKTNODE_EXAM));
 		}
+		AG_CopyString(ckt->nodes[i]->sym, buf,
+		    sizeof(ckt->nodes[i]->sym));
+
 		for (j = 0; j < nbranches; j++) {
 			char ppath[AG_OBJECT_PATH_MAX];
 			ES_Component *pcom;
@@ -348,9 +340,8 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 
 		/* Lookup the component. */
 		AG_CopyString(name, buf, sizeof(name));
-		AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-			if (AGOBJECT_SUBCLASS(com, "component") &&
-			    strcmp(AGOBJECT(com)->name, name) == 0)
+		AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+			if (strcmp(AGOBJECT(com)->name, name) == 0)
 				break;
 		}
 		if (com == NULL) { Fatal("unexisting component"); }
@@ -413,6 +404,7 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 		AG_WriteUint32(buf, (Uint32)node->flags);
 		nbranches_offs = AG_NetbufTell(buf);
 		AG_WriteUint32(buf, 0);
+		AG_WriteString(buf, node->sym);
 		TAILQ_FOREACH(br, &node->branches, branches) {
 			if (br->port == NULL || br->port->com == NULL ||
 			    br->port->com->flags & COMPONENT_FLOATING) {
@@ -433,9 +425,8 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 	/* Save the component information. */
 	ncoms_offs = AG_NetbufTell(buf);
 	AG_WriteUint32(buf, 0);
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component") ||
-		    com->flags & COMPONENT_FLOATING) {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+		if (com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		AG_WriteString(buf, AGOBJECT(com)->name);
@@ -461,6 +452,7 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 static void
 InitNode(ES_Node *node, u_int flags)
 {
+	node->sym[0] = '\0';
 	node->flags = flags;
 	node->nbranches = 0;
 	TAILQ_INIT(&node->branches);
@@ -545,6 +537,21 @@ ES_BranchCurrent(ES_Circuit *ckt, int k)
 		return (0.0);
 	}
 	return (ckt->sim->ops->branch_current(ckt->sim, k));
+}
+
+ES_Node *
+ES_CircuitFindNode(ES_Circuit *ckt, const char *sym)
+{
+	int i;
+	
+	for (i = 1; i <= ckt->n; i++) {
+		ES_Node *node = ckt->nodes[i];
+
+		if (strcmp(node->sym, sym) == 0)
+			return (node);
+	}
+	AG_SetError(_("No such node: %s"), sym);
+	return (NULL);
 }
 
 void
@@ -632,10 +639,7 @@ ES_CircuitFreeComponents(ES_Circuit *ckt)
 {
 	ES_Component *com, *ncom;
 
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component")) {
-			continue;
-		}
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
 		AG_ObjectDetach(com);
 		AG_ObjectDestroy(com);
 		Free(com, M_OBJECT);
@@ -875,7 +879,7 @@ ShowInterconnects(AG_Event *event)
 }
 
 static void
-ShowLayoutSettings(AG_Event *event)
+ShowDocumentProps(AG_Event *event)
 {
 	char path[AG_OBJECT_PATH_MAX];
 	AG_Window *pwin = AG_PTR(1);
@@ -894,25 +898,23 @@ ShowLayoutSettings(AG_Event *event)
 	AG_WindowSetCaption(win, _("Circuit layout: %s"), AGOBJECT(ckt)->name);
 	AG_WindowSetPosition(win, AG_WINDOW_UPPER_RIGHT, 0);
 
-	AG_LabelNew(win, AG_LABEL_POLLED, _("Loops: %u"), &ckt->l);
-	AG_LabelNew(win, AG_LABEL_POLLED, _("Voltage sources: %u"), &ckt->m);
-	AG_LabelNew(win, AG_LABEL_POLLED, _("Nodes: %u"), &ckt->n);
-
 	tb = AG_TextboxNew(win, AG_TEXTBOX_HFILL, _("Description: "));
-	AG_WidgetBind(tb, "string", AG_WIDGET_STRING, &ckt->descr,
-	    sizeof(ckt->descr));
+	AG_WidgetBindString(tb, "string", &ckt->descr, sizeof(ckt->descr));
 
 	fsu = AG_FSpinbuttonNew(win, 0, NULL, _("Grid spacing: "));
-	AG_WidgetBind(fsu, "value", AG_WIDGET_FLOAT, &vg->grid_gap);
+	AG_WidgetBindFloat(fsu, "value", &vg->grid_gap);
 	AG_FSpinbuttonSetMin(fsu, 0.0625);
 	AG_FSpinbuttonSetIncrement(fsu, 0.0625);
 	
-	cb = AG_CheckboxNew(win, 0, _("Display node indicators"));
-	AG_WidgetBind(cb, "state", AG_WIDGET_INT, &ckt->dis_nodes);
+	cb = AG_CheckboxNew(win, 0, _("Show nodes"));
+	AG_WidgetBindInt(cb, "state", &ckt->show_nodes);
 
-	cb = AG_CheckboxNew(win, 0, _("Display node names"));
-	AG_WidgetBind(cb, "state", AG_WIDGET_INT, &ckt->dis_node_names);
-	
+	cb = AG_CheckboxNew(win, 0, _("Show node numbers"));
+	AG_WidgetBindInt(cb, "state", &ckt->show_node_names);
+
+	cb = AG_CheckboxNew(win, 0, _("Show node symbols"));
+	AG_WidgetBindInt(cb, "state", &ckt->show_node_syms);
+
 #if 0
 	AG_LabelNew(win, AG_LABEL_STATIC, _("Nodes:"));
 	tl = AG_TlistNew(win, AG_TLIST_POLL|AG_TLIST_TREE);
@@ -951,9 +953,8 @@ CircuitViewButtondown(AG_Event *event)
 
 	if (button != SDL_BUTTON_RIGHT) { return; }
 
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component") ||
-		    AGOBJECT(com)->ops->edit == NULL) {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+		if (AGOBJECT(com)->ops->edit == NULL) {
 			continue;
 		}
 		VG_BlockExtent(ckt->vg, com->block, &rExt);
@@ -984,9 +985,8 @@ CircuitDoubleClick(AG_Event *event)
 
 	if (button != SDL_BUTTON_LEFT) { return; }
 
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component") ||
-		    AGOBJECT(com)->ops->edit == NULL) {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+		if (AGOBJECT(com)->ops->edit == NULL) {
 			continue;
 		}
 		VG_BlockExtent(ckt->vg, com->block, &rExt);
@@ -1094,8 +1094,8 @@ PollComponentPorts(AG_Event *event)
 	
 	AG_TlistClear(tl);
 	
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (AGOBJECT_SUBCLASS(com, "component") && com->selected)
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+		if (com->selected)
 			break;
 	}
 	if (com == NULL)
@@ -1126,8 +1126,8 @@ PollComponentPairs(AG_Event *event)
 	
 	AG_TlistClear(tl);
 	
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (AGOBJECT_SUBCLASS(com, "component") && com->selected)
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+		if (com->selected)
 			break;
 	}
 	if (com == NULL)
@@ -1212,6 +1212,11 @@ ES_CircuitEdit(void *p)
 		    ExportToSPICE, "%p", ckt);
 	
 		AG_MenuSeparator(pitem);
+		
+		AG_MenuAction(pitem, _("Document properties..."), SETTINGS_ICON,
+		    ShowDocumentProps, "%p,%p", win, ckt);
+		    
+		AG_MenuSeparator(pitem);
 
 		AG_MenuActionKb(pitem, _("Close document"), CLOSE_ICON,
 		    SDLK_w, KMOD_CTRL, AGWINCLOSE(win));
@@ -1243,10 +1248,6 @@ ES_CircuitEdit(void *p)
 		mSnap = AG_MenuNode(pitem, _("Snapping mode"),
 		    SNAP_CENTERPT_ICON);
 		VG_SnapMenu(menu, mSnap, ckt->vg);
-
-		AG_MenuAction(pitem, _("Layout settings..."), SETTINGS_ICON,
-		    ShowLayoutSettings, "%p,%p", win, ckt);
-		    
 	}
 		
 	pitem = AG_MenuAddItem(menu, _("Simulation"));
@@ -1328,14 +1329,12 @@ ES_CircuitEdit(void *p)
 
 			fsb = AG_FSpinbuttonNew(win, 0, "degC",
 			    _("Reference: "));
-			AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT,
-			    &com->Tnom);
+			AG_WidgetBindFloat(fsb, "value", &com->Tnom);
 			AG_FSpinbuttonSetMin(fsb, 0.0);
 	
 			fsb = AG_FSpinbuttonNew(win, 0, "degC",
 			    _("Instance: "));
-			AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT,
-			    &com->Tspec);
+			AG_WidgetBindFloat(fsb, "value", &com->Tspec);
 			AG_FSpinbuttonSetMin(fsb, 0.0);
 
 			AG_SeparatorNew(ntab, SEPARATOR_HORIZ);
