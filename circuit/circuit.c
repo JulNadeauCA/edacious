@@ -1234,7 +1234,16 @@ ES_CircuitEdit(void *p)
 
 		AG_MenuAction(pitem, _("Create view..."), NEW_VIEW_ICON,
 		    CircuitCreateView, "%p,%p", win, ckt);
-		    
+		
+		AG_MenuSeparator(pitem);
+		
+		AG_MenuIntBool(pitem, _("Show nodes"), EDA_NODE_ICON,
+		    &ckt->show_nodes, 0);
+		AG_MenuIntBool(pitem, _("Show node numbers"), EDA_NODE_ICON,
+		    &ckt->show_node_names, 0);
+		AG_MenuIntBool(pitem, _("Show node symbols"), EDA_NODE_ICON,
+		    &ckt->show_node_syms, 0);
+
 		AG_MenuSeparator(pitem);
 
 		AG_MenuIntFlags(pitem, _("Show origin"), VGORIGIN_ICON,
@@ -1243,6 +1252,7 @@ ES_CircuitEdit(void *p)
 		    &ckt->vg->flags, VG_VISGRID, 0);
 		AG_MenuIntFlags(pitem, _("Show extents"), VGBLOCK_ICON,
 		    &ckt->vg->flags, VG_VISBBOXES, 0);
+
 		AG_MenuSeparator(pitem);
 		
 		mSnap = AG_MenuNode(pitem, _("Snapping mode"),
