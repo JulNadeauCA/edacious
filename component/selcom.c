@@ -38,36 +38,33 @@ ES_SelcomButtondown(void *p, float x, float y, int b)
 {
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
-	VG *vg = ckt->vg;
 	ES_Component *com;
-	int multi = SDL_GetModState() & KMOD_CTRL;
 	AG_Window *pwin;
+	VG_Block *closest_blk;
+	int multi = SDL_GetModState() & KMOD_CTRL;
 
-	if (b != SDL_BUTTON_LEFT)
+	if (b != SDL_BUTTON_LEFT) {
 		return (0);
+	}
+	closest_blk = VG_BlockClosest(ckt->vg, x, y);
 
 	if (!multi) {
 		ES_ComponentUnselectAll(ckt);
 	}
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
-		VG_Rect rext;
-
-		if (com->flags & COMPONENT_FLOATING) {
+		if (com->flags & COMPONENT_FLOATING ||
+		    com->block != closest_blk) {
 			continue;
 		}
-		VG_BlockExtent(vg, com->block, &rext);
-		if (x > rext.x && y > rext.y &&
-		    x < rext.x+rext.w && y < rext.y+rext.h) {
-			if (multi) {
-				if (com->selected) {
-					ES_ComponentUnselect(com);
-				} else {
-					ES_ComponentSelect(com);
-				}
+		if (multi) {
+			if (com->selected) {
+				ES_ComponentUnselect(com);
 			} else {
 				ES_ComponentSelect(com);
-				break;
 			}
+		} else {
+			ES_ComponentSelect(com);
+			break;
 		}
 	}
 	if ((pwin = AG_WidgetParentWindow(t->vgv)) != NULL) {
@@ -77,45 +74,44 @@ ES_SelcomButtondown(void *p, float x, float y, int b)
 	return (1);
 }
 
+#if 0
 /* Select overlapping components. */
 static int
 ES_SelcomLeftButton(VG_Tool *t, int button, int state, float x, float y,
     void *arg)
 {
 	ES_Circuit *ckt = t->p;
-	VG *vg = ckt->vg;
 	ES_Component *com;
+	VG_Block *closest_blk;
 	int multi = SDL_GetModState() & KMOD_CTRL;
 
-	if (button != SDL_BUTTON_LEFT || !state)
+	if (button != SDL_BUTTON_LEFT || !state) {
 		return (0);
+	}
+	closest_blk = VG_BlockClosest(ckt->vg, x, y);
 
 	if (!multi) {
 		ES_ComponentUnselectAll(ckt);
 	}
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
-		VG_Rect rext;
-
-		if (com->flags & COMPONENT_FLOATING) {
+		if (com->flags & COMPONENT_FLOATING ||
+		    com->block != closest_blk) {
 			continue;
 		}
-		VG_BlockExtent(vg, com->block, &rext);
-		if (x > rext.x && y > rext.y &&
-		    x < rext.x+rext.w && y < rext.y+rext.h) {
-			if (multi) {
-				if (com->selected) {
-					ES_ComponentUnselect(com);
-				} else {
-					ES_ComponentSelect(com);
-				}
+		if (multi) {
+			if (com->selected) {
+				ES_ComponentUnselect(com);
 			} else {
 				ES_ComponentSelect(com);
-				break;
 			}
+		} else {
+			ES_ComponentSelect(com);
+			break;
 		}
 	}
 	return (1);
 }
+#endif
 
 /* Highlight any component underneath the cursor. */
 static int
@@ -145,8 +141,9 @@ static void
 ES_SelcomInit(void *p)
 {
 	VG_Tool *t = p;
-
+#if 0
 	VG_ToolBindMouseButton(t, SDL_BUTTON_LEFT, ES_SelcomLeftButton, NULL);
+#endif
 }
 
 VG_ToolOps esSelcomOps = {
