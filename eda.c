@@ -45,6 +45,8 @@
 #include <component/or.h>
 #include <component/spst.h>
 #include <component/spdt.h>
+#include <component/led.h>
+#include <component/logic_probe.h>
 
 #include <sources/vsquare.h>
 #include <sources/vsine.h>
@@ -59,6 +61,8 @@ extern const ES_ComponentOps esAndOps;
 extern const ES_ComponentOps esOrOps;
 extern const ES_ComponentOps esSpstOps;
 extern const ES_ComponentOps esSpdtOps;
+extern const ES_ComponentOps esLedOps;
+extern const ES_ComponentOps esLogicProbeOps;
 extern const ES_ComponentOps esVSquareOps;
 extern const ES_ComponentOps esVSineOps;
 
@@ -70,6 +74,8 @@ const struct eda_type eda_models[] = {
 	{ "semiresistor", sizeof(ES_SemiResistor),	&esSemiResistorOps },
 	{ "spst",	sizeof(ES_Spst),		&esSpstOps },
 	{ "spdt",	sizeof(ES_Spdt),		&esSpdtOps },
+	{ "led",	sizeof(ES_Led),			&esLedOps },
+	{ "logic_probe", sizeof(ES_LogicProbe),		&esLogicProbeOps },
 	{ "digital.inverter", sizeof(ES_Inverter),	&esInverterOps },
 	{ "digital.and", sizeof(ES_And),		&esAndOps },
 	{ "digital.or",	sizeof(ES_Or),			&esOrOps },
