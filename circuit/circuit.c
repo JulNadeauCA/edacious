@@ -1,7 +1,7 @@
 /*	$Csoft: circuit.c,v 1.11 2005/09/29 00:22:33 vedge Exp $	*/
 
 /*
- * Copyright (c) 2006 Hypertriton, Inc. <http://hypertriton.com>
+ * Copyright (c) 2006 Hypertriton, Inc. <http://www.hypertriton.com>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,7 +49,7 @@ const AG_ObjectOps esCircuitOps = {
 	ES_CircuitEdit
 };
 
-static void InitNode(ES_Node *, u_int);
+static void InitNode(ES_Node *, Uint);
 static void InitGround(ES_Circuit *);
 
 void
@@ -186,11 +186,10 @@ ES_CircuitInit(void *p, const char *name)
 	VG *vg;
 
 	AG_ObjectInit(ckt, "circuit", name, &esCircuitOps);
+	ckt->flags = CIRCUIT_SHOW_NODES|CIRCUIT_SHOW_NODESYMS;
 	ckt->simlock = 0;
 	ckt->descr[0] = '\0';
 	ckt->sim = NULL;
-	ckt->show_nodes = 1;
-	ckt->show_node_names = 1;
 	pthread_mutex_init(&ckt->lock, &agRecursiveMutexAttr);
 
 	ckt->loops = NULL;
@@ -233,7 +232,7 @@ ES_CircuitReinit(void *p)
 {
 	ES_Circuit *ckt = p;
 	ES_Component *com;
-	u_int i;
+	Uint i;
 
 	ES_DestroySimulation(ckt);
 
@@ -246,7 +245,7 @@ ES_CircuitReinit(void *p)
 	ckt->m = 0;
 	
 	for (i = 0; i <= ckt->n; i++) {
-		ES_CircuitDestroyNode(ckt->nodes[i]);
+		ES_CircuitFreeNode(ckt->nodes[i]);
 		Free(ckt->nodes[i], M_EDA);
 	}
 	ckt->nodes = Realloc(ckt->nodes, sizeof(ES_Node *));
@@ -273,26 +272,27 @@ int
 ES_CircuitLoad(void *p, AG_Netbuf *buf)
 {
 	ES_Circuit *ckt = p;
+	ES_Component *com;
 	Uint32 ncoms;
-	u_int i, j, nnodes;
+	Uint i, j, nnodes;
 
 	if (AG_ReadVersion(buf, &esCircuitVer, NULL) != 0) {
 		return (-1);
 	}
 	AG_CopyString(ckt->descr, buf, sizeof(ckt->descr));
-	AG_ReadUint32(buf);					/* Pad */
+	ckt->flags = AG_ReadUint32(buf);
 
-	/* Load the circuit nodes (including ground). */
-	nnodes = (u_int)AG_ReadUint32(buf);
+	/* Load the circuit nodes. */
+	nnodes = (Uint)AG_ReadUint32(buf);
 	for (i = 0; i <= nnodes; i++) {
 		int nbranches, flags;
-		u_int name;
+		int name;
 
 		flags = (int)AG_ReadUint32(buf);
 		nbranches = (int)AG_ReadUint32(buf);
 		if (i == 0) {
 			name = 0;
-			ES_CircuitDestroyNode(ckt->nodes[0]);
+			ES_CircuitFreeNode(ckt->nodes[0]);
 			Free(ckt->nodes[0], M_EDA);
 			InitGround(ckt);
 		} else {
@@ -376,6 +376,12 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 			port->selected = 0;
 		}
 	}
+
+	/* Send circuit-connected event to components. */
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+		AG_PostEvent(ckt, com, "circuit-connected", NULL);
+	}
+
 	ES_CircuitModified(ckt);
 	return (0);
 }
@@ -390,11 +396,11 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 	ES_Component *com;
 	off_t ncoms_offs;
 	Uint32 ncoms = 0;
-	u_int i;
+	Uint i;
 
 	AG_WriteVersion(buf, &esCircuitVer);
 	AG_WriteString(buf, ckt->descr);
-	AG_WriteUint32(buf, 0);					/* Pad */
+	AG_WriteUint32(buf, ckt->flags);
 	AG_WriteUint32(buf, ckt->n);
 	for (i = 0; i <= ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
@@ -450,7 +456,7 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 }
 
 static void
-InitNode(ES_Node *node, u_int flags)
+InitNode(ES_Node *node, Uint flags)
 {
 	node->sym[0] = '\0';
 	node->flags = flags;
@@ -465,11 +471,12 @@ InitGround(ES_Circuit *ckt)
 	InitNode(ckt->nodes[0], CKTNODE_REFERENCE);
 }
 
+/* Create a new node with no branches. */
 int
-ES_CircuitAddNode(ES_Circuit *ckt, u_int flags)
+ES_CircuitAddNode(ES_Circuit *ckt, Uint flags)
 {
 	ES_Node *node;
-	u_int n = ++ckt->n;
+	int n = ++ckt->n;
 
 	ckt->nodes = Realloc(ckt->nodes, (n+1)*sizeof(ES_Node *));
 	ckt->nodes[n] = Malloc(sizeof(ES_Node), M_EDA);
@@ -477,25 +484,16 @@ ES_CircuitAddNode(ES_Circuit *ckt, u_int flags)
 	return (n);
 }
 
-/* Evaluate whether node n is at ground potential. */
-int
-ES_NodeGrounded(ES_Circuit *ckt, u_int n)
-{
-	/* TODO check for shunts */
-	return (n == 0 ? 1 : 0);
-}
-
 /*
  * Evaluate whether node n is connected to the voltage source m. If that
  * is the case, return the polarity.
  */
 int
-ES_NodeVsource(ES_Circuit *ckt, u_int n, u_int m, int *sign)
+ES_NodeVsource(ES_Circuit *ckt, int n, int m, int *sign)
 {
 	ES_Node *node = ckt->nodes[n];
 	ES_Branch *br;
 	ES_Vsource *vs;
-	u_int i;
 
 	TAILQ_FOREACH(br, &node->branches, branches) {
 		if (br->port == NULL ||
@@ -517,7 +515,7 @@ ES_NodeVsource(ES_Circuit *ckt, u_int n, u_int m, int *sign)
 	return (0);
 }
 
-/* Return the DC voltage for the node j from the last simulation. */
+/* Return the DC voltage for the node j from the last simulation step. */
 SC_Real
 ES_NodeVoltage(ES_Circuit *ckt, int j)
 {
@@ -528,7 +526,7 @@ ES_NodeVoltage(ES_Circuit *ckt, int j)
 	return (ckt->sim->ops->node_voltage(ckt->sim, j));
 }
 
-/* Return the last simulated branch current for the voltage source k. */
+/* Return the branch current for the voltage source k from the last step. */
 SC_Real
 ES_BranchCurrent(ES_Circuit *ckt, int k)
 {
@@ -539,6 +537,7 @@ ES_BranchCurrent(ES_Circuit *ckt, int k)
 	return (ckt->sim->ops->branch_current(ckt->sim, k));
 }
 
+/* Search for a node with the given symbol. */
 ES_Node *
 ES_CircuitFindNode(ES_Circuit *ckt, const char *sym)
 {
@@ -555,7 +554,7 @@ ES_CircuitFindNode(ES_Circuit *ckt, const char *sym)
 }
 
 void
-ES_CircuitDestroyNode(ES_Node *node)
+ES_CircuitFreeNode(ES_Node *node)
 {
 	ES_Branch *br, *nbr;
 
@@ -568,18 +567,22 @@ ES_CircuitDestroyNode(ES_Node *node)
 	TAILQ_INIT(&node->branches);
 }
 
+/*
+ * Remove a node and all references to it. If necessary, shift the entire
+ * node array and update all port references accordingly.
+ */
 void
-ES_CircuitDelNode(ES_Circuit *ckt, u_int n)
+ES_CircuitDelNode(ES_Circuit *ckt, int n)
 {
 	ES_Node *node;
 	ES_Branch *br;
-	u_int i;
+	int i;
 
 #ifdef DEBUG
 	if (n == 0 || n > ckt->n) { Fatal("Illegal node"); }
 #endif
 	node = ckt->nodes[n];
-	ES_CircuitDestroyNode(node);
+	ES_CircuitFreeNode(node);
 	Free(node, M_EDA);
 
 	if (n != ckt->n) {
@@ -592,11 +595,83 @@ ES_CircuitDelNode(ES_Circuit *ckt, u_int n)
 		memmove(&ckt->nodes[n], &ckt->nodes[n+1],
 		    (ckt->n - n) * sizeof(ES_Node *));
 	}
+
 	ckt->n--;
+	ES_CircuitLog(ckt, _("Removed node %d"), n);
+}
+
+int
+ES_CircuitNodeNameByPtr(ES_Circuit *ckt, ES_Node *np) 
+{
+	int i;
+
+	for (i = 1; i <= ckt->n; i++) {
+		if (ckt->nodes[i] == np)
+			return (i);
+	}
+	AG_SetError(_("No such node"));
+	return (-1);
+}
+
+int
+ES_CircuitDelNodeByPtr(ES_Circuit *ckt, ES_Node *np)
+{
+	int i;
+
+	for (i = 1; i <= ckt->n; i++) {
+		if (ckt->nodes[i] == np) {
+			ES_CircuitDelNode(ckt, i);
+			return (0);
+		}
+	}
+	AG_SetError(_("No such node"));
+	return (-1);
+}
+
+/* Merge the branches of two nodes, creating a new node from them. */
+int
+ES_CircuitMergeNodes(ES_Circuit *ckt, int N1, int N2)
+{
+	ES_Branch *br;
+	ES_Node *n1 = ckt->nodes[N1];
+	ES_Node *n2 = ckt->nodes[N2];
+	ES_Node *n3;
+	int N3;
+
+	if (N1 == 0) {
+		TAILQ_FOREACH(br, &n2->branches, branches) {
+			br->port->node = 0;
+			ES_CircuitAddBranch(ckt, 0, br->port);
+		}
+		ES_CircuitFreeNode(n2);
+		N3 = 0;
+	} else if (N2 == 0) {
+		TAILQ_FOREACH(br, &n1->branches, branches) {
+			br->port->node = 0;
+			ES_CircuitAddBranch(ckt, 0, br->port);
+		}
+		ES_CircuitFreeNode(n1);
+		N3 = 0;
+	} else {
+		N3 = ES_CircuitAddNode(ckt,0);
+		TAILQ_FOREACH(br, &n1->branches, branches) {
+			br->port->node = N3;
+			ES_CircuitAddBranch(ckt, N3, br->port);
+		}
+		TAILQ_FOREACH(br, &n2->branches, branches) {
+			br->port->node = N3;
+			ES_CircuitAddBranch(ckt, N3, br->port);
+		}
+		ES_CircuitFreeNode(n1);
+		ES_CircuitFreeNode(n2);
+	}
+
+	ES_CircuitLog(ckt, _("Merged n%d,n%d into n%d"), N1, N2, N3);
+	return (N3);
 }
 
 ES_Branch *
-ES_CircuitAddBranch(ES_Circuit *ckt, u_int n, ES_Port *port)
+ES_CircuitAddBranch(ES_Circuit *ckt, int n, ES_Port *port)
 {
 	ES_Node *node = ckt->nodes[n];
 	ES_Branch *br;
@@ -609,7 +684,7 @@ ES_CircuitAddBranch(ES_Circuit *ckt, u_int n, ES_Port *port)
 }
 
 ES_Branch *
-ES_CircuitGetBranch(ES_Circuit *ckt, u_int n, ES_Port *port)
+ES_CircuitGetBranch(ES_Circuit *ckt, int n, ES_Port *port)
 {
 	ES_Node *node = ckt->nodes[n];
 	ES_Branch *br;
@@ -622,7 +697,7 @@ ES_CircuitGetBranch(ES_Circuit *ckt, u_int n, ES_Port *port)
 }
 
 void
-ES_CircuitDelBranch(ES_Circuit *ckt, u_int n, ES_Branch *br)
+ES_CircuitDelBranch(ES_Circuit *ckt, int n, ES_Branch *br)
 {
 	ES_Node *node = ckt->nodes[n];
 
@@ -698,10 +773,10 @@ ES_CircuitLog(void *p, const char *fmt, ...)
 	AG_ConsoleLine *ln;
 	va_list args;
 
-	if (ckt->sim == NULL || ckt->sim->log == NULL)
+	if (ckt->console == NULL)
 		return;
 
-	ln = AG_ConsoleAppendLine(ckt->sim->log, NULL);
+	ln = AG_ConsoleAppendLine(ckt->console, NULL);
 	va_start(args, fmt);
 	AG_Vasprintf(&ln->text, fmt, args);
 	va_end(args);
@@ -760,7 +835,7 @@ PollCircuitNodes(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
-	u_int i;
+	Uint i;
 
 	AG_TlistClear(tl);
 	for (i = 0; i <= ckt->n; i++) {
@@ -851,7 +926,7 @@ ShowInterconnects(AG_Event *event)
 	    AGOBJECT(ckt)->name)) == NULL) {
 		return;
 	}
-	AG_WindowSetCaption(win, _("%s: Connections"), AGOBJECT(ckt)->name);
+	AG_WindowSetCaption(win, _("%s: Topology"), AGOBJECT(ckt)->name);
 	AG_WindowSetPosition(win, AG_WINDOW_UPPER_RIGHT, 0);
 	
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
@@ -906,15 +981,6 @@ ShowDocumentProps(AG_Event *event)
 	AG_FSpinbuttonSetMin(fsu, 0.0625);
 	AG_FSpinbuttonSetIncrement(fsu, 0.0625);
 	
-	cb = AG_CheckboxNew(win, 0, _("Show nodes"));
-	AG_WidgetBindInt(cb, "state", &ckt->show_nodes);
-
-	cb = AG_CheckboxNew(win, 0, _("Show node numbers"));
-	AG_WidgetBindInt(cb, "state", &ckt->show_node_names);
-
-	cb = AG_CheckboxNew(win, 0, _("Show node symbols"));
-	AG_WidgetBindInt(cb, "state", &ckt->show_node_syms);
-
 #if 0
 	AG_LabelNew(win, AG_LABEL_STATIC, _("Nodes:"));
 	tl = AG_TlistNew(win, AG_TLIST_POLL|AG_TLIST_TREE);
@@ -949,20 +1015,20 @@ CircuitViewButtondown(AG_Event *event)
 	float x = AG_FLOAT(3);
 	float y = AG_FLOAT(4);
 	ES_Component *com;
-	VG_Rect rExt;
+	VG_Block *block;
 
-	if (button != SDL_BUTTON_RIGHT) { return; }
+	if (button != SDL_BUTTON_RIGHT) {
+		return;
+	}
+	block = VG_BlockClosest(ckt->vg, x, y);
 
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
-		if (AGOBJECT(com)->ops->edit == NULL) {
+		if (AGOBJECT(com)->ops->edit == NULL ||
+		    com->block != block) {
 			continue;
 		}
-		VG_BlockExtent(ckt->vg, com->block, &rExt);
-		if (x > rExt.x && y > rExt.y &&
-		    x < rExt.x+rExt.w && y < rExt.y+rExt.h) {
-			ES_ComponentOpenMenu(com, vgv);
-			break;
-		}
+		ES_ComponentOpenMenu(com, vgv);
+		break;
 	}
 }
 
@@ -981,19 +1047,20 @@ CircuitDoubleClick(AG_Event *event)
 	float x = AG_INT(3);
 	float y = AG_INT(4);
 	ES_Component *com;
-	VG_Rect rExt;
+	VG_Block *block;
 
-	if (button != SDL_BUTTON_LEFT) { return; }
+	if (button != SDL_BUTTON_LEFT) {
+		return;
+	}
+	block = VG_BlockClosest(ckt->vg, x, y);
 
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
-		if (AGOBJECT(com)->ops->edit == NULL) {
+		if (AGOBJECT(com)->ops->edit == NULL ||
+		    com->block != block) {
 			continue;
 		}
-		VG_BlockExtent(ckt->vg, com->block, &rExt);
-		if (x > rExt.x && y > rExt.y &&
-		    x < rExt.x+rExt.w && y < rExt.y+rExt.h) {
-			AG_ObjMgrOpenData(com, 1);
-		}
+		AG_ObjMgrOpenData(com, 1);
+		break;
 	}
 }
 
@@ -1066,6 +1133,30 @@ PollCircuitObjs(AG_Event *event)
 	FindCircuitObjs(tl, pob, 0, pob);
 	AG_UnlockLinkage();
 	AG_TlistRestore(tl);
+}
+
+static void
+ShowConsole(AG_Event *event)
+{
+	AG_Window *pwin = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(2);
+	AG_Window *win;
+
+	if ((win = AG_WindowNewNamed(0, "%s-console", AGOBJECT(ckt)->name))
+	    == NULL) {
+		return;
+	}
+	AG_WindowSetCaption(win, _("Console: %s"), AGOBJECT(ckt)->name);
+	ckt->console = AG_ConsoleNew(win, AG_CONSOLE_EXPAND);
+	AG_WidgetFocus(ckt->console);
+	AG_WindowAttach(pwin, win);
+
+	AG_WindowScale(win, -1, -1);
+	AG_WindowSetGeometry(win,
+	    0, agView->h - 100,
+	    agView->w/2, 99);
+	
+	AG_WindowShow(win);
 }
 
 static void
@@ -1178,6 +1269,13 @@ tryname:
 	AG_ObjMgrOpenData(scope, 1);
 }
 
+static void
+CircuitDraw(AG_Event *event)
+{
+	ES_Circuit *ckt = AG_PTR(1);
+
+}
+
 void *
 ES_CircuitEdit(void *p)
 {
@@ -1197,6 +1295,9 @@ ES_CircuitEdit(void *p)
 	AG_ToolbarInit(toolbar, AG_TOOLBAR_VERT, 1, 0);
 	vgv = Malloc(sizeof(VG_View), M_OBJECT);
 	VG_ViewInit(vgv, ckt->vg, VG_VIEW_EXPAND);
+#if 0
+	VG_ViewDrawFn(vgv, CircuitDraw, "%p", ckt);
+#endif
 	
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	pitem = AG_MenuAddItem(menu, _("File"));
@@ -1223,41 +1324,48 @@ ES_CircuitEdit(void *p)
 	}
 	pitem = AG_MenuAddItem(menu, _("Edit"));
 	{
+		AG_MenuItem *mSnap;
+
 		/* TODO */
 		AG_MenuAction(pitem, _("Undo"), -1, NULL, NULL);
 		AG_MenuAction(pitem, _("Redo"), -1, NULL, NULL);
-	}
-
-	pitem = AG_MenuAddItem(menu, _("Layout"));
-	{
-		AG_MenuItem *mSnap;
-
-		AG_MenuAction(pitem, _("Create view..."), NEW_VIEW_ICON,
-		    CircuitCreateView, "%p,%p", win, ckt);
 		
-		AG_MenuSeparator(pitem);
-		
-		AG_MenuIntBool(pitem, _("Show nodes"), EDA_NODE_ICON,
-		    &ckt->show_nodes, 0);
-		AG_MenuIntBool(pitem, _("Show node numbers"), EDA_NODE_ICON,
-		    &ckt->show_node_names, 0);
-		AG_MenuIntBool(pitem, _("Show node symbols"), EDA_NODE_ICON,
-		    &ckt->show_node_syms, 0);
-
-		AG_MenuSeparator(pitem);
-
-		AG_MenuIntFlags(pitem, _("Show origin"), VGORIGIN_ICON,
-		    &ckt->vg->flags, VG_VISORIGIN, 0);
-		AG_MenuIntFlags(pitem, _("Show grid"), GRID_ICON,
-		    &ckt->vg->flags, VG_VISGRID, 0);
-		AG_MenuIntFlags(pitem, _("Show extents"), VGBLOCK_ICON,
-		    &ckt->vg->flags, VG_VISBBOXES, 0);
-
 		AG_MenuSeparator(pitem);
 		
 		mSnap = AG_MenuNode(pitem, _("Snapping mode"),
 		    SNAP_CENTERPT_ICON);
 		VG_SnapMenu(menu, mSnap, ckt->vg);
+	}
+
+	pitem = AG_MenuAddItem(menu, _("View"));
+	{
+		AG_MenuAction(pitem, _("Create view..."), NEW_VIEW_ICON,
+		    CircuitCreateView, "%p,%p", win, ckt);
+		
+		AG_MenuSeparator(pitem);
+		
+		AG_MenuIntFlags(pitem, _("Circuit nodes"), EDA_NODE_ICON,
+		    &ckt->flags, CIRCUIT_SHOW_NODES, 0);
+		AG_MenuIntFlags(pitem, _("Node names"), EDA_NODE_ICON,
+		    &ckt->flags, CIRCUIT_SHOW_NODENAMES, 0);
+		AG_MenuIntFlags(pitem, _("Node symbols"), EDA_NODE_ICON,
+		    &ckt->flags, CIRCUIT_SHOW_NODESYMS, 0);
+
+		AG_MenuSeparator(pitem);
+
+		AG_MenuIntFlags(pitem, _("Drawing origin"), VGORIGIN_ICON,
+		    &ckt->vg->flags, VG_VISORIGIN, 0);
+		AG_MenuIntFlags(pitem, _("Drawing grid"), GRID_ICON,
+		    &ckt->vg->flags, VG_VISGRID, 0);
+		AG_MenuIntFlags(pitem, _("Drawing extents"), VGBLOCK_ICON,
+		    &ckt->vg->flags, VG_VISBBOXES, 0);
+		
+		AG_MenuSeparator(pitem);
+
+		AG_MenuAction(pitem, _("Circuit topology..."), EDA_MESH_ICON,
+		    ShowInterconnects, "%p,%p", win, ckt);
+		AG_MenuAction(pitem, _("Log console..."), VGTEXT_ICON,
+		    ShowConsole, "%p,%p", win, ckt);
 	}
 		
 	pitem = AG_MenuAddItem(menu, _("Simulation"));
@@ -1270,9 +1378,6 @@ ES_CircuitEdit(void *p)
 			    (*ops)->icon, 0, 0,
 			    CircuitSelectSim, "%p,%p,%p", ckt, *ops, win);
 		}
-		AG_MenuSeparator(pitem);
-		AG_MenuAction(pitem, _("Show interconnects..."), EDA_MESH_ICON,
-		    ShowInterconnects, "%p,%p", win, ckt);
 	}
 	
 	pane = AG_HPaneNew(win, AG_HPANE_EXPAND);

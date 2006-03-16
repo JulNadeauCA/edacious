@@ -28,49 +28,53 @@ typedef struct es_branch {
 /* Connection between two or more components. */
 typedef struct es_node {
 	char sym[CKTNODE_SYM_MAX];	/* Symbolic name */
-	u_int flags;
+	Uint flags;
 #define CKTNODE_EXAM		0x01	/* Branches are being examined
 					   (used to avoid redundancies) */
 #define CKTNODE_REFERENCE	0x02	/* Reference node (eg. ground) */
 
 	TAILQ_HEAD(,es_branch) branches;
-	u_int		      nbranches;
+	Uint		      nbranches;
 } ES_Node;
 
 /* Closed loop of port pairs with respect to some component in the circuit. */
 typedef struct es_loop {
-	u_int name;
+	Uint name;
 	void *origin;			/* Origin component (ie. vsource) */
 	ES_Pair **pairs;		/* Port pairs in loop */
-	u_int	 npairs;
+	Uint	 npairs;
 	TAILQ_ENTRY(es_loop) loops;
 } ES_Loop;
 
 struct es_vsource;
+struct ag_console;
 
 typedef struct es_circuit {
 	AG_Object obj;
 	char descr[CIRCUIT_DESCR_MAX];	/* Short description */
 	VG *vg;				/* Schematics drawing */
+	struct ag_console *console;	/* Log console */
 	ES_Sim *sim;			/* Current simulation mode */
-
+	Uint flags;
+#define CIRCUIT_SHOW_NODES	0x01
+#define CIRCUIT_SHOW_NODENAMES	0x02
+#define CIRCUIT_SHOW_NODESYMS	0x04
 	pthread_mutex_t lock;
 	int simlock;			/* Simulation is locked */
-	int show_nodes;			/* Display node indications */
-	int show_node_names;		/* Display node names */
-	int show_node_syms;		/* Display node symbols */
 
 	ES_Node **nodes;		/* Nodes (element 0 is ground) */
 	ES_Loop **loops;		/* Closed loops */
 	struct es_vsource **vsrcs;	/* Independent vsources */
 
-	u_int l;			/* Number of loops */
-	u_int m;			/* Number of independent vsources */
-	u_int n;			/* Number of nodes (except ground) */
+	Uint l;			/* Number of loops */
+	Uint m;			/* Number of independent vsources */
+	Uint n;			/* Number of nodes (except ground) */
 } ES_Circuit;
 
 #define ES_CIRCUIT(p) ((ES_Circuit *)(p))
 #define U(com,n) ES_NodeVoltage(COM(com)->ckt,(n))
+#define ESNODE_FOREACH_BRANCH(var, ckt, node) \
+	TAILQ_FOREACH((var), &(ckt)->nodes[node]->branches, branches)
 
 __BEGIN_DECLS
 void		 ES_CircuitInit(void *, const char *);
@@ -84,18 +88,21 @@ void		 ES_CircuitLog(void *, const char *, ...);
 __inline__ void	 ES_LockCircuit(ES_Circuit *);
 __inline__ void	 ES_UnlockCircuit(ES_Circuit *);
 
-int		 ES_CircuitAddNode(ES_Circuit *, u_int);
-void		 ES_CircuitDelNode(ES_Circuit *, u_int);
+int		 ES_CircuitAddNode(ES_Circuit *, Uint);
+int		 ES_CircuitMergeNodes(ES_Circuit *, int, int);
+void		 ES_CircuitDelNode(ES_Circuit *, int);
+int		 ES_CircuitDelNodeByPtr(ES_Circuit *, ES_Node *);
+
 void		 ES_CircuitCopyNode(ES_Circuit *, ES_Node *, ES_Node *);
-void		 ES_CircuitDestroyNode(ES_Node *);
-ES_Branch	*ES_CircuitAddBranch(ES_Circuit *, u_int, ES_Port *);
-void		 ES_CircuitDelBranch(ES_Circuit *, u_int, ES_Branch *);
+void		 ES_CircuitFreeNode(ES_Node *);
+ES_Branch	*ES_CircuitAddBranch(ES_Circuit *, int, ES_Port *);
+void		 ES_CircuitDelBranch(ES_Circuit *, int, ES_Branch *);
 
 __inline__ ES_Node	*ES_CircuitFindNode(ES_Circuit *, const char *);
-__inline__ ES_Branch	*ES_CircuitGetBranch(ES_Circuit *, u_int, ES_Port *);
+__inline__ ES_Branch	*ES_CircuitGetBranch(ES_Circuit *, int, ES_Port *);
+__inline__ int		 ES_CircuitNodeNameByPtr(ES_Circuit *, ES_Node *);
 
-__inline__ int	   ES_NodeGrounded(ES_Circuit *, u_int);
-__inline__ int	   ES_NodeVsource(ES_Circuit *, u_int, u_int, int *);
+__inline__ int	   ES_NodeVsource(ES_Circuit *, int, int, int *);
 __inline__ SC_Real ES_NodeVoltage(ES_Circuit *, int);
 __inline__ SC_Real ES_BranchCurrent(ES_Circuit *, int);
 

@@ -26,7 +26,6 @@ typedef struct es_sim {
 	struct es_circuit *ckt;		/* Circuit being analyzed */
 	const ES_SimOps *ops;		/* Generic operations */
 	AG_Window *win;			/* Settings window */
-	struct ag_console *log;		/* Log message display */
 	int running;			/* Continous simulation in process */
 } ES_Sim;
 

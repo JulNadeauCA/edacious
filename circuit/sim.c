@@ -48,7 +48,6 @@ ES_SimInit(void *p, const ES_SimOps *ops)
 	sim->ops = ops;
 	sim->running = 0;
 	sim->win = NULL;
-	sim->log = NULL;
 }
 
 void
@@ -91,10 +90,10 @@ ES_SimLog(void *p, const char *fmt, ...)
 	AG_ConsoleLine *ln;
 	va_list args;
 
-	if (sim->log == NULL)
+	if (sim->ckt == NULL || sim->ckt->console == NULL)
 		return;
 
-	ln = AG_ConsoleAppendLine(sim->log, NULL);
+	ln = AG_ConsoleAppendLine(sim->ckt->console, NULL);
 	va_start(args, fmt);
 	AG_Vasprintf(&ln->text, fmt, args);
 	va_end(args);

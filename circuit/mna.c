@@ -366,20 +366,18 @@ ES_MnaEdit(void *p, ES_Circuit *ckt)
 		AG_LabelNew(ntab, AG_LABEL_POLLED,
 		    _("Iterations/step watermark: %u-%u"),
 		    &mna->iters_lowat, &mna->iters_hiwat);
-
-		SIM(mna)->log = AG_ConsoleNew(ntab, AG_CONSOLE_EXPAND);
 	}
 	
 	ntab = AG_NotebookAddTab(nb, "[A]", AG_BOX_VERT);
 	mv = AG_MatviewNew(ntab, mna->A, 0);
-	AG_MatviewPrescale(mv, "-0.000", 10, 5);
+	AG_MatviewPrescale(mv, "-0.000", 4, 4);
 	AG_MatviewSetNumericalFmt(mv, "%.02f");
 	
 	ntab = AG_NotebookAddTab(nb, "[LU]", AG_BOX_VERT);
 	mv = AG_MatviewNew(ntab, mna->LU, 0);
 	AG_MatviewPrescale(mv, "-0.000", 10, 5);
 	AG_MatviewSetNumericalFmt(mv, "%.02f");
-
+#if 0
 	ntab = AG_NotebookAddTab(nb, "[G]", AG_BOX_VERT);
 	mv = AG_MatviewNew(ntab, mna->G, 0);
 	AG_MatviewPrescale(mv, "-0.000", 10, 5);
@@ -399,7 +397,7 @@ ES_MnaEdit(void *p, ES_Circuit *ckt)
 	mv = AG_MatviewNew(ntab, mna->D, 0);
 	AG_MatviewPrescale(mv, "-0.000", 10, 5);
 	AG_MatviewSetNumericalFmt(mv, "%.03f");
-	
+#endif
 	ntab = AG_NotebookAddTab(nb, "[z]", AG_BOX_VERT);
 	mv = AG_MatviewNew(ntab, mna->z, 0);
 	AG_MatviewPrescale(mv, "-0000.0000", 10, 5);
