@@ -1,8 +1,8 @@
 /*	$Csoft: inverter.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
 
 /*
- * Copyright (c) 2006 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2006 Hypertriton, Inc.
+ * <http://www.hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -59,10 +59,10 @@ const ES_ComponentOps esAndOps = {
 
 const ES_Port esAndPinout[] = {
 	{ 0, "",	0.0, 1.0 },
-	{ 1, "Vcc",	1.0, -1.0 },
-	{ 2, "Gnd",	1.0, +1.0 },
-	{ 3, "A",	0.0, -0.75 },
-	{ 4, "B",	0.0, +0.75 },
+	{ 1, "Vcc",	1.0, -0.5 },
+	{ 2, "Gnd",	1.0, +0.5 },
+	{ 3, "A",	0.0, -0.5 },
+	{ 4, "B",	0.0, +0.5 },
 	{ 5, "A&B",	2.0, 0.0 },
 	{ -1 },
 };
@@ -74,28 +74,21 @@ ES_AndDraw(void *p, VG *vg)
 	ES_Component *com = p;
 	VG_Block *block;
 
+	VG_Rectangle(vg, 0.25, -0.5625, 1.75, 0.5625);
 	VG_Begin(vg, VG_LINES);
-	VG_HLine(vg, 0.00, 0.25, 0.0);
 	VG_HLine(vg, 1.75, 2.00, 0.0);
+	VG_HLine(vg, 0.00, 0.25, -0.5);
+	VG_HLine(vg, 0.00, 0.25, +0.5);
 	VG_End(vg);
-	VG_Begin(vg, VG_LINE_LOOP);
-	VG_Vertex2(vg, 0.25, +0.625);
-	VG_Vertex2(vg, 1.75,  0.000);
-	VG_Vertex2(vg, 0.25, -0.625);
-	VG_End(vg);
-	VG_Begin(vg, VG_LINES);
-	VG_VintVLine2(vg, 1.000, -1.000, 1.75, 0.0, 0.25, -0.625);
-	VG_VintVLine2(vg, 1.000, +1.000, 1.75, 0.0, 0.25, +0.625);
-	VG_End(vg);
-	VG_Begin(vg, VG_CIRCLE);
-	VG_Vertex2(vg, 1.750, 0.0000);
-	VG_CircleRadius(vg, 0.0625);
-	VG_End(vg);
+#if 0
+	VG_VLine(vg, 0.25, -0.625, +0.625);
+#endif
+
 	VG_Begin(vg, VG_TEXT);
 	VG_SetStyle(vg, "component-name");
-	VG_Vertex2(vg, 0.750, 0);
+	VG_Vertex2(vg, 1.0, 0);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_Printf(vg, "%s", AGOBJECT(com)->name);
+	VG_Printf(vg, "&");
 	VG_End(vg);
 }
 
