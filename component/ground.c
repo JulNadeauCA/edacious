@@ -1,8 +1,7 @@
 /*	$Csoft: ground.c,v 1.2 2005/09/15 02:04:49 vedge Exp $	*/
 
 /*
- * Copyright (c) 2005 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2006 Hypertriton, Inc. <http://www.hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

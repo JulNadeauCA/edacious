@@ -1,8 +1,7 @@
 /*	$Csoft: component.c,v 1.7 2005/09/27 03:34:08 vedge Exp $	*/
 
 /*
- * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2006 Hypertriton, Inc. <http://www.hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -204,7 +203,7 @@ ES_ComponentHidden(AG_Event *event)
 
 /* Redraw a component schematic block. */
 static Uint32
-ES_ComponentRedraw(void *p, Uint32 ival, void *arg)
+ES_ComponentDraw(void *p, Uint32 ival, void *arg)
 {
 	ES_Component *com = p;
 	ES_Circuit *ckt = com->ckt;
@@ -241,7 +240,7 @@ ES_ComponentRedraw(void *p, Uint32 ival, void *arg)
 		theta -= com->block->theta;
 		VG_Pol2Car(vg, rho, theta, &x, &y);
 
-		if (ckt->show_nodes) {
+		if (ckt->flags & CIRCUIT_SHOW_NODES) {
 			vge = VG_Begin(vg, VG_CIRCLE);
 			vge->selected = 1;
 			VG_Vertex2(vg, x, y);
@@ -255,18 +254,19 @@ ES_ComponentRedraw(void *p, Uint32 ival, void *arg)
 			VG_End(vg);
 		}
 		if (port->node >= 0) {
-			if (ckt->show_node_names || ckt->show_node_syms) {
+			if (ckt->flags &
+			    (CIRCUIT_SHOW_NODENAMES|CIRCUIT_SHOW_NODESYMS)) {
 				vge = VG_Begin(vg, VG_TEXT);
 				vge->selected = 1;
 				VG_Vertex2(vg, x, y);
 				VG_SetStyle(vg, "node-name");
 				VG_Color3(vg, 0, 200, 100);
 				VG_TextAlignment(vg, VG_ALIGN_BR);
-				if (ckt->show_node_syms &&
+				if (ckt->flags&CIRCUIT_SHOW_NODESYMS &&
 				    ckt->nodes[port->node]->sym[0] != '\0') {
 					VG_Printf(vg, "%s",
 					    ckt->nodes[port->node]->sym);
-				} else if (ckt->show_node_names) {
+				} else if (ckt->flags&CIRCUIT_SHOW_NODENAMES) {
 					VG_Printf(vg, "n%d", port->node);
 				}
 				VG_End(vg);
@@ -363,7 +363,7 @@ ES_ComponentInit(void *obj, const char *tName, const char *name,
 	AG_SetEvent(com, "renamed", ES_ComponentRenamed, NULL);
 	AG_SetEvent(com, "circuit-shown", ES_ComponentShown, NULL);
 	AG_SetEvent(com, "circuit-hidden", ES_ComponentHidden, NULL);
-	AG_SetTimeout(&com->redraw_to, ES_ComponentRedraw, NULL,
+	AG_SetTimeout(&com->redraw_to, ES_ComponentDraw, NULL,
 	    AG_TIMEOUT_LOADABLE);
 }
 
@@ -481,14 +481,13 @@ ES_ComponentLog(void *p, const char *fmt, ...)
 	AG_ConsoleLine *ln;
 	va_list args;
 
-	if (com->ckt == NULL || com->ckt->sim == NULL ||
-	    com->ckt->sim->log == NULL)
+	if (com->ckt == NULL || com->ckt->console == NULL)
 		return;
 	
 	strlcpy(buf, AGOBJECT(com)->name, sizeof(buf));
 	
 	va_start(args, fmt);
-	ln = AG_ConsoleAppendLine(com->ckt->sim->log, NULL);
+	ln = AG_ConsoleAppendLine(com->ckt->console, NULL);
 	len = strlcat(buf, ": ", sizeof(buf));
 	vsnprintf(&buf[len], sizeof(buf)-len, fmt, args);
 	ln->text = strdup(buf);
@@ -571,6 +570,29 @@ RemoveComponent(AG_Event *event)
 }
 
 static void
+RemoveSelections(AG_Event *event)
+{
+	ES_Circuit *ckt = AG_PTR(1);
+	ES_Component *com;
+
+	ES_LockCircuit(ckt);
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+		if (!com->selected) {
+			continue;
+		}
+		AG_ObjectDetach(com);
+		if (!AG_ObjectInUse(com)) {
+			AG_ObjectDestroy(com);
+		} else {
+			AG_TextMsg(AG_MSG_ERROR, _("%s: component is in use."),
+			    AGOBJECT(com)->name);
+		}
+		ES_CircuitModified(ckt);
+	}
+	ES_UnlockCircuit(ckt);
+}
+
+static void
 LoadComponent(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
@@ -608,26 +630,48 @@ void
 ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 {
 	AG_PopupMenu *pm;
+	Uint nsel = 0;
+	ES_Component *com2;
+	int common_class = 1;
+	const ES_ComponentOps *common_ops = NULL;
+
+	AGOBJECT_FOREACH_CLASS(com2, com->ckt, es_component, "component") {
+		if (!com2->selected) {
+			continue;
+		}
+		if (common_ops != NULL && common_ops != com2->ops) {
+			common_class = 0;
+		}
+		common_ops = com2->ops;
+		nsel++;
+	}
 
 	pm = AG_PopupNew(vgv);
 	if (com->ops->menu != NULL) {
 		com->ops->menu(com, pm->item);
 		AG_MenuSeparator(pm->item);
 	}
-	AG_MenuAction(pm->item, _("Edit component"), EDA_COMPONENT_ICON,
+	AG_MenuSection(pm->item, "[Component: %s]", AGOBJECT(com)->name);
+	AG_MenuAction(pm->item, _("    Edit parameters"), EDA_COMPONENT_ICON,
 	    EditComponent, "%p", com);
-	AG_MenuSeparator(pm->item);
-	AG_MenuAction(pm->item, _("Delete component"), TRASH_ICON,
+	AG_MenuAction(pm->item, _("    Destroy instance"), TRASH_ICON,
 	    RemoveComponent, "%p", com);
-	AG_MenuSeparator(pm->item);
-	AG_MenuAction(pm->item, _("Save model"), OBJSAVE_ICON,
-	    LoadComponent, "%p", com);
-	AG_MenuAction(pm->item, _("Load model"), OBJLOAD_ICON,
-	    LoadComponent, "%p", com);
-	AG_MenuAction(pm->item, _("Export model to..."), OBJSAVE_ICON,
+	AG_MenuAction(pm->item, _("    Export model..."), OBJSAVE_ICON,
 	    SaveComponentTo, "%p", com);
-	AG_MenuAction(pm->item, _("Import model from..."), OBJLOAD_ICON,
+	AG_MenuAction(pm->item, _("    Import model..."), OBJLOAD_ICON,
 	    LoadComponentFrom, "%p", com);
+
+	if (nsel > 1) {
+		if (common_class) {
+			AG_MenuSeparator(pm->item);
+			AG_MenuSection(pm->item, _("[Class: %s]"),
+			    common_ops->name);
+		}
+		AG_MenuSeparator(pm->item);
+		AG_MenuSection(pm->item, _("[All selections]"));
+		AG_MenuAction(pm->item, _("    Destroy selections"), TRASH_ICON,
+		    RemoveSelections, "%p", com->ckt);
+	}
 
 	AG_PopupShow(pm);
 }
@@ -721,7 +765,7 @@ ES_PortIsGrounded(ES_Port *port)
 {
 	ES_Circuit *ckt = port->com->ckt;
 
-	return (ES_NodeGrounded(ckt, port->node));
+	return (port->node == 0);
 }
 
 /* Connect a floating component to the circuit. */

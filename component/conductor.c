@@ -144,6 +144,42 @@ ES_ConductorToolReinit(void)
 }
 
 static int
+ES_ConductorConnect(ES_Circuit *ckt, ES_Conductor *cd, float x1, float y1,
+    float x2, float y2)
+{
+	ES_Port *port1, *port2;
+	int N1, N2, N3;
+	int i;
+
+	ES_LockCircuit(ckt);
+
+	port1 = ES_ComponentPortOverlap(ckt, COM(cd), x1, y1);
+	port2 = ES_ComponentPortOverlap(ckt, COM(cd), x2, y2);
+	if (port1 != NULL && port2 != NULL &&
+	    port1->node == port2->node) {
+		AG_SetError(_("Redundant connection"));
+		goto fail;
+	}
+	N1 = (port1 != NULL) ? port1->node : ES_CircuitAddNode(ckt, 0);
+	N2 = (port2 != NULL) ? port2->node : ES_CircuitAddNode(ckt, 0);
+	COM(cd)->ports[1].node = N1;
+	COM(cd)->ports[2].node = N2;
+
+	if ((N3 = ES_CircuitMergeNodes(ckt, N1, N2)) == -1) {
+		goto fail;
+	}
+	port1->node = N3;
+	port2->node = N3;
+
+	ES_CircuitModified(ckt);
+	ES_UnlockCircuit(ckt);
+	return (0);
+fail:
+	ES_UnlockCircuit(ckt);
+	return (-1);
+}
+
+static int
 ES_ConductorToolMousebuttondown(void *p, float x, float y, int b)
 {
 	VG_Tool *t = p;
@@ -176,14 +212,21 @@ tryname:
 			com->ports[1].y = 0;
 			esCurCd = (ES_Conductor *)com;
 		} else {
-			COM(esCurCd)->ports[1].selected = 0;
-			COM(esCurCd)->ports[2].selected = 0;
-			ES_ComponentConnect(ckt, COM(esCurCd),
-			    &COM(esCurCd)->block->pos);
-			esCurCd = NULL;
+			com = (ES_Component *)esCurCd;
+			com->ports[1].selected = 0;
+			com->ports[2].selected = 0;
+			if (ES_ConductorConnect(ckt, esCurCd,
+			    com->block->pos.x + com->ports[1].x,
+			    com->block->pos.y + com->ports[1].y,
+			    com->block->pos.x + com->ports[2].x,
+			    com->block->pos.y + com->ports[2].y) == -1) {
+				AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
+			} else {
+				esCurCd = NULL;
+			}
 		}
 		break;
-	case SDL_BUTTON_MIDDLE:
+	default:
 		if (esCurCd != NULL) {
 			AG_ObjectDetach(esCurCd);
 			AG_ObjectDestroy(esCurCd);
@@ -191,8 +234,6 @@ tryname:
 			esCurCd = NULL;
 		}
 		break;
-	default:
-		return (0);
 	}
 	return (1);
 }

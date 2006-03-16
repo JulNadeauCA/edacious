@@ -275,7 +275,7 @@ ES_ResistorEdit(void *p)
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
 	
-	sb = AG_SpinbuttonNew(win, 0, _("Tolerance (%%): "));
+	sb = AG_SpinbuttonNew(win, 0, _("Tolerance (%): "));
 	AG_WidgetBind(sb, "value", AG_WIDGET_INT, &r->tolerance);
 	AG_SpinbuttonSetRange(sb, 1, 100);
 
