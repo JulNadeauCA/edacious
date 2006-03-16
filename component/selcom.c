@@ -1,8 +1,8 @@
 /*	$Csoft: component.c,v 1.7 2005/09/27 03:34:08 vedge Exp $	*/
 
 /*
- * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2004, 2005, 2006 Hypertriton, Inc.
+ * <http://www.hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -67,7 +67,8 @@ ES_SelcomButtondown(void *p, float x, float y, int b)
 			break;
 		}
 	}
-	if ((pwin = AG_WidgetParentWindow(t->vgv)) != NULL) {
+	if (t->vgv != NULL &&
+	    (pwin = AG_WidgetParentWindow(t->vgv)) != NULL) {
 		agView->focus_win = pwin;
 		AG_WidgetFocus(t->vgv);
 	}
