@@ -226,7 +226,7 @@ tryname:
 			}
 		}
 		break;
-	default:
+	case SDL_BUTTON_MIDDLE:
 		if (esCurCd != NULL) {
 			AG_ObjectDetach(esCurCd);
 			AG_ObjectDestroy(esCurCd);
@@ -234,6 +234,8 @@ tryname:
 			esCurCd = NULL;
 		}
 		break;
+	default:
+		return (0);
 	}
 	return (1);
 }

@@ -626,6 +626,23 @@ LoadComponentFrom(AG_Event *event)
 	AG_ObjMgrLoadFrom(com, _(com->ops->name));
 }
 
+static void
+SelectTool(AG_Event *event)
+{
+	VG_View *vgv = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(2);
+	VG_ToolOps *ops = AG_PTR(3);
+	VG_Tool *t;
+
+	if ((t = VG_ViewFindToolByOps(vgv, ops)) != NULL) {
+		VG_ViewSelectTool(vgv, t, ckt);
+		AG_WidgetFocus(vgv);
+		AG_WindowFocus(AG_WidgetParentWindow(vgv));
+	} else {
+		AG_TextMsg(AG_MSG_ERROR, _("No such tool: %s"), ops->name);
+	}
+}
+
 void
 ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 {
@@ -647,13 +664,21 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 	}
 
 	pm = AG_PopupNew(vgv);
+	{
+		extern VG_ToolOps esSelcomOps;
+		extern VG_ToolOps esConductorTool;
+
+		AG_MenuAction(pm->item, _("Select"), -1,
+		    SelectTool, "%p,%p,%s", vgv, com->ckt, &esSelcomOps);
+		AG_MenuAction(pm->item, _("Wire"), -1,
+		    SelectTool, "%p,%p,%s", vgv, com->ckt, &esConductorTool);
+		AG_MenuSeparator(pm->item);
+	}
 	if (com->ops->menu != NULL) {
 		com->ops->menu(com, pm->item);
 		AG_MenuSeparator(pm->item);
 	}
 	AG_MenuSection(pm->item, "[Component: %s]", AGOBJECT(com)->name);
-	AG_MenuAction(pm->item, _("    Edit parameters"), EDA_COMPONENT_ICON,
-	    EditComponent, "%p", com);
 	AG_MenuAction(pm->item, _("    Destroy instance"), TRASH_ICON,
 	    RemoveComponent, "%p", com);
 	AG_MenuAction(pm->item, _("    Export model..."), OBJSAVE_ICON,

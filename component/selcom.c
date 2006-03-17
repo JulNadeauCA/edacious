@@ -148,7 +148,7 @@ ES_SelcomInit(void *p)
 }
 
 VG_ToolOps esSelcomOps = {
-	N_("Select component"),
+	N_("Select"),
 	N_("Select one or more component in the circuit."),
 	EDA_COMPONENT_ICON,
 	sizeof(VG_Tool),
