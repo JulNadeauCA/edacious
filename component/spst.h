@@ -24,6 +24,8 @@ double	 ES_SpstResistance(void *, ES_Port *, ES_Port *);
 void	*ES_SpstEdit(void *);
 void	 ES_SpstDraw(void *, VG *);
 void	 ES_SpstUpdate(void *, VG *);
+void	 ES_SpstClassMenu(ES_Circuit *, AG_MenuItem *);
+void	 ES_SpstInstanceMenu(void *, AG_MenuItem *);
 __END_DECLS
 
 #include "close_code.h"

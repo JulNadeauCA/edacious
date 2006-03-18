@@ -51,10 +51,10 @@ const ES_ComponentOps esConductorOps = {
 	"Cd",
 	ES_ConductorDraw,
 	NULL,			/* edit */
-	NULL,			/* menu */
-	NULL,			/* connect */
-	NULL,			/* disconnect */
-	ES_ConductorExport
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	ES_ConductorExport,
+	NULL			/* connect */
 };
 
 const ES_Port esConductorPinout[] = {

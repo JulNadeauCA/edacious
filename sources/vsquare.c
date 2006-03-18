@@ -51,10 +51,10 @@ const ES_ComponentOps esVSquareOps = {
 	"Vsq",
 	ES_VSquareDraw,
 	ES_VSquareEdit,
-	NULL,			/* menu */
-	NULL,			/* connect */
-	NULL,			/* disconnect */
-	ES_VSquareExport
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	ES_VSquareExport,
+	NULL			/* connect */
 };
 
 const ES_Port esVSquarePorts[] = {

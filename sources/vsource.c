@@ -51,10 +51,10 @@ const ES_ComponentOps esVsourceOps = {
 	"V",
 	ES_VsourceDraw,
 	ES_VsourceEdit,
-	NULL,			/* menu */
-	NULL,			/* connect */
-	NULL,			/* disconnect */
-	ES_VsourceExport
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	ES_VsourceExport,
+	NULL			/* connect */
 };
 
 const ES_Port esVsourcePinout[] = {

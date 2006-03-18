@@ -51,10 +51,10 @@ const ES_ComponentOps esSemiResistorOps = {
 	"R",
 	ES_SemiResistorDraw,
 	ES_SemiResistorEdit,
-	NULL,			/* menu */
-	NULL,			/* connect */
-	NULL,			/* disconnect */
-	ES_SemiResistorExport
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	ES_SemiResistorExport,
+	NULL			/* connect */
 };
 
 const ES_Port esSemiResistorPinout[] = {

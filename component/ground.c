@@ -50,10 +50,10 @@ const ES_ComponentOps esGroundOps = {
 	"Gnd",
 	ES_GroundDraw,
 	NULL,			/* edit */
-	NULL,			/* menu */
-	ES_GroundConnect,
-	NULL,			/* disconnect */
-	NULL			/* export */
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	ES_GroundConnect
 };
 
 const ES_Port esGroundPinout[] = {

@@ -674,23 +674,26 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 		    SelectTool, "%p,%p,%s", vgv, com->ckt, &esConductorTool);
 		AG_MenuSeparator(pm->item);
 	}
-	if (com->ops->menu != NULL) {
-		com->ops->menu(com, pm->item);
-		AG_MenuSeparator(pm->item);
-	}
 	AG_MenuSection(pm->item, "[Component: %s]", AGOBJECT(com)->name);
+	AG_MenuAction(pm->item, _("    Edit parameters"), OBJEDIT_ICON,
+	    EditComponent, "%p", com);
 	AG_MenuAction(pm->item, _("    Destroy instance"), TRASH_ICON,
 	    RemoveComponent, "%p", com);
 	AG_MenuAction(pm->item, _("    Export model..."), OBJSAVE_ICON,
 	    SaveComponentTo, "%p", com);
 	AG_MenuAction(pm->item, _("    Import model..."), OBJLOAD_ICON,
 	    LoadComponentFrom, "%p", com);
+	if (com->ops->instance_menu != NULL) {
+		AG_MenuSeparator(pm->item);
+		com->ops->instance_menu(com, pm->item);
+	}
 
 	if (nsel > 1) {
-		if (common_class) {
+		if (common_class && com->ops->class_menu != NULL) {
 			AG_MenuSeparator(pm->item);
 			AG_MenuSection(pm->item, _("[Class: %s]"),
 			    common_ops->name);
+			com->ops->class_menu(com->ckt, pm->item);
 		}
 		AG_MenuSeparator(pm->item);
 		AG_MenuSection(pm->item, _("[All selections]"));

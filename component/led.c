@@ -50,10 +50,10 @@ const ES_ComponentOps esLedOps = {
 	"LED",
 	ES_LedDraw,
 	ES_LedEdit,
-	NULL,			/* menu */
-	NULL,			/* connect */
-	NULL,			/* disconnect */
-	NULL			/* export */
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	NULL			/* connect */
 };
 
 const ES_Port esLedPinout[] = {

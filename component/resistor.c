@@ -51,10 +51,10 @@ const ES_ComponentOps esResistorOps = {
 	"R",
 	ES_ResistorDraw,
 	ES_ResistorEdit,
-	NULL,			/* menu */
-	NULL,			/* connect */
-	NULL,			/* disconnect */
-	ES_ResistorExport
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	ES_ResistorExport,
+	NULL			/* connect */
 };
 
 const ES_Port esResistorPinout[] = {

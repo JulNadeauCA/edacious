@@ -51,10 +51,10 @@ const ES_ComponentOps esSpdtOps = {
 	"Sw",
 	ES_SpdtDraw,
 	ES_SpdtEdit,
-	NULL,			/* menu */
-	NULL,			/* connect */
-	NULL,			/* disconnect */
-	ES_SpdtExport
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	ES_SpdtExport,
+	NULL			/* connect */
 };
 
 const ES_Port esSpdtPinout[] = {

@@ -51,10 +51,10 @@ const ES_ComponentOps esOrOps = {
 	"Or",
 	ES_OrDraw,
 	ES_OrEdit,
-	NULL,			/* menu */
-	NULL,			/* connect */
-	NULL,			/* disconnect */
-	NULL			/* export */
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	NULL			/* connect */
 };
 
 const ES_Port esOrPinout[] = {

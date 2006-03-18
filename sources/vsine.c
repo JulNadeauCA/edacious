@@ -51,10 +51,10 @@ const ES_ComponentOps esVSineOps = {
 	"Vsin",
 	ES_VSineDraw,
 	ES_VSineEdit,
-	NULL,			/* menu */
-	NULL,			/* connect */
-	NULL,			/* disconnect */
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
 	NULL,			/* export */
+	NULL			/* connect */
 };
 
 const ES_Port esVSinePorts[] = {

@@ -75,10 +75,10 @@ typedef struct es_component_ops {
 
 	void	 (*draw)(void *, VG *);
 	void	*(*edit)(void *);
-	void	 (*menu)(void *, struct ag_menu_item *);
-	int	 (*connect)(void *, ES_Port *, ES_Port *);
-	void	 (*disconnect)(void *, ES_Port *, ES_Port *);
+	void	 (*instance_menu)(void *, struct ag_menu_item *);
+	void	 (*class_menu)(struct es_circuit *, struct ag_menu_item *);
 	int	 (*export_model)(void *, enum circuit_format, FILE *);
+	int	 (*connect)(void *, ES_Port *, ES_Port *);
 } ES_ComponentOps;
 
 typedef struct es_component {

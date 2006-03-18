@@ -51,10 +51,10 @@ const ES_ComponentOps esSpstOps = {
 	"Sw",
 	ES_SpstDraw,
 	ES_SpstEdit,
-	NULL,			/* menu */
-	NULL,			/* connect */
-	NULL,			/* disconnect */
-	ES_SpstExport
+	ES_SpstInstanceMenu,
+	ES_SpstClassMenu,
+	ES_SpstExport,
+	NULL			/* connect */
 };
 
 const ES_Port esSpstPinout[] = {
@@ -169,6 +169,38 @@ ES_SpstResistance(void *p, ES_Port *p1, ES_Port *p2)
 	ES_Spst *sw = p;
 
 	return (sw->state ? sw->on_resistance : sw->off_resistance);
+}
+
+static void
+SwitchAll(AG_Event *event)
+{
+	ES_Circuit *ckt = AG_PTR(1);
+	int nstate = AG_INT(2);
+	ES_Spst *spst;
+
+	AGOBJECT_FOREACH_CLASS(spst, ckt, es_spst, "component.spst") {
+		spst->state = (nstate == -1) ? !spst->state : nstate;
+	}
+}
+
+void
+ES_SpstClassMenu(ES_Circuit *ckt, AG_MenuItem *m)
+{
+	AG_MenuAction(m, _("Switch on all"), EDA_COMPONENT_ICON,
+	    SwitchAll, "%p,%i", ckt, 1);
+	AG_MenuAction(m, _("Switch off all"), EDA_COMPONENT_ICON,
+	    SwitchAll, "%p,%i", ckt, 0);
+	AG_MenuAction(m, _("Toggle all"), EDA_COMPONENT_ICON,
+	    SwitchAll, "%p,%i", ckt, -1);
+}
+
+void
+ES_SpstInstanceMenu(void *p, AG_MenuItem *m)
+{
+	ES_Spst *spst = p;
+
+	AG_MenuIntBool(m, _("Toggle state"), EDA_COMPONENT_ICON,
+	    &spst->state, 0);
 }
 
 #ifdef EDITION

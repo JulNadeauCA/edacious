@@ -51,10 +51,10 @@ const ES_ComponentOps esInverterOps = {
 	"Inv",
 	ES_InverterDraw,
 	ES_InverterEdit,
-	NULL,			/* menu */
-	NULL,			/* connect */
-	NULL,			/* disconnect */
-	NULL			/* export */
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	NULL			/* connect */
 };
 
 const ES_Port esInverterPinout[] = {
