@@ -53,9 +53,6 @@ scan:
 		    !com->selected) {
 			continue;
 		}
-		if (AGOBJECT_SUBCLASS(com, "component.conductor")) {
-			ES_ConductorToolReinit();
-		}
 		AG_ObjMgrCloseData(com);
 		if (AG_ObjectInUse(com)) {
 			AG_TextMsg(AG_MSG_ERROR, "%s: %s", AGOBJECT(com)->name,

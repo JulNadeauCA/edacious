@@ -51,7 +51,6 @@
 #include <sources/vsquare.h>
 #include <sources/vsine.h>
 
-extern const ES_ComponentOps esConductorOps;
 extern const ES_ComponentOps esVsourceOps;
 extern const ES_ComponentOps esGroundOps;
 extern const ES_ComponentOps esResistorOps;
@@ -67,7 +66,6 @@ extern const ES_ComponentOps esVSquareOps;
 extern const ES_ComponentOps esVSineOps;
 
 const struct eda_type eda_models[] = {
-	{ "conductor",	sizeof(ES_Conductor),		&esConductorOps },
 	{ "vsource",	sizeof(ES_Vsource),		&esVsourceOps },
 	{ "ground",	sizeof(ES_Ground),		&esGroundOps },
 	{ "resistor",	sizeof(ES_Resistor),		&esResistorOps },

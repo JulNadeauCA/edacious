@@ -37,6 +37,14 @@ typedef struct es_node {
 	Uint		      nbranches;
 } ES_Node;
 
+typedef struct es_wire {
+	Uint flags;
+#define ES_WIRE_FIXED	0x01		/* Don't allow moving */
+	Uint cat;			/* Category */
+	struct es_port ports[2];	/* Ports */
+	TAILQ_ENTRY(es_wire) wires;
+} ES_Wire;
+
 /* Closed loop of port pairs with respect to some component in the circuit. */
 typedef struct es_loop {
 	Uint name;
@@ -53,6 +61,7 @@ typedef struct es_circuit {
 	AG_Object obj;
 	char descr[CIRCUIT_DESCR_MAX];	/* Short description */
 	VG *vg;				/* Schematics drawing */
+	VG_Block *vgblk;		/* Circuit display block */
 	struct ag_console *console;	/* Log console */
 	ES_Sim *sim;			/* Current simulation mode */
 	Uint flags;
@@ -65,6 +74,7 @@ typedef struct es_circuit {
 	ES_Node **nodes;		/* Nodes (element 0 is ground) */
 	ES_Loop **loops;		/* Closed loops */
 	struct es_vsource **vsrcs;	/* Independent vsources */
+	TAILQ_HEAD(,es_wire) wires;	/* Schematic lines */
 
 	Uint l;			/* Number of loops */
 	Uint m;			/* Number of independent vsources */
@@ -75,6 +85,7 @@ typedef struct es_circuit {
 #define U(com,n) ES_NodeVoltage(COM(com)->ckt,(n))
 #define ESNODE_FOREACH_BRANCH(var, ckt, node) \
 	TAILQ_FOREACH((var), &(ckt)->nodes[node]->branches, branches)
+#define ES_NODE(ckt,n) ES_CircuitGetNode((ckt),(n))
 
 __BEGIN_DECLS
 void		 ES_CircuitInit(void *, const char *);
@@ -97,7 +108,11 @@ void		 ES_CircuitCopyNode(ES_Circuit *, ES_Node *, ES_Node *);
 void		 ES_CircuitFreeNode(ES_Node *);
 ES_Branch	*ES_CircuitAddBranch(ES_Circuit *, int, ES_Port *);
 void		 ES_CircuitDelBranch(ES_Circuit *, int, ES_Branch *);
+ES_Wire		*ES_CircuitAddWire(ES_Circuit *);
+void		 ES_CircuitDelWire(ES_Circuit *, ES_Wire *);
+__inline__ void	 ES_CircuitDrawPort(ES_Circuit *, ES_Port *, float, float);
 
+__inline__ ES_Node	*ES_CircuitGetNode(ES_Circuit *, int);
 __inline__ ES_Node	*ES_CircuitFindNode(ES_Circuit *, const char *);
 __inline__ ES_Branch	*ES_CircuitGetBranch(ES_Circuit *, int, ES_Port *);
 __inline__ int		 ES_CircuitNodeNameByPtr(ES_Circuit *, ES_Node *);

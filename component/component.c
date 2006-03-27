@@ -234,44 +234,11 @@ ES_ComponentDraw(void *p, Uint32 ival, void *arg)
 		ES_Port *port = &com->ports[i];
 		float rho, theta;
 		float x, y;
-		VG_Element *vge;
 
 		VG_Car2Pol(vg, port->x, port->y, &rho, &theta);
 		theta -= com->block->theta;
 		VG_Pol2Car(vg, rho, theta, &x, &y);
-
-		if (ckt->flags & CIRCUIT_SHOW_NODES) {
-			vge = VG_Begin(vg, VG_CIRCLE);
-			vge->selected = 1;
-			VG_Vertex2(vg, x, y);
-			if (port->selected) {
-				VG_Color3(vg, 255, 255, 165);
-				VG_CircleRadius(vg, 0.1600);
-			} else {
-				VG_Color3(vg, 0, 150, 150);
-				VG_CircleRadius(vg, 0.0625);
-			}
-			VG_End(vg);
-		}
-		if (port->node >= 0) {
-			if (ckt->flags &
-			    (CIRCUIT_SHOW_NODENAMES|CIRCUIT_SHOW_NODESYMS)) {
-				vge = VG_Begin(vg, VG_TEXT);
-				vge->selected = 1;
-				VG_Vertex2(vg, x, y);
-				VG_SetStyle(vg, "node-name");
-				VG_Color3(vg, 0, 200, 100);
-				VG_TextAlignment(vg, VG_ALIGN_BR);
-				if (ckt->flags&CIRCUIT_SHOW_NODESYMS &&
-				    ckt->nodes[port->node]->sym[0] != '\0') {
-					VG_Printf(vg, "%s",
-					    ckt->nodes[port->node]->sym);
-				} else if (ckt->flags&CIRCUIT_SHOW_NODENAMES) {
-					VG_Printf(vg, "n%d", port->node);
-				}
-				VG_End(vg);
-			}
-		}
+		ES_CircuitDrawPort(ckt, port, x, y);
 	}
 
 	/* TODO blend */
@@ -666,12 +633,12 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 	pm = AG_PopupNew(vgv);
 	{
 		extern VG_ToolOps esSelcomOps;
-		extern VG_ToolOps esConductorTool;
+		extern VG_ToolOps esWireTool;
 
 		AG_MenuAction(pm->item, _("Select"), -1,
 		    SelectTool, "%p,%p,%s", vgv, com->ckt, &esSelcomOps);
 		AG_MenuAction(pm->item, _("Wire"), -1,
-		    SelectTool, "%p,%p,%s", vgv, com->ckt, &esConductorTool);
+		    SelectTool, "%p,%p,%s", vgv, com->ckt, &esWireTool);
 		AG_MenuSeparator(pm->item);
 	}
 	AG_MenuSection(pm->item, "[Component: %s]", AGOBJECT(com)->name);
@@ -765,13 +732,12 @@ tryname:
  * (that does not belong to the given component if specified).
  */
 ES_Port *
-ES_ComponentPortOverlap(ES_Circuit *ckt, ES_Component *ncom, float x,
-    float y)
+ES_ComponentPortOverlap(ES_Circuit *ckt, ES_Component *ncom, float x, float y)
 {
 	ES_Component *ocom;
+	ES_Wire *wire;
 	int i;
 	
-	/* XXX use bounding boxes */
 	AGOBJECT_FOREACH_CLASS(ocom, ckt, es_component, "component") {
 		if ((ocom == ncom) || (ocom->flags & COMPONENT_FLOATING)) {
 			continue;
@@ -779,9 +745,21 @@ ES_ComponentPortOverlap(ES_Circuit *ckt, ES_Component *ncom, float x,
 		for (i = 1; i <= ocom->nports; i++) {
 			ES_Port *oport = &ocom->ports[i];
 
+			/* XXX arbitrary fuzz */
 			if (fabs(x-ocom->block->pos.x - oport->x) < 0.25 &&
 			    fabs(y-ocom->block->pos.y - oport->y) < 0.25)
 				return (oport);
+		}
+	}
+	TAILQ_FOREACH(wire, &ckt->wires, wires) {
+		for (i = 0; i < 2; i++) {
+			ES_Port *oport = &wire->ports[i];
+
+			/* XXX arbitrary fuzz */
+			if (fabs(x - oport->x) < 0.25 &&
+			    fabs(y - oport->y) < 0.25) {
+				return (oport);
+			}
 		}
 	}
 	return (NULL);

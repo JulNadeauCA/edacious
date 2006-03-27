@@ -246,6 +246,9 @@ find_loops(ES_Vsource *vs, ES_Port *pcur)
 			vs->nlstack--;
 			continue;
 		}
+		if (br->port->com == NULL) {
+			continue;
+		}
 		for (i = 1; i <= br->port->com->nports; i++) {
 			ES_Port *pnext = &br->port->com->ports[i];
 			ES_Node *nnext = ckt->nodes[pnext->node];

@@ -34,7 +34,6 @@ struct eda_type {
 };
 
 #include <circuit/circuit.h>
-#include <component/conductor.h>
 #include <component/ground.h>
 #include <sources/vsource.h>
 

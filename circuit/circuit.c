@@ -163,7 +163,7 @@ ES_CircuitModified(ES_Circuit *ckt)
 	if (ckt->sim != NULL &&
 	    ckt->sim->ops->cktmod != NULL)
 		ckt->sim->ops->cktmod(ckt->sim, ckt);
-
+#if 0
 	AG_ObjectFreeProps(AGOBJECT(ckt));
 	for (i = 1; i <= ckt->n; i++) {
 		snprintf(key, sizeof(key), "v%u", i);
@@ -175,6 +175,7 @@ ES_CircuitModified(ES_Circuit *ckt)
 		pr = SC_SetReal(ckt, key, 0.0);
 		SC_SetRealRdFn(pr, ES_CircuitReadBranchCurrent);
 	}
+#endif
 }
 
 void
@@ -190,15 +191,15 @@ ES_CircuitInit(void *p, const char *name)
 	ckt->simlock = 0;
 	ckt->descr[0] = '\0';
 	ckt->sim = NULL;
-	pthread_mutex_init(&ckt->lock, &agRecursiveMutexAttr);
-
 	ckt->loops = NULL;
 	ckt->vsrcs = NULL;
 	ckt->m = 0;
-	
 	ckt->nodes = Malloc(sizeof(ES_Node *), M_EDA);
 	ckt->n = 0;
+	ckt->console = NULL;
 	InitGround(ckt);
+	pthread_mutex_init(&ckt->lock, &agRecursiveMutexAttr);
+	TAILQ_INIT(&ckt->wires);
 
 	vg = ckt->vg = VG_New(VG_DIRECT|VG_VISGRID);
 	strlcpy(vg->layers[0].name, _("Schematic"), sizeof(vg->layers[0].name));
@@ -210,6 +211,9 @@ ES_CircuitInit(void *p, const char *name)
 	VG_OriginRadius(vg, 2, 0.09375);
 	VG_OriginColor(vg, 2, 255, 255, 165);
 	VG_SetSnapMode(vg, VG_GRID);
+
+	ckt->vgblk = VG_BeginBlock(vg, ".generic", 0);
+	VG_EndBlock(vg);
 
 	vgs = VG_CreateStyle(vg, VG_TEXT_STYLE, "component-name");
 	vgs->vg_text_st.size = 10;
@@ -232,6 +236,7 @@ ES_CircuitReinit(void *p)
 {
 	ES_Circuit *ckt = p;
 	ES_Component *com;
+	ES_Wire *wire, *nwire;
 	Uint i;
 
 	ES_DestroySimulation(ckt);
@@ -243,7 +248,15 @@ ES_CircuitReinit(void *p)
 	Free(ckt->vsrcs, M_EDA);
 	ckt->vsrcs = NULL;
 	ckt->m = 0;
-	
+
+	for (wire = TAILQ_FIRST(&ckt->wires);
+	     wire != TAILQ_END(&ckt->wires);
+	     wire = nwire) {
+		nwire = TAILQ_NEXT(wire, wires);
+		Free(wire, M_EDA);
+	}
+	TAILQ_INIT(&ckt->wires);
+
 	for (i = 0; i <= ckt->n; i++) {
 		ES_CircuitFreeNode(ckt->nodes[i]);
 		Free(ckt->nodes[i], M_EDA);
@@ -273,7 +286,7 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 {
 	ES_Circuit *ckt = p;
 	ES_Component *com;
-	Uint32 ncoms;
+	Uint32 nitems;
 	Uint i, j, nnodes;
 
 	if (AG_ReadVersion(buf, &esCircuitVer, NULL) != 0) {
@@ -327,12 +340,34 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 	}
 
 	/* Load the schematics. */
-	if (VG_Load(ckt->vg, buf) == -1)
+	if (VG_Load(ckt->vg, buf) == -1) {
 		return (-1);
+	}
+	if ((ckt->vgblk = VG_GetBlock(ckt->vg, ".generic")) == NULL) {
+		AG_SetError("Missing .generic block");
+		return (-1);
+	}
+
+	/* Load the schematic wires. */
+	nitems = AG_ReadUint32(buf);
+	for (i = 0; i < nitems; i++) {
+		ES_Wire *wire;
+		
+		wire = ES_CircuitAddWire(ckt);
+		wire->flags = (Uint)AG_ReadUint32(buf);
+		wire->cat = (Uint)AG_ReadUint32(buf);
+		for (i = 0; i < 2; i++) {
+			ES_Port *port = &wire->ports[i];
+
+			port->x = AG_ReadFloat(buf);
+			port->y = AG_ReadFloat(buf);
+			port->node = (int)AG_ReadUint32(buf);
+		}
+	}
 
 	/* Load the component port assignments. */
-	ncoms = AG_ReadUint32(buf);
-	for (i = 0; i < ncoms; i++) {
+	nitems = AG_ReadUint32(buf);
+	for (i = 0; i < nitems; i++) {
 		char name[AG_OBJECT_NAME_MAX];
 		char path[AG_OBJECT_PATH_MAX];
 		int j, nports;
@@ -394,8 +429,9 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 	ES_Node *node;
 	ES_Branch *br;
 	ES_Component *com;
-	off_t ncoms_offs;
-	Uint32 ncoms = 0;
+	ES_Wire *wire;
+	off_t ncoms_offs, nwires_offs;
+	Uint32 ncoms = 0, nwires = 0;
 	Uint i;
 
 	AG_WriteVersion(buf, &esCircuitVer);
@@ -427,7 +463,27 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 	
 	/* Save the schematics. */
 	VG_Save(ckt->vg, buf);
-	
+
+	/* Save the schematic wires. */
+	nwires_offs = AG_NetbufTell(buf);
+	AG_WriteUint32(buf, 0);
+	TAILQ_FOREACH(wire, &ckt->wires, wires) {
+		AG_WriteUint32(buf, (Uint32)wire->flags);
+		AG_WriteUint32(buf, (Uint32)wire->cat);
+		for (i = 0; i < 2; i++) {
+			ES_Port *port = &wire->ports[i];
+
+			AG_WriteFloat(buf, port->x);
+			AG_WriteFloat(buf, port->y);
+			AG_WriteUint32(buf, (Uint32)port->node);
+#ifdef DEBUG
+			if (port->node == -1) { Fatal("Illegal wire port"); }
+#endif
+		}
+		nwires++;
+	}
+	AG_PwriteUint32(buf, nwires, nwires_offs);
+
 	/* Save the component information. */
 	ncoms_offs = AG_NetbufTell(buf);
 	AG_WriteUint32(buf, 0);
@@ -444,10 +500,10 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 			AG_WriteString(buf, port->name);
 			AG_WriteFloat(buf, port->x);
 			AG_WriteFloat(buf, port->y);
-#ifdef DEBUG
-			if (port->node == -1) { Fatal("Illegal port"); }
-#endif
 			AG_WriteUint32(buf, (Uint32)port->node);
+#ifdef DEBUG
+			if (port->node == -1) { Fatal("Illegal com port"); }
+#endif
 		}
 		ncoms++;
 	}
@@ -482,6 +538,38 @@ ES_CircuitAddNode(ES_Circuit *ckt, Uint flags)
 	ckt->nodes[n] = Malloc(sizeof(ES_Node), M_EDA);
 	InitNode(ckt->nodes[n], flags);
 	return (n);
+}
+
+ES_Wire *
+ES_CircuitAddWire(ES_Circuit *ckt)
+{
+	ES_Wire *wire;
+	int i;
+
+	wire = Malloc(sizeof(ES_Wire), M_EDA);
+	wire->flags = 0;
+	wire->cat = 0;
+	for (i = 0; i < 2; i++) {
+		ES_Port *port = &wire->ports[i];
+
+		port->n = i+1;
+		port->name[0] = '\0';
+		port->x = 0.0;
+		port->y = 0.0;
+		port->com = NULL;
+		port->node = -1;
+		port->branch = NULL;
+		port->selected = 0;
+	}
+	TAILQ_INSERT_TAIL(&ckt->wires, wire, wires);
+	return (wire);
+}
+
+void
+ES_CircuitDelWire(ES_Circuit *ckt, ES_Wire *wire)
+{
+	TAILQ_REMOVE(&ckt->wires, wire, wires);
+	Free(wire, M_EDA);
 }
 
 /*
@@ -535,6 +623,15 @@ ES_BranchCurrent(ES_Circuit *ckt, int k)
 		return (0.0);
 	}
 	return (ckt->sim->ops->branch_current(ckt->sim, k));
+}
+
+ES_Node *
+ES_CircuitGetNode(ES_Circuit *ckt, int n)
+{
+	if (n < 0 || n > ckt->n) {
+		Fatal("%s:%d: bad node (%d)", AGOBJECT(ckt)->name, n, ckt->n);
+	}
+	return (ckt->nodes[n]);
 }
 
 /* Search for a node with the given symbol. */
@@ -850,14 +947,21 @@ PollCircuitNodes(AG_Event *event)
 		TAILQ_FOREACH(br, &node->branches, branches) {
 			if (br->port == NULL) {
 				it = AG_TlistAdd(tl, NULL, "(null port)");
+				it->p1 = br;
+				it->depth = 1;
 			} else {
-				it = AG_TlistAdd(tl, NULL, "%s:%s(%d)",
-				    (br->port!=NULL && br->port->com!=NULL) ?
-				    AGOBJECT(br->port->com)->name : "(null)",
-				    br->port->name, br->port->n);
+				if (br->port->com != NULL) {
+					it = AG_TlistAdd(tl, NULL, "%s:%s(%d)",
+					    AGOBJECT(br->port->com)->name,
+					    br->port->name, br->port->n);
+					it->p1 = br;
+					it->depth = 1;
+				} else {
+					it = AG_TlistAdd(tl, NULL, _("Wire"));
+					it->p1 = br;
+					it->depth = 1;
+				}
 			}
-			it->p1 = br;
-			it->depth = 1;
 		}
 	}
 	AG_TlistRestore(tl);
@@ -1269,11 +1373,69 @@ tryname:
 	AG_ObjMgrOpenData(scope, 1);
 }
 
+void
+ES_CircuitDrawPort(ES_Circuit *ckt, ES_Port *port, float x, float y)
+{
+	VG *vg = ckt->vg;
+	VG_Element *vge;
+
+	if (ckt->flags & CIRCUIT_SHOW_NODES) {
+		vge = VG_Begin(vg, VG_CIRCLE);
+		vge->selected = 1;
+		VG_Vertex2(vg, x, y);
+		if (port->selected) {
+			VG_Color3(vg, 255, 255, 165);
+			VG_CircleRadius(vg, 0.1600);
+		} else {
+			VG_Color3(vg, 0, 150, 150);
+			VG_CircleRadius(vg, 0.0625);
+		}
+		VG_End(vg);
+	}
+	if (port->node >= 0) {
+		if (ckt->flags &
+		    (CIRCUIT_SHOW_NODENAMES|CIRCUIT_SHOW_NODESYMS)) {
+			vge = VG_Begin(vg, VG_TEXT);
+			vge->selected = 1;
+			VG_Vertex2(vg, x, y);
+			VG_SetStyle(vg, "node-name");
+			VG_Color3(vg, 0, 200, 100);
+			VG_TextAlignment(vg, VG_ALIGN_BR);
+			if (ckt->flags&CIRCUIT_SHOW_NODESYMS &&
+			    ckt->nodes[port->node]->sym[0] != '\0') {
+				VG_Printf(vg, "%s",
+				    ckt->nodes[port->node]->sym);
+			} else if (ckt->flags&CIRCUIT_SHOW_NODENAMES) {
+				VG_Printf(vg, "n%d", port->node);
+			}
+			VG_End(vg);
+		}
+	}
+}
+
 static void
-CircuitDraw(AG_Event *event)
+CircuitDrawGeneric(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
+	ES_Wire *wire;
+	int i;
 
+	ES_LockCircuit(ckt);
+	VG_SelectBlock(ckt->vg, ckt->vgblk);
+	VG_ClearBlock(ckt->vg, ckt->vgblk);
+	TAILQ_FOREACH(wire, &ckt->wires, wires) {
+		VG_Begin(ckt->vg, VG_LINES);
+		VG_Vertex2(ckt->vg, wire->ports[0].x, wire->ports[0].y);
+		VG_Vertex2(ckt->vg, wire->ports[1].x, wire->ports[1].y);
+		VG_End(ckt->vg);
+		for (i = 0; i < 2; i++) {
+			ES_Port *port = &wire->ports[i];
+
+			ES_CircuitDrawPort(ckt, &wire->ports[i],
+			    port->x, port->y);
+		}
+	}
+	ES_UnlockCircuit(ckt);
 }
 
 void *
@@ -1295,9 +1457,7 @@ ES_CircuitEdit(void *p)
 	AG_ToolbarInit(toolbar, AG_TOOLBAR_VERT, 1, 0);
 	vgv = Malloc(sizeof(VG_View), M_OBJECT);
 	VG_ViewInit(vgv, ckt->vg, VG_VIEW_EXPAND);
-#if 0
-	VG_ViewDrawFn(vgv, CircuitDraw, "%p", ckt);
-#endif
+	VG_ViewDrawFn(vgv, CircuitDrawGeneric, "%p", ckt);
 	
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	pitem = AG_MenuAddItem(menu, _("File"));
@@ -1482,7 +1642,7 @@ ES_CircuitEdit(void *p)
 	{
 		extern VG_ToolOps esInscomOps;
 		extern VG_ToolOps esSelcomOps;
-		extern VG_ToolOps esConductorTool;
+		extern VG_ToolOps esWireTool;
 #if 0
 		extern VG_ToolOps vgScaleTool;
 		extern VG_ToolOps vgOriginTool;
@@ -1509,8 +1669,8 @@ ES_CircuitEdit(void *p)
 		    CircuitSelectTool, "%p,%p,%p", vgv, tool, ckt);
 		VG_ViewSetDefaultTool(vgv, tool);
 		
-		tool = VG_ViewRegTool(vgv, &esConductorTool, ckt);
-		AG_MenuTool(pitem, toolbar, _("Insert conductor"),
+		tool = VG_ViewRegTool(vgv, &esWireTool, ckt);
+		AG_MenuTool(pitem, toolbar, _("Insert wire"),
 		    tool->ops->icon, 0, 0,
 		    CircuitSelectTool, "%p,%p,%p", vgv, tool, ckt);
 	}
