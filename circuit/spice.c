@@ -61,7 +61,7 @@ ES_CircuitExportSPICE3(ES_Circuit *ckt, const char *path)
 
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
 		if (com->ops->export_model != NULL) {
-			fprintf(f, "* %s:%s\n", AGOBJECT(com)->type,
+			fprintf(f, "* %s:%s\n", AGOBJECT(com)->ops->type,
 			    AGOBJECT(com)->name);
 			if (com->ops->export_model(com, CIRCUIT_SPICE3, f)
 			    == -1) {
@@ -69,8 +69,8 @@ ES_CircuitExportSPICE3(ES_Circuit *ckt, const char *path)
 			}
 			ncards++;
 		} else {
-			fprintf(f, "* skipped: %s:%s\n", AGOBJECT(com)->type,
-			    AGOBJECT(com)->name);
+			fprintf(f, "* skipped: %s:%s\n",
+			    AGOBJECT(com)->ops->type, AGOBJECT(com)->name);
 		}
 	}
 

@@ -35,12 +35,10 @@
 #include "eda.h"
 #include "scope.h"
 
-const AG_Version esScopeVer = {
-	"agar-eda scope",
-	0, 0
-};
-
 const AG_ObjectOps esScopeOps = {
+	"ES_Scope",
+	sizeof(ES_Scope),
+	{ 0,0 },
 	ES_ScopeInit,
 	ES_ScopeReinit,
 	ES_ScopeDestroy,
@@ -66,7 +64,7 @@ ES_ScopeAttached(AG_Event *event)
 	ES_Circuit *ckt = AG_SENDER();
 	ES_Scope *scope = AG_SELF();
 
-	if (!AGOBJECT_SUBCLASS(ckt, "circuit")) {
+	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*")) {
 		AG_FatalError("bad parent");
 	}
 	scope->ckt = ckt;
@@ -77,7 +75,7 @@ ES_ScopeInit(void *obj, const char *name)
 {
 	ES_Scope *scope = obj;
 
-	AG_ObjectInit(scope, "scope", name, &esScopeOps);
+	AG_ObjectInit(scope, name, &esScopeOps);
 	scope->ckt = NULL;
 	AG_SetEvent(scope, "attached", ES_ScopeAttached, NULL);
 }
@@ -99,18 +97,16 @@ ES_ScopeLoad(void *obj, AG_Netbuf *buf)
 {
 	ES_Scope *scope = obj;
 
-	if (AG_ReadVersion(buf, &esScopeVer, NULL) != 0)
+	if (AG_ReadObjectVersion(buf, scope, NULL) == -1) {
 		return (-1);
-
+	}
 	return (0);
 }
 
 int
 ES_ScopeSave(void *obj, AG_Netbuf *buf)
 {
-	ES_Scope *scope = obj;
-
-	AG_WriteVersion(buf, &esScopeVer);
+	AG_WriteObjectVersion(buf, obj);
 	return (0);
 }
 
@@ -145,7 +141,7 @@ PollPlots(AG_Event *event)
 	TAILQ_FOREACH(pl, &ptr->plots, plots) {
 		it = AG_TlistAdd(tl, NULL, "%s", pl->label_txt);
 		it->p1 = pl;
-		it->class = "plot";
+		it->cat = "plot";
 	}
 	AG_TlistRestore(tl);
 }
