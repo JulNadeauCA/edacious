@@ -65,21 +65,22 @@ extern const ES_ComponentOps esLogicProbeOps;
 extern const ES_ComponentOps esVSquareOps;
 extern const ES_ComponentOps esVSineOps;
 
-const struct eda_type eda_models[] = {
-	{ "vsource",	sizeof(ES_Vsource),		&esVsourceOps },
-	{ "ground",	sizeof(ES_Ground),		&esGroundOps },
-	{ "resistor",	sizeof(ES_Resistor),		&esResistorOps },
-	{ "semiresistor", sizeof(ES_SemiResistor),	&esSemiResistorOps },
-	{ "spst",	sizeof(ES_Spst),		&esSpstOps },
-	{ "spdt",	sizeof(ES_Spdt),		&esSpdtOps },
-	{ "led",	sizeof(ES_Led),			&esLedOps },
-	{ "logic_probe", sizeof(ES_LogicProbe),		&esLogicProbeOps },
-	{ "digital.inverter", sizeof(ES_Inverter),	&esInverterOps },
-	{ "digital.and", sizeof(ES_And),		&esAndOps },
-	{ "digital.or",	sizeof(ES_Or),			&esOrOps },
-	{ "vsource.square", sizeof(ES_VSquare),		&esVSquareOps },
-	{ "vsource.sine", sizeof(ES_VSine),		&esVSineOps },
-	{ NULL }
+/* Built-in models */
+const void *eda_models[] = {
+	&esVsourceOps,
+	&esGroundOps,
+	&esResistorOps,
+	&esSemiResistorOps,
+	&esSpstOps,
+	&esSpdtOps,
+	&esLedOps,
+	&esLogicProbeOps,
+	&esInverterOps,
+	&esAndOps,
+	&esOrOps,
+	&esVSquareOps,
+	&esVSineOps,
+	NULL
 };
 
 int
@@ -87,7 +88,7 @@ main(int argc, char *argv[])
 {
 	extern const AG_ObjectOps esCircuitOps;
 	extern const AG_ObjectOps esScopeOps;
-	const struct eda_type *ty;
+	const void **model;
 	int c, i, fps = -1;
 	char *s;
 
@@ -141,17 +142,11 @@ main(int argc, char *argv[])
 	AG_BindGlobalKey(SDLK_F1, KMOD_NONE, AG_ShowSettings);
 	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
 	
-	for (ty = &eda_models[0]; ty->name != NULL; ty++) {
-		char tname[AG_OBJECT_NAME_MAX];
-	
-		strlcpy(tname, "component.", sizeof(tname));
-		strlcat(tname, ty->name, sizeof(tname));
-		AG_RegisterType(tname, ty->size, ty->ops, EDA_COMPONENT_ICON);
+	for (model = &eda_models[0]; *model != NULL; model++) {
+		AG_RegisterType(*model, EDA_COMPONENT_ICON);
 	}
-	AG_RegisterType("circuit", sizeof(ES_Circuit), &esCircuitOps,
-	    EDA_CIRCUIT_ICON);
-	AG_RegisterType("scope", sizeof(ES_Scope), &esScopeOps,
-	    EDA_CIRCUIT_ICON);
+	AG_RegisterType(&esCircuitOps, EDA_CIRCUIT_ICON);
+	AG_RegisterType(&esScopeOps, EDA_CIRCUIT_ICON);
 	
 	/* Initialize the object manager. */
 	AG_ObjMgrInit();

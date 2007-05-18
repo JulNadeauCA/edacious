@@ -27,12 +27,6 @@
 #include <math.h>
 #include <string.h>
 
-struct eda_type {
-	const char *name;
-	size_t size;
-	const void *ops;
-};
-
 #include <circuit/circuit.h>
 #include <component/ground.h>
 #include <sources/vsource.h>
