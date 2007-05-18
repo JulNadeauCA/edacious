@@ -35,12 +35,10 @@
 #include "spice.h"
 #include "scope.h"
 
-const AG_Version esCircuitVer = {
-	"agar-eda circuit",
-	0, 0
-};
-
 const AG_ObjectOps esCircuitOps = {
+	"ES_Circuit",
+	sizeof(ES_Circuit),
+	{ 0,0 },
 	ES_CircuitInit,
 	ES_CircuitReinit,
 	ES_CircuitDestroy,
@@ -186,7 +184,7 @@ ES_CircuitInit(void *p, const char *name)
 	VG_Style *vgs;
 	VG *vg;
 
-	AG_ObjectInit(ckt, "circuit", name, &esCircuitOps);
+	AG_ObjectInit(ckt, name, &esCircuitOps);
 	ckt->flags = CIRCUIT_SHOW_NODES|CIRCUIT_SHOW_NODESYMS;
 	ckt->simlock = 0;
 	ckt->descr[0] = '\0';
@@ -197,9 +195,11 @@ ES_CircuitInit(void *p, const char *name)
 	ckt->nodes = Malloc(sizeof(ES_Node *), M_EDA);
 	ckt->n = 0;
 	ckt->console = NULL;
-	InitGround(ckt);
 	pthread_mutex_init(&ckt->lock, &agRecursiveMutexAttr);
 	TAILQ_INIT(&ckt->wires);
+	TAILQ_INIT(&ckt->syms);
+	
+	InitGround(ckt);
 
 	vg = ckt->vg = VG_New(VG_DIRECT|VG_VISGRID);
 	strlcpy(vg->layers[0].name, _("Schematic"), sizeof(vg->layers[0].name));
@@ -237,6 +237,7 @@ ES_CircuitReinit(void *p)
 	ES_Circuit *ckt = p;
 	ES_Component *com;
 	ES_Wire *wire, *nwire;
+	ES_Sym *sym, *nsym;
 	Uint i;
 
 	ES_DestroySimulation(ckt);
@@ -256,6 +257,14 @@ ES_CircuitReinit(void *p)
 		Free(wire, M_EDA);
 	}
 	TAILQ_INIT(&ckt->wires);
+	
+	for (sym = TAILQ_FIRST(&ckt->syms);
+	     sym != TAILQ_END(&ckt->syms);
+	     sym = nsym) {
+		nsym = TAILQ_NEXT(sym, syms);
+		Free(sym, M_EDA);
+	}
+	TAILQ_INIT(&ckt->syms);
 
 	for (i = 0; i <= ckt->n; i++) {
 		ES_CircuitFreeNode(ckt->nodes[i]);
@@ -289,7 +298,7 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 	Uint32 nitems;
 	Uint i, j, nnodes;
 
-	if (AG_ReadVersion(buf, &esCircuitVer, NULL) != 0) {
+	if (AG_ReadObjectVersion(buf, ckt, NULL) != 0) {
 		return (-1);
 	}
 	AG_CopyString(ckt->descr, buf, sizeof(ckt->descr));
@@ -311,8 +320,6 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 		} else {
 			name = ES_CircuitAddNode(ckt, flags & ~(CKTNODE_EXAM));
 		}
-		AG_CopyString(ckt->nodes[i]->sym, buf,
-		    sizeof(ckt->nodes[i]->sym));
 
 		for (j = 0; j < nbranches; j++) {
 			char ppath[AG_OBJECT_PATH_MAX];
@@ -362,6 +369,30 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 			port->x = AG_ReadFloat(buf);
 			port->y = AG_ReadFloat(buf);
 			port->node = (int)AG_ReadUint32(buf);
+		}
+	}
+
+	/* Load the symbol table. */
+	nitems = AG_ReadUint32(buf);
+	for (i = 0; i < nitems; i++) {
+		char name[CIRCUIT_SYM_MAX];
+		ES_Sym *sym;
+		
+		sym = ES_CircuitAddSym(ckt);
+		AG_CopyString(sym->name, buf, sizeof(sym->name));
+		AG_CopyString(sym->descr, buf, sizeof(sym->descr));
+		sym->type = (enum es_sym_type)AG_ReadUint32(buf);
+		AG_ReadUint32(buf);				/* Pad */
+		switch (sym->type) {
+		case ES_SYM_NODE:
+			sym->p.node = (int)AG_ReadSint32(buf);
+			break;
+		case ES_SYM_VSOURCE:
+			sym->p.vsource = (int)AG_ReadSint32(buf);
+			break;
+		case ES_SYM_ISOURCE:
+			sym->p.isource = (int)AG_ReadSint32(buf);
+			break;
 		}
 	}
 
@@ -430,23 +461,22 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 	ES_Branch *br;
 	ES_Component *com;
 	ES_Wire *wire;
-	off_t ncoms_offs, nwires_offs;
-	Uint32 ncoms = 0, nwires = 0;
+	ES_Sym *sym;
+	off_t count_offs;
+	Uint32 count;
 	Uint i;
 
-	AG_WriteVersion(buf, &esCircuitVer);
+	AG_WriteObjectVersion(buf, ckt);
 	AG_WriteString(buf, ckt->descr);
 	AG_WriteUint32(buf, ckt->flags);
 	AG_WriteUint32(buf, ckt->n);
 	for (i = 0; i <= ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
-		off_t nbranches_offs;
-		Uint32 nbranches = 0;
 
 		AG_WriteUint32(buf, (Uint32)node->flags);
-		nbranches_offs = AG_NetbufTell(buf);
+		count_offs = AG_NetbufTell(buf);
+		count = 0;
 		AG_WriteUint32(buf, 0);
-		AG_WriteString(buf, node->sym);
 		TAILQ_FOREACH(br, &node->branches, branches) {
 			if (br->port == NULL || br->port->com == NULL ||
 			    br->port->com->flags & COMPONENT_FLOATING) {
@@ -456,16 +486,17 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 			AG_WriteString(buf, path);
 			AG_WriteUint32(buf, 0);			/* Pad */
 			AG_WriteUint32(buf, (Uint32)br->port->n);
-			nbranches++;
+			count++;
 		}
-		AG_PwriteUint32(buf, nbranches, nbranches_offs);
+		AG_PwriteUint32(buf, count, count_offs);
 	}
 	
 	/* Save the schematics. */
 	VG_Save(ckt->vg, buf);
 
 	/* Save the schematic wires. */
-	nwires_offs = AG_NetbufTell(buf);
+	count_offs = AG_NetbufTell(buf);
+	count = 0;
 	AG_WriteUint32(buf, 0);
 	TAILQ_FOREACH(wire, &ckt->wires, wires) {
 		AG_WriteUint32(buf, (Uint32)wire->flags);
@@ -480,12 +511,37 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 			if (port->node == -1) { Fatal("Illegal wire port"); }
 #endif
 		}
-		nwires++;
+		count++;
 	}
-	AG_PwriteUint32(buf, nwires, nwires_offs);
+	AG_PwriteUint32(buf, count, count_offs);
+
+	/* Save the symbol table. */
+	count_offs = AG_NetbufTell(buf);
+	count = 0;
+	AG_WriteUint32(buf, 0);
+	TAILQ_FOREACH(sym, &ckt->syms, syms) {
+		AG_WriteString(buf, sym->name);
+		AG_WriteString(buf, sym->descr);
+		AG_WriteUint32(buf, (Uint32)sym->type);
+		AG_WriteUint32(buf, 0);				/* Pad */
+		switch (sym->type) {
+		case ES_SYM_NODE:
+			AG_WriteSint32(buf, (Sint32)sym->p.node);
+			break;
+		case ES_SYM_VSOURCE:
+			AG_WriteSint32(buf, (Sint32)sym->p.vsource);
+			break;
+		case ES_SYM_ISOURCE:
+			AG_WriteSint32(buf, (Sint32)sym->p.isource);
+			break;
+		}
+		count++;
+	}
+	AG_PwriteUint32(buf, count, count_offs);
 
 	/* Save the component information. */
-	ncoms_offs = AG_NetbufTell(buf);
+	count_offs = AG_NetbufTell(buf);
+	count = 0;
 	AG_WriteUint32(buf, 0);
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
 		if (com->flags & COMPONENT_FLOATING) {
@@ -505,16 +561,15 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 			if (port->node == -1) { Fatal("Illegal com port"); }
 #endif
 		}
-		ncoms++;
+		count++;
 	}
-	AG_PwriteUint32(buf, ncoms, ncoms_offs);
+	AG_PwriteUint32(buf, count, count_offs);
 	return (0);
 }
 
 static void
 InitNode(ES_Node *node, Uint flags)
 {
-	node->sym[0] = '\0';
 	node->flags = flags;
 	node->nbranches = 0;
 	TAILQ_INIT(&node->branches);
@@ -525,6 +580,7 @@ InitGround(ES_Circuit *ckt)
 {
 	ckt->nodes[0] = Malloc(sizeof(ES_Node), M_EDA);
 	InitNode(ckt->nodes[0], CKTNODE_REFERENCE);
+	ES_CircuitAddNodeSym(ckt, "Gnd", 0);
 }
 
 /* Create a new node with no branches. */
@@ -565,6 +621,79 @@ ES_CircuitAddWire(ES_Circuit *ckt)
 	return (wire);
 }
 
+ES_Sym *
+ES_CircuitAddNodeSym(ES_Circuit *ckt, const char *name, int node)
+{
+	ES_Sym *sym;
+
+	sym = ES_CircuitAddSym(ckt);
+	strlcpy(sym->name, name, sizeof(sym->name));
+	sym->type = ES_SYM_NODE;
+	sym->p.node = node;
+	return (sym);
+}
+
+ES_Sym *
+ES_CircuitAddVsourceSym(ES_Circuit *ckt, const char *name, int vsource)
+{
+	ES_Sym *sym;
+
+	sym = ES_CircuitAddSym(ckt);
+	strlcpy(sym->name, name, sizeof(sym->name));
+	sym->type = ES_SYM_VSOURCE;
+	sym->p.vsource = vsource;
+	return (sym);
+}
+
+ES_Sym *
+ES_CircuitAddIsourceSym(ES_Circuit *ckt, const char *name, int isource)
+{
+	ES_Sym *sym;
+
+	sym = ES_CircuitAddSym(ckt);
+	strlcpy(sym->name, name, sizeof(sym->name));
+	sym->type = ES_SYM_ISOURCE;
+	sym->p.vsource = isource;
+	return (sym);
+}
+
+ES_Sym *
+ES_CircuitAddSym(ES_Circuit *ckt)
+{
+	ES_Sym *sym;
+
+	sym = Malloc(sizeof(ES_Sym), M_EDA);
+	sym->name[0] = '\0';
+	sym->descr[0] = '\0';
+	sym->type = 0;
+	sym->p.node = 0;
+	TAILQ_INSERT_TAIL(&ckt->syms, sym, syms);
+	return (sym);
+}
+
+void
+ES_CircuitDelSym(ES_Circuit *ckt, ES_Sym *sym)
+{
+	TAILQ_REMOVE(&ckt->syms, sym, syms);
+	Free(sym, M_EDA);
+}
+
+ES_Sym *
+ES_CircuitFindSym(ES_Circuit *ckt, const char *name)
+{
+	ES_Sym *sym;
+
+	TAILQ_FOREACH(sym, &ckt->syms, syms) {
+		if (strcmp(sym->name, name) == 0)
+			break;
+	}
+	if (sym == NULL) {
+		AG_SetError(_("%s: no such symbol: `%s'"),
+		    AGOBJECT(ckt)->name, name);
+	}
+	return (sym);
+}
+
 void
 ES_CircuitDelWire(ES_Circuit *ckt, ES_Wire *wire)
 {
@@ -589,7 +718,7 @@ ES_NodeVsource(ES_Circuit *ckt, int n, int m, int *sign)
 			continue;
 		}
 		if (COM(vs)->flags & COMPONENT_FLOATING ||
-		   !AGOBJECT_SUBCLASS(vs, "component.vsource") ||
+		   !AG_ObjectIsClass(vs, "ES_Component:ES_Vsource:*") ||
 		   vs != ckt->vsrcs[m-1]) {
 			continue;
 		}
@@ -634,19 +763,47 @@ ES_CircuitGetNode(ES_Circuit *ckt, int n)
 	return (ckt->nodes[n]);
 }
 
-/* Search for a node with the given symbol. */
-ES_Node *
-ES_CircuitFindNode(ES_Circuit *ckt, const char *sym)
+/* Return the matching symbol (or "nX") for a given node. */
+void
+ES_CircuitNodeSymbol(ES_Circuit *ckt, int n, char *dst, size_t dst_len)
 {
-	int i;
-	
-	for (i = 1; i <= ckt->n; i++) {
-		ES_Node *node = ckt->nodes[i];
+	ES_Sym *sym;
 
-		if (strcmp(node->sym, sym) == 0)
-			return (node);
+	if (n < 0) {
+		strlcpy(dst, "(null)", sizeof(dst));
+		return;
 	}
-	AG_SetError(_("No such node: %s"), sym);
+	TAILQ_FOREACH(sym, &ckt->syms, syms) {
+		if (sym->type == ES_SYM_NODE &&
+		    sym->p.node == n) {
+			strlcpy(dst, sym->name, dst_len);
+			return;
+		}
+	}
+	snprintf(dst, dst_len, "n%d", n);
+	return;
+}
+
+/* Search for a node matching the given name (symbol or "nX") */
+ES_Node *
+ES_CircuitFindNode(ES_Circuit *ckt, const char *name)
+{
+	ES_Sym *sym;
+
+	TAILQ_FOREACH(sym, &ckt->syms, syms) {
+		if (sym->type == ES_SYM_NODE &&
+		    strcmp(sym->name, name) == 0 &&
+		    sym->p.node >= 0 && sym->p.node <= ckt->n)
+			return (ckt->nodes[sym->p.node]);
+	}
+	if (name[0] == 'n' && name[1] != '\0') {
+		int n = atoi(&name[1]);
+
+		if (n >= 0 && n <= ckt->n) {
+			return (ckt->nodes[n]);
+		}
+	}
+	AG_SetError(_("No such node: `%s'"), name);
 	return (NULL);
 }
 
@@ -1210,7 +1367,7 @@ FindCircuitObjs(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 	it = AG_TlistAdd(tl, NULL, "%s%s", pob->name,
 	    (pob->flags & AG_OBJECT_DATA_RESIDENT) ? " (resident)" : "");
 	it->depth = depth;
-	it->class = "object";
+	it->cat = "object";
 	it->p1 = pob;
 
 	if (!TAILQ_EMPTY(&pob->children)) {
@@ -1401,12 +1558,16 @@ ES_CircuitDrawPort(ES_Circuit *ckt, ES_Port *port, float x, float y)
 			VG_SetStyle(vg, "node-name");
 			VG_Color3(vg, 0, 200, 100);
 			VG_TextAlignment(vg, VG_ALIGN_BR);
-			if (ckt->flags&CIRCUIT_SHOW_NODESYMS &&
-			    ckt->nodes[port->node]->sym[0] != '\0') {
-				VG_Printf(vg, "%s",
-				    ckt->nodes[port->node]->sym);
-			} else if (ckt->flags&CIRCUIT_SHOW_NODENAMES) {
+
+			if ((ckt->flags & CIRCUIT_SHOW_NODESYMS) == 0 &&
+			    (ckt->flags & CIRCUIT_SHOW_NODENAMES)) {
 				VG_Printf(vg, "n%d", port->node);
+			} else {
+				char sym[CIRCUIT_SYM_MAX];
+
+				ES_CircuitNodeSymbol(ckt, port->node, sym,
+				    sizeof(sym));
+				VG_Printf(vg, "%s", sym);
 			}
 			VG_End(vg);
 		}
@@ -1554,8 +1715,8 @@ ES_CircuitEdit(void *p)
 		ntab = AG_NotebookAddTab(nb, _("Models"), AG_BOX_VERT);
 		{
 			char tname[AG_OBJECT_TYPE_MAX];
-			extern const struct eda_type eda_models[];
-			const struct eda_type *ty;
+			extern const void *eda_models[];
+			const void **model;
 			int i;
 
 			tl = AG_TlistNew(ntab, AG_TLIST_EXPAND);
@@ -1567,12 +1728,9 @@ ES_CircuitEdit(void *p)
 			    _("Insert component"),
 			    ES_ComponentInsert, "%p,%p,%p", vgv, tl, ckt);
 
-			for (ty = &eda_models[0]; ty->name != NULL; ty++) {
+			for (model = &eda_models[0]; *model != NULL; model++) {
 				for (i = 0; i < agnTypes; i++) {
-					strlcpy(tname, "component.",
-					    sizeof(tname));
-					strlcat(tname, ty->name, sizeof(tname));
-					if (strcmp(agTypes[i].type, tname) == 0)
+					if (agTypes[i].ops == *model)
 						break;
 				}
 				if (i < agnTypes) {

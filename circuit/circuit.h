@@ -18,6 +18,8 @@
 #define CIRCUIT_MAX_BRANCHES	32
 #define CIRCUIT_MAX_NODES	(0xffff-1)
 #define CKTNODE_SYM_MAX		24
+#define CIRCUIT_SYM_MAX		24
+#define CIRCUIT_SYM_DESCR_MAX	128
 
 /* Connection to one component. */
 typedef struct es_branch {
@@ -27,7 +29,6 @@ typedef struct es_branch {
 
 /* Connection between two or more components. */
 typedef struct es_node {
-	char sym[CKTNODE_SYM_MAX];	/* Symbolic name */
 	Uint flags;
 #define CKTNODE_EXAM		0x01	/* Branches are being examined
 					   (used to avoid redundancies) */
@@ -54,6 +55,22 @@ typedef struct es_loop {
 	TAILQ_ENTRY(es_loop) loops;
 } ES_Loop;
 
+typedef struct es_sym {
+	char name[CIRCUIT_SYM_MAX];
+	char descr[CIRCUIT_SYM_DESCR_MAX];
+	enum es_sym_type {
+		ES_SYM_NODE,
+		ES_SYM_VSOURCE,
+		ES_SYM_ISOURCE,
+	} type;
+	union {
+		int node;
+		int vsource;
+		int isource;
+	} p;
+	TAILQ_ENTRY(es_sym) syms;
+} ES_Sym;
+
 struct es_vsource;
 struct ag_console;
 
@@ -75,6 +92,7 @@ typedef struct es_circuit {
 	ES_Loop **loops;		/* Closed loops */
 	struct es_vsource **vsrcs;	/* Independent vsources */
 	TAILQ_HEAD(,es_wire) wires;	/* Schematic lines */
+	TAILQ_HEAD(,es_sym) syms;	/* Symbols */
 
 	Uint l;			/* Number of loops */
 	Uint m;			/* Number of independent vsources */
@@ -113,6 +131,8 @@ void		 ES_CircuitDelWire(ES_Circuit *, ES_Wire *);
 __inline__ void	 ES_CircuitDrawPort(ES_Circuit *, ES_Port *, float, float);
 
 __inline__ ES_Node	*ES_CircuitGetNode(ES_Circuit *, int);
+__inline__ void		 ES_CircuitNodeSymbol(ES_Circuit *, int, char *,
+			                      size_t);
 __inline__ ES_Node	*ES_CircuitFindNode(ES_Circuit *, const char *);
 __inline__ ES_Branch	*ES_CircuitGetBranch(ES_Circuit *, int, ES_Port *);
 __inline__ int		 ES_CircuitNodeNameByPtr(ES_Circuit *, ES_Node *);
@@ -126,6 +146,13 @@ __inline__ void	 ES_SuspendSimulation(ES_Circuit *);
 ES_Sim		*ES_SetSimulationMode(ES_Circuit *, const ES_SimOps *);
 void		 ES_CircuitModified(ES_Circuit *);
 void		 ES_DestroySimulation(ES_Circuit *);
+
+ES_Sym		  *ES_CircuitAddSym(ES_Circuit *);
+ES_Sym		  *ES_CircuitAddNodeSym(ES_Circuit *, const char *, int);
+ES_Sym		  *ES_CircuitAddVsourceSym(ES_Circuit *, const char *, int);
+ES_Sym		  *ES_CircuitAddIsourceSym(ES_Circuit *, const char *, int);
+void		   ES_CircuitDelSym(ES_Circuit *, ES_Sym *);
+__inline__ ES_Sym *ES_CircuitFindSym(ES_Circuit *, const char *);
 
 __END_DECLS
 
