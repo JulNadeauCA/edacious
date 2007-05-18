@@ -50,8 +50,7 @@ typedef struct es_digital {
 #define digOutLO(p,j) (U(p,j) <= DIG(p)->Vol)
 
 __BEGIN_DECLS
-void	 ES_DigitalInit(void *, const char *, const char *, const void *,
-	                const ES_Port *);
+void	 ES_DigitalInit(void *, const char *, const void *, const ES_Port *);
 int	 ES_DigitalLoad(void *, AG_Netbuf *);
 int	 ES_DigitalSave(void *, AG_Netbuf *);
 int	 ES_DigitalExport(void *, enum circuit_format, FILE *);

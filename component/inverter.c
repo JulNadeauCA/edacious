@@ -33,13 +33,11 @@
 #include "eda.h"
 #include "inverter.h"
 
-const AG_Version esInverterVer = {
-	"agar-eda inverter",
-	0, 0
-};
-
 const ES_ComponentOps esInverterOps = {
 	{
+		"ES_Component:ES_Digital:ES_Inverter",
+		sizeof(ES_Inverter),
+		{ 0,0 },
 		ES_InverterInit,
 		NULL,			/* reinit */
 		ES_ComponentDestroy,
@@ -103,8 +101,7 @@ ES_InverterInit(void *p, const char *name)
 {
 	ES_Inverter *inv = p;
 
-	ES_DigitalInit(inv, "digital.inverter", name, &esInverterOps,
-	    esInverterPinout);
+	ES_DigitalInit(inv, name, &esInverterOps, esInverterPinout);
 	COM(inv)->intUpdate = ES_InverterUpdate;
 #if 0
 	ES_SetSpec(inv, "Tp", _("Propagation delay from A to A-bar"),

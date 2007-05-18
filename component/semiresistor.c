@@ -33,13 +33,11 @@
 #include "eda.h"
 #include "semiresistor.h"
 
-const AG_Version esSemiResistorVer = {
-	"agar-eda semiconductor resistor",
-	0, 0
-};
-
 const ES_ComponentOps esSemiResistorOps = {
 	{
+		"ES_Component:ES_SemiResistor",
+		sizeof(ES_SemiResistor),
+		{ 0,0 },
 		ES_SemiResistorInit,
 		NULL,			/* reinit */
 		ES_ComponentDestroy,
@@ -96,8 +94,7 @@ ES_SemiResistorInit(void *p, const char *name)
 {
 	ES_SemiResistor *r = p;
 
-	ES_ComponentInit(r, "semiresistor", name, &esSemiResistorOps,
-	    esSemiResistorPinout);
+	ES_ComponentInit(r, name, &esSemiResistorOps, esSemiResistorPinout);
 	r->l = 2e-6;
 	r->w = 1e-6;
 	r->rsh = 1000;
@@ -112,7 +109,7 @@ ES_SemiResistorLoad(void *p, AG_Netbuf *buf)
 {
 	ES_SemiResistor *r = p;
 
-	if (AG_ReadVersion(buf, &esSemiResistorVer, NULL) == -1 ||
+	if (AG_ReadObjectVersion(buf, r, NULL) == -1 ||
 	    ES_ComponentLoad(r, buf) == -1)
 		return (-1);
 
@@ -131,7 +128,7 @@ ES_SemiResistorSave(void *p, AG_Netbuf *buf)
 {
 	ES_SemiResistor *r = p;
 
-	AG_WriteVersion(buf, &esSemiResistorVer);
+	AG_WriteObjectVersion(buf, r);
 	if (ES_ComponentSave(r, buf) == -1)
 		return (-1);
 

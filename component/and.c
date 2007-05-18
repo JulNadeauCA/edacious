@@ -33,13 +33,11 @@
 #include "eda.h"
 #include "and.h"
 
-const AG_Version esAndVer = {
-	"agar-eda and gate",
-	0, 0
-};
-
 const ES_ComponentOps esAndOps = {
 	{
+		"ES_Component:ES_Digital:ES_And",
+		sizeof(ES_And),
+		{ 0,0 },
 		ES_AndInit,
 		NULL,			/* reinit */
 		ES_ComponentDestroy,
@@ -83,7 +81,6 @@ ES_AndDraw(void *p, VG *vg)
 #if 0
 	VG_VLine(vg, 0.25, -0.625, +0.625);
 #endif
-
 	VG_Begin(vg, VG_TEXT);
 	VG_SetStyle(vg, "component-name");
 	VG_Vertex2(vg, 1.0, 0);
@@ -97,7 +94,7 @@ ES_AndInit(void *p, const char *name)
 {
 	ES_And *gate = p;
 
-	ES_DigitalInit(gate, "digital.and", name, &esAndOps, esAndPinout);
+	ES_DigitalInit(gate, name, &esAndOps, esAndPinout);
 	COM(gate)->intUpdate = ES_AndUpdate;
 	ES_LogicOutput(gate, "A&B", ES_HI_Z);
 }

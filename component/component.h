@@ -125,8 +125,7 @@ typedef struct es_component {
 #endif
 
 __BEGIN_DECLS
-void	 ES_ComponentInit(void *, const char *, const char *, const void *,
-		          const ES_Port *);
+void	 ES_ComponentInit(void *, const char *, const void *, const ES_Port *);
 void	 ES_ComponentDestroy(void *);
 int	 ES_ComponentLoad(void *, AG_Netbuf *);
 int	 ES_ComponentSave(void *, AG_Netbuf *);
@@ -135,7 +134,6 @@ void	 ES_ComponentReinit(void *);
 void	 ES_ComponentFreePorts(ES_Component *);
 void	 ES_ComponentSetOps(void *, const void *);
 void	 ES_ComponentSetPorts(void *, const ES_Port *);
-void	 ES_ComponentSetType(void *, const char *);
 
 void	 ES_ComponentOpenMenu(ES_Component *, VG_View *);
 void	 ES_ComponentCloseMenu(VG_View *);

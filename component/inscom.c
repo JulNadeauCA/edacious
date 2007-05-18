@@ -48,7 +48,7 @@ ES_RemoveComponent(VG_Tool *t, SDLKey key, int state, void *arg)
 	ES_LockCircuit(ckt);
 scan:
 	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AGOBJECT_SUBCLASS(com, "component") ||
+		if (!AG_ObjectIsClass(com, "ES_Component:*") ||
 		    com->flags & COMPONENT_FLOATING ||
 		    !com->selected) {
 			continue;

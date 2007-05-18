@@ -33,9 +33,26 @@
 #include "eda.h"
 #include "digital.h"
 
-const AG_Version esDigitalVer = {
-	"agar-eda digital",
-	0, 0
+const ES_ComponentOps esDigitalOps = {
+	{
+		"ES_Component:ES_Digital",
+		sizeof(ES_Digital),
+		{ 0,0 },
+		NULL,			/* init */
+		NULL,			/* reinit */
+		NULL,			/* destroy */
+		NULL,			/* load */
+		NULL,			/* save */
+		NULL,			/* edit */
+	},
+	N_("Digital component"),
+	"Digital",
+	NULL,			/* draw */
+	NULL,			/* edit */
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	NULL			/* connect */
 };
 
 void
@@ -67,7 +84,7 @@ ES_DigitalLoad(void *p, AG_Netbuf *buf)
 {
 	ES_Digital *dig = p;
 
-	if (AG_ReadVersion(buf, &esDigitalVer, NULL) == -1 ||
+	if (AG_ReadObjectVersion(buf, dig, NULL) == -1 ||
 	    ES_ComponentLoad(dig, buf) == -1)
 		return (-1);
 
@@ -93,7 +110,7 @@ ES_DigitalSave(void *p, AG_Netbuf *buf)
 {
 	ES_Digital *dig = p;
 
-	AG_WriteVersion(buf, &esDigitalVer);
+	AG_WriteObjectVersion(buf, dig);
 	if (ES_ComponentSave(dig, buf) == -1)
 		return (-1);
 
@@ -220,12 +237,12 @@ ES_LogicInput(void *p, const char *portname)
 }
 
 void
-ES_DigitalInit(void *p, const char *type, const char *name, const void *ops,
+ES_DigitalInit(void *p, const char *name, const void *ops,
     const ES_Port *pinout)
 {
 	ES_Digital *dig = p;
 
-	ES_ComponentInit(dig, type, name, ops, pinout);
+	ES_ComponentInit(dig, name, ops, pinout);
 	AG_ObjectSetOps(dig, ops);
 	dig->VccPort = 1;
 	dig->GndPort = 2;

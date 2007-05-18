@@ -33,13 +33,11 @@
 #include "eda.h"
 #include "or.h"
 
-const AG_Version esOrVer = {
-	"agar-eda or gate",
-	0, 0
-};
-
 const ES_ComponentOps esOrOps = {
 	{
+		"ES_Component:ES_Digital:ES_Or",
+		sizeof(ES_Or),
+		{ 0,0 },
 		ES_OrInit,
 		NULL,			/* reinit */
 		ES_ComponentDestroy,
@@ -104,7 +102,7 @@ ES_OrInit(void *p, const char *name)
 {
 	ES_Or *gate = p;
 
-	ES_DigitalInit(gate, "digital.or", name, &esOrOps, esOrPinout);
+	ES_DigitalInit(gate, name, &esOrOps, esOrPinout);
 	COM(gate)->intUpdate = ES_OrUpdate;
 	ES_LogicOutput(gate, "A|B", ES_HI_Z);
 }

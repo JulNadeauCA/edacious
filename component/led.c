@@ -32,13 +32,11 @@
 #include "eda.h"
 #include "led.h"
 
-const AG_Version esLedVer = {
-	"agar-eda led",
-	0, 0
-};
-
 const ES_ComponentOps esLedOps = {
 	{
+		"ES_Component:ES_Led",
+		sizeof(ES_Led),
+		{ 0,0 },
 		ES_LedInit,
 		NULL,			/* reinit */
 		ES_ComponentDestroy,
@@ -84,30 +82,30 @@ ES_LedDraw(void *p, VG *vg)
 int
 ES_LedLoad(void *p, AG_Netbuf *buf)
 {
-	ES_Led *r = p;
+	ES_Led *led = p;
 
-	if (AG_ReadVersion(buf, &esLedVer, NULL) == -1 ||
-	    ES_ComponentLoad(r, buf) == -1)
+	if (AG_ReadObjectVersion(buf, led, NULL) == -1 ||
+	    ES_ComponentLoad(led, buf) == -1)
 		return (-1);
 
-	r->Vforw = SC_ReadReal(buf);
-	r->Vrev = SC_ReadReal(buf);
-	r->I = SC_ReadReal(buf);
+	led->Vforw = SC_ReadReal(buf);
+	led->Vrev = SC_ReadReal(buf);
+	led->I = SC_ReadReal(buf);
 	return (0);
 }
 
 int
 ES_LedSave(void *p, AG_Netbuf *buf)
 {
-	ES_Led *r = p;
+	ES_Led *led = p;
 
-	AG_WriteVersion(buf, &esLedVer);
-	if (ES_ComponentSave(r, buf) == -1)
+	AG_WriteObjectVersion(buf, led);
+	if (ES_ComponentSave(led, buf) == -1)
 		return (-1);
 
-	SC_WriteReal(buf, r->Vforw);
-	SC_WriteReal(buf, r->Vrev);
-	SC_WriteReal(buf, r->I);
+	SC_WriteReal(buf, led->Vforw);
+	SC_WriteReal(buf, led->Vrev);
+	SC_WriteReal(buf, led->I);
 	return (0);
 }
 
@@ -126,7 +124,7 @@ ES_LedInit(void *p, const char *name)
 {
 	ES_Led *r = p;
 
-	ES_ComponentInit(r, "led", name, &esLedOps, esLedPinout);
+	ES_ComponentInit(r, name, &esLedOps, esLedPinout);
 	r->Vforw = 30e-3;
 	r->Vrev = 5.0;
 	r->I = 2500e-3;

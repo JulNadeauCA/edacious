@@ -33,13 +33,11 @@
 #include "eda.h"
 #include "vsource.h"
 
-const AG_Version esVsourceVer = {
-	"agar-eda voltage source",
-	0, 0
-};
-
 const ES_ComponentOps esVsourceOps = {
 	{
+		"ES_Component:ES_Vsource",
+		sizeof(ES_Vsource),
+		{ 0,0 },
 		ES_VsourceInit,
 		ES_VsourceReinit,
 		ES_VsourceDestroy,
@@ -366,7 +364,7 @@ ES_VsourceInit(void *p, const char *name)
 {
 	ES_Vsource *vs = p;
 
-	ES_ComponentInit(vs, "vsource", name, &esVsourceOps, esVsourcePinout);
+	ES_ComponentInit(vs, name, &esVsourceOps, esVsourcePinout);
 	vs->voltage = 5;
 	vs->lstack = NULL;
 	vs->nlstack = 0;
@@ -421,7 +419,7 @@ ES_VsourceLoad(void *p, AG_Netbuf *buf)
 {
 	ES_Vsource *vs = p;
 
-	if (AG_ReadVersion(buf, &esVsourceVer, NULL) == -1 ||
+	if (AG_ReadObjectVersion(buf, vs, NULL) == -1 ||
 	    ES_ComponentLoad(vs, buf) == -1)
 		return (-1);
 
@@ -434,7 +432,7 @@ ES_VsourceSave(void *p, AG_Netbuf *buf)
 {
 	ES_Vsource *vs = p;
 
-	AG_WriteVersion(buf, &esVsourceVer);
+	AG_WriteObjectVersion(buf, vs);
 	if (ES_ComponentSave(vs, buf) == -1)
 		return (-1);
 

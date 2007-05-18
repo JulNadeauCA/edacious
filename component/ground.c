@@ -32,13 +32,11 @@
 #include "eda.h"
 #include "ground.h"
 
-const AG_Version esGroundVer = {
-	"agar-eda ground",
-	0, 0
-};
-
 const ES_ComponentOps esGroundOps = {
 	{
+		"ES_Component:ES_Ground",
+		sizeof(ES_Ground),
+		{ 0,0 },
 		ES_GroundInit,
 		NULL,			/* reinit */
 		ES_ComponentDestroy,
@@ -108,7 +106,7 @@ ES_GroundInit(void *p, const char *name)
 {
 	ES_Ground *gnd = p;
 
-	ES_ComponentInit(gnd, "ground", name, &esGroundOps, esGroundPinout);
+	ES_ComponentInit(gnd, name, &esGroundOps, esGroundPinout);
 }
 
 int
@@ -116,7 +114,7 @@ ES_GroundLoad(void *p, AG_Netbuf *buf)
 {
 	ES_Ground *gnd = p;
 
-	if (AG_ReadVersion(buf, &esGroundVer, NULL) == -1 ||
+	if (AG_ReadObjectVersion(buf, gnd, NULL) == -1 ||
 	    ES_ComponentLoad(gnd, buf) == -1) {
 		return (-1);
 	}
@@ -128,7 +126,7 @@ ES_GroundSave(void *p, AG_Netbuf *buf)
 {
 	ES_Ground *gnd = p;
 
-	AG_WriteVersion(buf, &esGroundVer);
+	AG_WriteObjectVersion(buf, gnd);
 	if (ES_ComponentSave(gnd, buf) == -1) {
 		return (-1);
 	}

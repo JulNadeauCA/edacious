@@ -32,13 +32,11 @@
 #include "eda.h"
 #include "logic_probe.h"
 
-const AG_Version esLogicProbeVer = {
-	"agar-eda logic probe",
-	0, 0
-};
-
 const ES_ComponentOps esLogicProbeOps = {
 	{
+		"ES_Component:ES_LogicProbe",
+		sizeof(ES_LogicProbe),
+		{ 0,0 },
 		ES_LogicProbeInit,
 		NULL,			/* reinit */
 		ES_ComponentDestroy,
@@ -83,26 +81,26 @@ ES_LogicProbeDraw(void *p, VG *vg)
 int
 ES_LogicProbeLoad(void *p, AG_Netbuf *buf)
 {
-	ES_LogicProbe *r = p;
+	ES_LogicProbe *lp = p;
 
-	if (AG_ReadVersion(buf, &esLogicProbeVer, NULL) == -1 ||
-	    ES_ComponentLoad(r, buf) == -1)
+	if (AG_ReadObjectVersion(buf, lp, NULL) == -1 ||
+	    ES_ComponentLoad(lp, buf) == -1)
 		return (-1);
 
-	r->Vhigh = SC_ReadReal(buf);
+	lp->Vhigh = SC_ReadReal(buf);
 	return (0);
 }
 
 int
 ES_LogicProbeSave(void *p, AG_Netbuf *buf)
 {
-	ES_LogicProbe *r = p;
+	ES_LogicProbe *lp = p;
 
-	AG_WriteVersion(buf, &esLogicProbeVer);
-	if (ES_ComponentSave(r, buf) == -1)
+	AG_WriteObjectVersion(buf, lp);
+	if (ES_ComponentSave(lp, buf) == -1)
 		return (-1);
 
-	SC_WriteReal(buf, r->Vhigh);
+	SC_WriteReal(buf, lp->Vhigh);
 	return (0);
 }
 
@@ -121,8 +119,7 @@ ES_LogicProbeInit(void *p, const char *name)
 {
 	ES_LogicProbe *r = p;
 
-	ES_ComponentInit(r, "logic_probe", name, &esLogicProbeOps,
-	    esLogicProbePinout);
+	ES_ComponentInit(r, name, &esLogicProbeOps, esLogicProbePinout);
 	r->Vhigh = 5.0;
 	r->state = 0;
 	COM(r)->intUpdate = ES_LogicProbeUpdate;

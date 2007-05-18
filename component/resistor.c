@@ -33,13 +33,11 @@
 #include "eda.h"
 #include "resistor.h"
 
-const AG_Version esResistorVer = {
-	"agar-eda resistor",
-	0, 0
-};
-
 const ES_ComponentOps esResistorOps = {
 	{
+		"ES_Component:ES_Resistor",
+		sizeof(ES_Resistor),
+		{ 0,0 },
 		ES_ResistorInit,
 		NULL,			/* reinit */
 		ES_ComponentDestroy,
@@ -124,7 +122,7 @@ ES_ResistorLoad(void *p, AG_Netbuf *buf)
 {
 	ES_Resistor *r = p;
 
-	if (AG_ReadVersion(buf, &esResistorVer, NULL) == -1 ||
+	if (AG_ReadObjectVersion(buf, r, NULL) == -1 ||
 	    ES_ComponentLoad(r, buf) == -1)
 		return (-1);
 
@@ -141,7 +139,7 @@ ES_ResistorSave(void *p, AG_Netbuf *buf)
 {
 	ES_Resistor *r = p;
 
-	AG_WriteVersion(buf, &esResistorVer);
+	AG_WriteObjectVersion(buf, r);
 	if (ES_ComponentSave(r, buf) == -1)
 		return (-1);
 
@@ -252,7 +250,7 @@ ES_ResistorInit(void *p, const char *name)
 {
 	ES_Resistor *r = p;
 
-	ES_ComponentInit(r, "resistor", name, &esResistorOps, esResistorPinout);
+	ES_ComponentInit(r, name, &esResistorOps, esResistorPinout);
 	r->resistance = 1;
 	r->power_rating = HUGE_VAL;
 	r->tolerance = 0;

@@ -33,13 +33,11 @@
 #include "eda.h"
 #include "spdt.h"
 
-const AG_Version esSpdtVer = {
-	"agar-eda spdt switch",
-	0, 0
-};
-
 const ES_ComponentOps esSpdtOps = {
 	{
+		"ES_Component:ES_Spdt",
+		sizeof(ES_Spdt),
+		{ 0,0 },
 		ES_SpdtInit,
 		NULL,			/* reinit */
 		ES_ComponentDestroy,
@@ -117,7 +115,7 @@ ES_SpdtInit(void *p, const char *name)
 {
 	ES_Spdt *sw = p;
 
-	ES_ComponentInit(sw, "spdt", name, &esSpdtOps, esSpdtPinout);
+	ES_ComponentInit(sw, name, &esSpdtOps, esSpdtPinout);
 	sw->on_resistance = 1.0;
 	sw->off_resistance = HUGE_VAL;
 	sw->state = 1;
@@ -128,7 +126,7 @@ ES_SpdtLoad(void *p, AG_Netbuf *buf)
 {
 	ES_Spdt *sw = p;
 
-	if (AG_ReadVersion(buf, &esSpdtVer, NULL) == -1 ||
+	if (AG_ReadObjectVersion(buf, sw, NULL) == -1 ||
 	    ES_ComponentLoad(sw, buf) == -1)
 		return (-1);
 
@@ -143,7 +141,7 @@ ES_SpdtSave(void *p, AG_Netbuf *buf)
 {
 	ES_Spdt *sw = p;
 
-	AG_WriteVersion(buf, &esSpdtVer);
+	AG_WriteObjectVersion(buf, sw);
 	if (ES_ComponentSave(sw, buf) == -1)
 		return (-1);
 

@@ -33,13 +33,11 @@
 #include "eda.h"
 #include "spst.h"
 
-const AG_Version esSpstVer = {
-	"agar-eda spst switch",
-	0, 0
-};
-
 const ES_ComponentOps esSpstOps = {
 	{
+		"ES_Component:ES_Spst",
+		sizeof(ES_Spst),
+		{ 0,0 },
 		ES_SpstInit,
 		NULL,			/* reinit */
 		ES_ComponentDestroy,
@@ -108,7 +106,7 @@ ES_SpstInit(void *p, const char *name)
 {
 	ES_Spst *sw = p;
 
-	ES_ComponentInit(sw, "spst", name, &esSpstOps, esSpstPinout);
+	ES_ComponentInit(sw, name, &esSpstOps, esSpstPinout);
 	sw->on_resistance = 1.0;
 	sw->off_resistance = HUGE_VAL;
 	sw->state = 0;
@@ -119,7 +117,7 @@ ES_SpstLoad(void *p, AG_Netbuf *buf)
 {
 	ES_Spst *sw = p;
 
-	if (AG_ReadVersion(buf, &esSpstVer, NULL) == -1 ||
+	if (AG_ReadObjectVersion(buf, sw, NULL) == -1 ||
 	    ES_ComponentLoad(sw, buf) == -1)
 		return (-1);
 
@@ -134,7 +132,7 @@ ES_SpstSave(void *p, AG_Netbuf *buf)
 {
 	ES_Spst *sw = p;
 
-	AG_WriteVersion(buf, &esSpstVer);
+	AG_WriteObjectVersion(buf, sw);
 	if (ES_ComponentSave(sw, buf) == -1)
 		return (-1);
 

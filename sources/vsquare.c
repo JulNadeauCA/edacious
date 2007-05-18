@@ -33,13 +33,11 @@
 #include "eda.h"
 #include "vsquare.h"
 
-const AG_Version esVSquareVer = {
-	"agar-eda square voltage source",
-	0, 0
-};
-
 const ES_ComponentOps esVSquareOps = {
 	{
+		"ES_Component:ES_Vsource:ES_VSquare",
+		sizeof(ES_VSquare),
+		{ 0,0 },
 		ES_VSquareInit,
 		ES_VsourceReinit,
 		ES_VsourceDestroy,
@@ -109,7 +107,6 @@ ES_VSquareInit(void *p, const char *name)
 	ES_VSquare *vs = p;
 
 	ES_VsourceInit(vs, name);
-	ES_ComponentSetType(vs, "component.vsource.square");
 	ES_ComponentSetOps(vs, &esVSquareOps);
 	ES_ComponentSetPorts(vs, esVSquarePorts);
 	vs->vH = 5.0;
@@ -126,7 +123,7 @@ ES_VSquareLoad(void *p, AG_Netbuf *buf)
 {
 	ES_VSquare *vs = p;
 
-	if (AG_ReadVersion(buf, &esVSquareVer, NULL) == -1 ||
+	if (AG_ReadObjectVersion(buf, vs, NULL) == -1 ||
 	    ES_VsourceLoad(vs, buf) == -1)
 		return (-1);
 
@@ -142,7 +139,7 @@ ES_VSquareSave(void *p, AG_Netbuf *buf)
 {
 	ES_VSquare *vs = p;
 
-	AG_WriteVersion(buf, &esVSquareVer);
+	AG_WriteObjectVersion(buf, vs);
 	if (ES_VsourceSave(vs, buf) == -1)
 		return (-1);
 

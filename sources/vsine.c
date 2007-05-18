@@ -33,13 +33,11 @@
 #include "eda.h"
 #include "vsine.h"
 
-const AG_Version esVSineVer = {
-	"agar-eda sinusoidal voltage source",
-	0, 0
-};
-
 const ES_ComponentOps esVSineOps = {
 	{
+		"ES_Component:ES_Vsource:ES_VSine",
+		sizeof(ES_VSine),
+		{ 0,0 },
 		ES_VSineInit,
 		ES_VsourceReinit,
 		ES_VsourceDestroy,
@@ -109,7 +107,6 @@ ES_VSineInit(void *p, const char *name)
 	ES_VSine *vs = p;
 
 	ES_VsourceInit(vs, name);
-	ES_ComponentSetType(vs, "component.vsource.sine");
 	ES_ComponentSetOps(vs, &esVSineOps);
 	ES_ComponentSetPorts(vs, esVSinePorts);
 	vs->vPeak = 5.0;
@@ -124,7 +121,7 @@ ES_VSineLoad(void *p, AG_Netbuf *buf)
 {
 	ES_VSine *vs = p;
 
-	if (AG_ReadVersion(buf, &esVSineVer, NULL) == -1 ||
+	if (AG_ReadObjectVersion(buf, vs, NULL) == -1 ||
 	    ES_VsourceLoad(vs, buf) == -1)
 		return (-1);
 
@@ -138,7 +135,7 @@ ES_VSineSave(void *p, AG_Netbuf *buf)
 {
 	ES_VSine *vs = p;
 
-	AG_WriteVersion(buf, &esVSineVer);
+	AG_WriteObjectVersion(buf, vs);
 	if (ES_VsourceSave(vs, buf) == -1)
 		return (-1);
 

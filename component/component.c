@@ -33,9 +33,16 @@
 
 #include "eda.h"
 
-const AG_Version esComponentVer = {
-	"agar-eda component",
-	0, 0
+const AG_ObjectOps esComponentOps = {
+	"ES_Component",
+	sizeof(ES_Component),
+	{ 0,0 },
+	NULL,			/* init */
+	NULL,			/* reinit */
+	NULL,			/* destroy */
+	NULL,			/* load */
+	NULL,			/* save */
+	NULL,			/* edit */
 };
 
 void
@@ -83,7 +90,7 @@ ES_ComponentUnselectAll(ES_Circuit *ckt)
 {
 	ES_Component *com;
 
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		ES_ComponentUnselect(com);
 	}
 }
@@ -108,7 +115,7 @@ ES_ComponentAttached(AG_Event *event)
 	VG *vg = ckt->vg;
 	VG_Block *block;
 
-	if (!AGOBJECT_SUBCLASS(ckt, "circuit")) {
+	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*")) {
 		return;
 	}
 	com->ckt = ckt;
@@ -130,7 +137,7 @@ ES_ComponentDetached(AG_Event *event)
 	ES_Circuit *ckt = AG_SENDER();
 	u_int i;
 
-	if (!AGOBJECT_SUBCLASS(ckt, "circuit"))
+	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*"))
 		return;
 
 	ES_LockCircuit(ckt);
@@ -287,21 +294,12 @@ ES_ComponentSetOps(void *p, const void *ops)
 }
 
 void
-ES_ComponentSetType(void *p, const char *type)
+ES_ComponentInit(void *obj, const char *name, const void *ops,
+    const ES_Port *ports)
 {
-	AG_ObjectSetType(p, type);
-}
-
-void
-ES_ComponentInit(void *obj, const char *tName, const char *name,
-    const void *ops, const ES_Port *ports)
-{
-	char clName[AG_OBJECT_NAME_MAX];
 	ES_Component *com = obj;
 
-	strlcpy(clName, "component.", sizeof(clName));
-	strlcat(clName, tName, sizeof(clName));
-	AG_ObjectInit(com, clName, name, ops);
+	AG_ObjectInit(com, name, ops != NULL ? ops : &esComponentOps);
 	com->ops = ops;
 	com->ckt = NULL;
 	com->block = NULL;
@@ -402,9 +400,9 @@ ES_ComponentLoad(void *p, AG_Netbuf *buf)
 	ES_Component *com = p;
 	float Tspec;
 
-	if (AG_ReadVersion(buf, &esComponentVer, NULL) == -1)
+	if (AG_ReadObjectVersion(buf, com, NULL) == -1) {
 		return (-1);
-
+	}
 	com->flags = (u_int)AG_ReadUint32(buf);
 	com->Tspec = AG_ReadFloat(buf);
 	return (0);
@@ -415,7 +413,7 @@ ES_ComponentSave(void *p, AG_Netbuf *buf)
 {
 	ES_Component *com = p;
 
-	AG_WriteVersion(buf, &esComponentVer);
+	AG_WriteObjectVersion(buf, com);
 	AG_WriteUint32(buf, com->flags);
 	AG_WriteFloat(buf, com->Tspec);
 	return (0);
@@ -543,7 +541,7 @@ RemoveSelections(AG_Event *event)
 	ES_Component *com;
 
 	ES_LockCircuit(ckt);
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (!com->selected) {
 			continue;
 		}
@@ -619,7 +617,7 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 	int common_class = 1;
 	const ES_ComponentOps *common_ops = NULL;
 
-	AGOBJECT_FOREACH_CLASS(com2, com->ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com2, com->ckt, es_component, "ES_Component:*") {
 		if (!com2->selected) {
 			continue;
 		}
@@ -702,7 +700,7 @@ tryname:
 	if (com != NULL)
 		goto tryname;
 
-	com = Malloc(comtype->size, M_OBJECT);
+	com = Malloc(comtype->ops->size, M_OBJECT);
 	comtype->ops->init(com, name);
 	com->flags |= COMPONENT_FLOATING;
 
@@ -738,7 +736,7 @@ ES_ComponentPortOverlap(ES_Circuit *ckt, ES_Component *ncom, float x, float y)
 	ES_Wire *wire;
 	int i;
 	
-	AGOBJECT_FOREACH_CLASS(ocom, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(ocom, ckt, es_component, "ES_Component:*") {
 		if ((ocom == ncom) || (ocom->flags & COMPONENT_FLOATING)) {
 			continue;
 		}
