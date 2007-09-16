@@ -1,4 +1,3 @@
-/*	$Csoft: semiresistor.h,v 1.1.1.1 2005/09/08 05:26:55 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_SEMIRESISTOR_H_

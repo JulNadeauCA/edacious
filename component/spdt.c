@@ -1,8 +1,5 @@
-/*	$Csoft: spdt.c,v 1.6 2005/09/29 00:22:35 vedge Exp $	*/
-
 /*
- * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2004, 2005 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -224,11 +221,11 @@ ES_SpdtEdit(void *p)
 
 	win = AG_WindowNew(0);
 
-	fsb = AG_FSpinbuttonNew(win, 0, "ohms", _("ON resistance: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("ON resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->on_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
 	
-	fsb = AG_FSpinbuttonNew(win, 0, "ohms", _("OFF resistance: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("OFF resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->off_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
 

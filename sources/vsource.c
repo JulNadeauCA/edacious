@@ -1,8 +1,5 @@
-/*	$Csoft: vsource.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
-
 /*
- * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2004-2005 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -481,7 +478,7 @@ ES_VsourceName(ES_Vsource *vs)
 
 #ifdef EDITION
 static void
-poll_loops(AG_Event *event)
+PollLoops(AG_Event *event)
 {
 	char text[AG_TLIST_LABEL_MAX];
 	ES_Vsource *vs = AG_PTR(1);
@@ -531,9 +528,9 @@ ES_VsourceEdit(void *p)
 	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Voltage: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &vs->voltage);
 	
-	AG_LabelNew(win, AG_LABEL_STATIC, _("Loops:"));
-	tl = AG_TlistNew(win, AG_TLIST_POLL|AG_TLIST_TREE|AG_TLIST_EXPAND);
-	AG_SetEvent(tl, "tlist-poll", poll_loops, "%p", vs);
+	AG_LabelNewStatic(win, 0, _("Loops:"));
+	tl = AG_TlistNewPolled(win, AG_TLIST_TREE|AG_TLIST_EXPAND,
+	    PollLoops, "%p", vs);
 	
 	return (win);
 }

@@ -1,8 +1,5 @@
-/*	$Csoft: component.c,v 1.7 2005/09/27 03:34:08 vedge Exp $	*/
-
 /*
- * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2004, 2005 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +26,7 @@
 #include <agar/core.h>
 #include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/dev.h>
 
 #include "eda.h"
 
@@ -36,7 +34,7 @@ ES_Component *esInscomCur = NULL;
 
 /* Remove the selected components from the circuit. */
 static int
-ES_RemoveComponent(VG_Tool *t, SDLKey key, int state, void *arg)
+RemoveComponent(VG_Tool *t, SDLKey key, int state, void *arg)
 {
 	ES_Circuit *ckt = t->p;
 	ES_Component *com;
@@ -53,7 +51,7 @@ scan:
 		    !com->selected) {
 			continue;
 		}
-		AG_ObjMgrCloseData(com);
+		DEV_BrowserCloseData(com);
 		if (AG_ObjectInUse(com)) {
 			AG_TextMsg(AG_MSG_ERROR, "%s: %s", AGOBJECT(com)->name,
 			    AG_GetError());
@@ -73,7 +71,7 @@ scan:
 
 /* Rotate a floating component by 90 degrees. */
 static void
-ES_RotateComponent(ES_Circuit *ckt, ES_Component *com)
+RotateComponent(ES_Circuit *ckt, ES_Component *com)
 {
 	VG *vg = ckt->vg;
 	int i;
@@ -92,7 +90,7 @@ ES_RotateComponent(ES_Circuit *ckt, ES_Component *com)
 }
 
 static int
-ES_InscomButtondown(void *p, float x, float y, int b)
+MouseButtonDown(void *p, float x, float y, int b)
 {
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
@@ -114,7 +112,7 @@ ES_InscomButtondown(void *p, float x, float y, int b)
 		break;
 	case SDL_BUTTON_MIDDLE:
 		if (esInscomCur != NULL) {
-			ES_RotateComponent(ckt, esInscomCur);
+			RotateComponent(ckt, esInscomCur);
 		}
 		break;
 	default:
@@ -137,7 +135,7 @@ remove:
 
 /* Move a floating component and highlight the overlapping nodes. */
 static int
-ES_InscomMousemotion(void *p, float x, float y, float xrel, float yrel, int b)
+MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
 {
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
@@ -155,13 +153,13 @@ ES_InscomMousemotion(void *p, float x, float y, float xrel, float yrel, int b)
 }
 
 static void
-ES_InscomInit(void *p)
+Init(void *p)
 {
 	VG_Tool *t = p;
 
 	esInscomCur = NULL;
-	VG_ToolBindKey(t, KMOD_NONE, SDLK_DELETE, ES_RemoveComponent, NULL);
-	VG_ToolBindKey(t, KMOD_NONE, SDLK_d, ES_RemoveComponent, NULL);
+	VG_ToolBindKey(t, KMOD_NONE, SDLK_DELETE, RemoveComponent, NULL);
+	VG_ToolBindKey(t, KMOD_NONE, SDLK_d, RemoveComponent, NULL);
 }
 
 VG_ToolOps esInscomOps = {
@@ -170,11 +168,11 @@ VG_ToolOps esInscomOps = {
 	EDA_INSERT_COMPONENT_ICON,
 	sizeof(VG_Tool),
 	0,
-	ES_InscomInit,
+	Init,
 	NULL,			/* destroy */
 	NULL,			/* edit */
-	ES_InscomMousemotion,
-	ES_InscomButtondown,
+	MouseMotion,
+	MouseButtonDown,
 	NULL,			/* mousebuttonup */
 	NULL,			/* keydown */
 	NULL			/* keyup */

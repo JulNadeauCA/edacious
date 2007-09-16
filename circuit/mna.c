@@ -1,7 +1,5 @@
-/*	$Csoft: mna.c,v 1.6 2005/09/29 00:22:34 vedge Exp $	*/
-
 /*
- * Copyright (c) 2006 Hypertriton, Inc. <http://hypertriton.com>
+ * Copyright (c) 2006 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,9 +24,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/sc.h>
 #include <agar/gui.h>
-#include <agar/sc/sc_matview.h>
+#include <agar/sc.h>
 
 #include "eda.h"
 #include "sim.h"
@@ -81,7 +78,7 @@ ES_MnaFactorize(ES_MNA *mna, ES_Circuit *ckt)
 	SC_MatrixSetZero(mna->e);
 
 	/* Formulate the general equations. */
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->loadDC_G != NULL)
 			com->loadDC_G(com, mna->G);
 		if (com->loadDC_BCD != NULL)
@@ -135,7 +132,7 @@ ES_MnaStep(void *obj, Uint32 ival, void *arg)
 	AG_PostEvent(NULL, ckt, "circuit-step-begin", NULL);
 
 	/* Invoke the time step function of all models. */
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->intStep != NULL)
 			com->intStep(com, mna->Telapsed);
 	}
@@ -152,7 +149,7 @@ solve:
 	 */
 	SC_MatrixAlloc(&Aprev, mna->A->m, mna->A->n);
 	SC_MatrixCopy(mna->A, &Aprev);
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->intUpdate != NULL)
 			com->intUpdate(com);
 	}
@@ -197,7 +194,7 @@ ES_MnaInit(void *p)
 	mna->max_iters = 100000;
 	mna->iters_hiwat = 1;
 	mna->iters_lowat = 1;
-	AG_SetTimeout(&mna->update_to, ES_MnaStep, mna, AG_TIMEOUT_LOADABLE);
+	AG_SetTimeout(&mna->update_to, ES_MnaStep, mna, AG_CANCEL_ONDETACH);
 
 	mna->A = SC_MatrixNew(0, 0);
 	mna->G = SC_MatrixNew(0, 0);
@@ -335,7 +332,7 @@ ES_MnaEdit(void *p, ES_Circuit *ckt)
 	AG_Tlist *tl;
 	AG_Notebook *nb;
 	AG_NotebookTab *ntab;
-	AG_Matview *mv;
+	SC_Matview *mv;
 
 	win = AG_WindowNew(AG_WINDOW_NOCLOSE);
 
@@ -357,56 +354,56 @@ ES_MnaEdit(void *p, ES_Circuit *ckt)
 		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT32, &mna->speed);
 		AG_SpinbuttonSetRange(sbu, 1, 1000);
 		
-		AG_LabelNew(ntab, AG_LABEL_POLLED,
+		AG_LabelNewPolled(ntab, 0,
 		    _("Total simulated time: %[u32]ns"),
 		    &mna->Telapsed);
-		AG_LabelNew(ntab, AG_LABEL_POLLED,
+		AG_LabelNewPolled(ntab, 0,
 		    _("Realtime/step average: %[u32]ms"),
 		    &mna->TavgReal);
-		AG_LabelNew(ntab, AG_LABEL_POLLED,
+		AG_LabelNewPolled(ntab, 0,
 		    _("Iterations/step watermark: %u-%u"),
 		    &mna->iters_lowat, &mna->iters_hiwat);
 	}
 	
 	ntab = AG_NotebookAddTab(nb, "[A]", AG_BOX_VERT);
-	mv = AG_MatviewNew(ntab, mna->A, 0);
-	AG_MatviewPrescale(mv, "-0.000", 4, 4);
-	AG_MatviewSetNumericalFmt(mv, "%.02f");
+	mv = SC_MatviewNew(ntab, mna->A, 0);
+	SC_MatviewSizeHint(mv, "-0.000", 4, 4);
+	SC_MatviewSetNumericalFmt(mv, "%.02f");
 	
 	ntab = AG_NotebookAddTab(nb, "[LU]", AG_BOX_VERT);
-	mv = AG_MatviewNew(ntab, mna->LU, 0);
-	AG_MatviewPrescale(mv, "-0.000", 10, 5);
-	AG_MatviewSetNumericalFmt(mv, "%.02f");
+	mv = SC_MatviewNew(ntab, mna->LU, 0);
+	SC_MatviewSizeHint(mv, "-0.000", 10, 5);
+	SC_MatviewSetNumericalFmt(mv, "%.02f");
 #if 0
 	ntab = AG_NotebookAddTab(nb, "[G]", AG_BOX_VERT);
-	mv = AG_MatviewNew(ntab, mna->G, 0);
-	AG_MatviewPrescale(mv, "-0.000", 10, 5);
-	AG_MatviewSetNumericalFmt(mv, "%.02f");
+	mv = SC_MatviewNew(ntab, mna->G, 0);
+	SC_MatviewSizeHint(mv, "-0.000", 10, 5);
+	SC_MatviewSetNumericalFmt(mv, "%.02f");
 	
 	ntab = AG_NotebookAddTab(nb, "[B]", AG_BOX_VERT);
-	mv = AG_MatviewNew(ntab, mna->B, 0);
-	AG_MatviewPrescale(mv, "-0.000", 10, 5);
-	AG_MatviewSetNumericalFmt(mv, "%.03f");
+	mv = SC_MatviewNew(ntab, mna->B, 0);
+	SC_MatviewSizeHint(mv, "-0.000", 10, 5);
+	SC_MatviewSetNumericalFmt(mv, "%.03f");
 	
 	ntab = AG_NotebookAddTab(nb, "[C]", AG_BOX_VERT);
-	mv = AG_MatviewNew(ntab, mna->C, 0);
-	AG_MatviewPrescale(mv, "-0.000", 10, 5);
-	AG_MatviewSetNumericalFmt(mv, "%.03f");
+	mv = SC_MatviewNew(ntab, mna->C, 0);
+	SC_MatviewSizeHint(mv, "-0.000", 10, 5);
+	SC_MatviewSetNumericalFmt(mv, "%.03f");
 	
 	ntab = AG_NotebookAddTab(nb, "[D]", AG_BOX_VERT);
-	mv = AG_MatviewNew(ntab, mna->D, 0);
-	AG_MatviewPrescale(mv, "-0.000", 10, 5);
-	AG_MatviewSetNumericalFmt(mv, "%.03f");
+	mv = SC_MatviewNew(ntab, mna->D, 0);
+	SC_MatviewSizeHint(mv, "-0.000", 10, 5);
+	SC_MatviewSetNumericalFmt(mv, "%.03f");
 #endif
 	ntab = AG_NotebookAddTab(nb, "[z]", AG_BOX_VERT);
-	mv = AG_MatviewNew(ntab, mna->z, 0);
-	AG_MatviewPrescale(mv, "-0000.0000", 10, 5);
-	AG_MatviewSetNumericalFmt(mv, "%.04f");
+	mv = SC_MatviewNew(ntab, mna->z, 0);
+	SC_MatviewSizeHint(mv, "-0000.0000", 10, 5);
+	SC_MatviewSetNumericalFmt(mv, "%.04f");
 	
 	ntab = AG_NotebookAddTab(nb, "[x]", AG_BOX_VERT);
-	mv = AG_MatviewNew(ntab, mna->x, 0);
-	AG_MatviewPrescale(mv, "-0000.0000", 10, 5);
-	AG_MatviewSetNumericalFmt(mv, "%.04f");
+	mv = SC_MatviewNew(ntab, mna->x, 0);
+	SC_MatviewSizeHint(mv, "-0000.0000", 10, 5);
+	SC_MatviewSetNumericalFmt(mv, "%.04f");
 	
 	return (win);
 }

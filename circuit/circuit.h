@@ -1,4 +1,3 @@
-/*	$Csoft: circuit.h,v 1.5 2005/09/15 02:04:48 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _CIRCUIT_CIRCUIT_H_
@@ -7,6 +6,13 @@
 #include <agar/core.h>
 #include <agar/vg.h>
 #include <agar/sc.h>
+
+#include <agar/config/_mk_have_unsigned_typedefs.h>
+#ifndef _MK_HAVE_UNSIGNED_TYPEDEFS
+#define Uchar unsigned char
+#define Uint unsigned int
+#define Ulong unsigned long
+#endif
 
 #include <component/component.h>
 #include <circuit/sim.h>

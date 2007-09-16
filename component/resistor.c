@@ -1,8 +1,5 @@
-/*	$Csoft: resistor.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
-
 /*
- * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2004, 2005 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -269,7 +266,7 @@ ES_ResistorEdit(void *p)
 
 	win = AG_WindowNew(0);
 
-	fsb = AG_FSpinbuttonNew(win, 0, "ohms", _("Resistance: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("Resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
 	
@@ -281,9 +278,9 @@ ES_ResistorEdit(void *p)
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->power_rating);
 	AG_FSpinbuttonSetMin(fsb, 0);
 	
-	fsb = AG_FSpinbuttonNew(win, 0, "mohms/degC", _("Temp. coefficient: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "mohm/degC", _("Temp. coefficient: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc1);
-	fsb = AG_FSpinbuttonNew(win, 0, "mohms/degC^2",
+	fsb = AG_FSpinbuttonNew(win, 0, "mohm/degC^2",
 	    _("Temp. coefficient: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc2);
 

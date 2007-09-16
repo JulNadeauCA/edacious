@@ -1,4 +1,3 @@
-/*	$Csoft: sim.h,v 1.1 2005/09/08 09:46:01 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _CIRCUIT_SIM_H_

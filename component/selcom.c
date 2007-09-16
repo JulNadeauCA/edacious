@@ -1,8 +1,5 @@
-/*	$Csoft: component.c,v 1.7 2005/09/27 03:34:08 vedge Exp $	*/
-
 /*
- * Copyright (c) 2004, 2005, 2006 Hypertriton, Inc.
- * <http://www.hypertriton.com/>
+ * Copyright (c) 2004-2006 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,7 +48,7 @@ ES_SelcomButtondown(void *p, float x, float y, int b)
 	if (!multi) {
 		ES_ComponentUnselectAll(ckt);
 	}
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->flags & COMPONENT_FLOATING ||
 		    com->block != closest_blk) {
 			continue;
@@ -69,8 +66,8 @@ ES_SelcomButtondown(void *p, float x, float y, int b)
 	}
 	if (t->vgv != NULL &&
 	    (pwin = AG_WidgetParentWindow(t->vgv)) != NULL) {
-		agView->focus_win = pwin;
 		AG_WidgetFocus(t->vgv);
+		AG_WindowFocus(pwin);
 	}
 	return (1);
 }
@@ -94,7 +91,7 @@ ES_SelcomLeftButton(VG_Tool *t, int button, int state, float x, float y,
 	if (!multi) {
 		ES_ComponentUnselectAll(ckt);
 	}
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->flags & COMPONENT_FLOATING ||
 		    com->block != closest_blk) {
 			continue;
@@ -129,7 +126,7 @@ ES_SelcomMousemotion(void *p, float x, float y, float xrel, float yrel, int b)
 	vg->origin[1].y = y;
 	closest_blk = VG_BlockClosest(vg, x, y);
 	
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->flags & COMPONENT_FLOATING) {
 			continue;
 		}

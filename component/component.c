@@ -1,7 +1,5 @@
-/*	$Csoft: component.c,v 1.7 2005/09/27 03:34:08 vedge Exp $	*/
-
 /*
- * Copyright (c) 2006 Hypertriton, Inc. <http://www.hypertriton.com/>
+ * Copyright (c) 2006 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +26,7 @@
 #include <agar/core.h>
 #include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/dev.h>
 
 #include <string.h>
 
@@ -220,7 +219,7 @@ ES_ComponentDraw(void *p, Uint32 ival, void *arg)
 	VG_Element *vge;
 	int i;
 	
-	if ((AGOBJECT(com)->flags & AG_OBJECT_DATA_RESIDENT) == 0)
+	if ((AGOBJECT(com)->flags & AG_OBJECT_RESIDENT) == 0)
 		return (ival);
 
 #ifdef DEBUG
@@ -329,7 +328,7 @@ ES_ComponentInit(void *obj, const char *name, const void *ops,
 	AG_SetEvent(com, "circuit-shown", ES_ComponentShown, NULL);
 	AG_SetEvent(com, "circuit-hidden", ES_ComponentHidden, NULL);
 	AG_SetTimeout(&com->redraw_to, ES_ComponentDraw, NULL,
-	    AG_TIMEOUT_LOADABLE);
+	    AG_CANCEL_ONDETACH);
 }
 
 /* Initialize the ports of a component instance from a given model. */
@@ -511,7 +510,8 @@ static void
 EditComponent(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
-	AG_ObjMgrOpenData(com, 1);
+
+	DEV_BrowserOpenData(com);
 }
 
 static void
@@ -580,7 +580,7 @@ SaveComponentTo(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
 
-	AG_ObjMgrSaveTo(com, _(com->ops->name));
+	DEV_BrowserSaveTo(com, _(com->ops->name));
 }
 
 static void
@@ -588,7 +588,7 @@ LoadComponentFrom(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
 
-	AG_ObjMgrLoadFrom(com, _(com->ops->name));
+	DEV_BrowserLoadFrom(com, _(com->ops->name));
 }
 
 static void
@@ -601,8 +601,8 @@ SelectTool(AG_Event *event)
 
 	if ((t = VG_ViewFindToolByOps(vgv, ops)) != NULL) {
 		VG_ViewSelectTool(vgv, t, ckt);
-		AG_WidgetFocus(vgv);
-		AG_WindowFocus(AG_WidgetParentWindow(vgv));
+//		AG_WidgetFocus(vgv);
+//		AG_WindowFocus(AG_WidgetParentWindow(vgv));
 	} else {
 		AG_TextMsg(AG_MSG_ERROR, _("No such tool: %s"), ops->name);
 	}
@@ -708,7 +708,7 @@ tryname:
 
 	AG_ObjectAttach(ckt, com);
 	AG_ObjectUnlinkDatafiles(com);
-	AG_ObjectPageIn(com, AG_OBJECT_DATA);
+	AG_ObjectPageIn(com);
 	AG_PostEvent(ckt, com, "circuit-shown", NULL);
 
 	if ((t = VG_ViewFindTool(vgv, "Insert component")) != NULL) {
@@ -716,11 +716,11 @@ tryname:
 		esInscomCur = com;
 		esInscomCur->selected = 1;
 	}
-	AG_WidgetFocus(vgv);
-	AG_WindowFocus(AG_WidgetParentWindow(vgv));
+//	AG_WidgetFocus(vgv);
+//	AG_WindowFocus(AG_WidgetParentWindow(vgv));
 	
-	if (AG_ObjectSave(com) == -1)
-		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
+//	if (AG_ObjectSave(com) == -1)
+//		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
 	
 	ES_UnlockCircuit(ckt);
 }

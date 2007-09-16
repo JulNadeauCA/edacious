@@ -1,8 +1,5 @@
-/*	$Csoft: sim.c,v 1.3 2005/09/10 05:48:20 vedge Exp $	*/
-
 /*
- * Copyright (c) 2004, 2005 CubeSoft Communications Inc
- * <http://www.winds-triton.com>
+ * Copyright (c) 2004, 2005 Hypertriton, Inc <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

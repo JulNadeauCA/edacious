@@ -1,4 +1,3 @@
-/*	$Csoft: vsource.h,v 1.3 2005/09/15 02:04:49 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _SOURCES_VSQUARE_H_

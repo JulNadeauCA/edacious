@@ -1,4 +1,3 @@
-/*	$Csoft: resistor.h,v 1.2 2005/09/15 02:04:49 vedge Exp $	*/
 /*	Public domain	*/
 
 #ifndef _COMPONENT_RESISTOR_H_

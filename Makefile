@@ -10,16 +10,17 @@ SUBDIR=	component \
 PROG=	eda
 SRCS=	eda.c
 
-CFLAGS+=${AGAR_SC_CFLAGS} ${AGAR_CFLAGS}
 LIBS+=	circuit/libcircuit.a \
 	component/libcomponent.a \
-	sources/libsources.a \
-	${AGAR_SC_LIBS} ${AGAR_LIBS}
+	sources/libsources.a
+
+LIBS+=	${AGAR_SC_LIBS} ${AGAR_DEV_LIBS} ${AGAR_VG_LIBS} ${AGAR_LIBS}
+CFLAGS+=${AGAR_SC_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 
 all: all-subdir ${PROG}
 
 configure: configure.in
-	cat configure.in | manuconf > configure
+	cat configure.in | mkconfigure > configure
 	chmod 755 configure
 
 release: cleandir

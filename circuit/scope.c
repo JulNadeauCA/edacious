@@ -1,8 +1,5 @@
-/*	$Csoft$	*/
-
 /*
- * Copyright (c) 2006 CubeSoft Communications, Inc.
- * <http://www.csoft.org>
+ * Copyright (c) 2006 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,8 +26,7 @@
 #include <agar/core.h>
 #include <agar/gui.h>
 #include <agar/vg.h>
-
-#include <agar/sc/sc_plotter.h>
+#include <agar/sc.h>
 
 #include "eda.h"
 #include "scope.h"
@@ -180,10 +176,9 @@ static void
 ShowPlotSettings(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
-	SC_Plotter *ptr = AG_PTR(2);
-	SC_Plot *pl = AG_TLIST_ITEM(3);
+	SC_Plot *pl = AG_TLIST_ITEM(2);
 
-	SC_PlotSettings(ptr, pl);
+	SC_PlotSettings(pl);
 }
 
 static void
@@ -202,30 +197,26 @@ ES_ScopeEdit(void *obj)
 	AG_Window *win;
 	SC_Plotter *ptr;
 	AG_Tlist *tlSrcs, *tlPlots;
-	AG_HPane *hPane;
-	AG_HPaneDiv *hDiv;
+	AG_Pane *hPane;
 	AG_Pane *vPane;
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, AGOBJECT(scope)->name);
 	AG_WindowSetPosition(win, AG_WINDOW_UPPER_RIGHT, 0);
 
-	hPane = AG_HPaneNew(win, AG_PANE_EXPAND);
-	hDiv = AG_HPaneAddDiv(hPane,
-	    AG_BOX_VERT, AG_BOX_VFILL,
-	    AG_BOX_HORIZ, AG_BOX_EXPAND);
+	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
 	{
-		ptr = SC_PlotterNew(hDiv->box2, SC_PLOTTER_EXPAND);
-		vPane = AG_PaneNew(hDiv->box1, AG_PANE_VERT,
+		ptr = SC_PlotterNew(hPane->div[1], SC_PLOTTER_EXPAND);
+		vPane = AG_PaneNewVert(hPane->div[0],
 		    AG_PANE_EXPAND|AG_PANE_DIV|AG_PANE_FORCE_DIV);
 		{
 			AG_Tlist *tl;
 			AG_MenuItem *m;
 
-			AG_LabelNewStatic(vPane->div[0], _("Sources:"));
+			AG_LabelNewStatic(vPane->div[0], 0, _("Sources:"));
 			tl = AG_TlistNew(vPane->div[0], AG_TLIST_EXPAND|
 			                                AG_TLIST_POLL);
-			AG_TlistPrescale(tl, "XXXXXXXXXXXXX", 2);
+			AG_TlistSizeHint(tl, "XXXXXXXXXXXXX", 2);
 			AG_SetEvent(tl, "tlist-poll", PollSrcs, "%p", ckt);
 			AG_SetEvent(tl, "tlist-dblclick", AddPlotFromSrc,
 			    "%p,%p", ckt, ptr);
@@ -238,14 +229,13 @@ ES_ScopeEdit(void *obj)
 			AG_MenuAction(m, _("Plot derivative"), -1,
 			    AddPlotFromDerivative, "%p,%p,%p", tl, ckt, ptr);
 			AG_MenuAction(m, _("Plot settings"), -1,
-			    ShowPlotSettings, "%p,%p,%p", ckt, ptr, tl);
+			    ShowPlotSettings, "%p,%p", ckt, tl);
 		}
 	}
 	
 	/* Update the plots at the end of every simulation step. */
 	AG_SetEvent(scope, "circuit-step-end", UpdateScope, "%p", ptr);
 
-	AG_WindowScale(win, -1, -1);
 	AG_WindowSetGeometry(win, agView->w/2, 0, agView->w/2, agView->h/3);
 	return (win);
 }

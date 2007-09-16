@@ -1,8 +1,5 @@
-/*	$Csoft: spst.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
-
 /*
- * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2004, 2005 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -176,7 +173,7 @@ SwitchAll(AG_Event *event)
 	int nstate = AG_INT(2);
 	ES_Spst *spst;
 
-	AGOBJECT_FOREACH_CLASS(spst, ckt, es_spst, "component.spst") {
+	AGOBJECT_FOREACH_CLASS(spst, ckt, es_spst, "ES_Component:ES_Spst:*") {
 		spst->state = (nstate == -1) ? !spst->state : nstate;
 	}
 }
@@ -212,11 +209,11 @@ ES_SpstEdit(void *p)
 
 	win = AG_WindowNew(0);
 
-	fsb = AG_FSpinbuttonNew(win, 0, "ohms", _("ON resistance: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("ON resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->on_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
 	
-	fsb = AG_FSpinbuttonNew(win, 0, "ohms", _("OFF resistance: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("OFF resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->off_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
 

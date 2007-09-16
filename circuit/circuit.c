@@ -1,7 +1,5 @@
-/*	$Csoft: circuit.c,v 1.11 2005/09/29 00:22:33 vedge Exp $	*/
-
 /*
- * Copyright (c) 2006 Hypertriton, Inc. <http://www.hypertriton.com>
+ * Copyright (c) 2006 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,8 +26,8 @@
 #include <agar/core.h>
 #include <agar/gui.h>
 #include <agar/vg.h>
-
-#include <agar/sc/sc_plotter.h>
+#include <agar/sc.h>
+#include <agar/dev.h>
 
 #include "eda.h"
 #include "spice.h"
@@ -78,9 +76,9 @@ ES_CircuitOpened(AG_Event *event)
 	ES_Circuit *ckt = AG_SELF();
 	ES_Component *com;
 
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		AG_PostEvent(ckt, com, "circuit-shown", NULL);
-		AG_ObjectPageIn(com, AG_OBJECT_DATA);
+		AG_ObjectPageIn(com);
 	}
 }
 
@@ -92,9 +90,9 @@ ES_CircuitClosed(AG_Event *event)
 
 	ES_DestroySimulation(ckt);
 
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		AG_PostEvent(ckt, com, "circuit-hidden", NULL);
-		AG_ObjectPageOut(com, AG_OBJECT_DATA);
+		AG_ObjectPageOut(com);
 	}
 }
 
@@ -122,14 +120,15 @@ ES_CircuitModified(ES_Circuit *ckt)
 	AG_Prop *pr;
 
 	/* Regenerate loop and pair information. */
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
 		for (i = 0; i < com->npairs; i++)
 			com->pairs[i].nloops = 0;
 	}
-	AGOBJECT_FOREACH_CLASS(vs, ckt, es_vsource, "component.vsource") {
+	AGOBJECT_FOREACH_CLASS(vs, ckt, es_vsource, "ES_Component:"
+	                                            "ES_Vsource:*") {
 		if (COM(vs)->flags & COMPONENT_FLOATING ||
 		    PORT(vs,1)->node == -1 ||
 		    PORT(vs,2)->node == -1) {
@@ -146,7 +145,8 @@ ES_CircuitModified(ES_Circuit *ckt)
 		ckt->loops = Malloc(sizeof(ES_Loop *), M_EDA);
 	}
 	ckt->l = 0;
-	AGOBJECT_FOREACH_CLASS(vs, ckt, es_vsource, "component.vsource") {
+	AGOBJECT_FOREACH_CLASS(vs, ckt, es_vsource, "ES_Component:"
+	                                            "ES_Vsource:*") {
 		if (COM(vs)->flags & COMPONENT_FLOATING) {
 			continue;
 		}
@@ -161,7 +161,7 @@ ES_CircuitModified(ES_Circuit *ckt)
 	if (ckt->sim != NULL &&
 	    ckt->sim->ops->cktmod != NULL)
 		ckt->sim->ops->cktmod(ckt->sim, ckt);
-#if 0
+#if 1
 	AG_ObjectFreeProps(AGOBJECT(ckt));
 	for (i = 1; i <= ckt->n; i++) {
 		snprintf(key, sizeof(key), "v%u", i);
@@ -201,7 +201,7 @@ ES_CircuitInit(void *p, const char *name)
 	
 	InitGround(ckt);
 
-	vg = ckt->vg = VG_New(VG_DIRECT|VG_VISGRID);
+	vg = ckt->vg = VG_New(VG_VISGRID);
 	strlcpy(vg->layers[0].name, _("Schematic"), sizeof(vg->layers[0].name));
 	VG_Scale(vg, 11.0, 8.5, 32.0);
 	VG_DefaultScale(vg, 2.0);
@@ -274,7 +274,7 @@ ES_CircuitReinit(void *p)
 	ckt->n = 0;
 	InitGround(ckt);
 
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
@@ -406,7 +406,8 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 
 		/* Lookup the component. */
 		AG_CopyString(name, buf, sizeof(name));
-		AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+		AGOBJECT_FOREACH_CLASS(com, ckt, es_component,
+		    "ES_Component:*") {
 			if (strcmp(AGOBJECT(com)->name, name) == 0)
 				break;
 		}
@@ -444,7 +445,7 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 	}
 
 	/* Send circuit-connected event to components. */
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		AG_PostEvent(ckt, com, "circuit-connected", NULL);
 	}
 
@@ -543,7 +544,7 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 	count_offs = AG_NetbufTell(buf);
 	count = 0;
 	AG_WriteUint32(buf, 0);
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
@@ -968,7 +969,7 @@ ES_CircuitFreeComponents(ES_Circuit *ckt)
 {
 	ES_Component *com, *ncom;
 
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		AG_ObjectDetach(com);
 		AG_ObjectDestroy(com);
 		Free(com, M_OBJECT);
@@ -1043,8 +1044,8 @@ ES_LockCircuit(ES_Circuit *ckt)
 {
 	AG_MutexLock(&ckt->lock);
 	if (ckt->sim != NULL && ckt->sim->running) {
-		if (ckt->simlock++ == 0)
-			ES_SuspendSimulation(ckt);
+//		if (ckt->simlock++ == 0)
+//			ES_SuspendSimulation(ckt);
 	}
 }
 
@@ -1283,7 +1284,7 @@ CircuitViewButtondown(AG_Event *event)
 	}
 	block = VG_BlockClosest(ckt->vg, x, y);
 
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (AGOBJECT(com)->ops->edit == NULL ||
 		    com->block != block) {
 			continue;
@@ -1315,12 +1316,12 @@ CircuitDoubleClick(AG_Event *event)
 	}
 	block = VG_BlockClosest(ckt->vg, x, y);
 
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (AGOBJECT(com)->ops->edit == NULL ||
 		    com->block != block) {
 			continue;
 		}
-		AG_ObjMgrOpenData(com, 1);
+		DEV_BrowserOpenData(com);
 		break;
 	}
 }
@@ -1365,7 +1366,7 @@ FindCircuitObjs(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 	SDL_Surface *icon;
 
 	it = AG_TlistAdd(tl, NULL, "%s%s", pob->name,
-	    (pob->flags & AG_OBJECT_DATA_RESIDENT) ? " (resident)" : "");
+	    (pob->flags & AG_OBJECT_RESIDENT) ? " (resident)" : "");
 	it->depth = depth;
 	it->cat = "object";
 	it->p1 = pob;
@@ -1412,7 +1413,6 @@ ShowConsole(AG_Event *event)
 	AG_WidgetFocus(ckt->console);
 	AG_WindowAttach(pwin, win);
 
-	AG_WindowScale(win, -1, -1);
 	AG_WindowSetGeometry(win,
 	    0, agView->h - 100,
 	    agView->w/2, 99);
@@ -1446,7 +1446,7 @@ PollComponentPorts(AG_Event *event)
 	
 	AG_TlistClear(tl);
 	
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->selected)
 			break;
 	}
@@ -1478,7 +1478,7 @@ PollComponentPairs(AG_Event *event)
 	
 	AG_TlistClear(tl);
 	
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "component") {
+	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->selected)
 			break;
 	}
@@ -1527,7 +1527,7 @@ tryname:
 		goto tryname;
 	}
 	scope = ES_ScopeNew(ckt, name);
-	AG_ObjMgrOpenData(scope, 1);
+	DEV_BrowserOpenData(scope);
 }
 
 void
@@ -1607,8 +1607,7 @@ ES_CircuitEdit(void *p)
 	AG_Toolbar *toolbar;
 	AG_Menu *menu;
 	AG_MenuItem *pitem, *subitem;
-	AG_HPane *pane;
-	AG_HPaneDiv *div;
+	AG_Pane *pane;
 	VG_View *vgv;
 
 	win = AG_WindowNew(0);
@@ -1701,17 +1700,14 @@ ES_CircuitEdit(void *p)
 		}
 	}
 	
-	pane = AG_HPaneNew(win, AG_HPANE_EXPAND);
-	div = AG_HPaneAddDiv(pane,
-	    AG_BOX_VERT, AG_BOX_VFILL,
-	    AG_BOX_HORIZ, AG_BOX_EXPAND);
+	pane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
 	{
 		AG_Notebook *nb;
 		AG_NotebookTab *ntab;
 		AG_Tlist *tl;
 		AG_Box *box;
 
-		nb = AG_NotebookNew(div->box1, AG_NOTEBOOK_EXPAND);
+		nb = AG_NotebookNew(pane->div[0], AG_NOTEBOOK_EXPAND);
 		ntab = AG_NotebookAddTab(nb, _("Models"), AG_BOX_VERT);
 		{
 			char tname[AG_OBJECT_TYPE_MAX];
@@ -1772,14 +1768,14 @@ ES_CircuitEdit(void *p)
 
 			AG_SeparatorNew(ntab, SEPARATOR_HORIZ);
 #endif
-			AG_LabelNew(ntab, AG_LABEL_STATIC, _("Pinout:"));
+			AG_LabelNewStatic(ntab, 0, _("Pinout:"));
 			{
 				tl = AG_TlistNew(ntab, AG_TLIST_POLL|
 						       AG_TLIST_EXPAND);
 				AG_SetEvent(tl, "tlist-poll",
 				    PollComponentPorts, "%p", ckt);
 			}
-			AG_LabelNew(ntab, AG_LABEL_STATIC, _("Port pairs:"));
+			AG_LabelNewStatic(ntab, 0, _("Port pairs:"));
 			{
 				tl = AG_TlistNew(ntab, AG_TLIST_POLL|
 				                       AG_TLIST_HFILL);
@@ -1788,12 +1784,12 @@ ES_CircuitEdit(void *p)
 			}
 		}
 
-		box = AG_BoxNew(div->box2, AG_BOX_VERT, AG_BOX_EXPAND);
+		box = AG_BoxNew(pane->div[1], AG_BOX_VERT, AG_BOX_EXPAND);
 		{
 			AG_ObjectAttach(box, vgv);
 			AG_WidgetFocus(vgv);
 		}
-		AG_ObjectAttach(div->box2, toolbar);
+//		AG_ObjectAttach(pane->div[1], toolbar);
 	}
 	
 	pitem = AG_MenuAddItem(menu, _("Components"));
@@ -1801,21 +1797,8 @@ ES_CircuitEdit(void *p)
 		extern VG_ToolOps esInscomOps;
 		extern VG_ToolOps esSelcomOps;
 		extern VG_ToolOps esWireTool;
-#if 0
-		extern VG_ToolOps vgScaleTool;
-		extern VG_ToolOps vgOriginTool;
-		extern VG_ToolOps vgLineTool;
-		extern VG_ToolOps vgTextTool;
-#endif
 		VG_Tool *tool;
 			
-#if 0
-		VG_ViewRegTool(vgv, &vgScaleTool, ckt->vg);
-		VG_ViewRegTool(vgv, &vgOriginTool, ckt->vg);
-		VG_ViewRegTool(vgv, &vgLineTool, ckt->vg);
-		VG_ViewRegTool(vgv, &vgTextTool, ckt->vg);
-		AG_SetEvent(vgv, "mapview-dblclick", double_click, "%p", ckt);
-#endif
 		VG_ViewButtondownFn(vgv, CircuitViewButtondown, "%p", ckt);
 		VG_ViewKeydownFn(vgv, CircuitViewKeydown, "%p", ckt);
 
@@ -1839,7 +1822,6 @@ ES_CircuitEdit(void *p)
 		    "%p", ckt);
 	}
 
-	AG_WindowScale(win, -1, -1);
 	AG_WindowSetGeometry(win,
 	    agView->w/16, agView->h/16,
 	    7*agView->w/8, 7*agView->h/8);

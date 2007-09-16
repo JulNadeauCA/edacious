@@ -1,8 +1,5 @@
-/*	$Csoft$	*/
-
 /*
- * Copyright (c) 2003, 2004, 2005 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2003-2005 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +26,7 @@
 #include <agar/core.h>
 #include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/dev.h>
 
 #include "eda.h"
 
@@ -65,7 +63,6 @@ extern const ES_ComponentOps esLogicProbeOps;
 extern const ES_ComponentOps esVSquareOps;
 extern const ES_ComponentOps esVSineOps;
 
-/* Built-in models */
 const void *eda_models[] = {
 	&esVsourceOps,
 	&esGroundOps,
@@ -149,8 +146,8 @@ main(int argc, char *argv[])
 	AG_RegisterType(&esScopeOps, EDA_CIRCUIT_ICON);
 	
 	/* Initialize the object manager. */
-	AG_ObjMgrInit();
-	AG_WindowShow(AG_ObjMgrWindow());
+	DEV_InitSubsystem(0);
+	DEV_Browser();
 
 	AG_ObjectLoad(agWorld);
 	AG_EventLoop();

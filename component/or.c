@@ -1,8 +1,5 @@
-/*	$Csoft: inverter.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
-
 /*
- * Copyright (c) 2006 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2006 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

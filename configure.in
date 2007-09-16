@@ -5,7 +5,7 @@ REGISTER("--enable-static",	"Produce a static binary [default: no]")
 REGISTER("--enable-warnings",	"Enable compiler warnings [default: no]")
 REGISTER("--enable-edition",	"Enable graphical editor [default: yes]")
 
-HDEFINE(VERSION, "\"0.2\"")
+HDEFINE(VERSION, "\"09152007\"")
 
 MDEFINE(SHAREDIR, "$PREFIX/share/agar-eda")
 HDEFINE(SHAREDIR, "\"$PREFIX/share/agar-eda\"")
@@ -19,9 +19,27 @@ HDEFINE(INCLDIR, "\"$PREFIX/include/agar-eda\"")
 CHECK(cc)
 CHECK(agar, 1.0)
 CHECK(agar-sc, 1.0)
+CHECK(agar-vg, 1.0)
+CHECK(agar-dev, 1.0)
 
-if [ "${HAVE_AGAR}" != "yes" -o "${HAVE_AGAR_SC}" != "yes" ]; then
-	echo "This application requires Agar and Agar-SC"
+if [ "${HAVE_AGAR}" != "yes" ]; then
+	echo "This application requires Agar"
+	echo "(http://hypertriton.com/agar)"
+	exit 1
+fi
+if [ "${HAVE_AGAR_SC}" != "yes" ]; then
+	echo "This application requires Agar-SC"
+	echo "(http://hypertriton.com/agar-sc)"
+	exit 1
+fi
+if [ "${HAVE_AGAR_VG}" != "yes" ]; then
+	echo "This application requires Agar-VG"
+	echo "(http://hypertriton.com/agar-vg)"
+	exit 1
+fi
+if [ "${HAVE_AGAR_DEV}" != "yes" ]; then
+	echo "This application requires Agar-DEV"
+	echo "(http://hypertriton.com/agar-dev)"
 	exit 1
 fi
 

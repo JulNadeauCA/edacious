@@ -1,8 +1,5 @@
-/*	$Csoft: semiresistor.c,v 1.5 2005/09/27 03:34:09 vedge Exp $	*/
-
 /*
- * Copyright (c) 2004, 2005 CubeSoft Communications, Inc.
- * <http://www.winds-triton.com>
+ * Copyright (c) 2004, 2005 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -196,7 +193,7 @@ ES_SemiResistorEdit(void *p)
 	AG_WidgetBind(mfsb, "yvalue", AG_WIDGET_DOUBLE, &r->w);
 	AG_MFSpinbuttonSetMin(mfsb, 1e-6);
 	
-	fsb = AG_FSpinbuttonNew(win, 0, "kohms", _("Sheet resistance/sq: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "kohm", _("Sheet resistance/sq: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->rsh);
 	AG_FSpinbuttonSetMin(fsb, 0);
 	
@@ -205,9 +202,9 @@ ES_SemiResistorEdit(void *p)
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->narrow);
 	AG_FSpinbuttonSetMin(fsb, 0);
 	
-	fsb = AG_FSpinbuttonNew(win, 0, "mohms/degC", _("Temp. coefficient: "));
+	fsb = AG_FSpinbuttonNew(win, 0, "mohm/degC", _("Temp. coefficient: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc1);
-	fsb = AG_FSpinbuttonNew(win, 0, "mohms/degC^2", _("Temp. coefficient"));
+	fsb = AG_FSpinbuttonNew(win, 0, "mohm/degC^2", _("Temp. coefficient"));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc2);
 
 	return (win);
