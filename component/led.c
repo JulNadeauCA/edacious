@@ -78,7 +78,7 @@ ES_LedDraw(void *p, VG *vg)
 }
 
 int
-ES_LedLoad(void *p, AG_Netbuf *buf)
+ES_LedLoad(void *p, AG_DataSource *buf)
 {
 	ES_Led *led = p;
 
@@ -93,7 +93,7 @@ ES_LedLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_LedSave(void *p, AG_Netbuf *buf)
+ES_LedSave(void *p, AG_DataSource *buf)
 {
 	ES_Led *led = p;
 

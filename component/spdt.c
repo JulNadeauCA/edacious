@@ -119,7 +119,7 @@ ES_SpdtInit(void *p, const char *name)
 }
 
 int
-ES_SpdtLoad(void *p, AG_Netbuf *buf)
+ES_SpdtLoad(void *p, AG_DataSource *buf)
 {
 	ES_Spdt *sw = p;
 
@@ -134,7 +134,7 @@ ES_SpdtLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_SpdtSave(void *p, AG_Netbuf *buf)
+ES_SpdtSave(void *p, AG_DataSource *buf)
 {
 	ES_Spdt *sw = p;
 

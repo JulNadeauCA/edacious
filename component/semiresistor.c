@@ -102,7 +102,7 @@ ES_SemiResistorInit(void *p, const char *name)
 }
 
 int
-ES_SemiResistorLoad(void *p, AG_Netbuf *buf)
+ES_SemiResistorLoad(void *p, AG_DataSource *buf)
 {
 	ES_SemiResistor *r = p;
 
@@ -121,7 +121,7 @@ ES_SemiResistorLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_SemiResistorSave(void *p, AG_Netbuf *buf)
+ES_SemiResistorSave(void *p, AG_DataSource *buf)
 {
 	ES_SemiResistor *r = p;
 

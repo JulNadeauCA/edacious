@@ -115,7 +115,7 @@ ES_ResistorDraw(void *p, VG *vg)
 }
 
 int
-ES_ResistorLoad(void *p, AG_Netbuf *buf)
+ES_ResistorLoad(void *p, AG_DataSource *buf)
 {
 	ES_Resistor *r = p;
 
@@ -132,7 +132,7 @@ ES_ResistorLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_ResistorSave(void *p, AG_Netbuf *buf)
+ES_ResistorSave(void *p, AG_DataSource *buf)
 {
 	ES_Resistor *r = p;
 

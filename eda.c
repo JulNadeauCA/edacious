@@ -129,21 +129,20 @@ main(int argc, char *argv[])
 		}
 	}
 	if (AG_InitVideo(900, 600, 32, AG_VIDEO_RESIZABLE|AG_VIDEO_BGPOPUPMENU)
-	    == -1 || AG_InitInput(0)) {
+	    == -1) {
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (-1);
 	}
-	AG_InitConfigWin(AG_CONFIG_ALL);
+	AG_InitInput(0);
 	AG_SetRefreshRate(fps);
 	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, AG_Quit);
-	AG_BindGlobalKey(SDLK_F1, KMOD_NONE, AG_ShowSettings);
 	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
 	
 	for (model = &eda_models[0]; *model != NULL; model++) {
-		AG_RegisterType(*model, EDA_COMPONENT_ICON);
+		AG_RegisterClass(*model);
 	}
-	AG_RegisterType(&esCircuitOps, EDA_CIRCUIT_ICON);
-	AG_RegisterType(&esScopeOps, EDA_CIRCUIT_ICON);
+	AG_RegisterClass(&esCircuitOps);
+	AG_RegisterClass(&esScopeOps);
 	
 	/* Initialize the object manager. */
 	DEV_InitSubsystem(0);

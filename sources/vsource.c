@@ -412,7 +412,7 @@ ES_VsourceFreeLoops(ES_Vsource *vs)
 }
 
 int
-ES_VsourceLoad(void *p, AG_Netbuf *buf)
+ES_VsourceLoad(void *p, AG_DataSource *buf)
 {
 	ES_Vsource *vs = p;
 
@@ -425,7 +425,7 @@ ES_VsourceLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_VsourceSave(void *p, AG_Netbuf *buf)
+ES_VsourceSave(void *p, AG_DataSource *buf)
 {
 	ES_Vsource *vs = p;
 

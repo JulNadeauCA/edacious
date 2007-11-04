@@ -238,13 +238,14 @@ ES_ComponentDraw(void *p, Uint32 ival, void *arg)
 	/* Indicate the nodes associated with connection points. */
 	for (i = 1; i <= com->nports; i++) {
 		ES_Port *port = &com->ports[i];
-		float rho, theta;
+		float r, theta;
 		float x, y;
 
-		VG_Car2Pol(vg, port->x, port->y, &rho, &theta);
-		theta -= com->block->theta;
-		VG_Pol2Car(vg, rho, theta, &x, &y);
-		ES_CircuitDrawPort(ckt, port, x, y);
+		r = hypotf(port->x,port->y);
+		theta = atan2f(port->y,port->x) - com->block->theta;
+		ES_CircuitDrawPort(ckt, port,
+		    r*cosf(theta),
+		    r*sinf(theta));
 	}
 
 	/* TODO blend */
@@ -394,7 +395,7 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 }
 
 int
-ES_ComponentLoad(void *p, AG_Netbuf *buf)
+ES_ComponentLoad(void *p, AG_DataSource *buf)
 {
 	ES_Component *com = p;
 	float Tspec;
@@ -408,7 +409,7 @@ ES_ComponentLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_ComponentSave(void *p, AG_Netbuf *buf)
+ES_ComponentSave(void *p, AG_DataSource *buf)
 {
 	ES_Component *com = p;
 
@@ -679,7 +680,6 @@ ES_ComponentInsert(AG_Event *event)
 	AG_Tlist *tl = AG_PTR(2);
 	ES_Circuit *ckt = AG_PTR(3);
 	AG_TlistItem *it;
-	AG_ObjectType *comtype;
 	ES_ComponentOps *comops;
 	ES_Component *com;
 	VG_Tool *t;
@@ -689,8 +689,7 @@ ES_ComponentInsert(AG_Event *event)
 		AG_TextMsg(AG_MSG_ERROR, _("No component type is selected."));
 		return;
 	}
-	comtype = it->p1;
-	comops = (ES_ComponentOps *)comtype->ops;
+	comops = (ES_ComponentOps *)it->p1;
 tryname:
 	snprintf(name, sizeof(name), "%s%d", comops->pfx, n++);
 	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
@@ -700,8 +699,8 @@ tryname:
 	if (com != NULL)
 		goto tryname;
 
-	com = Malloc(comtype->ops->size, M_OBJECT);
-	comtype->ops->init(com, name);
+	com = Malloc(comops->ops.size, M_OBJECT);
+	comops->ops.init(com, name);
 	com->flags |= COMPONENT_FLOATING;
 
 	ES_LockCircuit(ckt);

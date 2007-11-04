@@ -17,8 +17,8 @@ typedef struct es_led {
 
 __BEGIN_DECLS
 void	 ES_LedInit(void *, const char *);
-int	 ES_LedLoad(void *, AG_Netbuf *);
-int	 ES_LedSave(void *, AG_Netbuf *);
+int	 ES_LedLoad(void *, AG_DataSource *);
+int	 ES_LedSave(void *, AG_DataSource *);
 void	*ES_LedEdit(void *);
 int	 ES_LedConnect(void *, ES_Port *, ES_Port *);
 void	 ES_LedDraw(void *, VG *);

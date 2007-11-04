@@ -291,7 +291,7 @@ ES_CircuitReinit(void *p)
 }
 
 int
-ES_CircuitLoad(void *p, AG_Netbuf *buf)
+ES_CircuitLoad(void *p, AG_DataSource *buf)
 {
 	ES_Circuit *ckt = p;
 	ES_Component *com;
@@ -454,7 +454,7 @@ ES_CircuitLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_CircuitSave(void *p, AG_Netbuf *buf)
+ES_CircuitSave(void *p, AG_DataSource *buf)
 {
 	char path[AG_OBJECT_PATH_MAX];
 	ES_Circuit *ckt = p;
@@ -475,7 +475,7 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 		ES_Node *node = ckt->nodes[i];
 
 		AG_WriteUint32(buf, (Uint32)node->flags);
-		count_offs = AG_NetbufTell(buf);
+		count_offs = AG_Tell(buf);
 		count = 0;
 		AG_WriteUint32(buf, 0);
 		TAILQ_FOREACH(br, &node->branches, branches) {
@@ -489,14 +489,14 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 			AG_WriteUint32(buf, (Uint32)br->port->n);
 			count++;
 		}
-		AG_PwriteUint32(buf, count, count_offs);
+		AG_WriteUint32At(buf, count, count_offs);
 	}
 	
 	/* Save the schematics. */
 	VG_Save(ckt->vg, buf);
 
 	/* Save the schematic wires. */
-	count_offs = AG_NetbufTell(buf);
+	count_offs = AG_Tell(buf);
 	count = 0;
 	AG_WriteUint32(buf, 0);
 	TAILQ_FOREACH(wire, &ckt->wires, wires) {
@@ -514,10 +514,10 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 		}
 		count++;
 	}
-	AG_PwriteUint32(buf, count, count_offs);
+	AG_WriteUint32At(buf, count, count_offs);
 
 	/* Save the symbol table. */
-	count_offs = AG_NetbufTell(buf);
+	count_offs = AG_Tell(buf);
 	count = 0;
 	AG_WriteUint32(buf, 0);
 	TAILQ_FOREACH(sym, &ckt->syms, syms) {
@@ -538,10 +538,10 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 		}
 		count++;
 	}
-	AG_PwriteUint32(buf, count, count_offs);
+	AG_WriteUint32At(buf, count, count_offs);
 
 	/* Save the component information. */
-	count_offs = AG_NetbufTell(buf);
+	count_offs = AG_Tell(buf);
 	count = 0;
 	AG_WriteUint32(buf, 0);
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
@@ -564,7 +564,7 @@ ES_CircuitSave(void *p, AG_Netbuf *buf)
 		}
 		count++;
 	}
-	AG_PwriteUint32(buf, count, count_offs);
+	AG_WriteUint32At(buf, count, count_offs);
 	return (0);
 }
 
@@ -1725,18 +1725,9 @@ ES_CircuitEdit(void *p)
 			    ES_ComponentInsert, "%p,%p,%p", vgv, tl, ckt);
 
 			for (model = &eda_models[0]; *model != NULL; model++) {
-				for (i = 0; i < agnTypes; i++) {
-					if (agTypes[i].ops == *model)
-						break;
-				}
-				if (i < agnTypes) {
-					AG_ObjectType *ctype = &agTypes[i];
-					ES_ComponentOps *cops =
-					    (ES_ComponentOps *)ctype->ops;
-
-					AG_TlistAddPtr(tl, NULL, _(cops->name),
-					    ctype);
-				}
+				AG_TlistAddPtr(tl, NULL,
+				    ((ES_ComponentOps *)*model)->name,
+				    (void *)*model);
 			}
 		}
 

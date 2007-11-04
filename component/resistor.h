@@ -17,8 +17,8 @@ typedef struct es_resistor {
 
 __BEGIN_DECLS
 void	 ES_ResistorInit(void *, const char *);
-int	 ES_ResistorLoad(void *, AG_Netbuf *);
-int	 ES_ResistorSave(void *, AG_Netbuf *);
+int	 ES_ResistorLoad(void *, AG_DataSource *);
+int	 ES_ResistorSave(void *, AG_DataSource *);
 int	 ES_ResistorExport(void *, enum circuit_format, FILE *);
 SC_Real	 ES_ResistorResistance(void *, ES_Port *, ES_Port *);
 void	*ES_ResistorEdit(void *);

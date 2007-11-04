@@ -89,7 +89,7 @@ ES_ScopeDestroy(void *obj)
 }
 
 int
-ES_ScopeLoad(void *obj, AG_Netbuf *buf)
+ES_ScopeLoad(void *obj, AG_DataSource *buf)
 {
 	ES_Scope *scope = obj;
 
@@ -100,7 +100,7 @@ ES_ScopeLoad(void *obj, AG_Netbuf *buf)
 }
 
 int
-ES_ScopeSave(void *obj, AG_Netbuf *buf)
+ES_ScopeSave(void *obj, AG_DataSource *buf)
 {
 	AG_WriteObjectVersion(buf, obj);
 	return (0);

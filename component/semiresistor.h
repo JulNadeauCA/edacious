@@ -18,8 +18,8 @@ typedef struct es_semiresistor {
 
 __BEGIN_DECLS
 void	 ES_SemiResistorInit(void *, const char *);
-int	 ES_SemiResistorLoad(void *, AG_Netbuf *);
-int	 ES_SemiResistorSave(void *, AG_Netbuf *);
+int	 ES_SemiResistorLoad(void *, AG_DataSource *);
+int	 ES_SemiResistorSave(void *, AG_DataSource *);
 int	 ES_SemiResistorExport(void *, enum circuit_format, FILE *);
 double	 ES_SemiResistorResistance(void *, ES_Port *, ES_Port *);
 void	*ES_SemiResistorEdit(void *);

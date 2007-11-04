@@ -16,8 +16,8 @@ typedef struct es_spdt {
 
 __BEGIN_DECLS
 void	 ES_SpdtInit(void *, const char *);
-int	 ES_SpdtLoad(void *, AG_Netbuf *);
-int	 ES_SpdtSave(void *, AG_Netbuf *);
+int	 ES_SpdtLoad(void *, AG_DataSource *);
+int	 ES_SpdtSave(void *, AG_DataSource *);
 int	 ES_SpdtExport(void *, enum circuit_format, FILE *);
 double	 ES_SpdtResistance(void *, ES_Port *, ES_Port *);
 void	*ES_SpdtEdit(void *);

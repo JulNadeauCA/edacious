@@ -114,7 +114,7 @@ ES_VSineInit(void *p, const char *name)
 }
 
 int
-ES_VSineLoad(void *p, AG_Netbuf *buf)
+ES_VSineLoad(void *p, AG_DataSource *buf)
 {
 	ES_VSine *vs = p;
 
@@ -128,7 +128,7 @@ ES_VSineLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_VSineSave(void *p, AG_Netbuf *buf)
+ES_VSineSave(void *p, AG_DataSource *buf)
 {
 	ES_VSine *vs = p;
 

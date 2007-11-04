@@ -79,12 +79,13 @@ RotateComponent(ES_Circuit *ckt, ES_Component *com)
 	com->block->theta += M_PI_2;
 
 	for (i = 1; i <= com->nports; i++) {
-		float rho, theta;
+		float r, theta;
 
+		r = hypotf(com->ports[i].x, com->ports[i].y);
+		theta = atan2f(com->ports[i].y, com->ports[i].x) + M_PI_2;
 		VG_SelectBlock(vg, com->block);
-		VG_Car2Pol(vg, com->ports[i].x, com->ports[i].y, &rho, &theta);
-		theta += M_PI_2;
-		VG_Pol2Car(vg, rho, theta, &com->ports[i].x, &com->ports[i].y);
+		com->ports[i].x = r*cosf(theta);
+		com->ports[i].y = r*sinf(theta);
 		VG_EndBlock(vg);
 	}
 }

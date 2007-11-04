@@ -5,15 +5,15 @@
 
 #include <config/edition.h>
 
-#include <agar/compat/queue.h>
-#include <agar/compat/strlcpy.h>
-#include <agar/compat/strlcat.h>
-#include <agar/compat/snprintf.h>
-#include <agar/compat/vsnprintf.h>
-#include <agar/compat/asprintf.h>
-#include <agar/compat/vasprintf.h>
-#include <agar/compat/strsep.h>
-#include <agar/compat/math.h>
+#include <agar/core/queue.h>
+#include <agar/core/strlcpy.h>
+#include <agar/core/strlcat.h>
+#include <agar/core/snprintf.h>
+#include <agar/core/vsnprintf.h>
+#include <agar/core/asprintf.h>
+#include <agar/core/vasprintf.h>
+#include <agar/core/strsep.h>
+#include <agar/core/math.h>
 
 #define Malloc(s,c) AG_Malloc((s),(c))
 #define Free(p,c) AG_Free(p,c)

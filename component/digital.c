@@ -77,7 +77,7 @@ ES_DigitalDraw(void *p, VG *vg)
 }
 
 int
-ES_DigitalLoad(void *p, AG_Netbuf *buf)
+ES_DigitalLoad(void *p, AG_DataSource *buf)
 {
 	ES_Digital *dig = p;
 
@@ -103,7 +103,7 @@ ES_DigitalLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_DigitalSave(void *p, AG_Netbuf *buf)
+ES_DigitalSave(void *p, AG_DataSource *buf)
 {
 	ES_Digital *dig = p;
 

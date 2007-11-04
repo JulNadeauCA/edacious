@@ -20,8 +20,8 @@ __BEGIN_DECLS
 void	 ES_VSineInit(void *, const char *);
 void	 ES_VSineReinit(void *);
 void	 ES_VSineDestroy(void *);
-int	 ES_VSineLoad(void *, AG_Netbuf *);
-int	 ES_VSineSave(void *, AG_Netbuf *);
+int	 ES_VSineLoad(void *, AG_DataSource *);
+int	 ES_VSineSave(void *, AG_DataSource *);
 int	 ES_VSineExport(void *, enum circuit_format, FILE *);
 void	*ES_VSineEdit(void *);
 void	 ES_VSineDraw(void *, VG *);

@@ -12,8 +12,8 @@ typedef ES_Digital ES_And;
 
 __BEGIN_DECLS
 void	 ES_AndInit(void *, const char *);
-int	 ES_AndLoad(void *, AG_Netbuf *);
-int	 ES_AndSave(void *, AG_Netbuf *);
+int	 ES_AndLoad(void *, AG_DataSource *);
+int	 ES_AndSave(void *, AG_DataSource *);
 void	*ES_AndEdit(void *);
 void	 ES_AndDraw(void *, VG *);
 void	 ES_AndUpdate(void *);

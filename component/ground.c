@@ -108,7 +108,7 @@ ES_GroundInit(void *p, const char *name)
 }
 
 int
-ES_GroundLoad(void *p, AG_Netbuf *buf)
+ES_GroundLoad(void *p, AG_DataSource *buf)
 {
 	ES_Ground *gnd = p;
 
@@ -120,7 +120,7 @@ ES_GroundLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_GroundSave(void *p, AG_Netbuf *buf)
+ES_GroundSave(void *p, AG_DataSource *buf)
 {
 	ES_Ground *gnd = p;
 

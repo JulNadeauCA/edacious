@@ -114,8 +114,8 @@ typedef struct es_circuit {
 __BEGIN_DECLS
 void		 ES_CircuitInit(void *, const char *);
 void		 ES_CircuitReinit(void *);
-int		 ES_CircuitLoad(void *, AG_Netbuf *);
-int		 ES_CircuitSave(void *, AG_Netbuf *);
+int		 ES_CircuitLoad(void *, AG_DataSource *);
+int		 ES_CircuitSave(void *, AG_DataSource *);
 void		 ES_CircuitDestroy(void *);
 void		 ES_CircuitFreeComponents(ES_Circuit *);
 void		*ES_CircuitEdit(void *);

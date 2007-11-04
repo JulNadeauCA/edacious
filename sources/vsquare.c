@@ -116,7 +116,7 @@ ES_VSquareInit(void *p, const char *name)
 }
 
 int
-ES_VSquareLoad(void *p, AG_Netbuf *buf)
+ES_VSquareLoad(void *p, AG_DataSource *buf)
 {
 	ES_VSquare *vs = p;
 
@@ -132,7 +132,7 @@ ES_VSquareLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_VSquareSave(void *p, AG_Netbuf *buf)
+ES_VSquareSave(void *p, AG_DataSource *buf)
 {
 	ES_VSquare *vs = p;
 

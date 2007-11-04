@@ -15,8 +15,8 @@ typedef struct es_logic_probe {
 
 __BEGIN_DECLS
 void	 ES_LogicProbeInit(void *, const char *);
-int	 ES_LogicProbeLoad(void *, AG_Netbuf *);
-int	 ES_LogicProbeSave(void *, AG_Netbuf *);
+int	 ES_LogicProbeLoad(void *, AG_DataSource *);
+int	 ES_LogicProbeSave(void *, AG_DataSource *);
 void	*ES_LogicProbeEdit(void *);
 int	 ES_LogicProbeConnect(void *, ES_Port *, ES_Port *);
 void	 ES_LogicProbeDraw(void *, VG *);

@@ -50,8 +50,8 @@ typedef struct es_digital {
 
 __BEGIN_DECLS
 void	 ES_DigitalInit(void *, const char *, const void *, const ES_Port *);
-int	 ES_DigitalLoad(void *, AG_Netbuf *);
-int	 ES_DigitalSave(void *, AG_Netbuf *);
+int	 ES_DigitalLoad(void *, AG_DataSource *);
+int	 ES_DigitalSave(void *, AG_DataSource *);
 int	 ES_DigitalExport(void *, enum circuit_format, FILE *);
 void	 ES_DigitalEdit(void *, void *);
 void	 ES_DigitalDraw(void *, VG *);

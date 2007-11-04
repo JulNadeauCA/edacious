@@ -77,7 +77,7 @@ ES_LogicProbeDraw(void *p, VG *vg)
 }
 
 int
-ES_LogicProbeLoad(void *p, AG_Netbuf *buf)
+ES_LogicProbeLoad(void *p, AG_DataSource *buf)
 {
 	ES_LogicProbe *lp = p;
 
@@ -90,7 +90,7 @@ ES_LogicProbeLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_LogicProbeSave(void *p, AG_Netbuf *buf)
+ES_LogicProbeSave(void *p, AG_DataSource *buf)
 {
 	ES_LogicProbe *lp = p;
 

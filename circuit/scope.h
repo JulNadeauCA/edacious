@@ -18,8 +18,8 @@ void	  ES_ScopeInit(void *, const char *);
 void	  ES_ScopeReinit(void *);
 void	  ES_ScopeDestroy(void *);
 void	 *ES_ScopeEdit(void *);
-int	  ES_ScopeLoad(void *, AG_Netbuf *);
-int	  ES_ScopeSave(void *, AG_Netbuf *);
+int	  ES_ScopeLoad(void *, AG_DataSource *);
+int	  ES_ScopeSave(void *, AG_DataSource *);
 __END_DECLS
 
 #include "close_code.h"

@@ -110,7 +110,7 @@ ES_SpstInit(void *p, const char *name)
 }
 
 int
-ES_SpstLoad(void *p, AG_Netbuf *buf)
+ES_SpstLoad(void *p, AG_DataSource *buf)
 {
 	ES_Spst *sw = p;
 
@@ -125,7 +125,7 @@ ES_SpstLoad(void *p, AG_Netbuf *buf)
 }
 
 int
-ES_SpstSave(void *p, AG_Netbuf *buf)
+ES_SpstSave(void *p, AG_DataSource *buf)
 {
 	ES_Spst *sw = p;
 

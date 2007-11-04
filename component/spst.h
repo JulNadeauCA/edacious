@@ -16,8 +16,8 @@ typedef struct es_spst {
 
 __BEGIN_DECLS
 void	 ES_SpstInit(void *, const char *);
-int	 ES_SpstLoad(void *, AG_Netbuf *);
-int	 ES_SpstSave(void *, AG_Netbuf *);
+int	 ES_SpstLoad(void *, AG_DataSource *);
+int	 ES_SpstSave(void *, AG_DataSource *);
 int	 ES_SpstExport(void *, enum circuit_format, FILE *);
 double	 ES_SpstResistance(void *, ES_Port *, ES_Port *);
 void	*ES_SpstEdit(void *);
