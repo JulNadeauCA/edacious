@@ -60,7 +60,7 @@ scan:
 		AG_ObjectDetach(com);
 		AG_ObjectUnlinkDatafiles(com);
 		AG_ObjectDestroy(com);
-		Free(com, M_OBJECT);
+		Free(com);
 		goto scan;
 	}
 	AG_UnlockLinkage();
@@ -126,7 +126,7 @@ remove:
 		AG_ObjectDetach(esInscomCur);
 		AG_ObjectUnlinkDatafiles(esInscomCur);
 		AG_ObjectDestroy(esInscomCur);
-		Free(esInscomCur, M_OBJECT);
+		Free(esInscomCur);
 		esInscomCur = NULL;
 		VG_ViewSelectTool(t->vgv, NULL, NULL);
 		ES_UnlockCircuit(ckt);

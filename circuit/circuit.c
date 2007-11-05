@@ -142,7 +142,7 @@ ES_CircuitModified(ES_Circuit *ckt)
 		AG_PostEvent(ckt, com, "circuit-modified", NULL);
 #endif
 	if (ckt->loops == NULL) {
-		ckt->loops = Malloc(sizeof(ES_Loop *), M_EDA);
+		ckt->loops = Malloc(sizeof(ES_Loop *));
 	}
 	ckt->l = 0;
 	AGOBJECT_FOREACH_CLASS(vs, ckt, es_vsource, "ES_Component:"
@@ -192,7 +192,7 @@ ES_CircuitInit(void *p, const char *name)
 	ckt->loops = NULL;
 	ckt->vsrcs = NULL;
 	ckt->m = 0;
-	ckt->nodes = Malloc(sizeof(ES_Node *), M_EDA);
+	ckt->nodes = Malloc(sizeof(ES_Node *));
 	ckt->n = 0;
 	ckt->console = NULL;
 	pthread_mutex_init(&ckt->lock, &agRecursiveMutexAttr);
@@ -242,11 +242,11 @@ ES_CircuitReinit(void *p)
 
 	ES_DestroySimulation(ckt);
 
-	Free(ckt->loops, M_EDA);
+	Free(ckt->loops);
 	ckt->loops = NULL;
 	ckt->l = 0;
 
-	Free(ckt->vsrcs, M_EDA);
+	Free(ckt->vsrcs);
 	ckt->vsrcs = NULL;
 	ckt->m = 0;
 
@@ -254,7 +254,7 @@ ES_CircuitReinit(void *p)
 	     wire != TAILQ_END(&ckt->wires);
 	     wire = nwire) {
 		nwire = TAILQ_NEXT(wire, wires);
-		Free(wire, M_EDA);
+		Free(wire);
 	}
 	TAILQ_INIT(&ckt->wires);
 	
@@ -262,13 +262,13 @@ ES_CircuitReinit(void *p)
 	     sym != TAILQ_END(&ckt->syms);
 	     sym = nsym) {
 		nsym = TAILQ_NEXT(sym, syms);
-		Free(sym, M_EDA);
+		Free(sym);
 	}
 	TAILQ_INIT(&ckt->syms);
 
 	for (i = 0; i <= ckt->n; i++) {
 		ES_CircuitFreeNode(ckt->nodes[i]);
-		Free(ckt->nodes[i], M_EDA);
+		Free(ckt->nodes[i]);
 	}
 	ckt->nodes = Realloc(ckt->nodes, sizeof(ES_Node *));
 	ckt->n = 0;
@@ -315,7 +315,7 @@ ES_CircuitLoad(void *p, AG_DataSource *buf)
 		if (i == 0) {
 			name = 0;
 			ES_CircuitFreeNode(ckt->nodes[0]);
-			Free(ckt->nodes[0], M_EDA);
+			Free(ckt->nodes[0]);
 			InitGround(ckt);
 		} else {
 			name = ES_CircuitAddNode(ckt, flags & ~(CKTNODE_EXAM));
@@ -579,7 +579,7 @@ InitNode(ES_Node *node, Uint flags)
 static void
 InitGround(ES_Circuit *ckt)
 {
-	ckt->nodes[0] = Malloc(sizeof(ES_Node), M_EDA);
+	ckt->nodes[0] = Malloc(sizeof(ES_Node));
 	InitNode(ckt->nodes[0], CKTNODE_REFERENCE);
 	ES_CircuitAddNodeSym(ckt, "Gnd", 0);
 }
@@ -592,7 +592,7 @@ ES_CircuitAddNode(ES_Circuit *ckt, Uint flags)
 	int n = ++ckt->n;
 
 	ckt->nodes = Realloc(ckt->nodes, (n+1)*sizeof(ES_Node *));
-	ckt->nodes[n] = Malloc(sizeof(ES_Node), M_EDA);
+	ckt->nodes[n] = Malloc(sizeof(ES_Node));
 	InitNode(ckt->nodes[n], flags);
 	return (n);
 }
@@ -603,7 +603,7 @@ ES_CircuitAddWire(ES_Circuit *ckt)
 	ES_Wire *wire;
 	int i;
 
-	wire = Malloc(sizeof(ES_Wire), M_EDA);
+	wire = Malloc(sizeof(ES_Wire));
 	wire->flags = 0;
 	wire->cat = 0;
 	for (i = 0; i < 2; i++) {
@@ -663,7 +663,7 @@ ES_CircuitAddSym(ES_Circuit *ckt)
 {
 	ES_Sym *sym;
 
-	sym = Malloc(sizeof(ES_Sym), M_EDA);
+	sym = Malloc(sizeof(ES_Sym));
 	sym->name[0] = '\0';
 	sym->descr[0] = '\0';
 	sym->type = 0;
@@ -676,7 +676,7 @@ void
 ES_CircuitDelSym(ES_Circuit *ckt, ES_Sym *sym)
 {
 	TAILQ_REMOVE(&ckt->syms, sym, syms);
-	Free(sym, M_EDA);
+	Free(sym);
 }
 
 ES_Sym *
@@ -699,7 +699,7 @@ void
 ES_CircuitDelWire(ES_Circuit *ckt, ES_Wire *wire)
 {
 	TAILQ_REMOVE(&ckt->wires, wire, wires);
-	Free(wire, M_EDA);
+	Free(wire);
 }
 
 /*
@@ -817,7 +817,7 @@ ES_CircuitFreeNode(ES_Node *node)
 	     br != TAILQ_END(&node->branches);
 	     br = nbr) {
 		nbr = TAILQ_NEXT(br, branches);
-		Free(br, M_EDA);
+		Free(br);
 	}
 	TAILQ_INIT(&node->branches);
 }
@@ -838,7 +838,7 @@ ES_CircuitDelNode(ES_Circuit *ckt, int n)
 #endif
 	node = ckt->nodes[n];
 	ES_CircuitFreeNode(node);
-	Free(node, M_EDA);
+	Free(node);
 
 	if (n != ckt->n) {
 		for (i = n; i <= ckt->n; i++) {
@@ -931,7 +931,7 @@ ES_CircuitAddBranch(ES_Circuit *ckt, int n, ES_Port *port)
 	ES_Node *node = ckt->nodes[n];
 	ES_Branch *br;
 
-	br = Malloc(sizeof(ES_Branch), M_EDA);
+	br = Malloc(sizeof(ES_Branch));
 	br->port = port;
 	TAILQ_INSERT_TAIL(&node->branches, br, branches);
 	node->nbranches++;
@@ -957,7 +957,7 @@ ES_CircuitDelBranch(ES_Circuit *ckt, int n, ES_Branch *br)
 	ES_Node *node = ckt->nodes[n];
 
 	TAILQ_REMOVE(&node->branches, br, branches);
-	Free(br, M_EDA);
+	Free(br);
 #ifdef DEBUG
 	if ((node->nbranches - 1) < 0) { Fatal("--nbranches < 0"); }
 #endif
@@ -972,7 +972,7 @@ ES_CircuitFreeComponents(ES_Circuit *ckt)
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		AG_ObjectDetach(com);
 		AG_ObjectDestroy(com);
-		Free(com, M_OBJECT);
+		Free(com);
 	}
 }
 
@@ -1003,7 +1003,7 @@ ES_SetSimulationMode(ES_Circuit *ckt, const ES_SimOps *sops)
 
 	ES_DestroySimulation(ckt);
 
-	ckt->sim = sim = Malloc(sops->size, M_EDA);
+	ckt->sim = sim = Malloc(sops->size);
 	sim->ckt = ckt;
 	sim->ops = sops;
 	sim->running = 0;
@@ -1613,9 +1613,9 @@ ES_CircuitEdit(void *p)
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, "%s", AGOBJECT(ckt)->name);
 
-	toolbar = Malloc(sizeof(AG_Toolbar), M_OBJECT);
+	toolbar = Malloc(sizeof(AG_Toolbar));
 	AG_ToolbarInit(toolbar, AG_TOOLBAR_VERT, 1, 0);
-	vgv = Malloc(sizeof(VG_View), M_OBJECT);
+	vgv = Malloc(sizeof(VG_View));
 	VG_ViewInit(vgv, ckt->vg, VG_VIEW_EXPAND);
 	VG_ViewDrawFn(vgv, CircuitDrawGeneric, "%p", ckt);
 	

@@ -15,9 +15,9 @@
 #include <agar/core/strsep.h>
 #include <agar/core/math.h>
 
-#define Malloc(s,c) AG_Malloc((s),(c))
-#define Free(p,c) AG_Free(p,c)
-#define Realloc(p,s) AG_Realloc((p),(s))
+#define Malloc AG_Malloc
+#define Free AG_Free
+#define Realloc AG_Realloc
 #define Fatal AG_FatalError
 
 #define _(s) (s)

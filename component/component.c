@@ -53,10 +53,10 @@ ES_ComponentFreePorts(ES_Component *com)
 	for (i = 0; i < com->npairs; i++) {
 		ES_Pair *pair = &com->pairs[i];
 
-		Free(pair->loops, M_EDA);
-		Free(pair->lpols, M_EDA);
+		Free(pair->loops);
+		Free(pair->lpols);
 	}
-	Free(com->pairs, M_EDA);
+	Free(com->pairs);
 	com->pairs = NULL;
 }
 
@@ -363,7 +363,7 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 	}
 
 	/* Find the port pairs. */
-	com->pairs = Malloc(sizeof(ES_Pair), M_EDA);
+	com->pairs = Malloc(sizeof(ES_Pair));
 	com->npairs = 0;
 	for (i = 1; i <= com->nports; i++) {
 		for (j = 1; j <= com->nports; j++) {
@@ -387,8 +387,8 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 			pair->com = com;
 			pair->p1 = &com->ports[i];
 			pair->p2 = &com->ports[j];
-			pair->loops = Malloc(sizeof(ES_Loop *), M_EDA);
-			pair->lpols = Malloc(sizeof(int), M_EDA);
+			pair->loops = Malloc(sizeof(ES_Loop *));
+			pair->lpols = Malloc(sizeof(int));
 			pair->nloops = 0;
 		}
 	}
@@ -699,7 +699,7 @@ tryname:
 	if (com != NULL)
 		goto tryname;
 
-	com = Malloc(comops->ops.size, M_OBJECT);
+	com = Malloc(comops->ops.size);
 	comops->ops.init(com, name);
 	com->flags |= COMPONENT_FLOATING;
 

@@ -182,9 +182,9 @@ insert_loop(ES_Vsource *vs)
 	unsigned int i;
 
 	/* Create a new voltage source loop entry. */
-	lnew = Malloc(sizeof(ES_Loop), M_EDA);
+	lnew = Malloc(sizeof(ES_Loop));
 	lnew->name = 1+vs->nloops++;
-	lnew->pairs = Malloc((vs->nlstack-1)*sizeof(ES_Pair *), M_EDA);
+	lnew->pairs = Malloc((vs->nlstack-1)*sizeof(ES_Pair *));
 	lnew->npairs = 0;
 	lnew->origin = vs;
 
@@ -268,10 +268,10 @@ ES_VsourceFindLoops(ES_Vsource *vs)
 {
 	unsigned int i;
 
-	vs->lstack = Malloc(sizeof(ES_Port *), M_EDA);
+	vs->lstack = Malloc(sizeof(ES_Port *));
 	find_loops(vs, PORT(vs,1));
 
-	Free(vs->lstack, M_EDA);
+	Free(vs->lstack);
 	vs->lstack = NULL;
 	vs->nlstack = 0;
 }
@@ -400,13 +400,13 @@ ES_VsourceFreeLoops(ES_Vsource *vs)
 	     loop != TAILQ_END(&vs->loops);
 	     loop = nloop) {
 		nloop = TAILQ_NEXT(loop, loops);
-		Free(loop->pairs, M_EDA);
-		Free(loop, M_EDA);
+		Free(loop->pairs);
+		Free(loop);
 	}
 	TAILQ_INIT(&vs->loops);
 	vs->nloops = 0;
 
-	Free(vs->lstack, M_EDA);
+	Free(vs->lstack);
 	vs->lstack = NULL;
 	vs->nlstack = 0;
 }

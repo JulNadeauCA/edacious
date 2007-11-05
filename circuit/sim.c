@@ -58,7 +58,7 @@ ES_SimDestroy(void *p)
 	if (sim->ops->destroy != NULL) {
 		sim->ops->destroy(sim);
 	}
-	Free(sim, M_EDA);
+	Free(sim);
 }
 
 void

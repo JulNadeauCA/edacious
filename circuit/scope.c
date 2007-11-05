@@ -48,7 +48,7 @@ ES_ScopeNew(void *parent, const char *name)
 {
 	ES_Scope *scope;
 
-	scope = Malloc(sizeof(ES_Scope), M_OBJECT);
+	scope = Malloc(sizeof(ES_Scope));
 	ES_ScopeInit(scope, name);
 	AG_ObjectAttach(parent, scope);
 	return (scope);
