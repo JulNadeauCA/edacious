@@ -8,13 +8,13 @@ REGISTER("--enable-edition",	"Enable graphical editor [default: yes]")
 HDEFINE(VERSION, "09152007")
 
 MDEFINE(SHAREDIR, "$PREFIX/share/agar-eda")
-HDEFINE(SHAREDIR, "\"$PREFIX/share/agar-eda\"")
+HDEFINE(SHAREDIR, "$PREFIX/share/agar-eda")
 MDEFINE(TTFDIR, "$PREFIX/share/agar-eda/fonts")
-HDEFINE(TTFDIR, "\"$PREFIX/share/agar-eda/fonts\"")
+HDEFINE(TTFDIR, "$PREFIX/share/agar-eda/fonts")
 MDEFINE(LIBDIR, "$PREFIX/lib/agar-eda")
-HDEFINE(LIBDIR, "\"$PREFIX/lib/agar-eda\"")
+HDEFINE(LIBDIR, "$PREFIX/lib/agar-eda")
 MDEFINE(INCLDIR, "$PREFIX/include/agar-eda")
-HDEFINE(INCLDIR, "\"$PREFIX/include/agar-eda\"")
+HDEFINE(INCLDIR, "$PREFIX/include/agar-eda")
 
 CHECK(cc)
 CHECK(agar, 1.0)
@@ -24,7 +24,7 @@ CHECK(agar-dev, 1.0)
 
 if [ "${HAVE_AGAR}" != "yes" ]; then
 	echo "This application requires Agar"
-	echo "(http://hypertriton.com/agar)"
+	echo "(http://libagar.org/)"
 	exit 1
 fi
 if [ "${HAVE_AGAR_SC}" != "yes" ]; then
