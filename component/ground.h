@@ -12,16 +12,7 @@ typedef struct es_ground {
 } ES_Ground;
 
 __BEGIN_DECLS
-void	 ES_GroundInit(void *, const char *);
-int	 ES_GroundLoad(void *, AG_DataSource *);
-int	 ES_GroundSave(void *, AG_DataSource *);
-int	 ES_GroundExport(void *, enum circuit_format, FILE *);
-double	 ES_GroundResistance(void *, ES_Port *, ES_Port *);
-void	*ES_GroundEdit(void *);
-int	 ES_GroundConfigure(void *);
-void	 ES_GroundDraw(void *, VG *);
-void	 ES_GroundUpdate(void *, VG *);
-int	 ES_GroundConnect(void *, ES_Port *, ES_Port *);
+extern const ES_ComponentOps esGroundOps;
 __END_DECLS
 
 #include "close_code.h"

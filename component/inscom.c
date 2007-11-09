@@ -60,7 +60,6 @@ scan:
 		AG_ObjectDetach(com);
 		AG_ObjectUnlinkDatafiles(com);
 		AG_ObjectDestroy(com);
-		Free(com);
 		goto scan;
 	}
 	AG_UnlockLinkage();
@@ -126,7 +125,6 @@ remove:
 		AG_ObjectDetach(esInscomCur);
 		AG_ObjectUnlinkDatafiles(esInscomCur);
 		AG_ObjectDestroy(esInscomCur);
-		Free(esInscomCur);
 		esInscomCur = NULL;
 		VG_ViewSelectTool(t->vgv, NULL, NULL);
 		ES_UnlockCircuit(ckt);
@@ -166,7 +164,7 @@ Init(void *p)
 VG_ToolOps esInscomOps = {
 	N_("Insert component"),
 	N_("Insert new components into the circuit."),
-	EDA_INSERT_COMPONENT_ICON,
+	NULL,
 	sizeof(VG_Tool),
 	0,
 	Init,

@@ -30,28 +30,6 @@
 #include "eda.h"
 #include "vsource.h"
 
-const ES_ComponentOps esVsourceOps = {
-	{
-		"ES_Component:ES_Vsource",
-		sizeof(ES_Vsource),
-		{ 0,0 },
-		ES_VsourceInit,
-		ES_VsourceReinit,
-		ES_VsourceDestroy,
-		ES_VsourceLoad,
-		ES_VsourceSave,
-		ES_ComponentEdit
-	},
-	N_("Independent voltage source"),
-	"V",
-	ES_VsourceDraw,
-	ES_VsourceEdit,
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	ES_VsourceExport,
-	NULL			/* connect */
-};
-
 const ES_Port esVsourcePinout[] = {
 	{ 0, "",  0, 0 },
 	{ 1, "v+", 0, 0 },
@@ -64,8 +42,8 @@ enum {
 	VSOURCE_SYM_CIRCULAR
 } esVsourceStyle = 1;
 
-void
-ES_VsourceDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_Vsource *vs = p;
 	
@@ -85,7 +63,6 @@ ES_VsourceDraw(void *p, VG *vg)
 		VG_Vertex2(vg, -0.1875, 0.6875);
 		VG_Vertex2(vg, +0.1875, 0.6875);
 		VG_End(vg);
-
 		VG_Begin(vg, VG_TEXT);
 		VG_SetStyle(vg, "component-name");
 		VG_Vertex2(vg, -0.0468, 0.0625);
@@ -100,26 +77,22 @@ ES_VsourceDraw(void *p, VG *vg)
 		VG_Vertex2(vg, 0.000, 1.600);
 		VG_Vertex2(vg, 0.000, 2.000);
 		VG_End(vg);
-
 		VG_Begin(vg, VG_CIRCLE);
 		VG_Vertex2(vg, 0.0, 1.0);
 		VG_CircleRadius(vg, 0.6);
 		VG_End(vg);
-
 		VG_Begin(vg, VG_TEXT);
 		VG_SetStyle(vg, "component-name");
 		VG_Vertex2(vg, 0.0, 1.0);
 		VG_TextAlignment(vg, VG_ALIGN_MC);
 		VG_Printf(vg, "%s", AGOBJECT(vs)->name);
 		VG_End(vg);
-		
 		VG_Begin(vg, VG_TEXT);
 		VG_SetStyle(vg, "component-name");
 		VG_Vertex2(vg, 0.0, 0.6);
 		VG_TextAlignment(vg, VG_ALIGN_MC);
 		VG_Printf(vg, "+");
 		VG_End(vg);
-		
 		VG_Begin(vg, VG_TEXT);
 		VG_SetStyle(vg, "component-name");
 		VG_Vertex2(vg, 0.0, 1.4);
@@ -132,7 +105,7 @@ ES_VsourceDraw(void *p, VG *vg)
 
 /* Find the pairs connecting two contiguous ports, and its polarity. */
 static int
-contig_pair(ES_Port *pA, ES_Port *pB, ES_Pair **Rdip, int *Rpol)
+FindContigPair(ES_Port *pA, ES_Port *pB, ES_Pair **Rdip, int *Rpol)
 {
 	ES_Component *com = pA->com;
 	ES_Circuit *ckt = com->ckt;
@@ -176,7 +149,7 @@ contig_pair(ES_Port *pA, ES_Port *pB, ES_Pair **Rdip, int *Rpol)
  * loop stack.
  */
 static void
-insert_loop(ES_Vsource *vs)
+InsertVoltageLoop(ES_Vsource *vs)
 {
 	ES_Loop *lnew;
 	unsigned int i;
@@ -192,7 +165,7 @@ insert_loop(ES_Vsource *vs)
 		ES_Pair *dip;
 		int pol;
 
-		if (!contig_pair(vs->lstack[i], vs->lstack[i-1], &dip, &pol))
+		if (!FindContigPair(vs->lstack[i], vs->lstack[i-1], &dip, &pol))
 			continue;
 
 		lnew->pairs[lnew->npairs++] = dip;
@@ -215,7 +188,7 @@ insert_loop(ES_Vsource *vs)
  * with respect to the loop are recorded in a separate array.
  */
 static void
-find_loops(ES_Vsource *vs, ES_Port *pcur)
+FindLoops(ES_Vsource *vs, ES_Port *pcur)
 {
 	ES_Circuit *ckt = COM(vs)->ckt;
 	ES_Node *node = ckt->nodes[pcur->node];
@@ -237,7 +210,7 @@ find_loops(ES_Vsource *vs, ES_Port *pcur)
 			vs->lstack = Realloc(vs->lstack,
 			    (vs->nlstack+1)*sizeof(ES_Port *));
 			vs->lstack[vs->nlstack++] = &COM(vs)->ports[2];
-			insert_loop(vs);
+			InsertVoltageLoop(vs);
 			vs->nlstack--;
 			continue;
 		}
@@ -254,7 +227,7 @@ find_loops(ES_Vsource *vs, ES_Port *pcur)
 			    (nnext->flags & CKTNODE_EXAM)) {
 				continue;
 			}
-			find_loops(vs, pnext);
+			FindLoops(vs, pnext);
 		}
 	}
 
@@ -269,7 +242,7 @@ ES_VsourceFindLoops(ES_Vsource *vs)
 	unsigned int i;
 
 	vs->lstack = Malloc(sizeof(ES_Port *));
-	find_loops(vs, PORT(vs,1));
+	FindLoops(vs, PORT(vs,1));
 
 	Free(vs->lstack);
 	vs->lstack = NULL;
@@ -356,17 +329,17 @@ Disconnected(AG_Event *event)
 	}
 }
 
-void
-ES_VsourceInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_Vsource *vs = p;
 
-	ES_ComponentInit(vs, name, &esVsourceOps, esVsourcePinout);
+	ES_ComponentSetPorts(vs, esVsourcePinout);
 	vs->voltage = 5;
 	vs->lstack = NULL;
 	vs->nlstack = 0;
-	TAILQ_INIT(&vs->loops);
 	vs->nloops = 0;
+	TAILQ_INIT(&vs->loops);
 
 	COM(vs)->loadDC_BCD = LoadDC_BCD;
 	COM(vs)->loadDC_RHS = LoadDC_RHS;
@@ -374,19 +347,10 @@ ES_VsourceInit(void *p, const char *name)
 	AG_SetEvent(vs, "circuit-disconnected", Disconnected, NULL);
 }
 
-void
-ES_VsourceReinit(void *p)
+static void
+FreeDataset(void *p)
 {
 	ES_Vsource *vs = p;
-
-	ES_VsourceFreeLoops(vs);
-}
-
-void
-ES_VsourceDestroy(void *p)
-{
-	ES_Vsource *vs = p;
-
 	ES_VsourceFreeLoops(vs);
 }
 
@@ -411,34 +375,30 @@ ES_VsourceFreeLoops(ES_Vsource *vs)
 	vs->nlstack = 0;
 }
 
-int
-ES_VsourceLoad(void *p, AG_DataSource *buf)
+static int
+Load(void *p, AG_DataSource *buf)
 {
 	ES_Vsource *vs = p;
 
-	if (AG_ReadObjectVersion(buf, vs, NULL) == -1 ||
-	    ES_ComponentLoad(vs, buf) == -1)
+	if (AG_ReadObjectVersion(buf, vs, NULL) == -1) {
 		return (-1);
-
+	}
 	vs->voltage = AG_ReadDouble(buf);
 	return (0);
 }
 
-int
-ES_VsourceSave(void *p, AG_DataSource *buf)
+static int
+Save(void *p, AG_DataSource *buf)
 {
 	ES_Vsource *vs = p;
 
 	AG_WriteObjectVersion(buf, vs);
-	if (ES_ComponentSave(vs, buf) == -1)
-		return (-1);
-
 	AG_WriteDouble(buf, vs->voltage);
 	return (0);
 }
 
-int
-ES_VsourceExport(void *p, enum circuit_format fmt, FILE *f)
+static int
+Export(void *p, enum circuit_format fmt, FILE *f)
 {
 	ES_Vsource *vs = p;
 
@@ -476,7 +436,6 @@ ES_VsourceName(ES_Vsource *vs)
 	return (-1);
 }
 
-#ifdef EDITION
 static void
 PollLoops(AG_Event *event)
 {
@@ -514,24 +473,40 @@ PollLoops(AG_Event *event)
 	AG_TlistRestore(tl);
 }
 
-void *
-ES_VsourceEdit(void *p)
+static void *
+Edit(void *p)
 {
 	ES_Vsource *vs = p;
-	AG_Window *win, *subwin;
-	AG_Spinbutton *sb;
+	AG_Window *win;
 	AG_FSpinbutton *fsb;
 	AG_Tlist *tl;
 
 	win = AG_WindowNew(0);
-
 	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Voltage: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &vs->voltage);
-	
 	AG_LabelNewStatic(win, 0, _("Loops:"));
 	tl = AG_TlistNewPolled(win, AG_TLIST_TREE|AG_TLIST_EXPAND,
 	    PollLoops, "%p", vs);
-	
 	return (win);
 }
-#endif /* EDITION */
+
+const ES_ComponentOps esVsourceOps = {
+	{
+		"ES_Component:ES_Vsource",
+		sizeof(ES_Vsource),
+		{ 0,0 },
+		Init,
+		FreeDataset,
+		NULL,		/* destroy */
+		Load,
+		Save,
+		Edit
+	},
+	N_("Independent voltage source"),
+	"V",
+	Draw,
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	Export,
+	NULL			/* connect */
+};

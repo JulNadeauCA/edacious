@@ -30,30 +30,8 @@
 #include "eda.h"
 #include "digital.h"
 
-const ES_ComponentOps esDigitalOps = {
-	{
-		"ES_Component:ES_Digital",
-		sizeof(ES_Digital),
-		{ 0,0 },
-		NULL,			/* init */
-		NULL,			/* reinit */
-		NULL,			/* destroy */
-		NULL,			/* load */
-		NULL,			/* save */
-		NULL,			/* edit */
-	},
-	N_("Digital component"),
-	"Digital",
-	NULL,			/* draw */
-	NULL,			/* edit */
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	NULL,			/* export */
-	NULL			/* connect */
-};
-
-void
-ES_DigitalDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_Digital *dig = p;
 
@@ -76,15 +54,14 @@ ES_DigitalDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-int
-ES_DigitalLoad(void *p, AG_DataSource *buf)
+static int
+Load(void *p, AG_DataSource *buf)
 {
 	ES_Digital *dig = p;
 
-	if (AG_ReadObjectVersion(buf, dig, NULL) == -1 ||
-	    ES_ComponentLoad(dig, buf) == -1)
+	if (AG_ReadObjectVersion(buf, dig, NULL) == -1) {
 		return (-1);
-
+	}
 	dig->Vcc = SC_ReadRange(buf);
 	dig->Tamb = SC_ReadRange(buf);
 	dig->Idd = SC_ReadRange(buf);
@@ -102,15 +79,12 @@ ES_DigitalLoad(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-int
-ES_DigitalSave(void *p, AG_DataSource *buf)
+static int
+Save(void *p, AG_DataSource *buf)
 {
 	ES_Digital *dig = p;
 
 	AG_WriteObjectVersion(buf, dig);
-	if (ES_ComponentSave(dig, buf) == -1)
-		return (-1);
-
 	SC_WriteRange(buf, dig->Vcc);
 	SC_WriteRange(buf, dig->Tamb);
 	SC_WriteRange(buf, dig->Idd);
@@ -130,7 +104,7 @@ ES_DigitalSave(void *p, AG_DataSource *buf)
 
 /* Stamp the model conductances. */
 static int
-ES_DigitalLoadDC_G(void *p, SC_Matrix *G)
+LoadDC_G(void *p, SC_Matrix *G)
 {
 	ES_Digital *dig = p;
 	ES_Node *n;
@@ -233,20 +207,17 @@ ES_LogicInput(void *p, const char *portname)
 	}
 }
 
-void
-ES_DigitalInit(void *p, const char *name, const void *ops,
-    const ES_Port *pinout)
+static void
+Init(void *obj)
 {
-	ES_Digital *dig = p;
+	ES_Digital *dig = obj;
 
-	ES_ComponentInit(dig, name, ops, pinout);
-	AG_ObjectSetOps(dig, ops);
 	dig->VccPort = 1;
 	dig->GndPort = 2;
 	dig->G = SC_VectorNew(COM(dig)->npairs);
 	SC_VectorSetZero(dig->G);
 
-	COM(dig)->loadDC_G = ES_DigitalLoadDC_G;
+	COM(dig)->loadDC_G = LoadDC_G;
 
 	dig->Vcc.min = 3.0;	dig->Vcc.typ = 5.0;	dig->Vcc.max = 15.0;
 	dig->Vol.min = 0.0;	dig->Vol.typ = 0.0;	dig->Vol.max = 0.05;
@@ -258,7 +229,6 @@ ES_DigitalInit(void *p, const char *name, const void *ops,
 	dig->Iin.min = 0.0;	dig->Iin.typ = -10.0e-5; dig->Iin.max = -0.1;
 }
 
-#ifdef EDITION
 static void
 PollPairs(AG_Event *event)
 {
@@ -276,16 +246,40 @@ PollPairs(AG_Event *event)
 	AG_TableEnd(t);
 }
 
-void
-ES_DigitalEdit(void *p, void *cont)
+static void *
+Edit(void *p)
 {
 	ES_Digital *dig = p;
+	AG_Window *win;
 	AG_Table *tbl;
-
-	tbl = AG_TableNewPolled(cont, AG_TABLE_EXPAND, PollPairs, "%p", dig);
+	
+	win = AG_WindowNew(0);
+	tbl = AG_TableNewPolled(win, AG_TABLE_EXPAND, PollPairs, "%p", dig);
 	AG_TableAddCol(tbl, "n", "<88>", NULL);
 	AG_TableAddCol(tbl, "p1", "<88>", NULL);
 	AG_TableAddCol(tbl, "p2", "<88>", NULL);
 	AG_TableAddCol(tbl, "G", NULL, NULL);
+
+	return (win);
 }
-#endif /* EDITION */
+
+const ES_ComponentOps esDigitalOps = {
+	{
+		"ES_Component:ES_Digital",
+		sizeof(ES_Digital),
+		{ 0,0 },
+		Init,
+		NULL,			/* reinit */
+		NULL,			/* destroy */
+		Load,
+		Save,
+		Edit
+	},
+	N_("Digital component"),
+	"Digital",
+	Draw,
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	NULL			/* connect */
+};

@@ -30,28 +30,6 @@
 #include "eda.h"
 #include "inverter.h"
 
-const ES_ComponentOps esInverterOps = {
-	{
-		"ES_Component:ES_Digital:ES_Inverter",
-		sizeof(ES_Inverter),
-		{ 0,0 },
-		ES_InverterInit,
-		NULL,			/* reinit */
-		ES_ComponentDestroy,
-		ES_ComponentLoad,
-		ES_ComponentSave,
-		ES_ComponentEdit
-	},
-	N_("Inverter"),
-	"Inv",
-	ES_InverterDraw,
-	ES_InverterEdit,
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	NULL,			/* export */
-	NULL			/* connect */
-};
-
 const ES_Port esInverterPinout[] = {
 	{ 0, "",	0.0, 1.0 },
 	{ 1, "Vcc",	1.0, -1.0 },
@@ -61,8 +39,8 @@ const ES_Port esInverterPinout[] = {
 	{ -1 },
 };
 
-void
-ES_InverterDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_Inverter *inv = p;
 	ES_Component *com = p;
@@ -93,12 +71,12 @@ ES_InverterDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-void
-ES_InverterInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_Inverter *inv = p;
 
-	ES_DigitalInit(inv, name, &esInverterOps, esInverterPinout);
+	ES_ComponentSetPorts(inv, esInverterPinout);
 	COM(inv)->intUpdate = ES_InverterUpdate;
 #if 0
 	ES_SetSpec(inv, "Tp", _("Propagation delay from A to A-bar"),
@@ -147,9 +125,8 @@ ES_InverterUpdate(void *p)
 	}
 }
 
-#ifdef EDITION
-void *
-ES_InverterEdit(void *p)
+static void *
+Edit(void *p)
 {
 	ES_Inverter *inv = p;
 	AG_Window *win, *wDig;
@@ -159,7 +136,6 @@ ES_InverterEdit(void *p)
 	AG_Box *box;
 
 	win = AG_WindowNew(0);
-
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
 #if 0
 	ntab = AG_NotebookAddTab(nb, _("Timings"), AG_BOX_VERT);
@@ -177,8 +153,27 @@ ES_InverterEdit(void *p)
 		AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &inv->Tplh);
 	}
 #endif
-	ntab = AG_NotebookAddTab(nb, _("Digital"), AG_BOX_VERT);
-	ES_DigitalEdit(inv, ntab);
 	return (win);
 }
-#endif /* EDITION */
+
+const ES_ComponentOps esInverterOps = {
+	{
+		"ES_Component:ES_Digital:ES_Inverter",
+		sizeof(ES_Inverter),
+		{ 0,0 },
+		Init,
+		NULL,		/* reinit */
+		NULL,		/* destroy */
+		NULL,		/* load */
+		NULL,		/* save */
+		Edit
+	},
+	N_("Inverter"),
+	"Inv",
+	Draw,
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	NULL			/* connect */
+};
+

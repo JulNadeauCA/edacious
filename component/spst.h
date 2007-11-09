@@ -15,16 +15,7 @@ typedef struct es_spst {
 } ES_Spst;
 
 __BEGIN_DECLS
-void	 ES_SpstInit(void *, const char *);
-int	 ES_SpstLoad(void *, AG_DataSource *);
-int	 ES_SpstSave(void *, AG_DataSource *);
-int	 ES_SpstExport(void *, enum circuit_format, FILE *);
-double	 ES_SpstResistance(void *, ES_Port *, ES_Port *);
-void	*ES_SpstEdit(void *);
-void	 ES_SpstDraw(void *, VG *);
-void	 ES_SpstUpdate(void *, VG *);
-void	 ES_SpstClassMenu(ES_Circuit *, AG_MenuItem *);
-void	 ES_SpstInstanceMenu(void *, AG_MenuItem *);
+extern const ES_ComponentOps esSpstOps;
 __END_DECLS
 
 #include "close_code.h"

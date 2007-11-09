@@ -30,28 +30,6 @@
 #include "eda.h"
 #include "and.h"
 
-const ES_ComponentOps esAndOps = {
-	{
-		"ES_Component:ES_Digital:ES_And",
-		sizeof(ES_And),
-		{ 0,0 },
-		ES_AndInit,
-		NULL,			/* reinit */
-		ES_ComponentDestroy,
-		ES_ComponentLoad,
-		ES_ComponentSave,
-		ES_ComponentEdit
-	},
-	N_("AND Gate"),
-	"And",
-	ES_AndDraw,
-	ES_AndEdit,
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	NULL,			/* export */
-	NULL			/* connect */
-};
-
 const ES_Port esAndPinout[] = {
 	{ 0, "",	0.0, 1.0 },
 	{ 1, "Vcc",	1.0, -0.5 },
@@ -62,8 +40,8 @@ const ES_Port esAndPinout[] = {
 	{ -1 },
 };
 
-void
-ES_AndDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_And *gate = p;
 	ES_Component *com = p;
@@ -86,12 +64,12 @@ ES_AndDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-void
-ES_AndInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_And *gate = p;
 
-	ES_DigitalInit(gate, name, &esAndOps, esAndPinout);
+	ES_ComponentSetPorts(gate, esAndPinout);
 	COM(gate)->intUpdate = ES_AndUpdate;
 	ES_LogicOutput(gate, "A&B", ES_HI_Z);
 }
@@ -109,22 +87,23 @@ ES_AndUpdate(void *p)
 	}
 }
 
-#ifdef EDITION
-void *
-ES_AndEdit(void *p)
-{
-	ES_And *gate = p;
-	AG_Window *win, *wDig;
-	AG_FSpinbutton *fsb;
-	AG_Notebook *nb;
-	AG_NotebookTab *ntab;
-	AG_Box *box;
-
-	win = AG_WindowNew(0);
-
-	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
-	ntab = AG_NotebookAddTab(nb, _("Digital"), AG_BOX_VERT);
-	ES_DigitalEdit(gate, ntab);
-	return (win);
-}
-#endif /* EDITION */
+const ES_ComponentOps esAndOps = {
+	{
+		"ES_Component:ES_Digital:ES_And",
+		sizeof(ES_And),
+		{ 0,0 },
+		Init,
+		NULL,		/* reinit */
+		NULL,		/* destroy */
+		NULL,		/* load */
+		NULL,		/* save */
+		NULL		/* edit */
+	},
+	N_("AND Gate"),
+	"And",
+	Draw,
+	NULL,		/* instance_menu */
+	NULL,		/* class_menu */
+	NULL,		/* export */
+	NULL		/* connect */
+};

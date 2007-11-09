@@ -30,28 +30,6 @@
 #include "eda.h"
 #include "vsquare.h"
 
-const ES_ComponentOps esVSquareOps = {
-	{
-		"ES_Component:ES_Vsource:ES_VSquare",
-		sizeof(ES_VSquare),
-		{ 0,0 },
-		ES_VSquareInit,
-		ES_VsourceReinit,
-		ES_VsourceDestroy,
-		ES_VSquareLoad,
-		ES_VSquareSave,
-		ES_ComponentEdit
-	},
-	N_("Square voltage source"),
-	"Vsq",
-	ES_VSquareDraw,
-	ES_VSquareEdit,
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	ES_VSquareExport,
-	NULL			/* connect */
-};
-
 const ES_Port esVSquarePorts[] = {
 	{  0, "",   0.0, 0.0 },
 	{  1, "v+", 0.0, 0.0 },
@@ -59,8 +37,8 @@ const ES_Port esVSquarePorts[] = {
 	{ -1 },
 };
 
-void
-ES_VSquareDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_VSquare *vs = p;
 	
@@ -98,32 +76,28 @@ ES_VSquareDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-void
-ES_VSquareInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_VSquare *vs = p;
 
-	ES_VsourceInit(vs, name);
-	ES_ComponentSetOps(vs, &esVSquareOps);
 	ES_ComponentSetPorts(vs, esVSquarePorts);
 	vs->vH = 5.0;
 	vs->vL = 0.0;
 	vs->t = 0;
 	vs->tH = 100;
 	vs->tL = 100;
-
 	COM(vs)->intStep = ES_VSquareStep;
 }
 
-int
-ES_VSquareLoad(void *p, AG_DataSource *buf)
+static int
+Load(void *p, AG_DataSource *buf)
 {
 	ES_VSquare *vs = p;
 
-	if (AG_ReadObjectVersion(buf, vs, NULL) == -1 ||
-	    ES_VsourceLoad(vs, buf) == -1)
+	if (AG_ReadObjectVersion(buf, vs, NULL) == -1) {
 		return (-1);
-
+	}
 	vs->vH = SC_ReadReal(buf);
 	vs->vL = SC_ReadReal(buf);
 	vs->tH = SC_ReadQTime(buf);
@@ -131,15 +105,12 @@ ES_VSquareLoad(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-int
-ES_VSquareSave(void *p, AG_DataSource *buf)
+static int
+Save(void *p, AG_DataSource *buf)
 {
 	ES_VSquare *vs = p;
 
 	AG_WriteObjectVersion(buf, vs);
-	if (ES_VsourceSave(vs, buf) == -1)
-		return (-1);
-
 	SC_WriteReal(buf, vs->vH);
 	SC_WriteReal(buf, vs->vL);
 	SC_WriteQTime(buf, vs->tH);
@@ -147,8 +118,8 @@ ES_VSquareSave(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-int
-ES_VSquareExport(void *p, enum circuit_format fmt, FILE *f)
+static int
+Export(void *p, enum circuit_format fmt, FILE *f)
 {
 	ES_VSquare *vs = p;
 
@@ -173,9 +144,8 @@ ES_VSquareStep(void *p, Uint ticks)
 	}
 }
 
-#ifdef EDITION
-void *
-ES_VSquareEdit(void *p)
+static void *
+Edit(void *p)
 {
 	ES_VSquare *vs = p;
 	AG_Window *win;
@@ -192,4 +162,24 @@ ES_VSquareEdit(void *p)
 	AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &vs->tL);
 	return (win);
 }
-#endif /* EDITION */
+
+const ES_ComponentOps esVSquareOps = {
+	{
+		"ES_Component:ES_Vsource:ES_VSquare",
+		sizeof(ES_VSquare),
+		{ 0,0 },
+		Init,
+		NULL,		/* free_dataset */
+		NULL,		/* destroy */
+		Load,
+		Save,
+		Edit
+	},
+	N_("Square voltage source"),
+	"Vsq",
+	Draw,
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	Export,
+	NULL			/* connect */
+};

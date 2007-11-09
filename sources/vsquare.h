@@ -19,14 +19,6 @@ typedef struct es_vsquare {
 #define ES_VSQUARE(com) ((struct es_vsquare *)(com))
 
 __BEGIN_DECLS
-void	 ES_VSquareInit(void *, const char *);
-void	 ES_VSquareReinit(void *);
-void	 ES_VSquareDestroy(void *);
-int	 ES_VSquareLoad(void *, AG_DataSource *);
-int	 ES_VSquareSave(void *, AG_DataSource *);
-int	 ES_VSquareExport(void *, enum circuit_format, FILE *);
-void	*ES_VSquareEdit(void *);
-void	 ES_VSquareDraw(void *, VG *);
 void	 ES_VSquareStep(void *, Uint);
 void	 ES_VSquareUpdate(void *);
 __END_DECLS

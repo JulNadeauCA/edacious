@@ -49,13 +49,9 @@ typedef struct es_digital {
 #define digOutLO(p,j) (U(p,j) <= DIG(p)->Vol)
 
 __BEGIN_DECLS
-void	 ES_DigitalInit(void *, const char *, const void *, const ES_Port *);
-int	 ES_DigitalLoad(void *, AG_DataSource *);
-int	 ES_DigitalSave(void *, AG_DataSource *);
-int	 ES_DigitalExport(void *, enum circuit_format, FILE *);
-void	 ES_DigitalEdit(void *, void *);
-void	 ES_DigitalDraw(void *, VG *);
+extern const ES_ComponentOps esDigitalOps;
 
+void	 ES_DigitalDraw(void *, VG *);
 void	 ES_DigitalSetVccPort(void *, int);
 void	 ES_DigitalSetGndPort(void *, int);
 int	 ES_LogicOutput(void *, const char *, ES_LogicState);

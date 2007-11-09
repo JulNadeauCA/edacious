@@ -30,28 +30,6 @@
 #include "eda.h"
 #include "vsine.h"
 
-const ES_ComponentOps esVSineOps = {
-	{
-		"ES_Component:ES_Vsource:ES_VSine",
-		sizeof(ES_VSine),
-		{ 0,0 },
-		ES_VSineInit,
-		ES_VsourceReinit,
-		ES_VsourceDestroy,
-		ES_VSineLoad,
-		ES_VSineSave,
-		ES_ComponentEdit
-	},
-	N_("Sinusoidal voltage source"),
-	"Vsin",
-	ES_VSineDraw,
-	ES_VSineEdit,
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	NULL,			/* export */
-	NULL			/* connect */
-};
-
 const ES_Port esVSinePorts[] = {
 	{  0, "",   0.0, 0.0 },
 	{  1, "v+", 0.0, 0.0 },
@@ -59,8 +37,8 @@ const ES_Port esVSinePorts[] = {
 	{ -1 },
 };
 
-void
-ES_VSineDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_VSine *vs = p;
 	
@@ -98,51 +76,8 @@ ES_VSineDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-void
-ES_VSineInit(void *p, const char *name)
-{
-	ES_VSine *vs = p;
-
-	ES_VsourceInit(vs, name);
-	ES_ComponentSetOps(vs, &esVSineOps);
-	ES_ComponentSetPorts(vs, esVSinePorts);
-	vs->vPeak = 5.0;
-	vs->f = 60.0;
-	vs->phase = 0.0;
-
-	COM(vs)->intStep = ES_VSineStep;
-}
-
-int
-ES_VSineLoad(void *p, AG_DataSource *buf)
-{
-	ES_VSine *vs = p;
-
-	if (AG_ReadObjectVersion(buf, vs, NULL) == -1 ||
-	    ES_VsourceLoad(vs, buf) == -1)
-		return (-1);
-
-	vs->vPeak = SC_ReadReal(buf);
-	vs->f = SC_ReadReal(buf);
-	return (0);
-}
-
-int
-ES_VSineSave(void *p, AG_DataSource *buf)
-{
-	ES_VSine *vs = p;
-
-	AG_WriteObjectVersion(buf, vs);
-	if (ES_VsourceSave(vs, buf) == -1)
-		return (-1);
-
-	SC_WriteReal(buf, vs->vPeak);
-	SC_WriteReal(buf, vs->f);
-	return (0);
-}
-
-void
-ES_VSineStep(void *p, Uint ticks)
+static void
+IntStep(void *p, Uint ticks)
 {
 	ES_VSine *vs = p;
 
@@ -151,9 +86,44 @@ ES_VSineStep(void *p, Uint ticks)
 	if (vs->phase > M_PI*2) { vs->phase -= M_PI*2; }
 }
 
-#ifdef EDITION
-void *
-ES_VSineEdit(void *p)
+static void
+Init(void *p)
+{
+	ES_VSine *vs = p;
+
+	ES_ComponentSetPorts(vs, esVSinePorts);
+	vs->vPeak = 5.0;
+	vs->f = 60.0;
+	vs->phase = 0.0;
+	COM(vs)->intStep = IntStep;
+}
+
+static int
+Load(void *p, AG_DataSource *buf)
+{
+	ES_VSine *vs = p;
+
+	if (AG_ReadObjectVersion(buf, vs, NULL) == -1) {
+		return (-1);
+	}
+	vs->vPeak = SC_ReadReal(buf);
+	vs->f = SC_ReadReal(buf);
+	return (0);
+}
+
+static int
+Save(void *p, AG_DataSource *buf)
+{
+	ES_VSine *vs = p;
+
+	AG_WriteObjectVersion(buf, vs);
+	SC_WriteReal(buf, vs->vPeak);
+	SC_WriteReal(buf, vs->f);
+	return (0);
+}
+
+static void *
+Edit(void *p)
 {
 	ES_VSine *vs = p;
 	AG_Window *win;
@@ -166,4 +136,24 @@ ES_VSineEdit(void *p)
 	AG_WidgetBind(fsb, "value", SC_WIDGET_REAL, &vs->f);
 	return (win);
 }
-#endif /* EDITION */
+
+const ES_ComponentOps esVSineOps = {
+	{
+		"ES_Component:ES_Vsource:ES_VSine",
+		sizeof(ES_VSine),
+		{ 0,0 },
+		Init,
+		NULL,		/* reinit */
+		NULL,		/* destroy */
+		Load,
+		Save,
+		Edit
+	},
+	N_("Sinusoidal voltage source"),
+	"Vsin",
+	Draw,
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	NULL			/* connect */
+};

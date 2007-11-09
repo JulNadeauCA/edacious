@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2006-2007 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,18 +32,6 @@
 
 #include "eda.h"
 
-const AG_ObjectOps esComponentOps = {
-	"ES_Component",
-	sizeof(ES_Component),
-	{ 0,0 },
-	NULL,			/* init */
-	NULL,			/* reinit */
-	NULL,			/* destroy */
-	NULL,			/* load */
-	NULL,			/* save */
-	NULL,			/* edit */
-};
-
 void
 ES_ComponentFreePorts(ES_Component *com)
 {
@@ -60,14 +48,14 @@ ES_ComponentFreePorts(ES_Component *com)
 	com->pairs = NULL;
 }
 
-void
-ES_ComponentReinit(void *p)
+static void
+FreeDataset(void *p)
 {
 	ES_ComponentFreePorts(p);
 }
 
-void
-ES_ComponentDestroy(void *p)
+static void
+Destroy(void *p)
 {
 	ES_ComponentFreePorts(p);
 }
@@ -95,7 +83,7 @@ ES_ComponentUnselectAll(ES_Circuit *ckt)
 }
 
 static void
-ES_ComponentRenamed(AG_Event *event)
+OnRename(AG_Event *event)
 {
 	ES_Component *com = AG_SELF();
 
@@ -106,7 +94,7 @@ ES_ComponentRenamed(AG_Event *event)
 }
 
 static void
-ES_ComponentAttached(AG_Event *event)
+OnAttach(AG_Event *event)
 {
 	char blkname[VG_BLOCK_NAME_MAX];
 	ES_Component *com = AG_SELF();
@@ -130,7 +118,7 @@ ES_ComponentAttached(AG_Event *event)
 }
 
 static void
-ES_ComponentDetached(AG_Event *event)
+OnDetach(AG_Event *event)
 {
 	ES_Component *com = AG_SELF();
 	ES_Circuit *ckt = AG_SENDER();
@@ -188,7 +176,7 @@ del_nodes:
 }
 
 static void
-ES_ComponentShown(AG_Event *event)
+OnShow(AG_Event *event)
 {
 	ES_Component *com = AG_SELF();
 
@@ -196,7 +184,7 @@ ES_ComponentShown(AG_Event *event)
 }
 
 static void
-ES_ComponentHidden(AG_Event *event)
+OnHide(AG_Event *event)
 {
 	ES_Component *com = AG_SELF();
 
@@ -209,7 +197,7 @@ ES_ComponentHidden(AG_Event *event)
 
 /* Redraw a component schematic block. */
 static Uint32
-ES_ComponentDraw(void *p, Uint32 ival, void *arg)
+RedrawBlock(void *p, Uint32 ival, void *arg)
 {
 	ES_Component *com = p;
 	ES_Circuit *ckt = com->ckt;
@@ -284,23 +272,12 @@ ES_ComponentDraw(void *p, Uint32 ival, void *arg)
 	return (ival);
 }
 
-void
-ES_ComponentSetOps(void *p, const void *ops)
-{
-	ES_Component *com = p;
-
-	AGOBJECT(com)->ops = ops;
-	com->ops = ops;
-}
-
-void
-ES_ComponentInit(void *obj, const char *name, const void *ops,
-    const ES_Port *ports)
+static void
+Init(void *obj)
 {
 	ES_Component *com = obj;
 
-	AG_ObjectInit(com, name, ops != NULL ? ops : &esComponentOps);
-	com->ops = ops;
+	com->ops = (const ES_ComponentOps *)&AGOBJECT(com)->ops;
 	com->ckt = NULL;
 	com->block = NULL;
 	com->selected = 0;
@@ -311,6 +288,7 @@ ES_ComponentInit(void *obj, const char *name, const void *ops,
 	com->npairs = 0;
 	com->specs = NULL;
 	com->nspecs = 0;
+	AG_MutexInitRecursive(&com->lock);
 	
 	com->loadDC_G = NULL;
 	com->loadDC_BCD = NULL;
@@ -320,16 +298,13 @@ ES_ComponentInit(void *obj, const char *name, const void *ops,
 	com->intStep = NULL;
 	com->intUpdate = NULL;
 
-	pthread_mutex_init(&com->lock, &agRecursiveMutexAttr);
-	ES_ComponentSetPorts(com, ports);
+	AG_SetEvent(com, "attached", OnAttach, NULL);
+	AG_SetEvent(com, "detached", OnDetach, NULL);
+	AG_SetEvent(com, "renamed", OnRename, NULL);
+	AG_SetEvent(com, "circuit-shown", OnShow, NULL);
+	AG_SetEvent(com, "circuit-hidden", OnHide, NULL);
 
-	AG_SetEvent(com, "attached", ES_ComponentAttached, NULL);
-	AG_SetEvent(com, "detached", ES_ComponentDetached, NULL);
-	AG_SetEvent(com, "renamed", ES_ComponentRenamed, NULL);
-	AG_SetEvent(com, "circuit-shown", ES_ComponentShown, NULL);
-	AG_SetEvent(com, "circuit-hidden", ES_ComponentHidden, NULL);
-	AG_SetTimeout(&com->redraw_to, ES_ComponentDraw, NULL,
-	    AG_CANCEL_ONDETACH);
+	AG_SetTimeout(&com->redraw_to, RedrawBlock, NULL, AG_CANCEL_ONDETACH);
 }
 
 /* Initialize the ports of a component instance from a given model. */
@@ -394,8 +369,8 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 	}
 }
 
-int
-ES_ComponentLoad(void *p, AG_DataSource *buf)
+static int
+Load(void *p, AG_DataSource *buf)
 {
 	ES_Component *com = p;
 	float Tspec;
@@ -408,8 +383,8 @@ ES_ComponentLoad(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-int
-ES_ComponentSave(void *p, AG_DataSource *buf)
+static int
+Save(void *p, AG_DataSource *buf)
 {
 	ES_Component *com = p;
 
@@ -489,26 +464,8 @@ ES_FindPort(void *p, const char *portname)
 	return (NULL);
 }
 
-#ifdef EDITION
-void *
-ES_ComponentEdit(void *p)
-{
-	ES_Component *com = p;
-	AG_Window *win;
-
-	if (com->ops->edit == NULL) {
-		return (NULL);
-	}
-	win = com->ops->edit(com);
-	AG_WindowSetPosition(win, AG_WINDOW_MIDDLE_LEFT, 0);
-	AG_WindowSetCaption(win, "%s: %s", com->ops->name, AGOBJECT(com)->name);
-	AG_WindowSetCloseAction(win, AG_WINDOW_DETACH);
-	AG_WindowShow(win);
-	return (win);
-}
-
 static void
-EditComponent(AG_Event *event)
+EditParameters(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
 
@@ -634,20 +591,20 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 		extern VG_ToolOps esSelcomOps;
 		extern VG_ToolOps esWireTool;
 
-		AG_MenuAction(pm->item, _("Select"), -1,
-		    SelectTool, "%p,%p,%s", vgv, com->ckt, &esSelcomOps);
-		AG_MenuAction(pm->item, _("Wire"), -1,
-		    SelectTool, "%p,%p,%s", vgv, com->ckt, &esWireTool);
+		AG_MenuAction(pm->item, _("Select"), NULL,
+		    SelectTool, "%p,%p,%p", vgv, com->ckt, &esSelcomOps);
+		AG_MenuAction(pm->item, _("Wire"), NULL,
+		    SelectTool, "%p,%p,%p", vgv, com->ckt, &esWireTool);
 		AG_MenuSeparator(pm->item);
 	}
 	AG_MenuSection(pm->item, "[Component: %s]", AGOBJECT(com)->name);
-	AG_MenuAction(pm->item, _("    Edit parameters"), OBJEDIT_ICON,
-	    EditComponent, "%p", com);
-	AG_MenuAction(pm->item, _("    Destroy instance"), TRASH_ICON,
+	AG_MenuAction(pm->item, _("    Edit parameters"), agIconDoc.s,
+	    EditParameters, "%p", com);
+	AG_MenuAction(pm->item, _("    Destroy instance"), agIconTrash.s,
 	    RemoveComponent, "%p", com);
-	AG_MenuAction(pm->item, _("    Export model..."), OBJSAVE_ICON,
+	AG_MenuAction(pm->item, _("    Export model..."), agIconSave.s,
 	    SaveComponentTo, "%p", com);
-	AG_MenuAction(pm->item, _("    Import model..."), OBJLOAD_ICON,
+	AG_MenuAction(pm->item, _("    Import model..."), agIconDocImport.s,
 	    LoadComponentFrom, "%p", com);
 	if (com->ops->instance_menu != NULL) {
 		AG_MenuSeparator(pm->item);
@@ -663,7 +620,8 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 		}
 		AG_MenuSeparator(pm->item);
 		AG_MenuSection(pm->item, _("[All selections]"));
-		AG_MenuAction(pm->item, _("    Destroy selections"), TRASH_ICON,
+		AG_MenuAction(pm->item, _("    Destroy selections"),
+		    agIconTrash.s,
 		    RemoveSelections, "%p", com->ckt);
 	}
 
@@ -700,7 +658,8 @@ tryname:
 		goto tryname;
 
 	com = Malloc(comops->ops.size);
-	comops->ops.init(com, name);
+	AG_ObjectInit(com, &comops->ops);
+	AG_ObjectSetName(com, "%s", name);
 	com->flags |= COMPONENT_FLOATING;
 
 	ES_LockCircuit(ckt);
@@ -836,4 +795,14 @@ ES_ComponentHighlightPorts(ES_Circuit *ckt, ES_Component *com)
 	return (nconn);
 }
 
-#endif /* EDITION */
+const AG_ObjectOps esComponentOps = {
+	"ES_Component",
+	sizeof(ES_Component),
+	{ 0,0 },
+	Init,
+	FreeDataset,
+	Destroy,
+	Load,
+	Save,
+	NULL,			/* edit */
+};

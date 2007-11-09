@@ -30,28 +30,6 @@
 #include "eda.h"
 #include "resistor.h"
 
-const ES_ComponentOps esResistorOps = {
-	{
-		"ES_Component:ES_Resistor",
-		sizeof(ES_Resistor),
-		{ 0,0 },
-		ES_ResistorInit,
-		NULL,			/* reinit */
-		ES_ComponentDestroy,
-		ES_ResistorLoad,
-		ES_ResistorSave,
-		ES_ComponentEdit
-	},
-	N_("Resistor"),
-	"R",
-	ES_ResistorDraw,
-	ES_ResistorEdit,
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	ES_ResistorExport,
-	NULL			/* connect */
-};
-
 const ES_Port esResistorPinout[] = {
 	{ 0, "",  0.000, 0.625 },
 	{ 1, "A", 0.000, 0.000 },
@@ -65,8 +43,8 @@ enum {
 	RESISTOR_US_STYLE
 } esResistorStyle = 0;
 
-void
-ES_ResistorDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_Resistor *r = p;
 
@@ -114,15 +92,14 @@ ES_ResistorDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-int
-ES_ResistorLoad(void *p, AG_DataSource *buf)
+static int
+Load(void *p, AG_DataSource *buf)
 {
 	ES_Resistor *r = p;
 
-	if (AG_ReadObjectVersion(buf, r, NULL) == -1 ||
-	    ES_ComponentLoad(r, buf) == -1)
+	if (AG_ReadObjectVersion(buf, r, NULL) == -1) {
 		return (-1);
-
+	}
 	r->resistance = AG_ReadDouble(buf);
 	r->tolerance = (int)AG_ReadUint32(buf);
 	r->power_rating = AG_ReadDouble(buf);
@@ -131,15 +108,12 @@ ES_ResistorLoad(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-int
-ES_ResistorSave(void *p, AG_DataSource *buf)
+static int
+Save(void *p, AG_DataSource *buf)
 {
 	ES_Resistor *r = p;
 
 	AG_WriteObjectVersion(buf, r);
-	if (ES_ComponentSave(r, buf) == -1)
-		return (-1);
-
 	AG_WriteDouble(buf, r->resistance);
 	AG_WriteUint32(buf, (Uint32)r->tolerance);
 	AG_WriteDouble(buf, r->power_rating);
@@ -148,8 +122,8 @@ ES_ResistorSave(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-int
-ES_ResistorExport(void *p, enum circuit_format fmt, FILE *f)
+static int
+Export(void *p, enum circuit_format fmt, FILE *f)
 {
 	ES_Resistor *r = p;
 
@@ -166,14 +140,16 @@ ES_ResistorExport(void *p, enum circuit_format fmt, FILE *f)
 	return (0);
 }
 
-SC_Real
-ES_ResistorResistance(void *p, ES_Port *p1, ES_Port *p2)
+#if 0
+static SC_Real
+Resistance(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_Resistor *r = p;
 	SC_Real deltaT = COM_T0 - COM(r)->Tspec;
 
 	return (r->resistance * (1.0 + r->Tc1*deltaT + r->Tc2*deltaT*deltaT));
 }
+#endif
 
 /*
  * Load the element into the conductance matrix. All conductances between
@@ -186,7 +162,7 @@ ES_ResistorResistance(void *p, ES_Port *p1, ES_Port *p2)
  *   |------------|-----
  */
 static int
-ES_ResistorLoadDC_G(void *p, SC_Matrix *G)
+LoadDC_G(void *p, SC_Matrix *G)
 {
 	ES_Resistor *r = p;
 	ES_Node *n;
@@ -213,7 +189,7 @@ ES_ResistorLoadDC_G(void *p, SC_Matrix *G)
 }
 
 static int
-ES_ResistorLoadSP(void *p, SC_Matrix *S, SC_Matrix *N)
+LoadSP(void *p, SC_Matrix *S, SC_Matrix *N)
 {
 	ES_Resistor *res = p;
 	u_int k = PNODE(res,1);
@@ -242,22 +218,21 @@ ES_ResistorLoadSP(void *p, SC_Matrix *S, SC_Matrix *N)
 	return (0);
 }
 
-void
-ES_ResistorInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_Resistor *r = p;
 
-	ES_ComponentInit(r, name, &esResistorOps, esResistorPinout);
+	ES_ComponentSetPorts(r, esResistorPinout);
 	r->resistance = 1;
 	r->power_rating = HUGE_VAL;
 	r->tolerance = 0;
-	COM(r)->loadDC_G = ES_ResistorLoadDC_G;
-	COM(r)->loadSP= ES_ResistorLoadSP;
+	COM(r)->loadDC_G = LoadDC_G;
+	COM(r)->loadSP= LoadSP;
 }
 
-#ifdef EDITION
-void *
-ES_ResistorEdit(void *p)
+static void *
+Edit(void *p)
 {
 	ES_Resistor *r = p;
 	AG_Window *win;
@@ -283,7 +258,26 @@ ES_ResistorEdit(void *p)
 	fsb = AG_FSpinbuttonNew(win, 0, "mohm/degC^2",
 	    _("Temp. coefficient: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc2);
-
 	return (win);
 }
-#endif /* EDITION */
+
+const ES_ComponentOps esResistorOps = {
+	{
+		"ES_Component:ES_Resistor",
+		sizeof(ES_Resistor),
+		{ 0,0 },
+		Init,
+		NULL,		/* reinit */
+		NULL,		/* destroy */
+		Load,
+		Save,
+		Edit
+	},
+	N_("Resistor"),
+	"R",
+	Draw,
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	Export,
+	NULL			/* connect */
+};

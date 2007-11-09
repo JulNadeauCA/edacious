@@ -73,7 +73,6 @@ typedef struct es_component_ops {
 	const char *pfx;			/* Prefix (eg. "R") */
 
 	void	 (*draw)(void *, VG *);
-	void	*(*edit)(void *);
 	void	 (*instance_menu)(void *, struct ag_menu_item *);
 	void	 (*class_menu)(struct es_circuit *, struct ag_menu_item *);
 	int	 (*export_model)(void *, enum circuit_format, FILE *);
@@ -81,7 +80,7 @@ typedef struct es_component_ops {
 } ES_ComponentOps;
 
 typedef struct es_component {
-	AG_Object obj;
+	struct ag_object obj;
 	const ES_ComponentOps *ops;
 	struct es_circuit *ckt;			/* Back pointer to circuit */
 	VG_Block *block;			/* Schematic block */
@@ -124,14 +123,7 @@ typedef struct es_component {
 #endif
 
 __BEGIN_DECLS
-void	 ES_ComponentInit(void *, const char *, const void *, const ES_Port *);
-void	 ES_ComponentDestroy(void *);
-int	 ES_ComponentLoad(void *, AG_DataSource *);
-int	 ES_ComponentSave(void *, AG_DataSource *);
-void	*ES_ComponentEdit(void *);
-void	 ES_ComponentReinit(void *);
 void	 ES_ComponentFreePorts(ES_Component *);
-void	 ES_ComponentSetOps(void *, const void *);
 void	 ES_ComponentSetPorts(void *, const ES_Port *);
 
 void	 ES_ComponentOpenMenu(ES_Component *, VG_View *);
@@ -146,11 +138,10 @@ void	 ES_ComponentUnselect(ES_Component *);
 void	 ES_ComponentUnselectAll(struct es_circuit *);
 void	 ES_ComponentLog(void *, const char *, ...);
 
-__inline__ Uint		 ES_PortNode(ES_Component *, int);
-__inline__ int		 ES_PortIsGrounded(ES_Port *);
-__inline__ int		 ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
-__inline__ ES_Port	*ES_FindPort(void *, const char *);
-
+Uint	 ES_PortNode(ES_Component *, int);
+int	 ES_PortIsGrounded(ES_Port *);
+int	 ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
+ES_Port	*ES_FindPort(void *, const char *);
 __END_DECLS
 
 #include "close_code.h"

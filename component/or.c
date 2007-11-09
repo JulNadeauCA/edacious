@@ -30,28 +30,6 @@
 #include "eda.h"
 #include "or.h"
 
-const ES_ComponentOps esOrOps = {
-	{
-		"ES_Component:ES_Digital:ES_Or",
-		sizeof(ES_Or),
-		{ 0,0 },
-		ES_OrInit,
-		NULL,			/* reinit */
-		ES_ComponentDestroy,
-		ES_ComponentLoad,
-		ES_ComponentSave,
-		ES_ComponentEdit
-	},
-	N_("OR Gate"),
-	"Or",
-	ES_OrDraw,
-	ES_OrEdit,
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	NULL,			/* export */
-	NULL			/* connect */
-};
-
 const ES_Port esOrPinout[] = {
 	{ 0, "",	0.0, 1.0 },
 	{ 1, "Vcc",	1.0, -1.0 },
@@ -62,8 +40,8 @@ const ES_Port esOrPinout[] = {
 	{ -1 },
 };
 
-void
-ES_OrDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_Or *gate = p;
 	ES_Component *com = p;
@@ -94,12 +72,11 @@ ES_OrDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-void
-ES_OrInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_Or *gate = p;
 
-	ES_DigitalInit(gate, name, &esOrOps, esOrPinout);
 	COM(gate)->intUpdate = ES_OrUpdate;
 	ES_LogicOutput(gate, "A|B", ES_HI_Z);
 }
@@ -117,22 +94,23 @@ ES_OrUpdate(void *p)
 	}
 }
 
-#ifdef EDITION
-void *
-ES_OrEdit(void *p)
-{
-	ES_Or *gate = p;
-	AG_Window *win, *wDig;
-	AG_FSpinbutton *fsb;
-	AG_Notebook *nb;
-	AG_NotebookTab *ntab;
-	AG_Box *box;
-
-	win = AG_WindowNew(0);
-
-	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
-	ntab = AG_NotebookAddTab(nb, _("Digital"), AG_BOX_VERT);
-	ES_DigitalEdit(gate, ntab);
-	return (win);
-}
-#endif /* EDITION */
+const ES_ComponentOps esOrOps = {
+	{
+		"ES_Component:ES_Digital:ES_Or",
+		sizeof(ES_Or),
+		{ 0,0 },
+		Init,
+		NULL,		/* reinit */
+		NULL,		/* destroy */
+		NULL,		/* load */
+		NULL,		/* save */
+		NULL,		/* edit */
+	},
+	N_("OR Gate"),
+	"Or",
+	Draw,
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	NULL			/* connect */
+};

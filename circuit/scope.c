@@ -31,31 +31,20 @@
 #include "eda.h"
 #include "scope.h"
 
-const AG_ObjectOps esScopeOps = {
-	"ES_Scope",
-	sizeof(ES_Scope),
-	{ 0,0 },
-	ES_ScopeInit,
-	ES_ScopeReinit,
-	ES_ScopeDestroy,
-	ES_ScopeLoad,
-	ES_ScopeSave,
-	ES_ScopeEdit
-};
-
 ES_Scope *
 ES_ScopeNew(void *parent, const char *name)
 {
 	ES_Scope *scope;
 
 	scope = Malloc(sizeof(ES_Scope));
-	ES_ScopeInit(scope, name);
+	AG_ObjectInit(scope, &esScopeOps);
+	AG_ObjectSetName(scope, "%s", name);
 	AG_ObjectAttach(parent, scope);
 	return (scope);
 }
 
 static void
-ES_ScopeAttached(AG_Event *event)
+Attached(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_SENDER();
 	ES_Scope *scope = AG_SELF();
@@ -66,30 +55,17 @@ ES_ScopeAttached(AG_Event *event)
 	scope->ckt = ckt;
 }
 
-void
-ES_ScopeInit(void *obj, const char *name)
+static void
+Init(void *obj)
 {
 	ES_Scope *scope = obj;
 
-	AG_ObjectInit(scope, name, &esScopeOps);
 	scope->ckt = NULL;
-	AG_SetEvent(scope, "attached", ES_ScopeAttached, NULL);
+	AG_SetEvent(scope, "attached", Attached, NULL);
 }
 
-void
-ES_ScopeReinit(void *obj)
-{
-	ES_Scope *scope = obj;
-}
-
-void
-ES_ScopeDestroy(void *obj)
-{
-	ES_Scope *scope = obj;
-}
-
-int
-ES_ScopeLoad(void *obj, AG_DataSource *buf)
+static int
+Load(void *obj, AG_DataSource *buf)
 {
 	ES_Scope *scope = obj;
 
@@ -99,8 +75,8 @@ ES_ScopeLoad(void *obj, AG_DataSource *buf)
 	return (0);
 }
 
-int
-ES_ScopeSave(void *obj, AG_DataSource *buf)
+static int
+Save(void *obj, AG_DataSource *buf)
 {
 	AG_WriteObjectVersion(buf, obj);
 	return (0);
@@ -189,8 +165,8 @@ UpdateScope(AG_Event *event)
 	SC_PlotterUpdate(ptr);
 }
 
-void *
-ES_ScopeEdit(void *obj)
+static void *
+Edit(void *obj)
 {
 	ES_Scope *scope = obj;
 	ES_Circuit *ckt = scope->ckt;
@@ -226,9 +202,9 @@ ES_ScopeEdit(void *obj)
 			AG_SetEvent(tl, "tlist-poll", PollPlots,
 			    "%p,%p", ckt, ptr);
 			m = AG_TlistSetPopup(tl, "plot");
-			AG_MenuAction(m, _("Plot derivative"), -1,
+			AG_MenuAction(m, _("Plot derivative"), NULL,
 			    AddPlotFromDerivative, "%p,%p,%p", tl, ckt, ptr);
-			AG_MenuAction(m, _("Plot settings"), -1,
+			AG_MenuAction(m, _("Plot settings"), NULL,
 			    ShowPlotSettings, "%p,%p", ckt, tl);
 		}
 	}
@@ -240,3 +216,14 @@ ES_ScopeEdit(void *obj)
 	return (win);
 }
 
+const AG_ObjectOps esScopeOps = {
+	"ES_Scope",
+	sizeof(ES_Scope),
+	{ 0,0 },
+	Init,
+	NULL,			/* free_dataset */
+	NULL,			/* destroy */
+	Load,
+	Save,
+	Edit
+};

@@ -16,15 +16,7 @@ typedef struct es_resistor {
 } ES_Resistor;
 
 __BEGIN_DECLS
-void	 ES_ResistorInit(void *, const char *);
-int	 ES_ResistorLoad(void *, AG_DataSource *);
-int	 ES_ResistorSave(void *, AG_DataSource *);
-int	 ES_ResistorExport(void *, enum circuit_format, FILE *);
-SC_Real	 ES_ResistorResistance(void *, ES_Port *, ES_Port *);
-void	*ES_ResistorEdit(void *);
-int	 ES_ResistorConnect(void *, ES_Port *, ES_Port *);
-void	 ES_ResistorDraw(void *, VG *);
-void	 ES_ResistorUpdate(void *, VG *);
+extern const ES_ComponentOps esResistorOps;
 __END_DECLS
 
 #include "close_code.h"

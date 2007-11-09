@@ -33,18 +33,6 @@
 #include "spice.h"
 #include "scope.h"
 
-const AG_ObjectOps esCircuitOps = {
-	"ES_Circuit",
-	sizeof(ES_Circuit),
-	{ 0,0 },
-	ES_CircuitInit,
-	ES_CircuitReinit,
-	ES_CircuitDestroy,
-	ES_CircuitLoad,
-	ES_CircuitSave,
-	ES_CircuitEdit
-};
-
 static void InitNode(ES_Node *, Uint);
 static void InitGround(ES_Circuit *);
 
@@ -62,16 +50,18 @@ ES_SuspendSimulation(ES_Circuit *ckt)
 		ckt->sim->ops->stop(ckt->sim);
 }
 
+#if 0
 static void
-ES_CircuitDetached(AG_Event *event)
+Detached(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_SELF();
 
 	ES_DestroySimulation(ckt);
 }
+#endif
 
 static void
-ES_CircuitOpened(AG_Event *event)
+EditOpen(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_SELF();
 	ES_Component *com;
@@ -83,7 +73,7 @@ ES_CircuitOpened(AG_Event *event)
 }
 
 static void
-ES_CircuitClosed(AG_Event *event)
+EditClose(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_SELF();
 	ES_Component *com;
@@ -97,13 +87,13 @@ ES_CircuitClosed(AG_Event *event)
 }
 
 static SC_Real
-ES_CircuitReadNodeVoltage(void *p, AG_Prop *pr)
+ReadNodeVoltage(void *p, AG_Prop *pr)
 {
 	return (ES_NodeVoltage(p, atoi(&pr->key[1])));
 }
 
 static SC_Real
-ES_CircuitReadBranchCurrent(void *p, AG_Prop *pr)
+ReadBranchCurrent(void *p, AG_Prop *pr)
 {
 	return (ES_BranchCurrent(p, atoi(&pr->key[1])));
 }
@@ -166,25 +156,24 @@ ES_CircuitModified(ES_Circuit *ckt)
 	for (i = 1; i <= ckt->n; i++) {
 		snprintf(key, sizeof(key), "v%u", i);
 		pr = SC_SetReal(ckt, key, 0.0);
-		SC_SetRealRdFn(pr, ES_CircuitReadNodeVoltage);
+		SC_SetRealRdFn(pr, ReadNodeVoltage);
 	}
 	for (i = 1; i <= ckt->m; i++) {
 		snprintf(key, sizeof(key), "I%u", i);
 		pr = SC_SetReal(ckt, key, 0.0);
-		SC_SetRealRdFn(pr, ES_CircuitReadBranchCurrent);
+		SC_SetRealRdFn(pr, ReadBranchCurrent);
 	}
 #endif
 }
 
-void
-ES_CircuitInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_Circuit *ckt = p;
 	AG_Event *ev;
 	VG_Style *vgs;
 	VG *vg;
 
-	AG_ObjectInit(ckt, name, &esCircuitOps);
 	ckt->flags = CIRCUIT_SHOW_NODES|CIRCUIT_SHOW_NODESYMS;
 	ckt->simlock = 0;
 	ckt->descr[0] = '\0';
@@ -195,7 +184,7 @@ ES_CircuitInit(void *p, const char *name)
 	ckt->nodes = Malloc(sizeof(ES_Node *));
 	ckt->n = 0;
 	ckt->console = NULL;
-	pthread_mutex_init(&ckt->lock, &agRecursiveMutexAttr);
+	AG_MutexInitRecursive(&ckt->lock);
 	TAILQ_INIT(&ckt->wires);
 	TAILQ_INIT(&ckt->syms);
 	
@@ -221,8 +210,8 @@ ES_CircuitInit(void *p, const char *name)
 	vgs = VG_CreateStyle(vg, VG_TEXT_STYLE, "node-name");
 	vgs->vg_text_st.size = 8;
 	
-	AG_SetEvent(ckt, "edit-open", ES_CircuitOpened, NULL);
-	AG_SetEvent(ckt, "edit-close", ES_CircuitClosed, NULL);
+	AG_SetEvent(ckt, "edit-open", EditOpen, NULL);
+	AG_SetEvent(ckt, "edit-close", EditClose, NULL);
 
 	/* Notify visualization objects of simulation progress. */
 	ev = AG_SetEvent(ckt, "circuit-step-begin", NULL, NULL);
@@ -231,8 +220,8 @@ ES_CircuitInit(void *p, const char *name)
 	ev->flags |= AG_EVENT_PROPAGATE;
 }
 
-void
-ES_CircuitReinit(void *p)
+static void
+FreeDataset(void *p)
 {
 	ES_Circuit *ckt = p;
 	ES_Component *com;
@@ -290,8 +279,8 @@ ES_CircuitReinit(void *p)
 	VG_Reinit(ckt->vg);
 }
 
-int
-ES_CircuitLoad(void *p, AG_DataSource *buf)
+static int
+Load(void *p, AG_DataSource *buf)
 {
 	ES_Circuit *ckt = p;
 	ES_Component *com;
@@ -453,8 +442,8 @@ ES_CircuitLoad(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-int
-ES_CircuitSave(void *p, AG_DataSource *buf)
+static int
+Save(void *p, AG_DataSource *buf)
 {
 	char path[AG_OBJECT_PATH_MAX];
 	ES_Circuit *ckt = p;
@@ -972,7 +961,6 @@ ES_CircuitFreeComponents(ES_Circuit *ckt)
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		AG_ObjectDetach(com);
 		AG_ObjectDestroy(com);
-		Free(com);
 	}
 }
 
@@ -986,8 +974,8 @@ ES_DestroySimulation(ES_Circuit *ckt)
 	}
 }
 
-void
-ES_CircuitDestroy(void *p)
+static void
+Destroy(void *p)
 {
 	ES_Circuit *ckt = p;
 	
@@ -1059,8 +1047,6 @@ ES_UnlockCircuit(ES_Circuit *ckt)
 	}
 	AG_MutexUnlock(&ckt->lock);
 }
-
-#ifdef EDITION
 
 static void
 PollCircuitLoops(AG_Event *event)
@@ -1599,8 +1585,8 @@ CircuitDrawGeneric(AG_Event *event)
 	ES_UnlockCircuit(ckt);
 }
 
-void *
-ES_CircuitEdit(void *p)
+static void *
+Edit(void *p)
 {
 	ES_Circuit *ckt = p;
 	AG_Window *win;
@@ -1613,33 +1599,30 @@ ES_CircuitEdit(void *p)
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, "%s", AGOBJECT(ckt)->name);
 
-	toolbar = Malloc(sizeof(AG_Toolbar));
-	AG_ToolbarInit(toolbar, AG_TOOLBAR_VERT, 1, 0);
-	vgv = Malloc(sizeof(VG_View));
-	VG_ViewInit(vgv, ckt->vg, VG_VIEW_EXPAND);
+	toolbar = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
+	vgv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND);
 	VG_ViewDrawFn(vgv, CircuitDrawGeneric, "%p", ckt);
 	
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	pitem = AG_MenuAddItem(menu, _("File"));
 	{
-		AG_MenuActionKb(pitem, _("Revert"), OBJLOAD_ICON,
+		AG_MenuActionKb(pitem, _("Revert"), agIconLoad.s,
 		    SDLK_r, KMOD_CTRL, RevertCircuit, "%p", ckt);
-		AG_MenuActionKb(pitem, _("Save"), OBJSAVE_ICON,
+		AG_MenuActionKb(pitem, _("Save"), agIconSave.s,
 		    SDLK_s, KMOD_CTRL, SaveCircuit, "%p", ckt);
 
-		subitem = AG_MenuAction(pitem, _("Export circuit"),
-		    OBJSAVE_ICON, NULL, NULL);
-		AG_MenuAction(subitem, _("Export to SPICE..."), EDA_SPICE_ICON,
+		subitem = AG_MenuNode(pitem, _("Export"), agIconSave.s);
+		AG_MenuAction(subitem, _("Export to SPICE..."), agIconSave.s,
 		    ExportToSPICE, "%p", ckt);
 	
 		AG_MenuSeparator(pitem);
 		
-		AG_MenuAction(pitem, _("Document properties..."), SETTINGS_ICON,
+		AG_MenuAction(pitem, _("Document properties..."), agIconGear.s,
 		    ShowDocumentProps, "%p,%p", win, ckt);
 		    
 		AG_MenuSeparator(pitem);
 
-		AG_MenuActionKb(pitem, _("Close document"), CLOSE_ICON,
+		AG_MenuActionKb(pitem, _("Close document"), agIconClose.s,
 		    SDLK_w, KMOD_CTRL, AGWINCLOSE(win));
 	}
 	pitem = AG_MenuAddItem(menu, _("Edit"));
@@ -1647,56 +1630,56 @@ ES_CircuitEdit(void *p)
 		AG_MenuItem *mSnap;
 
 		/* TODO */
-		AG_MenuAction(pitem, _("Undo"), -1, NULL, NULL);
-		AG_MenuAction(pitem, _("Redo"), -1, NULL, NULL);
+		AG_MenuAction(pitem, _("Undo"), NULL, NULL, NULL);
+		AG_MenuAction(pitem, _("Redo"), NULL, NULL, NULL);
 		
 		AG_MenuSeparator(pitem);
 		
-		mSnap = AG_MenuNode(pitem, _("Snapping mode"),
-		    SNAP_CENTERPT_ICON);
+		mSnap = AG_MenuNode(pitem, _("Snapping mode"), NULL);
 		VG_SnapMenu(menu, mSnap, ckt->vg);
 	}
 
 	pitem = AG_MenuAddItem(menu, _("View"));
 	{
-		AG_MenuAction(pitem, _("Create view..."), NEW_VIEW_ICON,
+		AG_MenuAction(pitem, _("Create view..."), NULL,
 		    CircuitCreateView, "%p,%p", win, ckt);
 		
 		AG_MenuSeparator(pitem);
 		
-		AG_MenuIntFlags(pitem, _("Circuit nodes"), EDA_NODE_ICON,
+		AG_MenuIntFlags(pitem, _("Circuit nodes"), NULL,
 		    &ckt->flags, CIRCUIT_SHOW_NODES, 0);
-		AG_MenuIntFlags(pitem, _("Node names"), EDA_NODE_ICON,
+		AG_MenuIntFlags(pitem, _("Node names"), NULL,
 		    &ckt->flags, CIRCUIT_SHOW_NODENAMES, 0);
-		AG_MenuIntFlags(pitem, _("Node symbols"), EDA_NODE_ICON,
+		AG_MenuIntFlags(pitem, _("Node symbols"), NULL,
 		    &ckt->flags, CIRCUIT_SHOW_NODESYMS, 0);
 
 		AG_MenuSeparator(pitem);
 
-		AG_MenuIntFlags(pitem, _("Drawing origin"), VGORIGIN_ICON,
+		AG_MenuIntFlags(pitem, _("Drawing origin"), NULL,
 		    &ckt->vg->flags, VG_VISORIGIN, 0);
-		AG_MenuIntFlags(pitem, _("Drawing grid"), GRID_ICON,
+		AG_MenuIntFlags(pitem, _("Drawing grid"), vgIconSnapGrid.s,
 		    &ckt->vg->flags, VG_VISGRID, 0);
-		AG_MenuIntFlags(pitem, _("Drawing extents"), VGBLOCK_ICON,
+		AG_MenuIntFlags(pitem, _("Drawing extents"), vgIconBlock.s,
 		    &ckt->vg->flags, VG_VISBBOXES, 0);
 		
 		AG_MenuSeparator(pitem);
 
-		AG_MenuAction(pitem, _("Circuit topology..."), EDA_MESH_ICON,
+		AG_MenuAction(pitem, _("Circuit topology..."), NULL,
 		    ShowInterconnects, "%p,%p", win, ckt);
-		AG_MenuAction(pitem, _("Log console..."), VGTEXT_ICON,
+		AG_MenuAction(pitem, _("Log console..."), vgIconText.s,
 		    ShowConsole, "%p,%p", win, ckt);
 	}
 		
 	pitem = AG_MenuAddItem(menu, _("Simulation"));
 	{
 		extern const ES_SimOps *esSimOps[];
-		const ES_SimOps **ops;
+		const ES_SimOps **pOps, *ops;
 
-		for (ops = &esSimOps[0]; *ops != NULL; ops++) {
-			AG_MenuTool(pitem, toolbar, _((*ops)->name),
-			    (*ops)->icon, 0, 0,
-			    CircuitSelectSim, "%p,%p,%p", ckt, *ops, win);
+		for (pOps = &esSimOps[0]; *pOps != NULL; pOps++) {
+			ops = *pOps;
+			AG_MenuTool(pitem, toolbar, _(ops->name),
+			    ops->icon ? ops->icon->s : NULL, 0, 0,
+			    CircuitSelectSim, "%p,%p,%p", ckt, ops, win);
 		}
 	}
 	
@@ -1797,20 +1780,20 @@ ES_CircuitEdit(void *p)
 
 		tool = VG_ViewRegTool(vgv, &esSelcomOps, ckt);
 		AG_MenuTool(pitem, toolbar, _("Select components"),
-		    tool->ops->icon, 0, 0,
+		    tool->ops->icon ? tool->ops->icon->s : NULL, 0, 0,
 		    CircuitSelectTool, "%p,%p,%p", vgv, tool, ckt);
 		VG_ViewSetDefaultTool(vgv, tool);
 		
 		tool = VG_ViewRegTool(vgv, &esWireTool, ckt);
 		AG_MenuTool(pitem, toolbar, _("Insert wire"),
-		    tool->ops->icon, 0, 0,
+		    tool->ops->icon ? tool->ops->icon->s : NULL, 0, 0,
 		    CircuitSelectTool, "%p,%p,%p", vgv, tool, ckt);
 	}
 	
 	pitem = AG_MenuAddItem(menu, _("Visualization"));
 	{
-		AG_MenuAction(pitem, _("Create scope"), -1, CreateScope,
-		    "%p", ckt);
+		AG_MenuAction(pitem, _("Create scope"), NULL,
+		    CreateScope, "%p", ckt);
 	}
 
 	AG_WindowSetGeometry(win,
@@ -1819,4 +1802,15 @@ ES_CircuitEdit(void *p)
 	
 	return (win);
 }
-#endif /* EDITION */
+
+const AG_ObjectOps esCircuitOps = {
+	"ES_Circuit",
+	sizeof(ES_Circuit),
+	{ 0,0 },
+	Init,
+	FreeDataset,
+	Destroy,
+	Load,
+	Save,
+	Edit
+};

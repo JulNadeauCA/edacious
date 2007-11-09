@@ -23,9 +23,6 @@ void	 ES_VSineDestroy(void *);
 int	 ES_VSineLoad(void *, AG_DataSource *);
 int	 ES_VSineSave(void *, AG_DataSource *);
 int	 ES_VSineExport(void *, enum circuit_format, FILE *);
-void	*ES_VSineEdit(void *);
-void	 ES_VSineDraw(void *, VG *);
-void	 ES_VSineStep(void *, Uint);
 void	 ES_VSineUpdate(void *);
 __END_DECLS
 

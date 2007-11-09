@@ -30,36 +30,14 @@
 #include "eda.h"
 #include "logic_probe.h"
 
-const ES_ComponentOps esLogicProbeOps = {
-	{
-		"ES_Component:ES_LogicProbe",
-		sizeof(ES_LogicProbe),
-		{ 0,0 },
-		ES_LogicProbeInit,
-		NULL,			/* reinit */
-		ES_ComponentDestroy,
-		ES_LogicProbeLoad,
-		ES_LogicProbeSave,
-		ES_ComponentEdit
-	},
-	N_("LogicProbe"),
-	"LPROBE",
-	ES_LogicProbeDraw,
-	ES_LogicProbeEdit,
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	NULL,			/* export */
-	NULL			/* connect */
-};
-
 const ES_Port esLogicProbePinout[] = {
 	{ 0, "",  0.000, 0.625 },
 	{ 1, "A", 0.000, 0.000 },
 	{ -1 },
 };
 
-void
-ES_LogicProbeDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_LogicProbe *r = p;
 
@@ -76,28 +54,24 @@ ES_LogicProbeDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-int
-ES_LogicProbeLoad(void *p, AG_DataSource *buf)
+static int
+Load(void *p, AG_DataSource *buf)
 {
 	ES_LogicProbe *lp = p;
 
-	if (AG_ReadObjectVersion(buf, lp, NULL) == -1 ||
-	    ES_ComponentLoad(lp, buf) == -1)
+	if (AG_ReadObjectVersion(buf, lp, NULL) == -1) {
 		return (-1);
-
+	}
 	lp->Vhigh = SC_ReadReal(buf);
 	return (0);
 }
 
-int
-ES_LogicProbeSave(void *p, AG_DataSource *buf)
+static int
+Save(void *p, AG_DataSource *buf)
 {
 	ES_LogicProbe *lp = p;
 
 	AG_WriteObjectVersion(buf, lp);
-	if (ES_ComponentSave(lp, buf) == -1)
-		return (-1);
-
 	SC_WriteReal(buf, lp->Vhigh);
 	return (0);
 }
@@ -112,32 +86,48 @@ ES_LogicProbeUpdate(void *p)
 	r->state = ((v1 - v2) >= r->Vhigh);
 }
 
-void
-ES_LogicProbeInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_LogicProbe *r = p;
 
-	ES_ComponentInit(r, name, &esLogicProbeOps, esLogicProbePinout);
+	ES_ComponentSetPorts(r, esLogicProbePinout);
 	r->Vhigh = 5.0;
 	r->state = 0;
 	COM(r)->intUpdate = ES_LogicProbeUpdate;
 }
 
-#ifdef EDITION
-void *
-ES_LogicProbeEdit(void *p)
+static void *
+Edit(void *p)
 {
 	ES_LogicProbe *r = p;
 	AG_Window *win;
-	AG_Spinbutton *sb;
 	AG_FSpinbutton *fsb;
 
 	win = AG_WindowNew(0);
-
 	fsb = AG_FSpinbuttonNew(win, 0, "V", _("HIGH voltage: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->Vhigh);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
-	
 	return (win);
 }
-#endif /* EDITION */
+
+const ES_ComponentOps esLogicProbeOps = {
+	{
+		"ES_Component:ES_LogicProbe",
+		sizeof(ES_LogicProbe),
+		{ 0,0 },
+		Init,
+		NULL,		/* reinit */
+		NULL,		/* destroy */
+		Load,
+		Save,
+		Edit
+	},
+	N_("LogicProbe"),
+	"LPROBE",
+	Draw,
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	NULL			/* connect */
+};

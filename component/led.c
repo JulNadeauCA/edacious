@@ -30,28 +30,6 @@
 #include "eda.h"
 #include "led.h"
 
-const ES_ComponentOps esLedOps = {
-	{
-		"ES_Component:ES_Led",
-		sizeof(ES_Led),
-		{ 0,0 },
-		ES_LedInit,
-		NULL,			/* reinit */
-		ES_ComponentDestroy,
-		ES_LedLoad,
-		ES_LedSave,
-		ES_ComponentEdit
-	},
-	N_("Led"),
-	"LED",
-	ES_LedDraw,
-	ES_LedEdit,
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	NULL,			/* export */
-	NULL			/* connect */
-};
-
 const ES_Port esLedPinout[] = {
 	{ 0, "",  0.000, 0.625 },
 	{ 1, "A", 0.000, 0.000 },
@@ -59,8 +37,8 @@ const ES_Port esLedPinout[] = {
 	{ -1 },
 };
 
-void
-ES_LedDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_Led *r = p;
 
@@ -77,30 +55,26 @@ ES_LedDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-int
-ES_LedLoad(void *p, AG_DataSource *buf)
+static int
+Load(void *p, AG_DataSource *buf)
 {
 	ES_Led *led = p;
 
-	if (AG_ReadObjectVersion(buf, led, NULL) == -1 ||
-	    ES_ComponentLoad(led, buf) == -1)
+	if (AG_ReadObjectVersion(buf, led, NULL) == -1) {
 		return (-1);
-
+	}
 	led->Vforw = SC_ReadReal(buf);
 	led->Vrev = SC_ReadReal(buf);
 	led->I = SC_ReadReal(buf);
 	return (0);
 }
 
-int
-ES_LedSave(void *p, AG_DataSource *buf)
+static int
+Save(void *p, AG_DataSource *buf)
 {
 	ES_Led *led = p;
 
 	AG_WriteObjectVersion(buf, led);
-	if (ES_ComponentSave(led, buf) == -1)
-		return (-1);
-
 	SC_WriteReal(buf, led->Vforw);
 	SC_WriteReal(buf, led->Vrev);
 	SC_WriteReal(buf, led->I);
@@ -117,12 +91,12 @@ ES_LedUpdate(void *p)
 	r->state = ((v1 - v2) >= r->Vrev);
 }
 
-void
-ES_LedInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_Led *r = p;
 
-	ES_ComponentInit(r, name, &esLedOps, esLedPinout);
+	ES_ComponentSetPorts(r, esLedPinout);
 	r->Vforw = 30e-3;
 	r->Vrev = 5.0;
 	r->I = 2500e-3;
@@ -130,28 +104,42 @@ ES_LedInit(void *p, const char *name)
 	COM(r)->intUpdate = ES_LedUpdate;
 }
 
-#ifdef EDITION
-void *
-ES_LedEdit(void *p)
+static void *
+Edit(void *p)
 {
 	ES_Led *r = p;
 	AG_Window *win;
-	AG_Spinbutton *sb;
 	AG_FSpinbutton *fsb;
 
 	win = AG_WindowNew(0);
-
 	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Forward voltage: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->Vforw);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
-
 	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Reverse voltage: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->Vrev);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
-	
 	fsb = AG_FSpinbuttonNew(win, 0, "mcd", _("Luminous intensity: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->I);
-	
 	return (win);
 }
-#endif /* EDITION */
+
+const ES_ComponentOps esLedOps = {
+	{
+		"ES_Component:ES_Led",
+		sizeof(ES_Led),
+		{ 0,0 },
+		Init,
+		NULL,		/* reinit */
+		NULL,		/* destroy */
+		Load,
+		Save,
+		Edit
+	},
+	N_("Led"),
+	"LED",
+	Draw,
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	NULL			/* connect */
+};

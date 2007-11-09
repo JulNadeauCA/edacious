@@ -30,36 +30,14 @@
 #include "eda.h"
 #include "ground.h"
 
-const ES_ComponentOps esGroundOps = {
-	{
-		"ES_Component:ES_Ground",
-		sizeof(ES_Ground),
-		{ 0,0 },
-		ES_GroundInit,
-		NULL,			/* reinit */
-		ES_ComponentDestroy,
-		ES_GroundLoad,
-		ES_GroundSave,
-		ES_ComponentEdit
-	},
-	N_("Ground"),
-	"Gnd",
-	ES_GroundDraw,
-	NULL,			/* edit */
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	NULL,			/* export */
-	ES_GroundConnect
-};
-
 const ES_Port esGroundPinout[] = {
 	{ 0, "",  0.000, 0.000 },
 	{ 1, "A", 0.000, 0.000 },
 	{ -1 },
 };
 
-int
-ES_GroundConnect(void *p, ES_Port *p1, ES_Port *p2)
+static int
+Connect(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_Ground *gnd = p;
 	ES_Circuit *ckt = COM(gnd)->ckt;
@@ -84,8 +62,8 @@ ES_GroundConnect(void *p, ES_Port *p1, ES_Port *p2)
 	return (0);
 }
 
-void
-ES_GroundDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	VG_Begin(vg, VG_LINES);
 	VG_Vertex2(vg, 0.000, 0.000);
@@ -99,35 +77,31 @@ ES_GroundDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-void
-ES_GroundInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_Ground *gnd = p;
 
-	ES_ComponentInit(gnd, name, &esGroundOps, esGroundPinout);
+	ES_ComponentSetPorts(gnd, esGroundPinout);
 }
 
-int
-ES_GroundLoad(void *p, AG_DataSource *buf)
-{
-	ES_Ground *gnd = p;
-
-	if (AG_ReadObjectVersion(buf, gnd, NULL) == -1 ||
-	    ES_ComponentLoad(gnd, buf) == -1) {
-		return (-1);
-	}
-	return (0);
-}
-
-int
-ES_GroundSave(void *p, AG_DataSource *buf)
-{
-	ES_Ground *gnd = p;
-
-	AG_WriteObjectVersion(buf, gnd);
-	if (ES_ComponentSave(gnd, buf) == -1) {
-		return (-1);
-	}
-	return (0);
-}
-
+const ES_ComponentOps esGroundOps = {
+	{
+		"ES_Component:ES_Ground",
+		sizeof(ES_Ground),
+		{ 0,0 },
+		Init,
+		NULL,		/* reinit */
+		NULL,		/* destroy */
+		NULL,		/* load */
+		NULL,		/* save */
+		NULL		/* edit */
+	},
+	N_("Ground"),
+	"Gnd",
+	Draw,
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	Connect
+};

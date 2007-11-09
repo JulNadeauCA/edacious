@@ -60,11 +60,11 @@ typedef struct es_mna {
 	SC_Ivector *piv;	/* Pivot information from last factorization */
 } ES_MNA;
 
-static void ES_MnaResize(void *, ES_Circuit *);
+static void Resize(void *, ES_Circuit *);
 
 /* Formulate the KCL/branch equations and compute A=LU. */
 static int
-ES_MnaFactorize(ES_MNA *mna, ES_Circuit *ckt)
+FactorizeMNA(ES_MNA *mna, ES_Circuit *ckt)
 {
 	ES_Component *com;
 	u_int i, n, m;
@@ -103,7 +103,7 @@ ES_MnaFactorize(ES_MNA *mna, ES_Circuit *ckt)
 }
 
 static int
-ES_MnaSolve(ES_MNA *mna, ES_Circuit *ckt)
+SolveMNA(ES_MNA *mna, ES_Circuit *ckt)
 {
 	SC_VectorCopy(mna->z, mna->x);
 	SC_BacksubstLU(mna->LU, mna->piv, mna->x);
@@ -111,7 +111,7 @@ ES_MnaSolve(ES_MNA *mna, ES_Circuit *ckt)
 }
 
 static Uint32
-ES_MnaStep(void *obj, Uint32 ival, void *arg)
+StepMNA(void *obj, Uint32 ival, void *arg)
 {
 	ES_Circuit *ckt = obj;
 	ES_MNA *mna = arg;
@@ -138,8 +138,8 @@ ES_MnaStep(void *obj, Uint32 ival, void *arg)
 	}
 solve:
 	/* Find the initial DC operating point. */
-	if (ES_MnaFactorize(mna, ckt) == -1 ||
-	    ES_MnaSolve(mna, ckt) == -1) {
+	if (FactorizeMNA(mna, ckt) == -1 ||
+	    SolveMNA(mna, ckt) == -1) {
 		goto halt;
 	}
 	/*
@@ -153,8 +153,8 @@ solve:
 		if (com->intUpdate != NULL)
 			com->intUpdate(com);
 	}
-	if (ES_MnaFactorize(mna, ckt) == -1 ||
-	    ES_MnaSolve(mna, ckt) == -1) {
+	if (FactorizeMNA(mna, ckt) == -1 ||
+	    SolveMNA(mna, ckt) == -1) {
 		goto halt;
 	}
 	/* Loop until stability is reached. */
@@ -183,7 +183,7 @@ halt:
 }
 
 static void
-ES_MnaInit(void *p)
+Init(void *p)
 {
 	ES_MNA *mna = p;
 
@@ -194,7 +194,7 @@ ES_MnaInit(void *p)
 	mna->max_iters = 100000;
 	mna->iters_hiwat = 1;
 	mna->iters_lowat = 1;
-	AG_SetTimeout(&mna->update_to, ES_MnaStep, mna, AG_CANCEL_ONDETACH);
+	AG_SetTimeout(&mna->update_to, StepMNA, mna, AG_CANCEL_ONDETACH);
 
 	mna->A = SC_MatrixNew(0, 0);
 	mna->G = SC_MatrixNew(0, 0);
@@ -215,12 +215,12 @@ ES_MnaInit(void *p)
 }
 
 static void
-ES_MnaStart(void *p)
+Start(void *p)
 {
 	ES_MNA *mna = p;
 	ES_Circuit *ckt = SIM(mna)->ckt;
 		
-	ES_MnaResize(mna, ckt);
+	Resize(mna, ckt);
 	
 	SIM(mna)->running = 1;
 	AG_LockTimeouts(ckt);
@@ -235,7 +235,7 @@ ES_MnaStart(void *p)
 }
 
 static void
-ES_MnaStop(void *p)
+Stop(void *p)
 {
 	ES_MNA *mna = p;
 	ES_Circuit *ckt = SIM(mna)->ckt;
@@ -249,11 +249,11 @@ ES_MnaStop(void *p)
 }
 
 static void
-ES_MnaDestroy(void *p)
+Destroy(void *p)
 {
 	ES_MNA *mna = p;
 	
-	ES_MnaStop(mna);
+	Stop(mna);
 
 	SC_MatrixFree(mna->A);
 	SC_MatrixFree(mna->G);
@@ -271,7 +271,7 @@ ES_MnaDestroy(void *p)
 }
 
 static void
-ES_MnaResize(void *p, ES_Circuit *ckt)
+Resize(void *p, ES_Circuit *ckt)
 {
 	ES_MNA *mna = p;
 	Uint n = ckt->n;
@@ -316,14 +316,14 @@ ES_MnaRunContinuous(AG_Event *event)
 	SIM(mna)->ckt->simlock = 0;
 
 	if (state) {
-		ES_MnaStart(mna);
+		Start(mna);
 	} else {
-		ES_MnaStop(mna);
+		Stop(mna);
 	}
 }
 
 static AG_Window *
-ES_MnaEdit(void *p, ES_Circuit *ckt)
+Edit(void *p, ES_Circuit *ckt)
 {
 	ES_MNA *mna = p;
 	AG_Window *win;
@@ -409,7 +409,7 @@ ES_MnaEdit(void *p, ES_Circuit *ckt)
 }
 
 static SC_Real
-ES_MnaNodeVoltage(void *p, int j)
+NodeVoltage(void *p, int j)
 {
 	ES_MNA *mna = p;
 
@@ -417,7 +417,7 @@ ES_MnaNodeVoltage(void *p, int j)
 }
 
 static SC_Real
-ES_MnaBranchCurrent(void *p, int k)
+BranchCurrent(void *p, int k)
 {
 	ES_MNA *mna = p;
 	int i = SIM(mna)->ckt->n + k;
@@ -427,14 +427,14 @@ ES_MnaBranchCurrent(void *p, int k)
 
 const ES_SimOps esMnaOps = {
 	N_("Modified Nodal Analysis"),
-	EDA_NODE_ICON,
+	NULL,
 	sizeof(ES_MNA),
-	ES_MnaInit,
-	ES_MnaDestroy,
-	ES_MnaStart,
-	ES_MnaStop,
-	ES_MnaResize,
-	ES_MnaNodeVoltage,
-	ES_MnaBranchCurrent,
-	ES_MnaEdit
+	Init,
+	Destroy,
+	Start,
+	Stop,
+	Resize,
+	NodeVoltage,
+	BranchCurrent,
+	Edit
 };

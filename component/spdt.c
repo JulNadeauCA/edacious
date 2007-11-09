@@ -30,28 +30,6 @@
 #include "eda.h"
 #include "spdt.h"
 
-const ES_ComponentOps esSpdtOps = {
-	{
-		"ES_Component:ES_Spdt",
-		sizeof(ES_Spdt),
-		{ 0,0 },
-		ES_SpdtInit,
-		NULL,			/* reinit */
-		ES_ComponentDestroy,
-		ES_SpdtLoad,
-		ES_SpdtSave,
-		ES_ComponentEdit
-	},
-	N_("SPDT switch"),
-	"Sw",
-	ES_SpdtDraw,
-	ES_SpdtEdit,
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	ES_SpdtExport,
-	NULL			/* connect */
-};
-
 const ES_Port esSpdtPinout[] = {
 	{ 0, "",  0, +1.000 },
 	{ 1, "A", 0,  0.000 },
@@ -60,8 +38,8 @@ const ES_Port esSpdtPinout[] = {
 	{ -1 },
 };
 
-void
-ES_SpdtDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_Spdt *sw = p;
 
@@ -107,79 +85,45 @@ ES_SpdtDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-void
-ES_SpdtInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_Spdt *sw = p;
 
-	ES_ComponentInit(sw, name, &esSpdtOps, esSpdtPinout);
+	ES_ComponentSetPorts(sw, esSpdtPinout);
 	sw->on_resistance = 1.0;
 	sw->off_resistance = HUGE_VAL;
 	sw->state = 1;
 }
 
-int
-ES_SpdtLoad(void *p, AG_DataSource *buf)
+static int
+Load(void *p, AG_DataSource *buf)
 {
 	ES_Spdt *sw = p;
 
-	if (AG_ReadObjectVersion(buf, sw, NULL) == -1 ||
-	    ES_ComponentLoad(sw, buf) == -1)
+	if (AG_ReadObjectVersion(buf, sw, NULL) == -1) {
 		return (-1);
-
+	}
 	sw->on_resistance = AG_ReadDouble(buf);
 	sw->off_resistance = AG_ReadDouble(buf);
 	sw->state = (int)AG_ReadUint8(buf);
 	return (0);
 }
 
-int
-ES_SpdtSave(void *p, AG_DataSource *buf)
+static int
+Save(void *p, AG_DataSource *buf)
 {
 	ES_Spdt *sw = p;
 
 	AG_WriteObjectVersion(buf, sw);
-	if (ES_ComponentSave(sw, buf) == -1)
-		return (-1);
-
 	AG_WriteDouble(buf, sw->on_resistance);
 	AG_WriteDouble(buf, sw->off_resistance);
 	AG_WriteUint8(buf, (Uint8)sw->state);
 	return (0);
 }
 
-int
-ES_SpdtExport(void *p, enum circuit_format fmt, FILE *f)
-{
-	ES_Spdt *sw = p;
-	
-	switch (fmt) {
-	case CIRCUIT_SPICE3:
-		if (PNODE(sw,1) != -1 &&
-		    PNODE(sw,2) != -1) {
-			fprintf(f, "R%s %d %d %g\n", AGOBJECT(sw)->name,
-			    PNODE(sw,1), PNODE(sw,2),
-			    ES_SpdtResistance(sw, PORT(sw,1), PORT(sw,2)));
-		}
-		if (PNODE(sw,1) != -1 &&
-		    PNODE(sw,3) != -1) {
-			fprintf(f, "R%s %d %d %g\n", AGOBJECT(sw)->name,
-			    PNODE(sw,1), PNODE(sw,3),
-			    ES_SpdtResistance(sw, PORT(sw,1), PORT(sw,3)));
-		}
-		if (PNODE(sw,2) != -1 &&
-		    PNODE(sw,3) != -1) {
-			fprintf(f, "%s %d %d %g\n", AGOBJECT(sw)->name,
-			    PNODE(sw,2), PNODE(sw,3),
-			    ES_SpdtResistance(sw, PORT(sw,2), PORT(sw,3)));
-		}
-		break;
-	}
-	return (0);
-}
-
-double
-ES_SpdtResistance(void *p, ES_Port *p1, ES_Port *p2)
+static double
+Resistance(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_Spdt *sw = p;
 
@@ -203,35 +147,80 @@ ES_SpdtResistance(void *p, ES_Port *p1, ES_Port *p2)
 	return (-1);
 }
 
-#ifdef EDITION
+static int
+Export(void *p, enum circuit_format fmt, FILE *f)
+{
+	ES_Spdt *sw = p;
+	
+	switch (fmt) {
+	case CIRCUIT_SPICE3:
+		if (PNODE(sw,1) != -1 &&
+		    PNODE(sw,2) != -1) {
+			fprintf(f, "R%s %d %d %g\n", AGOBJECT(sw)->name,
+			    PNODE(sw,1), PNODE(sw,2),
+			    Resistance(sw, PORT(sw,1), PORT(sw,2)));
+		}
+		if (PNODE(sw,1) != -1 &&
+		    PNODE(sw,3) != -1) {
+			fprintf(f, "R%s %d %d %g\n", AGOBJECT(sw)->name,
+			    PNODE(sw,1), PNODE(sw,3),
+			    Resistance(sw, PORT(sw,1), PORT(sw,3)));
+		}
+		if (PNODE(sw,2) != -1 &&
+		    PNODE(sw,3) != -1) {
+			fprintf(f, "%s %d %d %g\n", AGOBJECT(sw)->name,
+			    PNODE(sw,2), PNODE(sw,3),
+			    Resistance(sw, PORT(sw,2), PORT(sw,3)));
+		}
+		break;
+	}
+	return (0);
+}
+
 static void
-toggle_state(AG_Event *event)
+ToggleState(AG_Event *event)
 {
 	ES_Spdt *sw = AG_PTR(1);
 
 	sw->state = (sw->state == 1) ? 2 : 1;
 }
 
-void *
-ES_SpdtEdit(void *p)
+static void *
+Edit(void *p)
 {
 	ES_Spdt *sw = p;
 	AG_Window *win;
 	AG_FSpinbutton *fsb;
 
 	win = AG_WindowNew(0);
-
 	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("ON resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->on_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
-	
 	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("OFF resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->off_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
-
-	AG_ButtonAct(win, AG_BUTTON_EXPAND, _("Toggle state"), toggle_state,
-	    "%p", sw);
-
+	AG_ButtonAct(win, AG_BUTTON_EXPAND, _("Toggle state"),
+	    ToggleState, "%p", sw);
 	return (win);
 }
-#endif /* EDITION */
+
+const ES_ComponentOps esSpdtOps = {
+	{
+		"ES_Component:ES_Spdt",
+		sizeof(ES_Spdt),
+		{ 0,0 },
+		Init,
+		NULL,			/* reinit */
+		NULL,			/* destroy */
+		Load,
+		Save,
+		Edit
+	},
+	N_("SPDT switch"),
+	"Sw",
+	Draw,
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	Export,
+	NULL			/* connect */
+};

@@ -14,13 +14,8 @@ typedef struct es_logic_probe {
 } ES_LogicProbe;
 
 __BEGIN_DECLS
-void	 ES_LogicProbeInit(void *, const char *);
-int	 ES_LogicProbeLoad(void *, AG_DataSource *);
-int	 ES_LogicProbeSave(void *, AG_DataSource *);
-void	*ES_LogicProbeEdit(void *);
-int	 ES_LogicProbeConnect(void *, ES_Port *, ES_Port *);
-void	 ES_LogicProbeDraw(void *, VG *);
-void	 ES_LogicProbeUpdate(void *);
+extern const ES_ComponentOps esLogicProbeOps;
+void ES_LogicProbeUpdate(void *);
 __END_DECLS
 
 #include "close_code.h"

@@ -17,15 +17,7 @@ typedef struct es_semiresistor {
 } ES_SemiResistor;
 
 __BEGIN_DECLS
-void	 ES_SemiResistorInit(void *, const char *);
-int	 ES_SemiResistorLoad(void *, AG_DataSource *);
-int	 ES_SemiResistorSave(void *, AG_DataSource *);
-int	 ES_SemiResistorExport(void *, enum circuit_format, FILE *);
-double	 ES_SemiResistorResistance(void *, ES_Port *, ES_Port *);
-void	*ES_SemiResistorEdit(void *);
-int	 ES_SemiResistorConfigure(void *);
-void	 ES_SemiResistorDraw(void *, VG *);
-void	 ES_SemiResistorUpdate(void *, VG *);
+extern const ES_ComponentOps esSemiResistorOps;
 __END_DECLS
 
 #include "close_code.h"

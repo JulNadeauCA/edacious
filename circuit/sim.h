@@ -9,7 +9,7 @@ struct ag_console;
 
 typedef struct es_sim_ops {
 	char *name;
-	int icon;
+	AG_StaticIcon *icon;
 	size_t size;
 	void (*init)(void *);
 	void (*destroy)(void *);

@@ -30,28 +30,6 @@
 #include "eda.h"
 #include "spst.h"
 
-const ES_ComponentOps esSpstOps = {
-	{
-		"ES_Component:ES_Spst",
-		sizeof(ES_Spst),
-		{ 0,0 },
-		ES_SpstInit,
-		NULL,			/* reinit */
-		ES_ComponentDestroy,
-		ES_SpstLoad,
-		ES_SpstSave,
-		ES_ComponentEdit
-	},
-	N_("SPST switch"),
-	"Sw",
-	ES_SpstDraw,
-	ES_SpstEdit,
-	ES_SpstInstanceMenu,
-	ES_SpstClassMenu,
-	ES_SpstExport,
-	NULL			/* connect */
-};
-
 const ES_Port esSpstPinout[] = {
 	{ 0, "",  0, 1 },
 	{ 1, "A", 0, 0 },
@@ -59,8 +37,8 @@ const ES_Port esSpstPinout[] = {
 	{ -1 },
 };
 
-void
-ES_SpstDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_Spst *sw = p;
 
@@ -98,49 +76,53 @@ ES_SpstDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-void
-ES_SpstInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_Spst *sw = p;
 
-	ES_ComponentInit(sw, name, &esSpstOps, esSpstPinout);
+	ES_ComponentSetPorts(sw, esSpstPinout);
 	sw->on_resistance = 1.0;
 	sw->off_resistance = HUGE_VAL;
 	sw->state = 0;
 }
 
-int
-ES_SpstLoad(void *p, AG_DataSource *buf)
+static int
+Load(void *p, AG_DataSource *buf)
 {
 	ES_Spst *sw = p;
 
-	if (AG_ReadObjectVersion(buf, sw, NULL) == -1 ||
-	    ES_ComponentLoad(sw, buf) == -1)
+	if (AG_ReadObjectVersion(buf, sw, NULL) == -1) {
 		return (-1);
-
+	}
 	sw->on_resistance = AG_ReadDouble(buf);
 	sw->off_resistance = AG_ReadDouble(buf);
 	sw->state = (int)AG_ReadUint8(buf);
 	return (0);
 }
 
-int
-ES_SpstSave(void *p, AG_DataSource *buf)
+static int
+Save(void *p, AG_DataSource *buf)
 {
 	ES_Spst *sw = p;
 
 	AG_WriteObjectVersion(buf, sw);
-	if (ES_ComponentSave(sw, buf) == -1)
-		return (-1);
-
 	AG_WriteDouble(buf, sw->on_resistance);
 	AG_WriteDouble(buf, sw->off_resistance);
 	AG_WriteUint8(buf, (Uint8)sw->state);
 	return (0);
 }
 
-int
-ES_SpstExport(void *p, enum circuit_format fmt, FILE *f)
+static double
+Resistance(void *p, ES_Port *p1, ES_Port *p2)
+{
+	ES_Spst *sw = p;
+
+	return (sw->state ? sw->on_resistance : sw->off_resistance);
+}
+
+static int
+Export(void *p, enum circuit_format fmt, FILE *f)
 {
 	ES_Spst *sw = p;
 
@@ -152,18 +134,10 @@ ES_SpstExport(void *p, enum circuit_format fmt, FILE *f)
 	case CIRCUIT_SPICE3:
 		fprintf(f, "R%s %d %d %g\n", AGOBJECT(sw)->name,
 		    PNODE(sw,1), PNODE(sw,2),
-		    ES_SpstResistance(sw, PORT(sw,1), PORT(sw,2)));
+		    Resistance(sw, PORT(sw,1), PORT(sw,2)));
 		break;
 	}
 	return (0);
-}
-
-double
-ES_SpstResistance(void *p, ES_Port *p1, ES_Port *p2)
-{
-	ES_Spst *sw = p;
-
-	return (sw->state ? sw->on_resistance : sw->off_resistance);
 }
 
 static void
@@ -178,29 +152,27 @@ SwitchAll(AG_Event *event)
 	}
 }
 
-void
-ES_SpstClassMenu(ES_Circuit *ckt, AG_MenuItem *m)
+static void
+ClassMenu(ES_Circuit *ckt, AG_MenuItem *m)
 {
-	AG_MenuAction(m, _("Switch on all"), EDA_COMPONENT_ICON,
+	AG_MenuAction(m, _("Switch on all"), NULL,
 	    SwitchAll, "%p,%i", ckt, 1);
-	AG_MenuAction(m, _("Switch off all"), EDA_COMPONENT_ICON,
+	AG_MenuAction(m, _("Switch off all"), NULL,
 	    SwitchAll, "%p,%i", ckt, 0);
-	AG_MenuAction(m, _("Toggle all"), EDA_COMPONENT_ICON,
+	AG_MenuAction(m, _("Toggle all"), NULL,
 	    SwitchAll, "%p,%i", ckt, -1);
 }
 
-void
-ES_SpstInstanceMenu(void *p, AG_MenuItem *m)
+static void
+InstanceMenu(void *p, AG_MenuItem *m)
 {
 	ES_Spst *spst = p;
 
-	AG_MenuIntBool(m, _("Toggle state"), EDA_COMPONENT_ICON,
-	    &spst->state, 0);
+	AG_MenuIntBool(m, _("Toggle state"), NULL, &spst->state, 0);
 }
 
-#ifdef EDITION
-void *
-ES_SpstEdit(void *p)
+static void *
+Edit(void *p)
 {
 	ES_Spst *sw = p;
 	AG_Window *win, *subwin;
@@ -208,19 +180,35 @@ ES_SpstEdit(void *p)
 	AG_Button *sb;
 
 	win = AG_WindowNew(0);
-
 	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("ON resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->on_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
-	
 	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("OFF resistance: "));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->off_resistance);
 	AG_FSpinbuttonSetMin(fsb, 1.0);
-
 	sb = AG_ButtonNew(win, AG_WIDGET_EXPAND, _("Toggle state"));
 	AG_ButtonSetSticky(sb, 1);
 	AG_WidgetBind(sb, "state", AG_WIDGET_BOOL, &sw->state);
-
 	return (win);
 }
-#endif /* EDITION */
+
+const ES_ComponentOps esSpstOps = {
+	{
+		"ES_Component:ES_Spst",
+		sizeof(ES_Spst),
+		{ 0,0 },
+		Init,
+		NULL,		/* reinit */
+		NULL,		/* destroy */
+		Load,
+		Save,
+		Edit
+	},
+	N_("SPST switch"),
+	"Sw",
+	Draw,
+	InstanceMenu,
+	ClassMenu,
+	Export,
+	NULL			/* connect */
+};

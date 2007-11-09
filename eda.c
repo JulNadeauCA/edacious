@@ -93,7 +93,6 @@ main(int argc, char *argv[])
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (1);
 	}
-
 	while ((c = getopt(argc, argv, "?vt:r:T:t:gG")) != -1) {
 		extern char *optarg;
 
@@ -134,6 +133,7 @@ main(int argc, char *argv[])
 		return (-1);
 	}
 	AG_InitInput(0);
+	VG_InitSubsystem();
 	AG_SetRefreshRate(fps);
 	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, AG_Quit);
 	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
@@ -144,11 +144,14 @@ main(int argc, char *argv[])
 	AG_RegisterClass(&esCircuitOps);
 	AG_RegisterClass(&esScopeOps);
 	
+	if (AG_ObjectLoad(agWorld) == -1) {
+		AG_ObjectSave(agWorld);		/* Assume initial run */
+	}
+	
 	/* Initialize the object manager. */
 	DEV_InitSubsystem(0);
 	DEV_Browser();
 
-	AG_ObjectLoad(agWorld);
 	AG_EventLoop();
 	AG_Quit();
 	return (0);

@@ -32,14 +32,14 @@
 static ES_Wire *esCurWire;
 
 static void
-ES_WireToolInit(void *p)
+InitTool(void *p)
 {
 	esCurWire = NULL;
 }
 
 static int
-ES_WireConnect(ES_Circuit *ckt, ES_Wire *wire, float x1, float y1,
-    float x2, float y2)
+ConnectWire(ES_Circuit *ckt, ES_Wire *wire, float x1, float y1, float x2,
+    float y2)
 {
 	ES_Port *port1, *port2;
 	int N1, N2, N3;
@@ -81,7 +81,7 @@ fail:
 }
 
 static int
-ES_WireToolMousebuttondown(void *p, float x, float y, int b)
+MouseButtonDown(void *p, float x, float y, int b)
 {
 	VG_Tool *t = p;
 	char name[AG_OBJECT_NAME_MAX];
@@ -100,7 +100,7 @@ ES_WireToolMousebuttondown(void *p, float x, float y, int b)
 			wire = esCurWire;
 			wire->ports[0].selected = 0;
 			wire->ports[1].selected = 0;
-			if (ES_WireConnect(ckt, wire,
+			if (ConnectWire(ckt, wire,
 			    wire->ports[0].x, wire->ports[0].y,
 			    wire->ports[1].x, wire->ports[1].y) == -1) {
 				AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
@@ -122,8 +122,7 @@ ES_WireToolMousebuttondown(void *p, float x, float y, int b)
 }
 
 static int
-ES_WireToolMousemotion(void *p, float x, float y, float xrel, float yrel,
-    int b)
+MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
 {
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
@@ -148,14 +147,14 @@ ES_WireToolMousemotion(void *p, float x, float y, float xrel, float yrel,
 VG_ToolOps esWireTool = {
 	N_("Wire"),
 	N_("Merge two nodes."),
-	EDA_BRANCH_TO_NODE_ICON,
+	NULL,
 	sizeof(VG_Tool),
 	0,
-	ES_WireToolInit,
+	InitTool,
 	NULL,				/* destroy */
 	NULL,				/* edit */
-	ES_WireToolMousemotion,
-	ES_WireToolMousebuttondown,
+	MouseMotion,
+	MouseButtonDown,
 	NULL,				/* mousebuttonup */
 	NULL,				/* keydown */
 	NULL				/* keyup */

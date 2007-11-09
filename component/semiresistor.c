@@ -30,28 +30,6 @@
 #include "eda.h"
 #include "semiresistor.h"
 
-const ES_ComponentOps esSemiResistorOps = {
-	{
-		"ES_Component:ES_SemiResistor",
-		sizeof(ES_SemiResistor),
-		{ 0,0 },
-		ES_SemiResistorInit,
-		NULL,			/* reinit */
-		ES_ComponentDestroy,
-		ES_SemiResistorLoad,
-		ES_SemiResistorSave,
-		ES_ComponentEdit
-	},
-	N_("Semiconductor resistor"),
-	"R",
-	ES_SemiResistorDraw,
-	ES_SemiResistorEdit,
-	NULL,			/* instance_menu */
-	NULL,			/* class_menu */
-	ES_SemiResistorExport,
-	NULL			/* connect */
-};
-
 const ES_Port esSemiResistorPinout[] = {
 	{ 0, "",  0.000, 0.625 },
 	{ 1, "A", 0.000, 0.000 },
@@ -59,8 +37,8 @@ const ES_Port esSemiResistorPinout[] = {
 	{ -1 },
 };
 
-void
-ES_SemiResistorDraw(void *p, VG *vg)
+static void
+Draw(void *p, VG *vg)
 {
 	ES_SemiResistor *r = p;
 
@@ -86,12 +64,12 @@ ES_SemiResistorDraw(void *p, VG *vg)
 	VG_End(vg);
 }
 
-void
-ES_SemiResistorInit(void *p, const char *name)
+static void
+Init(void *p)
 {
 	ES_SemiResistor *r = p;
 
-	ES_ComponentInit(r, name, &esSemiResistorOps, esSemiResistorPinout);
+	ES_ComponentSetPorts(r, esSemiResistorPinout);
 	r->l = 2e-6;
 	r->w = 1e-6;
 	r->rsh = 1000;
@@ -101,15 +79,14 @@ ES_SemiResistorInit(void *p, const char *name)
 	r->Tc2 = 0.0;
 }
 
-int
-ES_SemiResistorLoad(void *p, AG_DataSource *buf)
+static int
+Load(void *p, AG_DataSource *buf)
 {
 	ES_SemiResistor *r = p;
 
-	if (AG_ReadObjectVersion(buf, r, NULL) == -1 ||
-	    ES_ComponentLoad(r, buf) == -1)
+	if (AG_ReadObjectVersion(buf, r, NULL) == -1) {
 		return (-1);
-
+	}
 	r->l = AG_ReadDouble(buf);
 	r->w = AG_ReadDouble(buf);
 	r->rsh = AG_ReadDouble(buf);
@@ -120,15 +97,12 @@ ES_SemiResistorLoad(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-int
-ES_SemiResistorSave(void *p, AG_DataSource *buf)
+static int
+Save(void *p, AG_DataSource *buf)
 {
 	ES_SemiResistor *r = p;
 
 	AG_WriteObjectVersion(buf, r);
-	if (ES_ComponentSave(r, buf) == -1)
-		return (-1);
-
 	AG_WriteDouble(buf, r->l);
 	AG_WriteDouble(buf, r->w);
 	AG_WriteDouble(buf, r->rsh);
@@ -139,8 +113,8 @@ ES_SemiResistorSave(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-int
-ES_SemiResistorExport(void *p, enum circuit_format fmt, FILE *f)
+static int
+Export(void *p, enum circuit_format fmt, FILE *f)
 {
 	ES_SemiResistor *r = p;
 	static int nRmod = 1;
@@ -165,8 +139,9 @@ ES_SemiResistorExport(void *p, enum circuit_format fmt, FILE *f)
 	return (0);
 }
 
-double
-ES_SemiResistorResistance(void *p, ES_Port *p1, ES_Port *p2)
+#if 0
+static double
+Resistance(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_SemiResistor *r = p;
 	double deltaT = COM_T0 - COM(r)->Tspec;
@@ -175,10 +150,10 @@ ES_SemiResistorResistance(void *p, ES_Port *p1, ES_Port *p2)
 	R = r->rsh*(r->l - r->narrow)/(r->w - r->narrow);
 	return (R*(1.0 + r->Tc1*deltaT + r->Tc2*deltaT*deltaT));
 }
+#endif
 
-#ifdef EDITION
-void *
-ES_SemiResistorEdit(void *p)
+static void *
+Edit(void *p)
 {
 	ES_SemiResistor *r = p;
 	AG_Window *win, *subwin;
@@ -206,7 +181,26 @@ ES_SemiResistorEdit(void *p)
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc1);
 	fsb = AG_FSpinbuttonNew(win, 0, "mohm/degC^2", _("Temp. coefficient"));
 	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc2);
-
 	return (win);
 }
-#endif /* EDITION */
+
+const ES_ComponentOps esSemiResistorOps = {
+	{
+		"ES_Component:ES_SemiResistor",
+		sizeof(ES_SemiResistor),
+		{ 0,0 },
+		Init,
+		NULL,			/* reinit */
+		NULL,			/* destroy */
+		Load,
+		Save,
+		Edit
+	},
+	N_("Semiconductor resistor"),
+	"R",
+	Draw,
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	Export,
+	NULL			/* connect */
+};

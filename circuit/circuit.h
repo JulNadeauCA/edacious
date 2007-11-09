@@ -81,7 +81,7 @@ struct es_vsource;
 struct ag_console;
 
 typedef struct es_circuit {
-	AG_Object obj;
+	struct ag_object obj;
 	char descr[CIRCUIT_DESCR_MAX];	/* Short description */
 	VG *vg;				/* Schematics drawing */
 	VG_Block *vgblk;		/* Circuit display block */
@@ -112,21 +112,17 @@ typedef struct es_circuit {
 #define ES_NODE(ckt,n) ES_CircuitGetNode((ckt),(n))
 
 __BEGIN_DECLS
-void		 ES_CircuitInit(void *, const char *);
-void		 ES_CircuitReinit(void *);
-int		 ES_CircuitLoad(void *, AG_DataSource *);
-int		 ES_CircuitSave(void *, AG_DataSource *);
-void		 ES_CircuitDestroy(void *);
-void		 ES_CircuitFreeComponents(ES_Circuit *);
-void		*ES_CircuitEdit(void *);
-void		 ES_CircuitLog(void *, const char *, ...);
-__inline__ void	 ES_LockCircuit(ES_Circuit *);
-__inline__ void	 ES_UnlockCircuit(ES_Circuit *);
+extern const AG_ObjectOps esCircuitOps;
 
-int		 ES_CircuitAddNode(ES_Circuit *, Uint);
-int		 ES_CircuitMergeNodes(ES_Circuit *, int, int);
-void		 ES_CircuitDelNode(ES_Circuit *, int);
-int		 ES_CircuitDelNodeByPtr(ES_Circuit *, ES_Node *);
+void	 ES_CircuitFreeComponents(ES_Circuit *);
+void	 ES_CircuitLog(void *, const char *, ...);
+void	 ES_LockCircuit(ES_Circuit *);
+void	 ES_UnlockCircuit(ES_Circuit *);
+
+int	 ES_CircuitAddNode(ES_Circuit *, Uint);
+int	 ES_CircuitMergeNodes(ES_Circuit *, int, int);
+void	 ES_CircuitDelNode(ES_Circuit *, int);
+int	 ES_CircuitDelNodeByPtr(ES_Circuit *, ES_Node *);
 
 void		 ES_CircuitCopyNode(ES_Circuit *, ES_Node *, ES_Node *);
 void		 ES_CircuitFreeNode(ES_Node *);
@@ -134,32 +130,31 @@ ES_Branch	*ES_CircuitAddBranch(ES_Circuit *, int, ES_Port *);
 void		 ES_CircuitDelBranch(ES_Circuit *, int, ES_Branch *);
 ES_Wire		*ES_CircuitAddWire(ES_Circuit *);
 void		 ES_CircuitDelWire(ES_Circuit *, ES_Wire *);
-__inline__ void	 ES_CircuitDrawPort(ES_Circuit *, ES_Port *, float, float);
+void	 	 ES_CircuitDrawPort(ES_Circuit *, ES_Port *, float, float);
 
-__inline__ ES_Node	*ES_CircuitGetNode(ES_Circuit *, int);
-__inline__ void		 ES_CircuitNodeSymbol(ES_Circuit *, int, char *,
+ES_Node		*ES_CircuitGetNode(ES_Circuit *, int);
+void		 ES_CircuitNodeSymbol(ES_Circuit *, int, char *,
 			                      size_t);
-__inline__ ES_Node	*ES_CircuitFindNode(ES_Circuit *, const char *);
-__inline__ ES_Branch	*ES_CircuitGetBranch(ES_Circuit *, int, ES_Port *);
-__inline__ int		 ES_CircuitNodeNameByPtr(ES_Circuit *, ES_Node *);
+ES_Node		*ES_CircuitFindNode(ES_Circuit *, const char *);
+ES_Branch	*ES_CircuitGetBranch(ES_Circuit *, int, ES_Port *);
+int		 ES_CircuitNodeNameByPtr(ES_Circuit *, ES_Node *);
 
-__inline__ int	   ES_NodeVsource(ES_Circuit *, int, int, int *);
-__inline__ SC_Real ES_NodeVoltage(ES_Circuit *, int);
-__inline__ SC_Real ES_BranchCurrent(ES_Circuit *, int);
+int		 ES_NodeVsource(ES_Circuit *, int, int, int *);
+SC_Real		 ES_NodeVoltage(ES_Circuit *, int);
+SC_Real		 ES_BranchCurrent(ES_Circuit *, int);
 
-__inline__ void	 ES_ResumeSimulation(ES_Circuit *);
-__inline__ void	 ES_SuspendSimulation(ES_Circuit *);
+void	 	 ES_ResumeSimulation(ES_Circuit *);
+void	 	 ES_SuspendSimulation(ES_Circuit *);
 ES_Sim		*ES_SetSimulationMode(ES_Circuit *, const ES_SimOps *);
 void		 ES_CircuitModified(ES_Circuit *);
 void		 ES_DestroySimulation(ES_Circuit *);
 
-ES_Sym		  *ES_CircuitAddSym(ES_Circuit *);
-ES_Sym		  *ES_CircuitAddNodeSym(ES_Circuit *, const char *, int);
-ES_Sym		  *ES_CircuitAddVsourceSym(ES_Circuit *, const char *, int);
-ES_Sym		  *ES_CircuitAddIsourceSym(ES_Circuit *, const char *, int);
-void		   ES_CircuitDelSym(ES_Circuit *, ES_Sym *);
-__inline__ ES_Sym *ES_CircuitFindSym(ES_Circuit *, const char *);
-
+ES_Sym		*ES_CircuitAddSym(ES_Circuit *);
+ES_Sym		*ES_CircuitAddNodeSym(ES_Circuit *, const char *, int);
+ES_Sym		*ES_CircuitAddVsourceSym(ES_Circuit *, const char *, int);
+ES_Sym		*ES_CircuitAddIsourceSym(ES_Circuit *, const char *, int);
+void		 ES_CircuitDelSym(ES_Circuit *, ES_Sym *);
+ES_Sym 		*ES_CircuitFindSym(ES_Circuit *, const char *);
 __END_DECLS
 
 #include "close_code.h"

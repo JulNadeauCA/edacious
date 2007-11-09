@@ -29,9 +29,8 @@
 
 #include "eda.h"
 
-/* Select overlapping components. */
 static int
-ES_SelcomButtondown(void *p, float x, float y, int b)
+MouseButtonDown(void *p, float x, float y, int b)
 {
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
@@ -73,10 +72,8 @@ ES_SelcomButtondown(void *p, float x, float y, int b)
 }
 
 #if 0
-/* Select overlapping components. */
 static int
-ES_SelcomLeftButton(VG_Tool *t, int button, int state, float x, float y,
-    void *arg)
+LeftButton(VG_Tool *t, int button, int state, float x, float y, void *arg)
 {
 	ES_Circuit *ckt = t->p;
 	ES_Component *com;
@@ -111,9 +108,8 @@ ES_SelcomLeftButton(VG_Tool *t, int button, int state, float x, float y,
 }
 #endif
 
-/* Highlight any component underneath the cursor. */
 static int
-ES_SelcomMousemotion(void *p, float x, float y, float xrel, float yrel, int b)
+MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
 {
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
@@ -136,25 +132,25 @@ ES_SelcomMousemotion(void *p, float x, float y, float xrel, float yrel, int b)
 }
 
 static void
-ES_SelcomInit(void *p)
+Init(void *p)
 {
 	VG_Tool *t = p;
 #if 0
-	VG_ToolBindMouseButton(t, SDL_BUTTON_LEFT, ES_SelcomLeftButton, NULL);
+	VG_ToolBindMouseButton(t, SDL_BUTTON_LEFT, LeftButton, NULL);
 #endif
 }
 
 VG_ToolOps esSelcomOps = {
 	N_("Select"),
 	N_("Select one or more component in the circuit."),
-	EDA_COMPONENT_ICON,
+	NULL,
 	sizeof(VG_Tool),
 	VG_NOSNAP,
-	ES_SelcomInit,
+	Init,
 	NULL,			/* destroy */
 	NULL,			/* edit */
-	ES_SelcomMousemotion,
-	ES_SelcomButtondown,
+	MouseMotion,
+	MouseButtonDown,
 	NULL,			/* mousebuttonup */
 	NULL,			/* keydown */
 	NULL			/* keyup */

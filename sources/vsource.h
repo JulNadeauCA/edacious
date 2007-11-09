@@ -19,19 +19,12 @@ typedef struct es_vsource {
 #define VSOURCE(com) ((struct es_vsource *)(com))
 
 __BEGIN_DECLS
-void	 ES_VsourceInit(void *, const char *);
-void	 ES_VsourceReinit(void *);
-void	 ES_VsourceDestroy(void *);
+extern const ES_ComponentOps esVsourceOps;
+
 void	 ES_VsourceFindLoops(ES_Vsource *);
 void	 ES_VsourceFreeLoops(ES_Vsource *);
-int	 ES_VsourceLoad(void *, AG_DataSource *);
-int	 ES_VsourceSave(void *, AG_DataSource *);
-int	 ES_VsourceExport(void *, enum circuit_format, FILE *);
 double	 ES_VsourceVoltage(void *, int, int);
-void	*ES_VsourceEdit(void *);
-void	 ES_VsourceDraw(void *, VG *);
-
-__inline__ int ES_VsourceName(ES_Vsource *);
+int	 ES_VsourceName(ES_Vsource *);
 __END_DECLS
 
 #include "close_code.h"
