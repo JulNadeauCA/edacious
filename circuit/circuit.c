@@ -1267,7 +1267,7 @@ CircuitViewButtondown(AG_Event *event)
 	block = VG_BlockClosest(ckt->vg, x, y);
 
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
-		if (AGOBJECT(com)->ops->edit == NULL ||
+		if (AGOBJECT(com)->cls->edit == NULL ||
 		    com->block != block) {
 			continue;
 		}
@@ -1299,7 +1299,7 @@ CircuitDoubleClick(AG_Event *event)
 	block = VG_BlockClosest(ckt->vg, x, y);
 
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
-		if (AGOBJECT(com)->ops->edit == NULL ||
+		if (AGOBJECT(com)->cls->edit == NULL ||
 		    com->block != block) {
 			continue;
 		}
@@ -1705,7 +1705,7 @@ Edit(void *p)
 
 			for (model = &eda_models[0]; *model != NULL; model++) {
 				AG_TlistAddPtr(tl, NULL,
-				    ((ES_ComponentOps *)*model)->name,
+				    ((ES_ComponentClass *)*model)->name,
 				    (void *)*model);
 			}
 		}
@@ -1799,7 +1799,7 @@ Edit(void *p)
 	return (win);
 }
 
-const AG_ObjectOps esCircuitOps = {
+const AG_ObjectClass esCircuitClass = {
 	"ES_Circuit",
 	sizeof(ES_Circuit),
 	{ 0,0 },

@@ -119,7 +119,7 @@ Edit(void *p)
 	return (win);
 }
 
-const ES_ComponentOps esLedOps = {
+const ES_ComponentClass esLedClass = {
 	{
 		"ES_Component:ES_Led",
 		sizeof(ES_Led),

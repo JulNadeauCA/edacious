@@ -19,7 +19,7 @@ typedef struct es_vsource {
 #define VSOURCE(com) ((struct es_vsource *)(com))
 
 __BEGIN_DECLS
-extern const ES_ComponentOps esVsourceOps;
+extern const ES_ComponentClass esVsourceClass;
 
 void	 ES_VsourceFindLoops(ES_Vsource *);
 void	 ES_VsourceFreeLoops(ES_Vsource *);

@@ -200,7 +200,7 @@ Edit(void *p)
 	return (win);
 }
 
-const ES_ComponentOps esSpdtOps = {
+const ES_ComponentClass esSpdtClass = {
 	{
 		"ES_Component:ES_Spdt",
 		sizeof(ES_Spdt),

@@ -11,7 +11,8 @@
 typedef ES_Digital ES_Or;
 
 __BEGIN_DECLS
-extern const ES_ComponentOps esOrOps;
+extern const ES_ComponentClass esOrClass;
+
 void ES_OrUpdate(void *);
 __END_DECLS
 

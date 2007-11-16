@@ -49,42 +49,42 @@
 #include <sources/vsquare.h>
 #include <sources/vsine.h>
 
-extern const ES_ComponentOps esVsourceOps;
-extern const ES_ComponentOps esGroundOps;
-extern const ES_ComponentOps esResistorOps;
-extern const ES_ComponentOps esSemiResistorOps;
-extern const ES_ComponentOps esInverterOps;
-extern const ES_ComponentOps esAndOps;
-extern const ES_ComponentOps esOrOps;
-extern const ES_ComponentOps esSpstOps;
-extern const ES_ComponentOps esSpdtOps;
-extern const ES_ComponentOps esLedOps;
-extern const ES_ComponentOps esLogicProbeOps;
-extern const ES_ComponentOps esVSquareOps;
-extern const ES_ComponentOps esVSineOps;
+extern const ES_ComponentClass esVsourceClass;
+extern const ES_ComponentClass esGroundClass;
+extern const ES_ComponentClass esResistorClass;
+extern const ES_ComponentClass esSemiResistorClass;
+extern const ES_ComponentClass esInverterClass;
+extern const ES_ComponentClass esAndClass;
+extern const ES_ComponentClass esOrClass;
+extern const ES_ComponentClass esSpstClass;
+extern const ES_ComponentClass esSpdtClass;
+extern const ES_ComponentClass esLedClass;
+extern const ES_ComponentClass esLogicProbeClass;
+extern const ES_ComponentClass esVSquareClass;
+extern const ES_ComponentClass esVSineClass;
 
 const void *eda_models[] = {
-	&esVsourceOps,
-	&esGroundOps,
-	&esResistorOps,
-	&esSemiResistorOps,
-	&esSpstOps,
-	&esSpdtOps,
-	&esLedOps,
-	&esLogicProbeOps,
-	&esInverterOps,
-	&esAndOps,
-	&esOrOps,
-	&esVSquareOps,
-	&esVSineOps,
+	&esVsourceClass,
+	&esGroundClass,
+	&esResistorClass,
+	&esSemiResistorClass,
+	&esSpstClass,
+	&esSpdtClass,
+	&esLedClass,
+	&esLogicProbeClass,
+	&esInverterClass,
+	&esAndClass,
+	&esOrClass,
+	&esVSquareClass,
+	&esVSineClass,
 	NULL
 };
 
 int
 main(int argc, char *argv[])
 {
-	extern const AG_ObjectOps esCircuitOps;
-	extern const AG_ObjectOps esScopeOps;
+	extern const AG_ObjectClass esCircuitClass;
+	extern const AG_ObjectClass esScopeClass;
 	const void **model;
 	int c, i, fps = -1;
 	char *s;
@@ -138,11 +138,13 @@ main(int argc, char *argv[])
 	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, AG_Quit);
 	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
 	
+	AG_RegisterClass(&esComponentClass);
+	AG_RegisterClass(&esDigitalClass);
 	for (model = &eda_models[0]; *model != NULL; model++) {
 		AG_RegisterClass(*model);
 	}
-	AG_RegisterClass(&esCircuitOps);
-	AG_RegisterClass(&esScopeOps);
+	AG_RegisterClass(&esCircuitClass);
+	AG_RegisterClass(&esScopeClass);
 	
 	if (AG_ObjectLoad(agWorld) == -1) {
 		AG_ObjectSave(agWorld);		/* Assume initial run */

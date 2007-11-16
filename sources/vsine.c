@@ -133,7 +133,7 @@ Edit(void *p)
 	return (win);
 }
 
-const ES_ComponentOps esVSineOps = {
+const ES_ComponentClass esVSineClass = {
 	{
 		"ES_Component:ES_Vsource:ES_VSine",
 		sizeof(ES_VSine),

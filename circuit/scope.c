@@ -37,7 +37,7 @@ ES_ScopeNew(void *parent, const char *name)
 	ES_Scope *scope;
 
 	scope = Malloc(sizeof(ES_Scope));
-	AG_ObjectInit(scope, &esScopeOps);
+	AG_ObjectInit(scope, &esScopeClass);
 	AG_ObjectSetName(scope, "%s", name);
 	AG_ObjectAttach(parent, scope);
 	return (scope);
@@ -211,7 +211,7 @@ Edit(void *obj)
 	return (win);
 }
 
-const AG_ObjectOps esScopeOps = {
+const AG_ObjectClass esScopeClass = {
 	"ES_Scope",
 	sizeof(ES_Scope),
 	{ 0,0 },

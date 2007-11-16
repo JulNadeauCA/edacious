@@ -15,7 +15,7 @@ typedef struct es_spdt {
 } ES_Spdt;
 
 __BEGIN_DECLS
-extern const ES_ComponentOps esSpdtOps;
+extern const ES_ComponentClass esSpdtClass;
 __END_DECLS
 
 #include "close_code.h"

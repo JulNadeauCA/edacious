@@ -17,7 +17,7 @@ typedef struct es_semiresistor {
 } ES_SemiResistor;
 
 __BEGIN_DECLS
-extern const ES_ComponentOps esSemiResistorOps;
+extern const ES_ComponentClass esSemiResistorClass;
 __END_DECLS
 
 #include "close_code.h"

@@ -16,7 +16,7 @@ typedef struct es_led {
 } ES_Led;
 
 __BEGIN_DECLS
-extern const ES_ComponentOps esLedOps;
+extern const ES_ComponentClass esLedClass;
 
 int	 ES_LedConnect(void *, ES_Port *, ES_Port *);
 void	 ES_LedDraw(void *, VG *);

@@ -12,7 +12,7 @@ typedef struct es_ground {
 } ES_Ground;
 
 __BEGIN_DECLS
-extern const ES_ComponentOps esGroundOps;
+extern const ES_ComponentClass esGroundClass;
 __END_DECLS
 
 #include "close_code.h"

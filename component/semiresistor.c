@@ -180,7 +180,7 @@ Edit(void *p)
 	return (win);
 }
 
-const ES_ComponentOps esSemiResistorOps = {
+const ES_ComponentClass esSemiResistorClass = {
 	{
 		"ES_Component:ES_SemiResistor",
 		sizeof(ES_SemiResistor),

@@ -101,7 +101,7 @@ OnAttach(AG_Event *event)
 	ES_Circuit *ckt = AG_SENDER();
 	VG *vg = ckt->vg;
 	VG_Block *block;
-
+	
 	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*")) {
 		return;
 	}
@@ -220,8 +220,8 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 	VG_SelectBlock(vg, com->block);
 	VG_ClearBlock(vg, com->block);
 
-	if (com->ops->draw != NULL)
-		com->ops->draw(com, vg);
+	if (COMOPS(com)->draw != NULL)
+		COMOPS(com)->draw(com, vg);
 
 	/* Indicate the nodes associated with connection points. */
 	for (i = 1; i <= com->nports; i++) {
@@ -277,7 +277,6 @@ Init(void *obj)
 {
 	ES_Component *com = obj;
 
-	com->ops = (const ES_ComponentOps *)&AGOBJECT(com)->ops;
 	com->ckt = NULL;
 	com->block = NULL;
 	com->selected = 0;
@@ -534,7 +533,7 @@ SaveComponentTo(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
 
-	DEV_BrowserSaveTo(com, _(com->ops->name));
+	DEV_BrowserSaveTo(com, _(COMOPS(com)->name));
 }
 
 static void
@@ -542,7 +541,7 @@ LoadComponentFrom(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
 
-	DEV_BrowserLoadFrom(com, _(com->ops->name));
+	DEV_BrowserLoadFrom(com, _(COMOPS(com)->name));
 }
 
 static void
@@ -569,16 +568,16 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 	Uint nsel = 0;
 	ES_Component *com2;
 	int common_class = 1;
-	const ES_ComponentOps *common_ops = NULL;
+	const ES_ComponentClass *comCls = NULL;
 
 	AGOBJECT_FOREACH_CLASS(com2, com->ckt, es_component, "ES_Component:*") {
 		if (!com2->selected) {
 			continue;
 		}
-		if (common_ops != NULL && common_ops != com2->ops) {
+		if (comCls != NULL && comCls != COMOPS(com2)) {
 			common_class = 0;
 		}
-		common_ops = com2->ops;
+		comCls = COMOPS(com2);
 		nsel++;
 	}
 
@@ -602,17 +601,17 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 	    SaveComponentTo, "%p", com);
 	AG_MenuAction(pm->item, _("    Import model..."), agIconDocImport.s,
 	    LoadComponentFrom, "%p", com);
-	if (com->ops->instance_menu != NULL) {
+	if (COMOPS(com)->instance_menu != NULL) {
 		AG_MenuSeparator(pm->item);
-		com->ops->instance_menu(com, pm->item);
+		COMOPS(com)->instance_menu(com, pm->item);
 	}
 
 	if (nsel > 1) {
-		if (common_class && com->ops->class_menu != NULL) {
+		if (common_class && COMOPS(com)->class_menu != NULL) {
 			AG_MenuSeparator(pm->item);
 			AG_MenuSection(pm->item, _("[Class: %s]"),
-			    common_ops->name);
-			com->ops->class_menu(com->ckt, pm->item);
+			    comCls->name);
+			COMOPS(com)->class_menu(com->ckt, pm->item);
 		}
 		AG_MenuSeparator(pm->item);
 		AG_MenuSection(pm->item, _("[All selections]"));
@@ -634,7 +633,7 @@ ES_ComponentInsert(AG_Event *event)
 	AG_Tlist *tl = AG_PTR(2);
 	ES_Circuit *ckt = AG_PTR(3);
 	AG_TlistItem *it;
-	ES_ComponentOps *comops;
+	ES_ComponentClass *cls;
 	ES_Component *com;
 	VG_Tool *t;
 	int n = 1;
@@ -643,9 +642,9 @@ ES_ComponentInsert(AG_Event *event)
 		AG_TextMsg(AG_MSG_ERROR, _("No component type is selected."));
 		return;
 	}
-	comops = (ES_ComponentOps *)it->p1;
+	cls = (ES_ComponentClass *)it->p1;
 tryname:
-	snprintf(name, sizeof(name), "%s%d", comops->pfx, n++);
+	snprintf(name, sizeof(name), "%s%d", cls->pfx, n++);
 	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
 		if (strcmp(AGOBJECT(com)->name, name) == 0)
 			break;
@@ -653,8 +652,8 @@ tryname:
 	if (com != NULL)
 		goto tryname;
 
-	com = Malloc(comops->ops.size);
-	AG_ObjectInit(com, &comops->ops);
+	com = Malloc(cls->obj.size);
+	AG_ObjectInit(com, cls);
 	AG_ObjectSetName(com, "%s", name);
 	com->flags |= COMPONENT_FLOATING;
 
@@ -738,11 +737,13 @@ ES_ComponentConnect(ES_Circuit *ckt, ES_Component *com, VG_Vtx *vtx)
 	for (i = 1; i <= com->nports; i++) {
 		ES_Port *port = &com->ports[i];
 
+		printf("%s class = %s\n", AGOBJECT(com)->name,
+		    AGOBJECT(com)->cls->name);
 		oport = ES_ComponentPortOverlap(ckt, com,
 		    vtx->x + port->x,
 		    vtx->y + port->y);
-		if (com->ops->connect == NULL ||
-		    com->ops->connect(com, port, oport) == -1) {
+		if (COMOPS(com)->connect == NULL ||
+		    COMOPS(com)->connect(com, port, oport) == -1) {
 			if (oport != NULL) {
 #ifdef DEBUG
 				if (port->node > 0) { Fatal("bad node"); }
@@ -791,7 +792,7 @@ ES_ComponentHighlightPorts(ES_Circuit *ckt, ES_Component *com)
 	return (nconn);
 }
 
-const AG_ObjectOps esComponentOps = {
+const AG_ObjectClass esComponentClass = {
 	"ES_Component",
 	sizeof(ES_Component),
 	{ 0,0 },

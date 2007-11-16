@@ -15,7 +15,7 @@ typedef struct es_spst {
 } ES_Spst;
 
 __BEGIN_DECLS
-extern const ES_ComponentOps esSpstOps;
+extern const ES_ComponentClass esSpstClass;
 __END_DECLS
 
 #include "close_code.h"

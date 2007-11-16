@@ -58,17 +58,17 @@ ES_CircuitExportSPICE3(ES_Circuit *ckt, const char *path)
 	    VERSION);
 
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
-		if (com->ops->export_model != NULL) {
-			fprintf(f, "* %s:%s\n", AGOBJECT(com)->ops->type,
+		if (COMOPS(com)->export_model != NULL) {
+			fprintf(f, "* %s:%s\n", AGOBJECT(com)->cls->name,
 			    AGOBJECT(com)->name);
-			if (com->ops->export_model(com, CIRCUIT_SPICE3, f)
+			if (COMOPS(com)->export_model(com, CIRCUIT_SPICE3, f)
 			    == -1) {
 				goto fail;
 			}
 			ncards++;
 		} else {
 			fprintf(f, "* skipped: %s:%s\n",
-			    AGOBJECT(com)->ops->type, AGOBJECT(com)->name);
+			    AGOBJECT(com)->cls->name, AGOBJECT(com)->name);
 		}
 	}
 

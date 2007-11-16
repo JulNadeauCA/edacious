@@ -14,7 +14,8 @@ typedef struct es_logic_probe {
 } ES_LogicProbe;
 
 __BEGIN_DECLS
-extern const ES_ComponentOps esLogicProbeOps;
+extern const ES_ComponentClass esLogicProbeClass;
+
 void ES_LogicProbeUpdate(void *);
 __END_DECLS
 

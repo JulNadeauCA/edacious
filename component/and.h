@@ -11,7 +11,8 @@
 typedef ES_Digital ES_And;
 
 __BEGIN_DECLS
-extern const ES_ComponentOps esAndOps;
+extern const ES_ComponentClass esAndClass;
+
 void ES_AndUpdate(void *);
 __END_DECLS
 

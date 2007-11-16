@@ -486,7 +486,7 @@ Edit(void *p)
 	return (win);
 }
 
-const ES_ComponentOps esVsourceOps = {
+const ES_ComponentClass esVsourceClass = {
 	{
 		"ES_Component:ES_Vsource",
 		sizeof(ES_Vsource),

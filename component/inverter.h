@@ -11,7 +11,8 @@
 typedef ES_Digital ES_Inverter;
 
 __BEGIN_DECLS
-extern const ES_ComponentOps esInverterOps;
+extern const ES_ComponentClass esInverterClass;
+
 void ES_InverterUpdate(void *);
 __END_DECLS
 

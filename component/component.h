@@ -67,8 +67,8 @@ typedef struct es_spec {
 } ES_Spec;
 
 /* Generic component description and operation vector. */
-typedef struct es_component_ops {
-	AG_ObjectOps ops;			/* Generic object ops */
+typedef struct es_component_class {
+	AG_ObjectClass obj;
 	const char *name;			/* Name (eg. "Resistor") */
 	const char *pfx;			/* Prefix (eg. "R") */
 
@@ -77,11 +77,10 @@ typedef struct es_component_ops {
 	void	 (*class_menu)(struct es_circuit *, struct ag_menu_item *);
 	int	 (*export_model)(void *, enum circuit_format, FILE *);
 	int	 (*connect)(void *, ES_Port *, ES_Port *);
-} ES_ComponentOps;
+} ES_ComponentClass;
 
 typedef struct es_component {
 	struct ag_object obj;
-	const ES_ComponentOps *ops;
 	struct es_circuit *ckt;			/* Back pointer to circuit */
 	VG_Block *block;			/* Schematic block */
 	Uint flags;
@@ -109,7 +108,8 @@ typedef struct es_component {
 	TAILQ_ENTRY(es_component) components;
 } ES_Component;
 
-#define COM(p) ((struct es_component *)(p))
+#define COMOPS(p) ((ES_ComponentClass *)(AGOBJECT(p)->cls))
+#define COM(p) ((ES_Component *)(p))
 #define PORT(p,n) (&COM(p)->ports[n])
 #define PAIR(p,n) (&COM(p)->pairs[n])
 #define COM_Z0 50.0				/* Normalizing impedance */
@@ -123,6 +123,8 @@ typedef struct es_component {
 #endif
 
 __BEGIN_DECLS
+extern const AG_ObjectClass esComponentClass;
+
 void	 ES_ComponentFreePorts(ES_Component *);
 void	 ES_ComponentSetPorts(void *, const ES_Port *);
 

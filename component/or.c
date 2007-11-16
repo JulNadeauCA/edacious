@@ -94,7 +94,7 @@ ES_OrUpdate(void *p)
 	}
 }
 
-const ES_ComponentOps esOrOps = {
+const ES_ComponentClass esOrClass = {
 	{
 		"ES_Component:ES_Digital:ES_Or",
 		sizeof(ES_Or),
