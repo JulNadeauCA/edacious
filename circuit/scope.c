@@ -65,20 +65,15 @@ Init(void *obj)
 }
 
 static int
-Load(void *obj, AG_DataSource *buf)
+Load(void *obj, AG_DataSource *buf, const AG_Version *ver)
 {
-	ES_Scope *scope = obj;
-
-	if (AG_ReadObjectVersion(buf, scope, NULL) == -1) {
-		return (-1);
-	}
+/*	ES_Scope *scope = obj; */
 	return (0);
 }
 
 static int
 Save(void *obj, AG_DataSource *buf)
 {
-	AG_WriteObjectVersion(buf, obj);
 	return (0);
 }
 

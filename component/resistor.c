@@ -93,13 +93,10 @@ Draw(void *p, VG *vg)
 }
 
 static int
-Load(void *p, AG_DataSource *buf)
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Resistor *r = p;
 
-	if (AG_ReadObjectVersion(buf, r, NULL) == -1) {
-		return (-1);
-	}
 	r->resistance = AG_ReadDouble(buf);
 	r->tolerance = (int)AG_ReadUint32(buf);
 	r->power_rating = AG_ReadDouble(buf);
@@ -113,7 +110,6 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Resistor *r = p;
 
-	AG_WriteObjectVersion(buf, r);
 	AG_WriteDouble(buf, r->resistance);
 	AG_WriteUint32(buf, (Uint32)r->tolerance);
 	AG_WriteDouble(buf, r->power_rating);

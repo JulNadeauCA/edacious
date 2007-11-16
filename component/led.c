@@ -56,13 +56,10 @@ Draw(void *p, VG *vg)
 }
 
 static int
-Load(void *p, AG_DataSource *buf)
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Led *led = p;
 
-	if (AG_ReadObjectVersion(buf, led, NULL) == -1) {
-		return (-1);
-	}
 	led->Vforw = SC_ReadReal(buf);
 	led->Vrev = SC_ReadReal(buf);
 	led->I = SC_ReadReal(buf);
@@ -74,7 +71,6 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Led *led = p;
 
-	AG_WriteObjectVersion(buf, led);
 	SC_WriteReal(buf, led->Vforw);
 	SC_WriteReal(buf, led->Vrev);
 	SC_WriteReal(buf, led->I);

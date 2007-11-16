@@ -55,13 +55,10 @@ Draw(void *p, VG *vg)
 }
 
 static int
-Load(void *p, AG_DataSource *buf)
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_LogicProbe *lp = p;
 
-	if (AG_ReadObjectVersion(buf, lp, NULL) == -1) {
-		return (-1);
-	}
 	lp->Vhigh = SC_ReadReal(buf);
 	return (0);
 }
@@ -71,7 +68,6 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_LogicProbe *lp = p;
 
-	AG_WriteObjectVersion(buf, lp);
 	SC_WriteReal(buf, lp->Vhigh);
 	return (0);
 }

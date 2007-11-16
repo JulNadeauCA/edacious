@@ -91,13 +91,10 @@ Init(void *p)
 }
 
 static int
-Load(void *p, AG_DataSource *buf)
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_VSquare *vs = p;
 
-	if (AG_ReadObjectVersion(buf, vs, NULL) == -1) {
-		return (-1);
-	}
 	vs->vH = SC_ReadReal(buf);
 	vs->vL = SC_ReadReal(buf);
 	vs->tH = SC_ReadQTime(buf);
@@ -110,7 +107,6 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_VSquare *vs = p;
 
-	AG_WriteObjectVersion(buf, vs);
 	SC_WriteReal(buf, vs->vH);
 	SC_WriteReal(buf, vs->vL);
 	SC_WriteQTime(buf, vs->tH);

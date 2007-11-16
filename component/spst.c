@@ -88,13 +88,10 @@ Init(void *p)
 }
 
 static int
-Load(void *p, AG_DataSource *buf)
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Spst *sw = p;
 
-	if (AG_ReadObjectVersion(buf, sw, NULL) == -1) {
-		return (-1);
-	}
 	sw->on_resistance = AG_ReadDouble(buf);
 	sw->off_resistance = AG_ReadDouble(buf);
 	sw->state = (int)AG_ReadUint8(buf);
@@ -106,7 +103,6 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Spst *sw = p;
 
-	AG_WriteObjectVersion(buf, sw);
 	AG_WriteDouble(buf, sw->on_resistance);
 	AG_WriteDouble(buf, sw->off_resistance);
 	AG_WriteUint8(buf, (Uint8)sw->state);

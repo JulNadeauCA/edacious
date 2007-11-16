@@ -55,13 +55,10 @@ Draw(void *p, VG *vg)
 }
 
 static int
-Load(void *p, AG_DataSource *buf)
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Digital *dig = p;
 
-	if (AG_ReadObjectVersion(buf, dig, NULL) == -1) {
-		return (-1);
-	}
 	dig->Vcc = SC_ReadRange(buf);
 	dig->Tamb = SC_ReadRange(buf);
 	dig->Idd = SC_ReadRange(buf);
@@ -84,7 +81,6 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Digital *dig = p;
 
-	AG_WriteObjectVersion(buf, dig);
 	SC_WriteRange(buf, dig->Vcc);
 	SC_WriteRange(buf, dig->Tamb);
 	SC_WriteRange(buf, dig->Idd);

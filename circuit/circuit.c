@@ -280,16 +280,13 @@ FreeDataset(void *p)
 }
 
 static int
-Load(void *p, AG_DataSource *buf)
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Circuit *ckt = p;
 	ES_Component *com;
 	Uint32 nitems;
 	Uint i, j, nnodes;
 
-	if (AG_ReadObjectVersion(buf, ckt, NULL) != 0) {
-		return (-1);
-	}
 	AG_CopyString(ckt->descr, buf, sizeof(ckt->descr));
 	ckt->flags = AG_ReadUint32(buf);
 
@@ -456,7 +453,6 @@ Save(void *p, AG_DataSource *buf)
 	Uint32 count;
 	Uint i;
 
-	AG_WriteObjectVersion(buf, ckt);
 	AG_WriteString(buf, ckt->descr);
 	AG_WriteUint32(buf, ckt->flags);
 	AG_WriteUint32(buf, ckt->n);

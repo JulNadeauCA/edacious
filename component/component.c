@@ -370,14 +370,11 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 }
 
 static int
-Load(void *p, AG_DataSource *buf)
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Component *com = p;
 	float Tspec;
 
-	if (AG_ReadObjectVersion(buf, com, NULL) == -1) {
-		return (-1);
-	}
 	com->flags = (u_int)AG_ReadUint32(buf);
 	com->Tspec = AG_ReadFloat(buf);
 	return (0);
@@ -388,7 +385,6 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Component *com = p;
 
-	AG_WriteObjectVersion(buf, com);
 	AG_WriteUint32(buf, com->flags);
 	AG_WriteFloat(buf, com->Tspec);
 	return (0);

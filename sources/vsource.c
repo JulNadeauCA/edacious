@@ -376,13 +376,10 @@ ES_VsourceFreeLoops(ES_Vsource *vs)
 }
 
 static int
-Load(void *p, AG_DataSource *buf)
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Vsource *vs = p;
 
-	if (AG_ReadObjectVersion(buf, vs, NULL) == -1) {
-		return (-1);
-	}
 	vs->voltage = AG_ReadDouble(buf);
 	return (0);
 }
@@ -392,7 +389,6 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Vsource *vs = p;
 
-	AG_WriteObjectVersion(buf, vs);
 	AG_WriteDouble(buf, vs->voltage);
 	return (0);
 }

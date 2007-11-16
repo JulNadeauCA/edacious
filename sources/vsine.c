@@ -99,13 +99,10 @@ Init(void *p)
 }
 
 static int
-Load(void *p, AG_DataSource *buf)
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_VSine *vs = p;
 
-	if (AG_ReadObjectVersion(buf, vs, NULL) == -1) {
-		return (-1);
-	}
 	vs->vPeak = SC_ReadReal(buf);
 	vs->f = SC_ReadReal(buf);
 	return (0);
@@ -116,7 +113,6 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_VSine *vs = p;
 
-	AG_WriteObjectVersion(buf, vs);
 	SC_WriteReal(buf, vs->vPeak);
 	SC_WriteReal(buf, vs->f);
 	return (0);

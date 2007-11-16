@@ -80,13 +80,10 @@ Init(void *p)
 }
 
 static int
-Load(void *p, AG_DataSource *buf)
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_SemiResistor *r = p;
 
-	if (AG_ReadObjectVersion(buf, r, NULL) == -1) {
-		return (-1);
-	}
 	r->l = AG_ReadDouble(buf);
 	r->w = AG_ReadDouble(buf);
 	r->rsh = AG_ReadDouble(buf);
@@ -102,7 +99,6 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_SemiResistor *r = p;
 
-	AG_WriteObjectVersion(buf, r);
 	AG_WriteDouble(buf, r->l);
 	AG_WriteDouble(buf, r->w);
 	AG_WriteDouble(buf, r->rsh);
