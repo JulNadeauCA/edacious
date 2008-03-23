@@ -87,7 +87,7 @@ ES_AndUpdate(void *p)
 	}
 }
 
-const ES_ComponentClass esAndClass = {
+ES_ComponentClass esAndClass = {
 	{
 		"ES_Component:ES_Digital:ES_And",
 		sizeof(ES_And),

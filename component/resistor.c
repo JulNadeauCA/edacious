@@ -257,7 +257,7 @@ Edit(void *p)
 	return (win);
 }
 
-const ES_ComponentClass esResistorClass = {
+ES_ComponentClass esResistorClass = {
 	{
 		"ES_Component:ES_Resistor",
 		sizeof(ES_Resistor),

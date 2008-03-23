@@ -107,7 +107,7 @@ Edit(void *p)
 	return (win);
 }
 
-const ES_ComponentClass esLogicProbeClass = {
+ES_ComponentClass esLogicProbeClass = {
 	{
 		"ES_Component:ES_LogicProbe",
 		sizeof(ES_LogicProbe),

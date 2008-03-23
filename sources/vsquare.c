@@ -159,7 +159,7 @@ Edit(void *p)
 	return (win);
 }
 
-const ES_ComponentClass esVSquareClass = {
+ES_ComponentClass esVSquareClass = {
 	{
 		"ES_Component:ES_Vsource:ES_VSquare",
 		sizeof(ES_VSquare),

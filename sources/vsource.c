@@ -162,8 +162,8 @@ InsertVoltageLoop(ES_Vsource *vs)
 	lnew->origin = vs;
 
 	for (i = 1; i < vs->nlstack; i++) {
-		ES_Pair *dip;
-		int pol;
+		ES_Pair *dip = NULL;
+		int pol = 0;
 
 		if (!FindContigPair(vs->lstack[i], vs->lstack[i-1], &dip, &pol))
 			continue;
@@ -486,7 +486,7 @@ Edit(void *p)
 	return (win);
 }
 
-const ES_ComponentClass esVsourceClass = {
+ES_ComponentClass esVsourceClass = {
 	{
 		"ES_Component:ES_Vsource",
 		sizeof(ES_Vsource),

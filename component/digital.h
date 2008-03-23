@@ -49,7 +49,7 @@ typedef struct es_digital {
 #define digOutLO(p,j) (U(p,j) <= DIG(p)->Vol)
 
 __BEGIN_DECLS
-extern const ES_ComponentClass esDigitalClass;
+extern ES_ComponentClass esDigitalClass;
 
 void	 ES_DigitalDraw(void *, VG *);
 void	 ES_DigitalSetVccPort(void *, int);

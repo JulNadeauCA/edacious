@@ -16,7 +16,7 @@ typedef struct es_resistor {
 } ES_Resistor;
 
 __BEGIN_DECLS
-extern const ES_ComponentClass esResistorClass;
+extern ES_ComponentClass esResistorClass;
 __END_DECLS
 
 #include "close_code.h"

@@ -42,7 +42,7 @@ RemoveComponent(VG_Tool *t, SDLKey key, int state, void *arg)
 	if (!state) {
 		return (0);
 	}
-	AG_LockLinkage();
+	AG_LockVFS(ckt);
 	ES_LockCircuit(ckt);
 scan:
 	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
@@ -62,7 +62,7 @@ scan:
 		AG_ObjectDestroy(com);
 		goto scan;
 	}
-	AG_UnlockLinkage();
+	AG_UnlockVFS(ckt);
 	ES_CircuitModified(ckt);
 	ES_UnlockCircuit(ckt);
 	return (1);

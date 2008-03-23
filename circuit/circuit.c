@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2006-2008 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -191,7 +191,7 @@ Init(void *p)
 	InitGround(ckt);
 
 	vg = ckt->vg = VG_New(VG_VISGRID);
-	strlcpy(vg->layers[0].name, _("Schematic"), sizeof(vg->layers[0].name));
+	Strlcpy(vg->layers[0].name, _("Schematic"), sizeof(vg->layers[0].name));
 	VG_Scale(vg, 11.0, 8.5, 32.0);
 	VG_DefaultScale(vg, 2.0);
 	VG_SetGridGap(vg, 0.25);
@@ -316,7 +316,7 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 			AG_CopyString(ppath, buf, sizeof(ppath));
 			AG_ReadUint32(buf);			/* Pad */
 			pport = (int)AG_ReadUint32(buf);
-			if ((pcom = AG_ObjectFind(ppath)) == NULL) {
+			if ((pcom = AG_ObjectFind(ckt, ppath)) == NULL) {
 				AG_SetError("%s", AG_GetError());
 				return (-1);
 			}
@@ -613,7 +613,7 @@ ES_CircuitAddNodeSym(ES_Circuit *ckt, const char *name, int node)
 	ES_Sym *sym;
 
 	sym = ES_CircuitAddSym(ckt);
-	strlcpy(sym->name, name, sizeof(sym->name));
+	Strlcpy(sym->name, name, sizeof(sym->name));
 	sym->type = ES_SYM_NODE;
 	sym->p.node = node;
 	return (sym);
@@ -625,7 +625,7 @@ ES_CircuitAddVsourceSym(ES_Circuit *ckt, const char *name, int vsource)
 	ES_Sym *sym;
 
 	sym = ES_CircuitAddSym(ckt);
-	strlcpy(sym->name, name, sizeof(sym->name));
+	Strlcpy(sym->name, name, sizeof(sym->name));
 	sym->type = ES_SYM_VSOURCE;
 	sym->p.vsource = vsource;
 	return (sym);
@@ -637,7 +637,7 @@ ES_CircuitAddIsourceSym(ES_Circuit *ckt, const char *name, int isource)
 	ES_Sym *sym;
 
 	sym = ES_CircuitAddSym(ckt);
-	strlcpy(sym->name, name, sizeof(sym->name));
+	Strlcpy(sym->name, name, sizeof(sym->name));
 	sym->type = ES_SYM_ISOURCE;
 	sym->p.vsource = isource;
 	return (sym);
@@ -756,13 +756,13 @@ ES_CircuitNodeSymbol(ES_Circuit *ckt, int n, char *dst, size_t dst_len)
 	ES_Sym *sym;
 
 	if (n < 0) {
-		strlcpy(dst, "(null)", sizeof(dst));
+		Strlcpy(dst, "(null)", sizeof(dst));
 		return;
 	}
 	TAILQ_FOREACH(sym, &ckt->syms, syms) {
 		if (sym->type == ES_SYM_NODE &&
 		    sym->p.node == n) {
-			strlcpy(dst, sym->name, dst_len);
+			Strlcpy(dst, sym->name, dst_len);
 			return;
 		}
 	}
@@ -1145,8 +1145,7 @@ SaveCircuit(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
 
-	if (AG_ObjectSave(agWorld) == 0 &&
-	    AG_ObjectSave(ckt) == 0) {
+	if (AG_ObjectSave(ckt) == 0) {
 		AG_TextTmsg(AG_MSG_INFO, 1250,
 		    _("Circuit `%s' saved successfully."),
 		    AGOBJECT(ckt)->name);
@@ -1157,7 +1156,7 @@ SaveCircuit(AG_Event *event)
 }
 
 static void
-ShowInterconnects(AG_Event *event)
+ShowTopology(AG_Event *event)
 {
 	AG_Window *pwin = AG_PTR(1);
 	ES_Circuit *ckt = AG_PTR(2);
@@ -1166,12 +1165,12 @@ ShowInterconnects(AG_Event *event)
 	AG_NotebookTab *ntab;
 	AG_Tlist *tl;
 	
-	if ((win = AG_WindowNewNamed(0, "%s-interconnects",
-	    AGOBJECT(ckt)->name)) == NULL) {
+	if ((win = AG_WindowNewNamed(0, "%s-topology", AGOBJECT(ckt)->name))
+	    == NULL) {
 		return;
 	}
-	AG_WindowSetCaption(win, _("%s: Topology"), AGOBJECT(ckt)->name);
-	AG_WindowSetPosition(win, AG_WINDOW_UPPER_RIGHT, 0);
+	AG_WindowSetCaption(win, _("%s: Circuit topology"),
+	    AGOBJECT(ckt)->name);
 	
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
 	ntab = AG_NotebookAddTab(nb, _("Nodes"), AG_BOX_VERT);
@@ -1192,9 +1191,10 @@ ShowInterconnects(AG_Event *event)
 		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_EXPAND);
 		AG_SetEvent(tl, "tlist-poll", PollCircuitSources, "%p", ckt);
 	}
-
+	
 	AG_WindowAttach(pwin, win);
 	AG_WindowShow(win);
+	AG_WindowSetGeometry(win, 0, agView->h - 300, 200, 300);
 }
 
 static void
@@ -1206,7 +1206,7 @@ ShowDocumentProps(AG_Event *event)
 	VG *vg = ckt->vg;
 	AG_Window *win;
 	AG_MFSpinbutton *mfsu;
-	AG_FSpinbutton *fsu;
+	AG_Numerical *num;
 	AG_Textbox *tb;
 	AG_Checkbox *cb;
 	
@@ -1218,13 +1218,12 @@ ShowDocumentProps(AG_Event *event)
 	AG_WindowSetPosition(win, AG_WINDOW_UPPER_RIGHT, 0);
 
 	tb = AG_TextboxNew(win, AG_TEXTBOX_HFILL, _("Description: "));
-	AG_WidgetBindString(tb, "string", &ckt->descr, sizeof(ckt->descr));
+	AG_TextboxBindUTF8(tb, ckt->descr, sizeof(ckt->descr));
 
-	fsu = AG_FSpinbuttonNew(win, 0, NULL, _("Grid spacing: "));
-	AG_WidgetBindFloat(fsu, "value", &vg->grid_gap);
-	AG_FSpinbuttonSetMin(fsu, 0.0625);
-	AG_FSpinbuttonSetIncrement(fsu, 0.0625);
-	
+	num = AG_NumericalNewFlt(win, 0, NULL, _("Grid spacing: "),
+	    &vg->grid_gap);
+	AG_NumericalSetMin(num, 0.0625);
+	AG_NumericalSetIncrement(num, 0.0625);
 #if 0
 	AG_LabelNew(win, AG_LABEL_STATIC, _("Nodes:"));
 	tl = AG_TlistNew(win, AG_TLIST_POLL|AG_TLIST_TREE);
@@ -1242,8 +1241,8 @@ ExportToSPICE(AG_Event *event)
 	char name[FILENAME_MAX];
 	ES_Circuit *ckt = AG_PTR(1);
 
-	strlcpy(name, AGOBJECT(ckt)->name, sizeof(name));
-	strlcat(name, ".cir", sizeof(name));
+	Strlcpy(name, AGOBJECT(ckt)->name, sizeof(name));
+	Strlcat(name, ".cir", sizeof(name));
 
 	if (ES_CircuitExportSPICE3(ckt, name) == -1)
 		AG_TextMsg(AG_MSG_ERROR, "%s: %s", AGOBJECT(ckt)->name,
@@ -1369,13 +1368,13 @@ static void
 PollCircuitObjs(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
-	AG_Object *pob = AG_PTR(1);
+	AG_Object *ckt = AG_PTR(1);
 	AG_TlistItem *it;
 
 	AG_TlistClear(tl);
-	AG_LockLinkage();
-	FindCircuitObjs(tl, pob, 0, pob);
-	AG_UnlockLinkage();
+	AG_LockVFS(ckt);
+	FindCircuitObjs(tl, ckt, 0, ckt);
+	AG_UnlockVFS(ckt);
 	AG_TlistRestore(tl);
 }
 
@@ -1642,26 +1641,26 @@ Edit(void *p)
 		
 		AG_MenuSeparator(pitem);
 		
-		AG_MenuIntFlags(pitem, _("Circuit nodes"), NULL,
+		AG_MenuUintFlags(pitem, _("Circuit nodes"), NULL,
 		    &ckt->flags, CIRCUIT_SHOW_NODES, 0);
-		AG_MenuIntFlags(pitem, _("Node names"), NULL,
+		AG_MenuUintFlags(pitem, _("Node names"), NULL,
 		    &ckt->flags, CIRCUIT_SHOW_NODENAMES, 0);
-		AG_MenuIntFlags(pitem, _("Node symbols"), NULL,
+		AG_MenuUintFlags(pitem, _("Node symbols"), NULL,
 		    &ckt->flags, CIRCUIT_SHOW_NODESYMS, 0);
 
 		AG_MenuSeparator(pitem);
 
-		AG_MenuIntFlags(pitem, _("Drawing origin"), NULL,
+		AG_MenuUintFlags(pitem, _("Drawing origin"), NULL,
 		    &ckt->vg->flags, VG_VISORIGIN, 0);
-		AG_MenuIntFlags(pitem, _("Drawing grid"), vgIconSnapGrid.s,
+		AG_MenuUintFlags(pitem, _("Drawing grid"), vgIconSnapGrid.s,
 		    &ckt->vg->flags, VG_VISGRID, 0);
-		AG_MenuIntFlags(pitem, _("Drawing extents"), vgIconBlock.s,
+		AG_MenuUintFlags(pitem, _("Drawing extents"), vgIconBlock.s,
 		    &ckt->vg->flags, VG_VISBBOXES, 0);
 		
 		AG_MenuSeparator(pitem);
 
 		AG_MenuAction(pitem, _("Circuit topology..."), NULL,
-		    ShowInterconnects, "%p,%p", win, ckt);
+		    ShowTopology, "%p,%p", win, ckt);
 		AG_MenuAction(pitem, _("Log console..."), vgIconText.s,
 		    ShowConsole, "%p,%p", win, ckt);
 	}
@@ -1690,8 +1689,8 @@ Edit(void *p)
 		ntab = AG_NotebookAddTab(nb, _("Models"), AG_BOX_VERT);
 		{
 			char tname[AG_OBJECT_TYPE_MAX];
-			extern const void *eda_models[];
-			const void **model;
+			extern void *edaModels[];
+			void **model;
 			int i;
 
 			tl = AG_TlistNew(ntab, AG_TLIST_EXPAND);
@@ -1703,7 +1702,7 @@ Edit(void *p)
 			    _("Insert component"),
 			    ES_ComponentInsert, "%p,%p,%p", vgv, tl, ckt);
 
-			for (model = &eda_models[0]; *model != NULL; model++) {
+			for (model = &edaModels[0]; *model != NULL; model++) {
 				AG_TlistAddPtr(tl, NULL,
 				    ((ES_ComponentClass *)*model)->name,
 				    (void *)*model);
@@ -1799,7 +1798,7 @@ Edit(void *p)
 	return (win);
 }
 
-const AG_ObjectClass esCircuitClass = {
+AG_ObjectClass esCircuitClass = {
 	"ES_Circuit",
 	sizeof(ES_Circuit),
 	{ 0,0 },

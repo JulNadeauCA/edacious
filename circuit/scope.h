@@ -11,7 +11,7 @@ typedef struct ag_scope {
 } ES_Scope;
 
 __BEGIN_DECLS
-extern const AG_ObjectClass esScopeClass;
+extern AG_ObjectClass esScopeClass;
 ES_Scope *ES_ScopeNew(void *, const char *);
 __END_DECLS
 

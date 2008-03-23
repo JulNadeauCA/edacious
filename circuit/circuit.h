@@ -112,7 +112,7 @@ typedef struct es_circuit {
 #define ES_NODE(ckt,n) ES_CircuitGetNode((ckt),(n))
 
 __BEGIN_DECLS
-extern const AG_ObjectClass esCircuitClass;
+extern AG_ObjectClass esCircuitClass;
 
 void	 ES_CircuitFreeComponents(ES_Circuit *);
 void	 ES_CircuitLog(void *, const char *, ...);

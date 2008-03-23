@@ -123,7 +123,7 @@ AddPlotFromSrc(AG_Event *event)
 	SC_Plot *pl;
 
 	AG_PropPath(prop_path, sizeof(prop_path), ckt, prop->key);
-	pl = SC_PlotFromProp(ptr, SC_PLOT_LINEAR, prop->key, prop_path);
+	pl = SC_PlotFromProp(ptr, SC_PLOT_LINEAR, prop->key, ckt, prop_path);
 	SC_PlotSetXoffs(pl, ptr->xMax-1);
 	SC_PlotSetScale(pl, 0.0, 15.0);
 }
@@ -211,7 +211,7 @@ Edit(void *obj)
 	return (win);
 }
 
-const AG_ObjectClass esScopeClass = {
+AG_ObjectClass esScopeClass = {
 	"ES_Scope",
 	sizeof(ES_Scope),
 	{ 0,0 },

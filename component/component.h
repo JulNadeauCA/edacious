@@ -123,7 +123,7 @@ typedef struct es_component {
 #endif
 
 __BEGIN_DECLS
-extern const AG_ObjectClass esComponentClass;
+extern AG_ObjectClass esComponentClass;
 
 void	 ES_ComponentFreePorts(ES_Component *);
 void	 ES_ComponentSetPorts(void *, const ES_Port *);

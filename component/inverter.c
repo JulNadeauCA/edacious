@@ -156,7 +156,7 @@ Edit(void *p)
 	return (win);
 }
 
-const ES_ComponentClass esInverterClass = {
+ES_ComponentClass esInverterClass = {
 	{
 		"ES_Component:ES_Digital:ES_Inverter",
 		sizeof(ES_Inverter),

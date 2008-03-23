@@ -188,7 +188,7 @@ Edit(void *p)
 	return (win);
 }
 
-const ES_ComponentClass esSpstClass = {
+ES_ComponentClass esSpstClass = {
 	{
 		"ES_Component:ES_Spst",
 		sizeof(ES_Spst),

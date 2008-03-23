@@ -259,7 +259,7 @@ Edit(void *p)
 	return (win);
 }
 
-const ES_ComponentClass esDigitalClass = {
+ES_ComponentClass esDigitalClass = {
 	{
 		"ES_Component:ES_Digital",
 		sizeof(ES_Digital),

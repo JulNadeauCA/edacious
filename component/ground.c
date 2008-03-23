@@ -85,7 +85,7 @@ Init(void *p)
 	ES_ComponentSetPorts(gnd, esGroundPinout);
 }
 
-const ES_ComponentClass esGroundClass = {
+ES_ComponentClass esGroundClass = {
 	{
 		"ES_Component:ES_Ground",
 		sizeof(ES_Ground),

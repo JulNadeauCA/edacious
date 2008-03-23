@@ -325,7 +325,7 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 	     i++, pPort++) {
 		ES_Port *port = &com->ports[i];
 
-		strlcpy(port->name, pPort->name, sizeof(port->name));
+		Strlcpy(port->name, pPort->name, sizeof(port->name));
 		port->n = i;
 		port->x = pPort->x;
 		port->y = pPort->y;
@@ -419,11 +419,11 @@ ES_ComponentLog(void *p, const char *fmt, ...)
 	if (com->ckt == NULL || com->ckt->console == NULL)
 		return;
 	
-	strlcpy(buf, AGOBJECT(com)->name, sizeof(buf));
+	Strlcpy(buf, AGOBJECT(com)->name, sizeof(buf));
 	
 	va_start(args, fmt);
 	ln = AG_ConsoleAppendLine(com->ckt->console, NULL);
-	len = strlcat(buf, ": ", sizeof(buf));
+	len = Strlcat(buf, ": ", sizeof(buf));
 	vsnprintf(&buf[len], sizeof(buf)-len, fmt, args);
 	ln->text = strdup(buf);
 	ln->len = strlen(ln->text);
@@ -568,7 +568,7 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 	Uint nsel = 0;
 	ES_Component *com2;
 	int common_class = 1;
-	const ES_ComponentClass *comCls = NULL;
+	ES_ComponentClass *comCls = NULL;
 
 	AGOBJECT_FOREACH_CLASS(com2, com->ckt, es_component, "ES_Component:*") {
 		if (!com2->selected) {
@@ -792,7 +792,7 @@ ES_ComponentHighlightPorts(ES_Circuit *ckt, ES_Component *com)
 	return (nconn);
 }
 
-const AG_ObjectClass esComponentClass = {
+AG_ObjectClass esComponentClass = {
 	"ES_Component",
 	sizeof(ES_Component),
 	{ 0,0 },
