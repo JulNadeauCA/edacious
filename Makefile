@@ -1,5 +1,3 @@
-#	$Csoft: Makefile,v 1.2 2005/09/08 09:48:56 vedge Exp $
-
 TOP=	.
 include ${TOP}/Makefile.config
 
@@ -28,4 +26,4 @@ release: cleandir
 
 .PHONY: configure release
 
-include ${TOP}/mk/csoft.prog.mk
+include ${TOP}/mk/build.prog.mk

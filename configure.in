@@ -1,11 +1,10 @@
-# $Csoft: configure.in,v 1.3 2005/01/16 10:16:29 vedge Exp $
 # Public domain
 
 REGISTER("--enable-static",	"Produce a static binary [default: no]")
 REGISTER("--enable-warnings",	"Enable compiler warnings [default: no]")
 REGISTER("--enable-edition",	"Enable graphical editor [default: yes]")
 
-HDEFINE(VERSION, "09152007")
+HDEFINE(VERSION, "03182008")
 
 MDEFINE(SHAREDIR, "$PREFIX/share/agar-eda")
 HDEFINE(SHAREDIR, "$PREFIX/share/agar-eda")
@@ -22,6 +21,9 @@ CHECK(agar-sc, 1.0)
 CHECK(agar-vg, 1.0)
 CHECK(agar-dev, 1.0)
 
+C_DEFINE(_USE_AGAR_STD)
+C_DEFINE(_USE_AGAR_QUEUE)
+
 if [ "${HAVE_AGAR}" != "yes" ]; then
 	echo "This application requires Agar"
 	echo "(http://libagar.org/)"
@@ -35,11 +37,6 @@ fi
 if [ "${HAVE_AGAR_VG}" != "yes" ]; then
 	echo "This application requires Agar-VG"
 	echo "(http://hypertriton.com/agar-vg)"
-	exit 1
-fi
-if [ "${HAVE_AGAR_DEV}" != "yes" ]; then
-	echo "This application requires Agar-DEV"
-	echo "(http://hypertriton.com/agar-dev)"
 	exit 1
 fi
 
