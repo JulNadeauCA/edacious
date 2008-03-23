@@ -1,15 +1,15 @@
 
 What is it?
 -----------
-Agar-EDA is an open-source Electronics Design Automation (EDA) toolkit,
-built on top of the Agar [http://agar.csoft.org/] engine. The package
-includes a graphical circuit editor, a mixed-signal circuit simulator
-and different types of analysis. Agar-EDA can export to SPICE3 format.
+Agar-EDA is an open-source Electronics Design Automation (EDA) toolkit.
+The package includes a graphical circuit editor, a mixed-signal circuit
+simulator and different types of analysis. Agar-EDA requires the Agar
+GUI library (http://libagar.org/)
 
 Availability
 ------------
 You can download the most recent Agar-EDA version from the Agar-EDA
-home page at http://agar-eda.csoft.org/.
+home page at http://hypertriton.com/agar-eda/.
 
 License
 -------
@@ -20,8 +20,8 @@ Portability
 Thanks to Agar, Agar-EDA is portable to many different platforms,
 including FreeBSD, IRIX, Linux, MacOS Classic, MacOS X, NetBSD,
 OpenBSD and Windows. For the list of official ports, see:
-http://agar-eda.csoft.org/portable.html.
+http://hypertriton.com/agar-eda/portable.html.
 
 Acknowledgements
 ----------------
-See: http://agar-eda.csoft.org/credits.html
+See: http://hypertriton.com/agar-eda/credits.html

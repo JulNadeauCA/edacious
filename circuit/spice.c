@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2004-2008 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -21,6 +21,10 @@
  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/*
+ * Export of models to SPICE3 format.
  */
 
 #include <config/version.h>

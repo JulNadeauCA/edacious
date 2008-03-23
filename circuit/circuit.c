@@ -23,6 +23,10 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * Electrical circuit.
+ */
+
 #include <agar/core.h>
 #include <agar/gui.h>
 #include <agar/vg.h>

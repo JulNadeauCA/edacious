@@ -23,6 +23,10 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * Main user interface code for Agar-EDA.
+ */
+
 #include <agar/core.h>
 #include <agar/vg.h>
 #include <agar/gui.h>
