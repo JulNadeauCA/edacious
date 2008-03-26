@@ -41,11 +41,11 @@ const ES_Port esResistorPinout[] = {
 	{ -1 },
 };
 
-int esResistorDispVal = 0;
+int esResistorShowValue = 0;
 enum {
 	RESISTOR_BOX_STYLE,
-	RESISTOR_US_STYLE
-} esResistorStyle = 0;
+	RESISTOR_AMERICAN_STYLE
+} esResistorStyle = RESISTOR_BOX_STYLE;
 
 static void
 Draw(void *p, VG *vg)
@@ -55,43 +55,50 @@ Draw(void *p, VG *vg)
 	switch (esResistorStyle) {
 	case RESISTOR_BOX_STYLE:
 		VG_Begin(vg, VG_LINES);
-		VG_Vertex2(vg, 0.000, 0.000);
-		VG_Vertex2(vg, 0.156, 0.000);
-		VG_Vertex2(vg, 1.250, 0.000);
-		VG_Vertex2(vg, 1.09375, 0.000);
+		{
+			VG_Vertex2(vg, 0.000, 0.000);
+			VG_Vertex2(vg, 0.156, 0.000);
+			VG_Vertex2(vg, 1.250, 0.000);
+			VG_Vertex2(vg, 1.09375, 0.000);
+		}
 		VG_End(vg);
 		VG_Begin(vg, VG_LINE_LOOP);
-		VG_Vertex2(vg, 0.156, -0.240);
-		VG_Vertex2(vg, 0.156,  0.240);
-		VG_Vertex2(vg, 1.09375,  0.240);
-		VG_Vertex2(vg, 1.09375, -0.240);
+		{
+			VG_Vertex2(vg, 0.156, -0.240);
+			VG_Vertex2(vg, 0.156,  0.240);
+			VG_Vertex2(vg, 1.09375,  0.240);
+			VG_Vertex2(vg, 1.09375, -0.240);
+		}
 		VG_End(vg);
 		break;
-	case RESISTOR_US_STYLE:
+	case RESISTOR_AMERICAN_STYLE:
 		VG_Begin(vg, VG_LINE_STRIP);
-		VG_Vertex2(vg, 0.000, 0.125);
-		VG_Vertex2(vg, 0.125, 0.000);
-		VG_Vertex2(vg, 0.250, 0.125);
-		VG_Vertex2(vg, 0.375, 0.000);
-		VG_Vertex2(vg, 0.500, 0.125);
-		VG_Vertex2(vg, 0.625, 0.000);
-		VG_Vertex2(vg, 0.750, 0.125);
-		VG_Vertex2(vg, 0.875, 0.000);
-		VG_Vertex2(vg, 1.000, 0.000);
+		{
+			VG_Vertex2(vg, 0.000, 0.125);
+			VG_Vertex2(vg, 0.125, 0.000);
+			VG_Vertex2(vg, 0.250, 0.125);
+			VG_Vertex2(vg, 0.375, 0.000);
+			VG_Vertex2(vg, 0.500, 0.125);
+			VG_Vertex2(vg, 0.625, 0.000);
+			VG_Vertex2(vg, 0.750, 0.125);
+			VG_Vertex2(vg, 0.875, 0.000);
+			VG_Vertex2(vg, 1.000, 0.000);
+		}
 		VG_End(vg);
 		break;
 	}
 
 	VG_Begin(vg, VG_TEXT);
-	VG_SetStyle(vg, "component-name");
-	VG_Vertex2(vg, 0.625, 0.000);
-	VG_TextAlignment(vg, VG_ALIGN_MC);
-
-	if (esResistorDispVal) {
-		VG_Printf(vg, "%s (%.2f\xce\xa9)", AGOBJECT(r)->name,
-		    r->resistance);
-	} else {
-		VG_Printf(vg, "%s", AGOBJECT(r)->name);
+	{
+		VG_SetStyle(vg, "component-name");
+		VG_Vertex2(vg, 0.625, 0.000);
+		VG_TextAlignment(vg, VG_ALIGN_MC);
+		if (esResistorShowValue) {
+			VG_Printf(vg, "%s (%.2f\xce\xa9)",
+			    AGOBJECT(r)->name, r->resistance);
+		} else {
+			VG_Printf(vg, "%s", AGOBJECT(r)->name);
+		}
 	}
 	VG_End(vg);
 }
@@ -236,28 +243,17 @@ Edit(void *p)
 {
 	ES_Resistor *r = p;
 	AG_Window *win;
-	AG_Spinbutton *sb;
-	AG_FSpinbutton *fsb;
 
 	win = AG_WindowNew(0);
+	AG_NumericalNewDblR(win, 0, "ohm", _("Resistance: "), &r->resistance,
+	    1.0, HUGE_VAL);
+	AG_NumericalNewIntR(win, 0, _("Tolerance: "), "%", &r->tolerance,
+	    1, 100);
+	AG_NumericalNewDblR(win, 0, "W", _("Power rating: "), &r->power_rating,
+	    0.0, HUGE_VAL);
 
-	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("Resistance: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->resistance);
-	AG_FSpinbuttonSetMin(fsb, 1.0);
-	
-	sb = AG_SpinbuttonNew(win, 0, _("Tolerance (%): "));
-	AG_WidgetBind(sb, "value", AG_WIDGET_INT, &r->tolerance);
-	AG_SpinbuttonSetRange(sb, 1, 100);
-
-	fsb = AG_FSpinbuttonNew(win, 0, "W", _("Power rating: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->power_rating);
-	AG_FSpinbuttonSetMin(fsb, 0);
-	
-	fsb = AG_FSpinbuttonNew(win, 0, "mohm/degC", _("Temp. coefficient: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc1);
-	fsb = AG_FSpinbuttonNew(win, 0, "mohm/degC^2",
-	    _("Temp. coefficient: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc2);
+	AG_NumericalNewFlt(win, 0, "mohm/degC", _("Temp. coeff.: "), &r->Tc1);
+	AG_NumericalNewFlt(win, 0, "mohm/degC^2", _("Temp. coeff.: "), &r->Tc2);
 	return (win);
 }
 

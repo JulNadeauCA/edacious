@@ -1596,8 +1596,8 @@ Edit(void *p)
 	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND);
 	VG_ViewDrawFn(vv, CircuitDrawGeneric, "%p", ckt);
 	VG_ViewSetSnapMode(vv, VG_GRID);
-	VG_ViewSetScale(vv, 20.0f);
-	VG_ViewSetGridInterval(vv, 16.0f);
+	VG_ViewSetScale(vv, 30.0f);
+	VG_ViewSetGridInterval(vv, 0.5f);
 	
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	mi = AG_MenuAddItem(menu, _("File"));
