@@ -48,9 +48,9 @@ Draw(void *p, VG *vg)
 
 	VG_Begin(vg, VG_POLYGON);
 	if (r->state) {
-		VG_Color3(vg, 200, 0, 0);
+		VG_ColorRGB(vg, 200, 0, 0);
 	} else {
-		VG_Color3(vg, 0, 0, 0);
+		VG_ColorRGB(vg, 0, 0, 0);
 	}
 	VG_Vertex2(vg, 0.156, -0.240);
 	VG_Vertex2(vg, 0.156,  0.240);

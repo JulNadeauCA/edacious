@@ -235,15 +235,15 @@ OpenDlg(AG_Event *event)
 
 	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
 	fd = AG_FileDlgNewMRU(hPane->div[0], "agar-eda.mru.circuits",
-	    AG_FILEDLG_LOAD|AG_FILEDLG_ASYNC|AG_FILEDLG_EXPAND);
+	    AG_FILEDLG_LOAD|AG_FILEDLG_ASYNC|AG_FILEDLG_EXPAND|
+	    AG_FILEDLG_CLOSEWIN);
 	AG_FileDlgSetOptionContainer(fd, hPane->div[1]);
 
 	AG_FileDlgAddType(fd, _("Agar-EDA circuit model"), "*.ecm",
 	    OpenCircuit, NULL);
 
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 70, 40);
 	AG_WindowShow(win);
-	AG_WindowSetGeometry(win, AGWIDGET(win)->x-100, AGWIDGET(win)->y,
-	                          AGWIDGET(win)->w+200, AGWIDGET(win)->h);
 }
 
 static void
@@ -523,7 +523,7 @@ main(int argc, char *argv[])
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (1);
 	}
-	AG_TextParseFontSpec("Vera.ttf:15");
+	AG_TextParseFontSpec("_agFontVera:15");
 #ifdef HAVE_GETOPT
 	while ((c = getopt(argc, argv, "?vt:r:T:t:gG")) != -1) {
 		extern char *optarg;

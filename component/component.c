@@ -245,7 +245,7 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 		TAILQ_FOREACH(vge, &com->block->vges, vgbmbs) {
 			if (!vge->selected) {
 				VG_Select(vg, vge);
-				VG_Color3(vg, 250, 250, 180);
+				VG_ColorRGB(vg, 250, 250, 180);
 				VG_End(vg);
 			}
 		}
@@ -253,7 +253,7 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 		TAILQ_FOREACH(vge, &com->block->vges, vgbmbs) {
 			if (!vge->selected) {
 				VG_Select(vg, vge);
-				VG_Color3(vg, 240, 240, 50);
+				VG_ColorRGB(vg, 240, 240, 50);
 				VG_End(vg);
 			}
 		}
@@ -261,7 +261,7 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 		TAILQ_FOREACH(vge, &com->block->vges, vgbmbs) {
 			if (!vge->selected) {
 				VG_Select(vg, vge);
-				VG_Color3(vg, 180, 180, 120);
+				VG_ColorRGB(vg, 180, 180, 120);
 				VG_End(vg);
 			}
 		}

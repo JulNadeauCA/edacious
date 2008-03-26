@@ -54,54 +54,69 @@ Draw(void *p, VG *vg)
 	switch (esVsourceStyle) {
 	case VSOURCE_SYM_LINEAR:
 		VG_Begin(vg, VG_LINES);
-		VG_Vertex2(vg, 0.0000, 0.0000);
-		VG_Vertex2(vg, 0.0000, 0.3125);
-		VG_Vertex2(vg, 0.0000, 0.6875);
-		VG_Vertex2(vg, 0.0000, 1.0000);
-		VG_Vertex2(vg, -0.0937, 0.3125);
-		VG_Vertex2(vg, +0.0937, 0.3125);
-		VG_Vertex2(vg, -0.1875, 0.4375);
-		VG_Vertex2(vg, +0.1875, 0.4375);
-		VG_Vertex2(vg, -0.0937, 0.5625);
-		VG_Vertex2(vg, +0.0937, 0.5625);
-		VG_Vertex2(vg, -0.1875, 0.6875);
-		VG_Vertex2(vg, +0.1875, 0.6875);
+		{
+			VG_Vertex2(vg, 0.0000, 0.0000);
+			VG_Vertex2(vg, 0.0000, 0.3125);
+			VG_Vertex2(vg, 0.0000, 0.6875);
+			VG_Vertex2(vg, 0.0000, 1.0000);
+			VG_Vertex2(vg, -0.0937, 0.3125);
+			VG_Vertex2(vg, +0.0937, 0.3125);
+			VG_Vertex2(vg, -0.1875, 0.4375);
+			VG_Vertex2(vg, +0.1875, 0.4375);
+			VG_Vertex2(vg, -0.0937, 0.5625);
+			VG_Vertex2(vg, +0.0937, 0.5625);
+			VG_Vertex2(vg, -0.1875, 0.6875);
+			VG_Vertex2(vg, +0.1875, 0.6875);
+		}
 		VG_End(vg);
 		VG_Begin(vg, VG_TEXT);
-		VG_SetStyle(vg, "component-name");
-		VG_Vertex2(vg, -0.0468, 0.0625);
-		VG_TextAlignment(vg, VG_ALIGN_TR);
-		VG_Printf(vg, "%s\n%.2fV\n", AGOBJECT(vs)->name, vs->voltage);
+		{
+			VG_SetStyle(vg, "component-name");
+			VG_Vertex2(vg, -0.0468, 0.0625);
+			VG_TextAlignment(vg, VG_ALIGN_TR);
+			VG_Printf(vg, "%s\n%.2fV\n", AGOBJECT(vs)->name,
+			    vs->voltage);
+		}
 		VG_End(vg);
 		break;
 	case VSOURCE_SYM_CIRCULAR:
 		VG_Begin(vg, VG_LINES);
-		VG_Vertex2(vg, 0.000, 0.000);
-		VG_Vertex2(vg, 0.000, 0.400);
-		VG_Vertex2(vg, 0.000, 1.600);
-		VG_Vertex2(vg, 0.000, 2.000);
+		{
+			VG_Vertex2(vg, 0.000, 0.000);
+			VG_Vertex2(vg, 0.000, 0.400);
+			VG_Vertex2(vg, 0.000, 1.600);
+			VG_Vertex2(vg, 0.000, 2.000);
+		}
 		VG_End(vg);
 		VG_Begin(vg, VG_CIRCLE);
-		VG_Vertex2(vg, 0.0, 1.0);
-		VG_CircleRadius(vg, 0.6);
+		{
+			VG_Vertex2(vg, 0.0, 1.0);
+			VG_CircleRadius(vg, 0.6);
+		}
 		VG_End(vg);
 		VG_Begin(vg, VG_TEXT);
-		VG_SetStyle(vg, "component-name");
-		VG_Vertex2(vg, 0.0, 1.0);
-		VG_TextAlignment(vg, VG_ALIGN_MC);
-		VG_Printf(vg, "%s", AGOBJECT(vs)->name);
+		{
+			VG_SetStyle(vg, "component-name");
+			VG_Vertex2(vg, 0.0, 1.0);
+			VG_TextAlignment(vg, VG_ALIGN_MC);
+			VG_Printf(vg, "%s", AGOBJECT(vs)->name);
+		}
 		VG_End(vg);
 		VG_Begin(vg, VG_TEXT);
-		VG_SetStyle(vg, "component-name");
-		VG_Vertex2(vg, 0.0, 0.6);
-		VG_TextAlignment(vg, VG_ALIGN_MC);
-		VG_Printf(vg, "+");
+		{
+			VG_SetStyle(vg, "component-name");
+			VG_Vertex2(vg, 0.0, 0.6);
+			VG_TextAlignment(vg, VG_ALIGN_MC);
+			VG_Printf(vg, "+");
+		}
 		VG_End(vg);
 		VG_Begin(vg, VG_TEXT);
-		VG_SetStyle(vg, "component-name");
-		VG_Vertex2(vg, 0.0, 1.4);
-		VG_TextAlignment(vg, VG_ALIGN_MC);
-		VG_Printf(vg, "-");
+		{
+			VG_SetStyle(vg, "component-name");
+			VG_Vertex2(vg, 0.0, 1.4);
+			VG_TextAlignment(vg, VG_ALIGN_MC);
+			VG_Printf(vg, "-");
+		}
 		VG_End(vg);
 		break;
 	}
