@@ -243,7 +243,7 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 	/* TODO blend */
 	if (com->selected && com->highlighted) {
 		TAILQ_FOREACH(vge, &com->block->vges, vgbmbs) {
-			if (!vge->selected) {
+			if (!(vge->flags & VG_ELEMENT_SELECTED)) {
 				VG_Select(vg, vge);
 				VG_ColorRGB(vg, 250, 250, 180);
 				VG_End(vg);
@@ -251,7 +251,7 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 		}
 	} else if (com->selected) {
 		TAILQ_FOREACH(vge, &com->block->vges, vgbmbs) {
-			if (!vge->selected) {
+			if (!(vge->flags & VG_ELEMENT_SELECTED)) {
 				VG_Select(vg, vge);
 				VG_ColorRGB(vg, 240, 240, 50);
 				VG_End(vg);
@@ -259,7 +259,7 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 		}
 	} else if (com->highlighted) {
 		TAILQ_FOREACH(vge, &com->block->vges, vgbmbs) {
-			if (!vge->selected) {
+			if (!(vge->flags & VG_ELEMENT_SELECTED)) {
 				VG_Select(vg, vge);
 				VG_ColorRGB(vg, 180, 180, 120);
 				VG_End(vg);
@@ -437,7 +437,7 @@ ES_ComponentLog(void *p, const char *fmt, ...)
 Uint
 ES_PortNode(ES_Component *com, int port)
 {
-	if (port >= com->nports) {
+	if (port > com->nports) {
 		Fatal("%s: bad port %d/%u", AGOBJECT(com)->name, port,
 		    com->nports);
 	}

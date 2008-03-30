@@ -36,6 +36,7 @@
 #include <circuit/circuit.h>
 #include <component/ground.h>
 #include <sources/vsource.h>
+#include <icons.h>
 
 #ifdef WIN32
 #define ES_PATHSEPC '\\'

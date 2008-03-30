@@ -147,7 +147,7 @@ Init(void *p)
 VG_ToolOps esSelcomOps = {
 	N_("Select"),
 	N_("Select one or more component in the circuit."),
-	NULL,
+	&esIconSelectComponent,
 	sizeof(VG_Tool),
 	VG_NOSNAP,
 	Init,

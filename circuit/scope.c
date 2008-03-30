@@ -61,12 +61,23 @@ Attached(AG_Event *event)
 }
 
 static void
+PostSimStep(AG_Event *event)
+{
+	ES_Scope *scope = AG_SELF();
+
+	if (scope->plotter != NULL)
+		SC_PlotterUpdate(scope->plotter);
+}
+
+static void
 Init(void *obj)
 {
 	ES_Scope *scope = obj;
 
 	scope->ckt = NULL;
+	scope->plotter = NULL;
 	AG_SetEvent(scope, "attached", Attached, NULL);
+	AG_SetEvent(scope, "circuit-step-end", PostSimStep, NULL);
 }
 
 static int
@@ -157,14 +168,6 @@ ShowPlotSettings(AG_Event *event)
 	SC_PlotSettings(pl);
 }
 
-static void
-UpdateScope(AG_Event *event)
-{
-	SC_Plotter *ptr = AG_PTR(1);
-
-	SC_PlotterUpdate(ptr);
-}
-
 static void *
 Edit(void *obj)
 {
@@ -183,6 +186,8 @@ Edit(void *obj)
 	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
 	{
 		ptr = SC_PlotterNew(hPane->div[1], SC_PLOTTER_EXPAND);
+		scope->plotter = ptr;
+
 		vPane = AG_PaneNewVert(hPane->div[0],
 		    AG_PANE_EXPAND|AG_PANE_DIV|AG_PANE_FORCE_DIV);
 		{
@@ -209,9 +214,6 @@ Edit(void *obj)
 		}
 	}
 	
-	/* Update the plots at the end of every simulation step. */
-	AG_SetEvent(scope, "circuit-step-end", UpdateScope, "%p", ptr);
-
 	AG_WindowSetGeometry(win, agView->w/2, 0, agView->w/2, agView->h/3);
 	return (win);
 }

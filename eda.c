@@ -42,7 +42,11 @@
 #include <circuit/scope.h>
 #include <circuit/spice.h>
 
+#include <icons.h>
+#include <icons_data.h>
+
 #include <config/have_getopt.h>
+#include <config/have_agar_dev.h>
 
 extern ES_ComponentClass esDigitalClass;
 extern ES_ComponentClass esVsourceClass;
@@ -429,16 +433,19 @@ FileMenu(AG_Event *event)
 	AG_MenuItem *m = AG_SENDER();
 	AG_MenuItem *node;
 
-	AG_MenuActionKb(m, _("New circuit..."), agIconDoc.s, SDLK_s, KMOD_ALT,
+	AG_MenuActionKb(m, _("New circuit..."), esIconCircuit.s,
+	    SDLK_s, KMOD_ALT,
 	    NewObject, "%p", &esCircuitClass);
 
-	AG_MenuActionKb(m, _("Open..."), agIconLoad.s, SDLK_o, KMOD_CTRL,
+	AG_MenuActionKb(m, _("Open..."), agIconLoad.s,
+	    SDLK_o, KMOD_CTRL,
 	    OpenDlg, NULL);
 
 	AG_MutexLock(&objLock);
 	if (objFocus == NULL) { AG_MenuDisable(m); }
 
-	AG_MenuActionKb(m, _("Save"), agIconSave.s, SDLK_s, KMOD_CTRL,
+	AG_MenuActionKb(m, _("Save"), agIconSave.s,
+	    SDLK_s, KMOD_CTRL,
 	    Save, "%p", objFocus);
 	AG_MenuAction(m, _("Save as..."), agIconSave.s,
 	    SaveAsDlg, "%p", objFocus);
@@ -476,7 +483,9 @@ FileMenu(AG_Event *event)
 	
 	AG_MenuSeparator(m);
 	
-	AG_MenuActionKb(m, _("Quit"), NULL, SDLK_q, KMOD_CTRL, Quit, NULL);
+	AG_MenuActionKb(m, _("Quit"), agIconClose.s,
+	    SDLK_q, KMOD_CTRL,
+	    Quit, NULL);
 }
 
 static void
@@ -523,14 +532,19 @@ main(int argc, char *argv[])
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (1);
 	}
-	AG_TextParseFontSpec("_agFontVera:15");
+	AG_TextParseFontSpec("_agFontVera:12");
 #ifdef HAVE_GETOPT
-	while ((c = getopt(argc, argv, "?vt:r:T:t:gG")) != -1) {
+	while ((c = getopt(argc, argv, "?vd:t:r:T:t:gG")) != -1) {
 		extern char *optarg;
 
 		switch (c) {
 		case 'v':
 			exit(0);
+		case 'd':
+#ifdef DEBUG
+			agDebugLvl = atoi(optarg);
+#endif
+			break;
 		case 'r':
 			fps = atoi(optarg);
 			break;
@@ -550,8 +564,8 @@ main(int argc, char *argv[])
 #endif
 		case '?':
 		default:
-			printf("Usage: %s [-v] [-r fps] [-T font-path] "
-			       "[-t fontspec]", agProgName);
+			printf("Usage: %s [-v] [-d debuglvl] [-r fps] "
+			       "[-T font-path] [-t fontspec]", agProgName);
 #ifdef HAVE_OPENGL
 			printf(" [-gG]");
 #endif
@@ -560,7 +574,8 @@ main(int argc, char *argv[])
 		}
 	}
 #endif /* HAVE_GETOPT */
-	if (AG_InitVideo(1024, 768, 32, AG_VIDEO_RESIZABLE) == -1) {
+	if (AG_InitVideo(800, 600, 32,
+	    AG_VIDEO_OPENGL_OR_SDL|AG_VIDEO_RESIZABLE) == -1) {
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (-1);
 	}
@@ -577,21 +592,21 @@ main(int argc, char *argv[])
 
 	/* Register our classes. */
 	RegisterClasses();
-	
+
+	/* Load our built-in icons. */
+	esIcon_Init();
+
 	/* Create the application menu. */ 
 	appMenu = AG_MenuNewGlobal(0);
 	AG_MenuDynamicItem(appMenu->root, _("File"), NULL, FileMenu, NULL);
 	AG_MenuDynamicItem(appMenu->root, _("Edit"), NULL, EditMenu, NULL);
-
 #if defined(HAVE_AGAR_DEV) && defined(DEBUG)
-	/* Create an Agar-DEV browser for debugging our VFS */
 	DEV_InitSubsystem(0);
 	if (agDebugLvl >= 5) {
 		DEV_Browser(&vfsRoot);
 	}
 	DEV_ToolMenu(AG_MenuNode(appMenu->root, _("Debug"), NULL));
 #endif
-
 	AG_EventLoop();
 	AG_ObjectDestroy(&vfsRoot);
 	AG_Destroy();

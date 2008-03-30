@@ -30,6 +30,8 @@ typedef struct es_sim {
 
 #define SIM(p) ((ES_Sim *)p)
 
+#include <circuit/dc.h>
+
 __BEGIN_DECLS
 void ES_SimInit(void *, const ES_SimOps *);
 void ES_SimDestroy(void *);

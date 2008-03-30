@@ -7,6 +7,7 @@
 
 typedef struct ag_scope {
 	struct ag_object obj;
+	SC_Plotter *plotter;
 	ES_Circuit *ckt;
 } ES_Scope;
 

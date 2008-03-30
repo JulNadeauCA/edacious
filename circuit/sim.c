@@ -34,10 +34,10 @@
 
 #include "eda.h"
 
-extern const ES_SimOps esMnaOps;
+extern const ES_SimOps esSimDcOps;
 
 const ES_SimOps *esSimOps[] = {
-	&esMnaOps,
+	&esSimDcOps,
 	NULL
 };
 

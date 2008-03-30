@@ -151,7 +151,7 @@ MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
 VG_ToolOps esWireTool = {
 	N_("Wire"),
 	N_("Merge two nodes."),
-	NULL,
+	&esIconInsertWire,
 	sizeof(VG_Tool),
 	0,
 	InitTool,

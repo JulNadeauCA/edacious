@@ -171,6 +171,16 @@ ES_CircuitModified(ES_Circuit *ckt)
 }
 
 static void
+PostSimulationStep(AG_Event *event)
+{
+	ES_Circuit *ckt = AG_SELF();
+	AG_Object *obj;
+
+	AGOBJECT_FOREACH_CHILD(obj, ckt, ag_object)
+		AG_PostEvent(ckt, obj, "circuit-step-end", NULL);
+}
+
+static void
 Init(void *p)
 {
 	ES_Circuit *ckt = p;
@@ -213,7 +223,7 @@ Init(void *p)
 	/* Notify visualization objects of simulation progress. */
 	ev = AG_SetEvent(ckt, "circuit-step-begin", NULL, NULL);
 	ev->flags |= AG_EVENT_PROPAGATE;
-	ev = AG_SetEvent(ckt, "circuit-step-end", NULL, NULL);
+	ev = AG_SetEvent(ckt, "circuit-step-end", PostSimulationStep, NULL);
 	ev->flags |= AG_EVENT_PROPAGATE;
 }
 
@@ -1123,21 +1133,6 @@ PollCircuitSources(AG_Event *event)
 }
 
 static void
-RevertCircuit(AG_Event *event)
-{
-	ES_Circuit *ckt = AG_PTR(1);
-
-	if (AG_ObjectLoad(ckt) == 0) {
-		AG_TextTmsg(AG_MSG_INFO, 1000,
-		    _("Circuit `%s' reverted successfully."),
-		    AGOBJECT(ckt)->name);
-	} else {
-		AG_TextMsg(AG_MSG_ERROR, "%s: %s", AGOBJECT(ckt)->name,
-		    AG_GetError());
-	}
-}
-
-static void
 SaveCircuit(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
@@ -1195,7 +1190,7 @@ ShowTopology(AG_Event *event)
 }
 
 static void
-ShowDocumentProps(AG_Event *event)
+ShowLayoutSettings(AG_Event *event)
 {
 	char path[AG_OBJECT_PATH_MAX];
 	AG_Window *pwin = AG_PTR(1);
@@ -1493,7 +1488,7 @@ out:
 }
 
 static void
-CreateScope(AG_Event *event)
+NewScope(AG_Event *event)
 {
 	char name[AG_OBJECT_NAME_MAX];
 	ES_Circuit *ckt = AG_PTR(1);
@@ -1517,7 +1512,7 @@ ES_CircuitDrawPort(ES_Circuit *ckt, ES_Port *port, float x, float y)
 
 	if (ckt->flags & CIRCUIT_SHOW_NODES) {
 		vge = VG_Begin(vg, VG_CIRCLE);
-		vge->selected = 1;
+		vge->flags |= VG_ELEMENT_SELECTED;
 		VG_Vertex2(vg, x, y);
 		if (port->selected) {
 			VG_ColorRGB(vg, 255, 255, 165);
@@ -1532,7 +1527,7 @@ ES_CircuitDrawPort(ES_Circuit *ckt, ES_Port *port, float x, float y)
 		if (ckt->flags &
 		    (CIRCUIT_SHOW_NODENAMES|CIRCUIT_SHOW_NODESYMS)) {
 			vge = VG_Begin(vg, VG_TEXT);
-			vge->selected = 1;
+			vge->flags |= VG_ELEMENT_SELECTED;
 			VG_Vertex2(vg, x, y);
 			VG_SetStyle(vg, "node-name");
 			VG_ColorRGB(vg, 0, 200, 100);
@@ -1583,7 +1578,7 @@ Edit(void *p)
 {
 	ES_Circuit *ckt = p;
 	AG_Window *win;
-	AG_Toolbar *toolbar;
+	AG_Toolbar *tbSide;
 	AG_Menu *menu;
 	AG_MenuItem *mi, *miSub;
 	AG_Pane *pane;
@@ -1592,7 +1587,7 @@ Edit(void *p)
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, "%s", AGOBJECT(ckt)->name);
 
-	toolbar = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
+	tbSide = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
 	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND);
 	VG_ViewDrawFn(vv, CircuitDrawGeneric, "%p", ckt);
 	VG_ViewSetSnapMode(vv, VG_GRID);
@@ -1602,19 +1597,17 @@ Edit(void *p)
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	mi = AG_MenuAddItem(menu, _("File"));
 	{
-		AG_MenuActionKb(mi, _("Revert"), agIconLoad.s,
-		    SDLK_r, KMOD_CTRL, RevertCircuit, "%p", ckt);
 		AG_MenuActionKb(mi, _("Save"), agIconSave.s,
 		    SDLK_s, KMOD_CTRL, SaveCircuit, "%p", ckt);
 		miSub = AG_MenuNode(mi, _("Export"), agIconSave.s);
 		{
 			AG_MenuAction(miSub, _("Export to SPICE..."),
-			    agIconSave.s,
+			    esIconExportToSpice.s,
 			    ExportToSPICE, "%p", ckt);
 		}
 		AG_MenuSeparator(mi);
-		AG_MenuAction(mi, _("Document properties..."), agIconGear.s,
-		    ShowDocumentProps, "%p,%p,%p", win, ckt, vv);
+		AG_MenuAction(mi, _("Layout settings..."), agIconGear.s,
+		    ShowLayoutSettings, "%p,%p,%p", win, ckt, vv);
 		AG_MenuSeparator(mi);
 		AG_MenuActionKb(mi, _("Close document"), agIconClose.s,
 		    SDLK_w, KMOD_CTRL, AGWINCLOSE(win));
@@ -1631,26 +1624,27 @@ Edit(void *p)
 
 	mi = AG_MenuAddItem(menu, _("View"));
 	{
-		AG_MenuAction(mi, _("Create view..."), NULL,
+		AG_MenuAction(mi, _("Create view..."), esIconCircuit.s,
 		    CircuitCreateView, "%p,%p", win, ckt);
 		AG_MenuSeparator(mi);
-		AG_MenuUintFlags(mi, _("Circuit nodes"), NULL,
+		AG_MenuUintFlags(mi, _("Circuit nodes"), esIconNode.s,
 		    &ckt->flags, CIRCUIT_SHOW_NODES, 0);
-		AG_MenuUintFlags(mi, _("Node names"), NULL,
+		AG_MenuUintFlags(mi, _("Node names"), esIconNode.s,
 		    &ckt->flags, CIRCUIT_SHOW_NODENAMES, 0);
-		AG_MenuUintFlags(mi, _("Node symbols"), NULL,
+		AG_MenuUintFlags(mi, _("Node symbols"), esIconNode.s,
 		    &ckt->flags, CIRCUIT_SHOW_NODESYMS, 0);
 		AG_MenuSeparator(mi);
-		AG_MenuUintFlags(mi, _("Drawing origin"), NULL,
-		    &ckt->vg->flags, VG_VISORIGIN, 0);
-		AG_MenuUintFlags(mi, _("Drawing grid"), vgIconSnapGrid.s,
+		AG_MenuUintFlags(mi, _("Show grid"), vgIconSnapGrid.s,
 		    &ckt->vg->flags, VG_VISGRID, 0);
-		AG_MenuUintFlags(mi, _("Drawing extents"), vgIconBlock.s,
+#ifdef DEBUG
+		AG_MenuUintFlags(mi, _("Show extents"), vgIconBlock.s,
 		    &ckt->vg->flags, VG_VISBBOXES, 0);
+#endif
 		AG_MenuSeparator(mi);
-		AG_MenuAction(mi, _("Circuit topology..."), NULL,
+		AG_MenuAction(mi, _("Circuit topology..."), esIconMesh.s,
 		    ShowTopology, "%p,%p", win, ckt);
-		AG_MenuAction(mi, _("Log console..."), vgIconText.s,
+		AG_MenuTool(mi, tbSide, _("Log console..."), esIconConsole.s,
+		    0, 0,
 		    ShowConsole, "%p,%p", win, ckt);
 	}
 		
@@ -1661,7 +1655,7 @@ Edit(void *p)
 
 		for (pOps = &esSimOps[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
-			AG_MenuTool(mi, toolbar, _(ops->name),
+			AG_MenuTool(mi, tbSide, _(ops->name),
 			    ops->icon ? ops->icon->s : NULL, 0, 0,
 			    CircuitSelectSim, "%p,%p,%p", ckt, ops, win);
 		}
@@ -1683,14 +1677,16 @@ Edit(void *p)
 			int i;
 
 			tl = AG_TlistNew(ntab, AG_TLIST_EXPAND);
+			AG_TlistSizeHint(tl, _("Independent voltage source"),
+			    20);
 			AGWIDGET(tl)->flags &= ~(AG_WIDGET_FOCUSABLE);
 			AG_SetEvent(tl, "tlist-dblclick", ES_ComponentInsert,
 			    "%p,%p,%p", vv, tl, ckt);
-
+#if 0
 			AG_ButtonAct(ntab, AG_BUTTON_HFILL,
 			    _("Insert component"),
 			    ES_ComponentInsert, "%p,%p,%p", vv, tl, ckt);
-
+#endif
 			for (model = &edaModels[0]; *model != NULL; model++)
 				AG_TlistAddPtr(tl, NULL,
 				    ((ES_ComponentClass *)*model)->name,
@@ -1741,12 +1737,12 @@ Edit(void *p)
 			}
 		}
 
-		box = AG_BoxNew(pane->div[1], AG_BOX_VERT, AG_BOX_EXPAND);
+		box = AG_BoxNew(pane->div[1], AG_BOX_HORIZ, AG_BOX_EXPAND);
 		{
 			AG_ObjectAttach(box, vv);
 			AG_WidgetFocus(vv);
+			AG_ObjectAttach(box, tbSide);
 		}
-//		AG_ObjectAttach(pane->div[1], toolbar);
 	}
 	
 	mi = AG_MenuAddItem(menu, _("Components"));
@@ -1762,21 +1758,22 @@ Edit(void *p)
 		VG_ViewRegTool(vv, &esInscomOps, ckt);
 
 		tool = VG_ViewRegTool(vv, &esSelcomOps, ckt);
-		AG_MenuTool(mi, toolbar, _("Select components"),
+		AG_MenuTool(mi, tbSide, _("Select components"),
 		    tool->ops->icon ? tool->ops->icon->s : NULL, 0, 0,
 		    CircuitSelectTool, "%p,%p,%p", vv, tool, ckt);
 		VG_ViewSetDefaultTool(vv, tool);
 		
 		tool = VG_ViewRegTool(vv, &esWireTool, ckt);
-		AG_MenuTool(mi, toolbar, _("Insert wire"),
+		AG_MenuTool(mi, tbSide, _("Insert wire"),
 		    tool->ops->icon ? tool->ops->icon->s : NULL, 0, 0,
 		    CircuitSelectTool, "%p,%p,%p", vv, tool, ckt);
 	}
 	
 	mi = AG_MenuAddItem(menu, _("Visualization"));
 	{
-		AG_MenuAction(mi, _("Create scope"), NULL,
-		    CreateScope, "%p", ckt);
+		AG_MenuTool(mi, tbSide, _("New scope..."), esIconScope.s,
+		    0, 0,
+		    NewScope, "%p", ckt);
 	}
 
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);
