@@ -28,8 +28,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 #include "logic_probe.h"
@@ -125,6 +125,7 @@ ES_ComponentClass esLogicProbeClass = {
 	},
 	N_("LogicProbe"),
 	"LPROBE",
+	NULL,			/* schem */
 	Draw,
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

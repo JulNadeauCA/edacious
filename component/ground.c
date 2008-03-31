@@ -29,8 +29,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 #include "ground.h"
@@ -104,6 +104,7 @@ ES_ComponentClass esGroundClass = {
 	},
 	N_("Ground"),
 	"Gnd",
+	"Ground.vg",
 	Draw,
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

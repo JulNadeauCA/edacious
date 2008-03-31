@@ -198,13 +198,12 @@ Init(void *p)
 	ckt->nodes = Malloc(sizeof(ES_Node *));
 	ckt->n = 0;
 	ckt->console = NULL;
-	AG_MutexInitRecursive(&ckt->lock);
 	TAILQ_INIT(&ckt->wires);
 	TAILQ_INIT(&ckt->syms);
 	
 	InitGround(ckt);
 
-	vg = ckt->vg = VG_New(VG_VISGRID);
+	vg = ckt->vg = VG_New(0);
 	Strlcpy(vg->layers[0].name, _("Schematic"), sizeof(vg->layers[0].name));
 	VG_SetBackgroundColor(vg, VG_GetColorRGB(0,0,0));
 	VG_SetGridColor(vg, VG_GetColorRGB(120,120,120));
@@ -983,7 +982,6 @@ Destroy(void *p)
 	ES_Circuit *ckt = p;
 	
 	VG_Destroy(ckt->vg);
-	pthread_mutex_destroy(&ckt->lock);
 }
 
 /* Select the simulation mode. */
@@ -1027,28 +1025,6 @@ ES_CircuitLog(void *p, const char *fmt, ...)
 	AG_Vasprintf(&ln->text, fmt, args);
 	va_end(args);
 	ln->len = strlen(ln->text);
-}
-
-/* Lock the circuit and suspend any continuous simulation in progress. */
-void
-ES_LockCircuit(ES_Circuit *ckt)
-{
-	AG_MutexLock(&ckt->lock);
-	if (ckt->sim != NULL && ckt->sim->running) {
-//		if (ckt->simlock++ == 0)
-//			ES_SuspendSimulation(ckt);
-	}
-}
-
-/* Resume any previously suspended simulation and unlock the circuit. */
-void
-ES_UnlockCircuit(ES_Circuit *ckt)
-{
-	if (ckt->sim != NULL && !ckt->sim->running) {
-		if (--ckt->simlock == 0)
-			ES_ResumeSimulation(ckt);
-	}
-	AG_MutexUnlock(&ckt->lock);
 }
 
 static void
@@ -1386,7 +1362,7 @@ ShowConsole(AG_Event *event)
 	AG_WidgetFocus(ckt->console);
 	AG_WindowAttach(pwin, win);
 
-	AG_WindowSetGeometryAligned(win, AG_WINDOW_MC, agView->w/2, 100);
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_BL, 50, 30);
 	AG_WindowShow(win);
 }
 
@@ -1427,7 +1403,7 @@ PollComponentPorts(AG_Event *event)
 	if (com == NULL)
 		goto out;
 
-	pthread_mutex_lock(&com->lock);
+	AG_ObjectLock(com);
 	for (i = 1; i <= com->nports; i++) {
 		char text[AG_TLIST_LABEL_MAX];
 		ES_Port *port = &com->ports[i];
@@ -1437,7 +1413,7 @@ PollComponentPorts(AG_Event *event)
 		    ES_NodeVoltage(ckt, port->node));
 		AG_TlistAddPtr(tl, NULL, text, port);
 	}
-	pthread_mutex_unlock(&com->lock);
+	AG_ObjectUnlock(com);
 out:
 	AG_TlistRestore(tl);
 }
@@ -1459,7 +1435,7 @@ PollComponentPairs(AG_Event *event)
 	if (com == NULL)
 		goto out;
 
-	pthread_mutex_lock(&com->lock);
+	AG_ObjectLock(com);
 	for (i = 0; i < com->npairs; i++) {
 		char text[AG_TLIST_LABEL_MAX];
 		ES_Pair *pair = &com->pairs[i];
@@ -1482,7 +1458,7 @@ PollComponentPairs(AG_Event *event)
 			it->depth = 1;
 		}
 	}
-	pthread_mutex_unlock(&com->lock);
+	AG_ObjectUnlock(com);
 out:
 	AG_TlistRestore(tl);
 }
@@ -1508,11 +1484,11 @@ void
 ES_CircuitDrawPort(ES_Circuit *ckt, ES_Port *port, float x, float y)
 {
 	VG *vg = ckt->vg;
-	VG_Element *vge;
+	VG_Node *vn;
 
 	if (ckt->flags & CIRCUIT_SHOW_NODES) {
-		vge = VG_Begin(vg, VG_CIRCLE);
-		vge->flags |= VG_ELEMENT_SELECTED;
+		vn = VG_Begin(vg, VG_CIRCLE);
+		vn->flags |= VG_NODE_SELECTED;
 		VG_Vertex2(vg, x, y);
 		if (port->selected) {
 			VG_ColorRGB(vg, 255, 255, 165);
@@ -1526,8 +1502,8 @@ ES_CircuitDrawPort(ES_Circuit *ckt, ES_Port *port, float x, float y)
 	if (port->node >= 0) {
 		if (ckt->flags &
 		    (CIRCUIT_SHOW_NODENAMES|CIRCUIT_SHOW_NODESYMS)) {
-			vge = VG_Begin(vg, VG_TEXT);
-			vge->flags |= VG_ELEMENT_SELECTED;
+			vn = VG_Begin(vg, VG_TEXT);
+			vn->flags |= VG_NODE_SELECTED;
 			VG_Vertex2(vg, x, y);
 			VG_SetStyle(vg, "node-name");
 			VG_ColorRGB(vg, 0, 200, 100);
@@ -1588,7 +1564,7 @@ Edit(void *p)
 	AG_WindowSetCaption(win, "%s", AGOBJECT(ckt)->name);
 
 	tbSide = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
-	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND);
+	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
 	VG_ViewDrawFn(vv, CircuitDrawGeneric, "%p", ckt);
 	VG_ViewSetSnapMode(vv, VG_GRID);
 	VG_ViewSetScale(vv, 30.0f);
@@ -1635,10 +1611,10 @@ Edit(void *p)
 		    &ckt->flags, CIRCUIT_SHOW_NODESYMS, 0);
 		AG_MenuSeparator(mi);
 		AG_MenuUintFlags(mi, _("Show grid"), vgIconSnapGrid.s,
-		    &ckt->vg->flags, VG_VISGRID, 0);
+		    &vv->flags, VG_VIEW_GRID, 0);
 #ifdef DEBUG
 		AG_MenuUintFlags(mi, _("Show extents"), vgIconBlock.s,
-		    &ckt->vg->flags, VG_VISBBOXES, 0);
+		    &vv->flags, VG_VIEW_EXTENTS, 0);
 #endif
 		AG_MenuSeparator(mi);
 		AG_MenuAction(mi, _("Circuit topology..."), esIconMesh.s,

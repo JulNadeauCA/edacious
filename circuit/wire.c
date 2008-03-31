@@ -28,8 +28,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 
@@ -131,18 +131,20 @@ MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
 	VG *vg = ckt->vg;
-
+#if 0
 	vg->origin[1].x = x;
 	vg->origin[1].y = y;
-
+#endif
 	if (esCurWire != NULL) {
 		esCurWire->ports[1].x = x;
 		esCurWire->ports[1].y = y;
 		//ES_WireHighlightPorts(ckt, esCurWire);
 	} else {
 		if (ES_ComponentPortOverlap(ckt, NULL, x, y) != NULL) {
+#if 0
 			vg->origin[2].x = x;
 			vg->origin[2].y = y;
+#endif
 		}
 	}
 	return (0);

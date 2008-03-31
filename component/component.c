@@ -28,8 +28,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 #include <agar/dev.h>
 
 #include <string.h>
@@ -41,7 +41,6 @@ ES_ComponentFreePorts(ES_Component *com)
 {
 	int i;
 	
-	pthread_mutex_destroy(&com->lock);
 	for (i = 0; i < com->npairs; i++) {
 		ES_Pair *pair = &com->pairs[i];
 
@@ -100,24 +99,28 @@ OnRename(AG_Event *event)
 static void
 OnAttach(AG_Event *event)
 {
-	char blkname[VG_BLOCK_NAME_MAX];
+	char blkName[VG_BLOCK_NAME_MAX];
 	ES_Component *com = AG_SELF();
 	ES_Circuit *ckt = AG_SENDER();
 	VG *vg = ckt->vg;
-	VG_Block *block;
 	
 	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*")) {
 		return;
 	}
+	Debug(ckt, "Attaching component: %s\n", AGOBJECT(com)->name);
+	Debug(com, "Attaching to circuit: %s\n", AGOBJECT(ckt)->name);
+
 	com->ckt = ckt;
 	
-	AG_ObjectCopyName(com, blkname, sizeof(blkname));
+	AG_ObjectCopyName(com, blkName, sizeof(blkName));
 #ifdef DEBUG
 	if (com->block != NULL) { Fatal("Block exists"); }
-	if (VG_GetBlock(vg, blkname) != NULL) { Fatal("Duplicate block"); }
+	if (VG_GetBlock(vg, blkName) != NULL) { Fatal("Duplicate block"); }
 #endif
-	com->block = VG_BeginBlock(vg, blkname, 0);
-	VG_Origin(vg, 0, com->ports[0].x, com->ports[0].y);
+	com->block = VG_BeginBlock(vg, blkName, 0);
+	com->block->pos.x = com->ports[0].x;
+	com->block->pos.y = com->ports[0].y;
+/*	VG_Origin(vg, 0, com->ports[0].x, com->ports[0].y); */
 	VG_EndBlock(vg);
 }
 
@@ -132,6 +135,8 @@ OnDetach(AG_Event *event)
 		return;
 
 	ES_LockCircuit(ckt);
+	Debug(ckt, "Detaching component: %s\n", AGOBJECT(com)->name);
+	Debug(com, "Detaching from circuit: %s\n", AGOBJECT(ckt)->name);
 	AG_PostEvent(ckt, com, "circuit-disconnected", NULL);
 
 	for (i = 0; i <= ckt->n; i++) {
@@ -205,10 +210,10 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 {
 	ES_Component *com = p;
 	ES_Circuit *ckt = com->ckt;
-	VG_Block *block_save;
-	VG_Element *element_save;
+	VG_Block *blockSave;
+	VG_Node *nodeSave;
 	VG *vg = ckt->vg;
-	VG_Element *vge;
+	VG_Node *vn;
 	int i;
 	
 	if ((AGOBJECT(com)->flags & AG_OBJECT_RESIDENT) == 0)
@@ -218,9 +223,9 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 	if (com->block == NULL) { Fatal("Missing block"); }
 #endif
 
-	pthread_mutex_lock(&vg->lock);
-	block_save = vg->cur_block;
-	element_save = vg->cur_vge;
+	VG_Lock(vg);
+	blockSave = vg->curBlock;
+	nodeSave = vg->curNode;
 	VG_SelectBlock(vg, com->block);
 	VG_ClearBlock(vg, com->block);
 
@@ -242,25 +247,25 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 
 	/* TODO blend */
 	if (com->selected && com->highlighted) {
-		TAILQ_FOREACH(vge, &com->block->vges, vgbmbs) {
-			if (!(vge->flags & VG_ELEMENT_SELECTED)) {
-				VG_Select(vg, vge);
+		TAILQ_FOREACH(vn, &com->block->nodes, vgbmbs) {
+			if (!(vn->flags & VG_NODE_SELECTED)) {
+				VG_Select(vg, vn);
 				VG_ColorRGB(vg, 250, 250, 180);
 				VG_End(vg);
 			}
 		}
 	} else if (com->selected) {
-		TAILQ_FOREACH(vge, &com->block->vges, vgbmbs) {
-			if (!(vge->flags & VG_ELEMENT_SELECTED)) {
-				VG_Select(vg, vge);
+		TAILQ_FOREACH(vn, &com->block->nodes, vgbmbs) {
+			if (!(vn->flags & VG_NODE_SELECTED)) {
+				VG_Select(vg, vn);
 				VG_ColorRGB(vg, 240, 240, 50);
 				VG_End(vg);
 			}
 		}
 	} else if (com->highlighted) {
-		TAILQ_FOREACH(vge, &com->block->vges, vgbmbs) {
-			if (!(vge->flags & VG_ELEMENT_SELECTED)) {
-				VG_Select(vg, vge);
+		TAILQ_FOREACH(vn, &com->block->nodes, vgbmbs) {
+			if (!(vn->flags & VG_NODE_SELECTED)) {
+				VG_Select(vg, vn);
 				VG_ColorRGB(vg, 180, 180, 120);
 				VG_End(vg);
 			}
@@ -270,9 +275,9 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 	if (com->block->theta != 0) {
 		VG_RotateBlock(vg, com->block, com->block->theta);
 	}
-	VG_Select(vg, element_save);
-	VG_SelectBlock(vg, block_save);
-	pthread_mutex_unlock(&vg->lock);
+	VG_Select(vg, nodeSave);
+	VG_SelectBlock(vg, blockSave);
+	VG_Unlock(vg);
 	return (ival);
 }
 
@@ -291,7 +296,6 @@ Init(void *obj)
 	com->npairs = 0;
 	com->specs = NULL;
 	com->nspecs = 0;
-	AG_MutexInitRecursive(&com->lock);
 	
 	com->loadDC_G = NULL;
 	com->loadDC_BCD = NULL;
@@ -338,6 +342,7 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 		port->branch = NULL;
 		port->selected = 0;
 		com->nports++;
+		Debug(com, "Added port #%d (%s)\n", i, port->name);
 	}
 
 	/* Find the port pairs. */
@@ -368,6 +373,9 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 			pair->loops = Malloc(sizeof(ES_Loop *));
 			pair->lpols = Malloc(sizeof(int));
 			pair->nloops = 0;
+			Debug(com, "Found pair: %s<->%s\n",
+			    pair->p1->name,
+			    pair->p2->name);
 		}
 	}
 }
@@ -438,11 +446,11 @@ Uint
 ES_PortNode(ES_Component *com, int port)
 {
 	if (port > com->nports) {
-		Fatal("%s: bad port %d/%u", AGOBJECT(com)->name, port,
+		Fatal("%s: Bad port %d/%u", AGOBJECT(com)->name, port,
 		    com->nports);
 	}
 	if (com->ports[port].node < 0 || com->ports[port].node > com->ckt->n) {
-		Fatal("%s:%d: bad node", AGOBJECT(com)->name, port);
+		Fatal("%s:%d: Bad node", AGOBJECT(com)->name, port);
 	}
 	return (com->ports[port].node);
 }
@@ -459,7 +467,7 @@ ES_FindPort(void *p, const char *portname)
 		if (strcmp(port->name, portname) == 0)
 			return (port);
 	}
-	AG_SetError(_("%s: no such port: `%s'"), AGOBJECT(com)->name, portname);
+	AG_SetError(_("%s: No such port: <%s>"), AGOBJECT(com)->name, portname);
 	return (NULL);
 }
 
@@ -484,7 +492,7 @@ RemoveComponent(AG_Event *event)
 		    AGOBJECT(com)->name);
 		AG_ObjectDestroy(com);
 	} else {
-		AG_TextMsg(AG_MSG_ERROR, _("%s: component is in use."),
+		AG_TextMsg(AG_MSG_ERROR, _("%s: Component is in use."),
 		    AGOBJECT(com)->name);
 	}
 	ES_CircuitModified(ckt);
@@ -506,7 +514,7 @@ RemoveSelections(AG_Event *event)
 		if (!AG_ObjectInUse(com)) {
 			AG_ObjectDestroy(com);
 		} else {
-			AG_TextMsg(AG_MSG_ERROR, _("%s: component is in use."),
+			AG_TextMsg(AG_MSG_ERROR, _("%s: Component is in use."),
 			    AGOBJECT(com)->name);
 		}
 		ES_CircuitModified(ckt);
@@ -738,11 +746,11 @@ ES_ComponentConnect(ES_Circuit *ckt, ES_Component *com, VG_Vtx *vtx)
 	int i;
 
 	ES_LockCircuit(ckt);
+	Debug(ckt, "Connecting component: %s\n", AGOBJECT(com)->name);
+	Debug(com, "Connecting to circuit: %s\n", AGOBJECT(ckt)->name);
 	for (i = 1; i <= com->nports; i++) {
 		ES_Port *port = &com->ports[i];
 
-		printf("%s class = %s\n", AGOBJECT(com)->name,
-		    AGOBJECT(com)->cls->name);
 		oport = ES_ComponentPortOverlap(ckt, com,
 		    vtx->x + port->x,
 		    vtx->y + port->y);

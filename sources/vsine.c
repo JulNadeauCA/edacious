@@ -28,8 +28,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 #include "vsine.h"
@@ -157,6 +157,7 @@ ES_ComponentClass esVSineClass = {
 	},
 	N_("Sinusoidal voltage source"),
 	"Vsin",
+	"Sources/Vsine.vg",
 	Draw,
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

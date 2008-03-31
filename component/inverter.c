@@ -28,8 +28,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 #include "inverter.h"
@@ -174,6 +174,7 @@ ES_ComponentClass esInverterClass = {
 	},
 	N_("Inverter"),
 	"Inv",
+	"Digital/Inverter.vg",
 	Draw,
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

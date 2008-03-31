@@ -91,7 +91,6 @@ typedef struct es_circuit {
 #define CIRCUIT_SHOW_NODES	0x01
 #define CIRCUIT_SHOW_NODENAMES	0x02
 #define CIRCUIT_SHOW_NODESYMS	0x04
-	pthread_mutex_t lock;
 	int simlock;			/* Simulation is locked */
 
 	ES_Node **nodes;		/* Nodes (element 0 is ground) */
@@ -116,8 +115,6 @@ extern AG_ObjectClass esCircuitClass;
 
 void	 ES_CircuitFreeComponents(ES_Circuit *);
 void	 ES_CircuitLog(void *, const char *, ...);
-void	 ES_LockCircuit(ES_Circuit *);
-void	 ES_UnlockCircuit(ES_Circuit *);
 
 int	 ES_CircuitAddNode(ES_Circuit *, Uint);
 int	 ES_CircuitMergeNodes(ES_Circuit *, int, int);
@@ -155,6 +152,28 @@ ES_Sym		*ES_CircuitAddVsourceSym(ES_Circuit *, const char *, int);
 ES_Sym		*ES_CircuitAddIsourceSym(ES_Circuit *, const char *, int);
 void		 ES_CircuitDelSym(ES_Circuit *, ES_Sym *);
 ES_Sym 		*ES_CircuitFindSym(ES_Circuit *, const char *);
+
+/* Lock the circuit and suspend any continuous simulation in progress. */
+static __inline__ void
+ES_LockCircuit(ES_Circuit *ckt)
+{
+	AG_ObjectLock(ckt);
+	if (ckt->sim != NULL && ckt->sim->running) {
+		if (ckt->simlock++ == 0)
+			ES_SuspendSimulation(ckt);
+	}
+}
+
+/* Resume any previously suspended simulation and unlock the circuit. */
+static __inline__ void
+ES_UnlockCircuit(ES_Circuit *ckt)
+{
+	if (ckt->sim != NULL && !ckt->sim->running) {
+		if (--ckt->simlock == 0)
+			ES_ResumeSimulation(ckt);
+	}
+	AG_ObjectUnlock(ckt);
+}
 __END_DECLS
 
 #include "close_code.h"

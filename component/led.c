@@ -28,8 +28,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 #include "led.h"
@@ -137,6 +137,7 @@ ES_ComponentClass esLedClass = {
 	},
 	N_("Led"),
 	"LED",
+	NULL,			/* schem */
 	Draw,
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

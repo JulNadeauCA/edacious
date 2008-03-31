@@ -29,8 +29,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 #include "spdt.h"
@@ -219,6 +219,7 @@ ES_ComponentClass esSpdtClass = {
 	},
 	N_("SPDT switch"),
 	"Sw",
+	NULL,			/* schem */
 	Draw,
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

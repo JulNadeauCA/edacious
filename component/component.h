@@ -69,8 +69,9 @@ typedef struct es_spec {
 /* Generic component description and operation vector. */
 typedef struct es_component_class {
 	AG_ObjectClass obj;
-	const char *name;			/* Name (eg. "Resistor") */
-	const char *pfx;			/* Prefix (eg. "R") */
+	const char *name;	/* Name (e.g., "Resistor") */
+	const char *pfx;	/* Prefix (e.g., "R") */
+	const char *schem;	/* Schematic filename (or NULL if generated) */
 
 	void	 (*draw)(void *, VG *);
 	void	 (*instance_menu)(void *, struct ag_menu_item *);
@@ -87,7 +88,6 @@ typedef struct es_component {
 #define COMPONENT_FLOATING	0x01		/* Not yet connected */
 	int selected;				/* Selected for edition? */
 	int highlighted;			/* Selected for selection? */
-	pthread_mutex_t lock;
 	AG_Timeout redraw_to;			/* Timer for vg updates */
 	float Tspec;				/* Instance temp (k) */
 	ES_Port ports[COMPONENT_MAX_PORTS];	/* Interface elements */

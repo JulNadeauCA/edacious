@@ -28,8 +28,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 #include "vsource.h"
@@ -519,6 +519,7 @@ ES_ComponentClass esVsourceClass = {
 	},
 	N_("Independent voltage source"),
 	"V",
+	"Sources/Vsource.vg",
 	Draw,
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

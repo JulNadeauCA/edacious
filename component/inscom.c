@@ -28,8 +28,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 #include <agar/dev.h>
 
 #include "eda.h"
@@ -144,9 +144,10 @@ MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
 	ES_Circuit *ckt = t->p;
 	VG *vg = ckt->vg;
 	int nconn;
-
+#if 0
 	vg->origin[1].x = x;
 	vg->origin[1].y = y;
+#endif
 	if (esInscomCur != NULL) {
 		VG_MoveBlock(vg, esInscomCur->block, x, y, -1);
 		nconn = ES_ComponentHighlightPorts(ckt, esInscomCur);

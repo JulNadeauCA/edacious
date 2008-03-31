@@ -29,8 +29,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 #include "digital.h"
@@ -154,7 +154,7 @@ ES_DigitalSetGndPort(void *p, int port)
 }
 
 int
-ES_LogicOutput(void *p, const char *portname, ES_LogicState nstate)
+ES_LogicOutput(void *p, const char *portname, ES_LogicState nState)
 {
 	ES_Digital *dig = p;
 	ES_Port *port;
@@ -169,18 +169,18 @@ ES_LogicOutput(void *p, const char *portname, ES_LogicState nstate)
 
 		if ((pair->p1 == port && pair->p2->n == dig->VccPort) ||
 		    (pair->p2 == port && pair->p1->n == dig->VccPort)) {
-			dig->G->mat[i+1][1] = (nstate == ES_LOW) ?
+			dig->G->mat[i+1][1] = (nState == ES_LOW) ?
 			    1e-9 : 1.0 - 1e-9;
 		}
 		if ((pair->p1 == port && pair->p2->n == dig->GndPort) ||
 		    (pair->p2 == port && pair->p1->n == dig->GndPort)) {
-			dig->G->mat[i+1][1] = (nstate == ES_HIGH) ?
+			dig->G->mat[i+1][1] = (nState == ES_HIGH) ?
 			    1e-9 : 1.0 - 1e-9;
 		}
 	}
-	ES_ComponentLog(dig, "%s -> %s", portname,
-	    nstate == ES_LOW ? "low" :
-	    nstate == ES_HIGH ? "high" : "hi-Z");
+	Debug(dig, "LogicOutput: %s -> %s", portname,
+	    nState == ES_LOW ? "LOW" :
+	    nState == ES_HIGH ? "HIGH" : "HI-Z");
 	return (0);
 }
 
@@ -196,14 +196,12 @@ ES_LogicInput(void *p, const char *portname)
 		return (-1);
 	}
 	v = ES_NodeVoltage(COM(dig)->ckt, port->node);
-	printf("[%s:%s]: %f\n", AGOBJECT(dig)->name, portname, v);
 	if (v >= dig->Vih.min) {
 		return (ES_HIGH);
 	} else if (v <= dig->Vil.max) {
 		return (ES_LOW);
 	} else {
-		ES_ComponentLog(dig, "%s: invalid logic level (%fV)",
-		    portname, v);
+		Debug(dig, "%s: Invalid logic level (%fV)", portname, v);
 		return (ES_INVALID);
 	}
 }
@@ -278,6 +276,7 @@ ES_ComponentClass esDigitalClass = {
 	},
 	N_("Digital component"),
 	"Digital",
+	"Digital/Digital.vg",
 	Draw,
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

@@ -28,10 +28,10 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
 #include <agar/dev.h>
 #include <agar/sc.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 

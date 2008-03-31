@@ -28,8 +28,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 
@@ -40,20 +40,20 @@ MouseButtonDown(void *p, float x, float y, int b)
 	ES_Circuit *ckt = t->p;
 	ES_Component *com;
 	AG_Window *pwin;
-	VG_Block *closest_blk;
+	VG_Block *blkClosest;
 	int multi = SDL_GetModState() & KMOD_CTRL;
 
 	if (b != SDL_BUTTON_LEFT) {
 		return (0);
 	}
-	closest_blk = VG_BlockClosest(ckt->vg, x, y);
+	blkClosest = VG_BlockClosest(ckt->vg, x, y);
 
 	if (!multi) {
 		ES_ComponentUnselectAll(ckt);
 	}
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->flags & COMPONENT_FLOATING ||
-		    com->block != closest_blk) {
+		    com->block != blkClosest) {
 			continue;
 		}
 		if (multi) {
@@ -81,20 +81,20 @@ LeftButton(VG_Tool *t, int button, int state, float x, float y, void *arg)
 {
 	ES_Circuit *ckt = t->p;
 	ES_Component *com;
-	VG_Block *closest_blk;
+	VG_Block *blkClosest;
 	int multi = SDL_GetModState() & KMOD_CTRL;
 
 	if (button != SDL_BUTTON_LEFT || !state) {
 		return (0);
 	}
-	closest_blk = VG_BlockClosest(ckt->vg, x, y);
+	blkClosest = VG_BlockClosest(ckt->vg, x, y);
 
 	if (!multi) {
 		ES_ComponentUnselectAll(ckt);
 	}
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->flags & COMPONENT_FLOATING ||
-		    com->block != closest_blk) {
+		    com->block != blkClosest) {
 			continue;
 		}
 		if (multi) {
@@ -120,17 +120,15 @@ MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
 	VG *vg = ckt->vg;
 	ES_Component *com;
 	VG_Rect rext;
-	VG_Block *closest_blk;
+	VG_Block *blkClosest;
 	
-	vg->origin[1].x = x;
-	vg->origin[1].y = y;
-	closest_blk = VG_BlockClosest(vg, x, y);
+	blkClosest = VG_BlockClosest(vg, x, y);
 	
 	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->flags & COMPONENT_FLOATING) {
 			continue;
 		}
-		com->highlighted = (com->block == closest_blk);
+		com->highlighted = (com->block == blkClosest);
 	}
 	return (0);
 }

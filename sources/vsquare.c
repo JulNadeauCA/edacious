@@ -28,8 +28,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 #include "vsquare.h"
@@ -177,6 +177,7 @@ ES_ComponentClass esVSquareClass = {
 	},
 	N_("Square voltage source"),
 	"Vsq",
+	"Sources/Vsquare.vg",
 	Draw,
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

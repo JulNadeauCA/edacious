@@ -28,8 +28,8 @@
  */
 
 #include <agar/core.h>
-#include <agar/vg.h>
 #include <agar/gui.h>
+#include <agar/vg.h>
 
 #include "eda.h"
 #include "or.h"
@@ -113,6 +113,7 @@ ES_ComponentClass esOrClass = {
 	},
 	N_("OR Gate"),
 	"Or",
+	"Digital/OR.vg",
 	Draw,
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
