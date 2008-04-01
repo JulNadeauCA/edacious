@@ -35,15 +35,16 @@
 
 #include "eda.h"
 
-#include <string.h>
-#include <unistd.h>
-
+#include <schem/schem.h>
 #include <circuit/circuit.h>
 #include <circuit/scope.h>
 #include <circuit/spice.h>
 
 #include <icons.h>
 #include <icons_data.h>
+
+#include <string.h>
+#include <unistd.h>
 
 #include <config/have_getopt.h>
 #include <config/have_agar_dev.h>
@@ -94,6 +95,7 @@ RegisterClasses(void)
 	AG_RegisterClass(&esDigitalClass);
 	AG_RegisterClass(&esCircuitClass);
 	AG_RegisterClass(&esScopeClass);
+	AG_RegisterClass(&esSchemClass);
 	for (model = &edaModels[0]; *model != NULL; model++) {
 		AG_RegisterClass(*model);
 	}
@@ -109,7 +111,17 @@ SaveAndClose(AG_Object *obj, AG_Window *win)
 static void
 SaveChangesReturn(AG_Event *event)
 {
-	SaveAndClose(AG_PTR(2), AG_PTR(1));
+	AG_Window *win = AG_PTR(1);
+	AG_Object *obj = AG_PTR(2);
+	int doSave = AG_INT(3);
+
+	AG_PostEvent(NULL, obj, "edit-close", NULL);
+
+	if (doSave) {
+		SaveAndClose(obj, win);
+	} else {
+		AG_ViewDetach(win);
+	}
 }
 
 static void
@@ -125,7 +137,7 @@ SaveChangesDlg(AG_Event *event)
 		AG_Window *wDlg;
 
 		wDlg = AG_TextPromptOptions(bOpts, 3,
-		    _("Save changes to %s?"), AGOBJECT(obj)->name);
+		    _("Save changes to %s?"), OBJECT(obj)->name);
 		AG_WindowAttach(win, wDlg);
 		
 		AG_ButtonText(bOpts[0], _("Save"));
@@ -147,7 +159,8 @@ WindowGainedFocus(AG_Event *event)
 	
 	AG_MutexLock(&objLock);
 	if (AG_ObjectIsClass(obj, "ES_Circuit:*") ||
-	    AG_ObjectIsClass(obj, "ES_Scope:*")) {
+	    AG_ObjectIsClass(obj, "ES_Scope:*") ||
+	    AG_ObjectIsClass(obj, "ES_Schem:*")) {
 		objFocus = obj;
 	} else {
 		objFocus = NULL;
@@ -182,10 +195,14 @@ static void
 NewObject(AG_Event *event)
 {
 	AG_ObjectClass *cls = AG_PTR(1);
+	AG_Object *obj;
 
-	ES_CreateEditionWindow(AG_ObjectNew(&vfsRoot, NULL, cls));
+	obj = AG_ObjectNew(&vfsRoot, NULL, cls);
+	ES_CreateEditionWindow(obj);
+	AG_PostEvent(NULL, obj, "edit-open", NULL);
 }
 
+#if 0
 static void
 EditDevice(AG_Event *event)
 {
@@ -193,6 +210,7 @@ EditDevice(AG_Event *event)
 
 	ES_CreateEditionWindow(dev);
 }
+#endif
 
 static void
 SetArchivePath(void *obj, const char *path)
@@ -208,14 +226,15 @@ SetArchivePath(void *obj, const char *path)
 	}
 }
 
-/* Load a circuit file from native agar-eda format. */
+/* Load an object file from native Agar-EDA format. */
 static void
-OpenCircuit(AG_Event *event)
+OpenNativeObject(AG_Event *event)
 {
-	char *path = AG_STRING(1);
+	AG_ObjectClass *cls = AG_PTR(1);
+	char *path = AG_STRING(2);
 	AG_Object *obj;
 
-	obj = AG_ObjectNew(&vfsRoot, NULL, &esCircuitClass);
+	obj = AG_ObjectNew(&vfsRoot, NULL, cls);
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
 		AG_TextMsgFromError();
 		AG_ObjectDetach(obj);
@@ -244,41 +263,32 @@ OpenDlg(AG_Event *event)
 	AG_FileDlgSetOptionContainer(fd, hPane->div[1]);
 
 	AG_FileDlgAddType(fd, _("Agar-EDA circuit model"), "*.ecm",
-	    OpenCircuit, NULL);
+	    OpenNativeObject, "%p", &esCircuitClass);
+	AG_FileDlgAddType(fd, _("Agar-EDA component schematic"), "*.eschem",
+	    OpenNativeObject, "%p", &esSchemClass);
 
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 70, 40);
 	AG_WindowShow(win);
 }
 
+/* Save an object file in native Agar-EDA format. */
 static void
-SaveCircuitToECM(AG_Event *event)
+SaveNativeObject(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
+	AG_Object *obj = AG_PTR(1);
 	char *path = AG_STRING(2);
 
-	if (AG_ObjectSaveToFile(ckt, path) == -1) {
+	if (AG_ObjectSaveToFile(obj, path) == -1) {
 		AG_TextMsgFromError();
 	}
-	SetArchivePath(ckt, path);
-}
-
-static void
-SaveCircuitToECL(AG_Event *event)
-{
-	ES_Circuit *ckt = AG_PTR(1);
-	char *path = AG_STRING(2);
-
-	if (AG_ObjectSaveToFile(ckt, path) == -1) {
-		AG_TextMsgFromError();
-	}
-	SetArchivePath(ckt, path);
+	SetArchivePath(obj, path);
 }
 
 static void
 SaveCircuitToGerber(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
-	char *path = AG_STRING(2);
+//	ES_Circuit *ckt = AG_PTR(1);
+//	char *path = AG_STRING(2);
 
 	AG_TextMsg(AG_MSG_ERROR, "Export to Gerber not implemented yet");
 }
@@ -286,8 +296,8 @@ SaveCircuitToGerber(AG_Event *event)
 static void
 SaveCircuitToXGerber(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
-	char *path = AG_STRING(2);
+//	ES_Circuit *ckt = AG_PTR(1);
+//	char *path = AG_STRING(2);
 
 	AG_TextMsg(AG_MSG_ERROR, "Export to XGerber not implemented yet");
 }
@@ -295,21 +305,39 @@ SaveCircuitToXGerber(AG_Event *event)
 static void
 SaveCircuitToSPICE3(AG_Event *event)
 {
-	char name[FILENAME_MAX];
 	ES_Circuit *ckt = AG_PTR(1);
 	char *path = AG_STRING(2);
 	
 	if (ES_CircuitExportSPICE3(ckt, path) == -1)
-		AG_TextMsg(AG_MSG_ERROR, "%s: %s", AGOBJECT(ckt)->name,
+		AG_TextMsg(AG_MSG_ERROR, "%s: %s", OBJECT(ckt)->name,
 		    AG_GetError());
 }
 
 static void
 SaveCircuitToPDF(AG_Event *event)
 {
-	char name[FILENAME_MAX];
-	ES_Circuit *ckt = AG_PTR(1);
-	char *path = AG_STRING(2);
+//	ES_Circuit *ckt = AG_PTR(1);
+//	char *path = AG_STRING(2);
+
+	/* TODO */
+	AG_TextMsg(AG_MSG_ERROR, "Export to PDF not implemented yet");
+}
+
+static void
+SaveSchem(AG_Event *event)
+{
+//	ES_Circuit *ckt = AG_PTR(1);
+//	char *path = AG_STRING(2);
+
+	/* TODO */
+	AG_TextMsg(AG_MSG_ERROR, "Export to PDF not implemented yet");
+}
+
+static void
+SaveSchemToPDF(AG_Event *event)
+{
+//	ES_Schem *scm = AG_PTR(1);
+//	char *path = AG_STRING(2);
 
 	/* TODO */
 	AG_TextMsg(AG_MSG_ERROR, "Export to PDF not implemented yet");
@@ -330,22 +358,33 @@ SaveAsDlg(AG_Event *event)
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 
 	if (AG_ObjectIsClass(obj, "ES_Circuit:*")) {
-		AG_FileDlgAddType(fd, _("Agar-EDA circuit model"), "*.ecm",
-		    SaveCircuitToECM, "%p", obj);
-		ft = AG_FileDlgAddType(fd, _("SPICE3 netlist"), "*.cir",
+		AG_FileDlgAddType(fd, _("Agar-EDA circuit model"),
+		    "*.ecm",
+		    SaveNativeObject, "%p", obj);
+		ft = AG_FileDlgAddType(fd, _("SPICE3 netlist"),
+		    "*.cir",
 		    SaveCircuitToSPICE3, "%p", obj);
-		AG_FileDlgAddType(fd, _("Portable Document Format"), "*.pdf",
+		AG_FileDlgAddType(fd, _("Portable Document Format"),
+		    "*.pdf",
 		    SaveCircuitToPDF, "%p", obj);
 		/* ... */
 	} else if (AG_ObjectIsClass(obj, "ES_Layout:*")) {
-		AG_FileDlgAddType(fd, _("Agar-EDA circuit layout"), "*.ecl",
-		    SaveCircuitToECL, "%p", obj);
+		AG_FileDlgAddType(fd, _("Agar-EDA circuit layout"),
+		    "*.ecl",
+		    SaveNativeObject, "%p", obj);
 		AG_FileDlgAddType(fd, _("Gerber (RS-274D)"),
 		    "*.gbr,*.phd,*.spl,*.art",
 		    SaveCircuitToGerber, "%p", obj);
 		AG_FileDlgAddType(fd, _("Extended Gerber (RS-274X)"),
 		    "*.gbl,*.gtl,*.gbs,*.gts,*.gbo,*.gto",
 		    SaveCircuitToXGerber, "%p", obj);
+	} else if (AG_ObjectIsClass(obj, "ES_Schem:*")) {
+		AG_FileDlgAddType(fd, _("Agar-EDA component schematic"),
+		    "*.eschem",
+		    SaveNativeObject, "%p", obj);
+		AG_FileDlgAddType(fd, _("Portable Document Format"),
+		    "*.pdf",
+		    SaveSchemToPDF, "%p", obj);
 	}
 	AG_WindowShow(win);
 }
@@ -355,7 +394,7 @@ Save(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
 
-	if (AGOBJECT(obj)->archivePath == NULL) {
+	if (OBJECT(obj)->archivePath == NULL) {
 		SaveAsDlg(event);
 		return;
 	}
@@ -364,7 +403,7 @@ Save(AG_Event *event)
 		    AG_GetError());
 	} else {
 		AG_TextInfo(_("Saved object %s successfully"),
-		    AGOBJECT(obj)->name);
+		    OBJECT(obj)->name);
 	}
 }
 
@@ -398,7 +437,7 @@ Quit(AG_Event *event)
 	}
 	agTerminating = 1;
 
-	AGOBJECT_FOREACH_CHILD(obj, &vfsRoot, ag_object) {
+	OBJECT_FOREACH_CHILD(obj, &vfsRoot, ag_object) {
 		if (AG_ObjectChanged(obj))
 			break;
 	}
@@ -415,8 +454,7 @@ Quit(AG_Event *event)
 		AG_LabelNewStaticString(win, 0,
 		    _("There is at least one object with unsaved changes.  "
 	              "Exit application?"));
-		box = AG_BoxNew(win, AG_BOX_HORIZ, AG_BOX_HOMOGENOUS|
-		                                   AG_VBOX_HFILL);
+		box = AG_BoxNewHoriz(win, AG_BOX_HOMOGENOUS|AG_VBOX_HFILL);
 		AG_BoxSetSpacing(box, 0);
 		AG_BoxSetPadding(box, 0);
 		AG_ButtonNewFn(box, 0, _("Discard changes"),
@@ -434,8 +472,10 @@ FileMenu(AG_Event *event)
 	AG_MenuItem *node;
 
 	AG_MenuActionKb(m, _("New circuit..."), esIconCircuit.s,
-	    SDLK_s, KMOD_ALT,
+	    SDLK_n, KMOD_CTRL,
 	    NewObject, "%p", &esCircuitClass);
+	AG_MenuAction(m, _("New component schematic..."), esIconComponent.s,
+	    NewObject, "%p", &esSchemClass);
 
 	AG_MenuActionKb(m, _("Open..."), agIconLoad.s,
 	    SDLK_o, KMOD_CTRL,
@@ -458,7 +498,7 @@ FileMenu(AG_Event *event)
 #if 0
 	node = AG_MenuNode(m, _("Devices"), NULL);
 	{
-		ES_Device *mach;
+		ES_Device *dev;
 
 		AG_MenuAction(node, _("Microcontroller..."), agIconDoc.s,
 		    NewObject, "%p", &esMCU);
@@ -473,10 +513,9 @@ FileMenu(AG_Event *event)
 		AG_MenuAction(node, _("Digital output..."), agIconDoc.s,
 		    NewObject, "%p", &esDigitalOutputClass);
 		AG_MenuSeparator(node);
-		AGOBJECT_FOREACH_CLASS(mach, &vfsRoot, cam_machine,
-		    "ES_Device:*") {
-			AG_MenuAction(node, AGOBJECT(mach)->name, agIconGear.s,
-			    EditDevice, "%p", mach);
+		OBJECT_FOREACH_CLASS(dev, &vfsRoot, es_device, "ES_Device:*") {
+			AG_MenuAction(node, OBJECT(dev)->name, agIconGear.s,
+			    EditDevice, "%p", dev);
 		}
 	}
 #endif
