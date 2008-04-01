@@ -62,7 +62,7 @@ Draw(void *p, VG *vg)
 	VG_SetStyle(vg, "component-name");
 	VG_Vertex2(vg, 0.0, 1.0);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_Printf(vg, "%s", AGOBJECT(vs)->name);
+	VG_Printf(vg, "%s", OBJECT(vs)->name);
 	VG_End(vg);
 		
 	VG_Begin(vg, VG_TEXT);

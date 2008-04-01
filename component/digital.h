@@ -41,12 +41,7 @@ typedef struct es_digital {
 	SC_QTimeRange Ttlh;	/* Output transition time; LOW->HIGH */
 } ES_Digital;
 
-#define DIG(p) ((ES_Digital *)(p))
-#define digG(p,j) (DIG(p)->G->mat[j][1])
-#define digInHI(p,j) (U(p,j) >= DIG(p)->Vih)
-#define digInLO(p,j) (U(p,j) <= DIG(p)->Vil)
-#define digOutHI(p,j) (U(p,j) >= DIG(p)->Voh)
-#define digOutLO(p,j) (U(p,j) <= DIG(p)->Vol)
+#define DIGITAL(p) ((ES_Digital *)(p))
 
 __BEGIN_DECLS
 extern ES_ComponentClass esDigitalClass;

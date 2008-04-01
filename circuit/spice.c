@@ -52,7 +52,7 @@ ES_CircuitExportSPICE3(ES_Circuit *ckt, const char *path)
 		return (-1);
 	}
 
-	fputs(AGOBJECT(ckt)->name, f);
+	fputs(OBJECT(ckt)->name, f);
 	if (ckt->descr[0] != '\0') {
 		fprintf(f, " (%s)", ckt->descr);
 	}
@@ -61,10 +61,10 @@ ES_CircuitExportSPICE3(ES_Circuit *ckt, const char *path)
 	    "<http://hypertriton.com/agar-eda/>\n\n",
 	    VERSION);
 
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
+	OBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (COMOPS(com)->export_model != NULL) {
-			fprintf(f, "* %s:%s\n", AGOBJECT(com)->cls->name,
-			    AGOBJECT(com)->name);
+			fprintf(f, "* %s:%s\n", OBJECT(com)->cls->name,
+			    OBJECT(com)->name);
 			if (COMOPS(com)->export_model(com, CIRCUIT_SPICE3, f)
 			    == -1) {
 				goto fail;
@@ -72,7 +72,7 @@ ES_CircuitExportSPICE3(ES_Circuit *ckt, const char *path)
 			ncards++;
 		} else {
 			fprintf(f, "* skipped: %s:%s\n",
-			    AGOBJECT(com)->cls->name, AGOBJECT(com)->name);
+			    OBJECT(com)->cls->name, OBJECT(com)->name);
 		}
 	}
 
@@ -82,10 +82,10 @@ ES_CircuitExportSPICE3(ES_Circuit *ckt, const char *path)
 
 	AG_TextTmsg(AG_MSG_INFO, 1250,
 	    _("`%s' was successfully exported to `%s' (%u cards)"),
-	    AGOBJECT(ckt)->name, path, ncards);
+	    OBJECT(ckt)->name, path, ncards);
 	return (0);
 fail:
 	fclose(f);
-	AG_TextMsg(AG_MSG_ERROR, "%s: %s", AGOBJECT(ckt)->name, AG_GetError());
+	AG_TextMsg(AG_MSG_ERROR, "%s: %s", OBJECT(ckt)->name, AG_GetError());
 	return (-1);
 }

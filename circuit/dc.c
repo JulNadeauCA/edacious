@@ -55,7 +55,7 @@ FactorizeMNA(ES_SimDC *sim, ES_Circuit *ckt)
 	SC_MatrixSetZero(sim->e);
 
 	/* Formulate the general equations. */
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
+	OBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->loadDC_G != NULL)
 			com->loadDC_G(com, sim->G);
 		if (com->loadDC_BCD != NULL)
@@ -109,7 +109,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	AG_PostEvent(NULL, ckt, "circuit-step-begin", NULL);
 
 	/* Invoke the time step function of all models. */
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
+	OBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->intStep != NULL)
 			com->intStep(com, sim->Telapsed);
 	}
@@ -126,7 +126,7 @@ solve:
 	 */
 	SC_MatrixAlloc(&Aprev, sim->A->m, sim->A->n);
 	SC_MatrixCopy(sim->A, &Aprev);
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
+	OBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->intUpdate != NULL)
 			com->intUpdate(com);
 	}

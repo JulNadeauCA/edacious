@@ -74,7 +74,7 @@ Draw(void *p, VG *vg)
 			VG_SetStyle(vg, "component-name");
 			VG_Vertex2(vg, -0.0468, 0.0625);
 			VG_TextAlignment(vg, VG_ALIGN_TR);
-			VG_Printf(vg, "%s\n%.2fV\n", AGOBJECT(vs)->name,
+			VG_Printf(vg, "%s\n%.2fV\n", OBJECT(vs)->name,
 			    vs->voltage);
 		}
 		VG_End(vg);
@@ -99,7 +99,7 @@ Draw(void *p, VG *vg)
 			VG_SetStyle(vg, "component-name");
 			VG_Vertex2(vg, 0.0, 1.0);
 			VG_TextAlignment(vg, VG_ALIGN_MC);
-			VG_Printf(vg, "%s", AGOBJECT(vs)->name);
+			VG_Printf(vg, "%s", OBJECT(vs)->name);
 		}
 		VG_End(vg);
 		VG_Begin(vg, VG_TEXT);
@@ -423,7 +423,7 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
-		fprintf(f, "%s %d %d %g\n", AGOBJECT(vs)->name,
+		fprintf(f, "%s %d %d %g\n", OBJECT(vs)->name,
 		    PNODE(vs,1), PNODE(vs,2), vs->voltage);
 		break;
 	}
@@ -478,7 +478,7 @@ PollLoops(AG_Event *event)
 			ES_Pair *dip = l->pairs[i];
 
 			snprintf(text, sizeof(text), "%s:(%s,%s)",
-			    AGOBJECT(dip->com)->name, dip->p1->name,
+			    OBJECT(dip->com)->name, dip->p1->name,
 			    dip->p2->name);
 			it = AG_TlistAddPtr(tl, NULL, text,
 			    dip);

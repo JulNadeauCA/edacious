@@ -86,7 +86,7 @@ Draw(void *p, VG *vg)
 	VG_SetStyle(vg, "component-name");
 	VG_Vertex2(vg, 1.200, 0.000);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_Printf(vg, "%s", AGOBJECT(sw)->name);
+	VG_Printf(vg, "%s", OBJECT(sw)->name);
 	VG_End(vg);
 }
 
@@ -157,19 +157,19 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 	case CIRCUIT_SPICE3:
 		if (PNODE(sw,1) != -1 &&
 		    PNODE(sw,2) != -1) {
-			fprintf(f, "R%s %d %d %g\n", AGOBJECT(sw)->name,
+			fprintf(f, "R%s %d %d %g\n", OBJECT(sw)->name,
 			    PNODE(sw,1), PNODE(sw,2),
 			    Resistance(sw, PORT(sw,1), PORT(sw,2)));
 		}
 		if (PNODE(sw,1) != -1 &&
 		    PNODE(sw,3) != -1) {
-			fprintf(f, "R%s %d %d %g\n", AGOBJECT(sw)->name,
+			fprintf(f, "R%s %d %d %g\n", OBJECT(sw)->name,
 			    PNODE(sw,1), PNODE(sw,3),
 			    Resistance(sw, PORT(sw,1), PORT(sw,3)));
 		}
 		if (PNODE(sw,2) != -1 &&
 		    PNODE(sw,3) != -1) {
-			fprintf(f, "%s %d %d %g\n", AGOBJECT(sw)->name,
+			fprintf(f, "%s %d %d %g\n", OBJECT(sw)->name,
 			    PNODE(sw,2), PNODE(sw,3),
 			    Resistance(sw, PORT(sw,2), PORT(sw,3)));
 		}

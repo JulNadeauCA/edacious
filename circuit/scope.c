@@ -103,7 +103,7 @@ PollSrcs(AG_Event *event)
 	AG_TlistItem *it;
 
 	AG_TlistClear(tl);
-	TAILQ_FOREACH(prop, &AGOBJECT(ckt)->props, props) {
+	TAILQ_FOREACH(prop, &OBJECT(ckt)->props, props) {
 		AG_PropPrint(pval, sizeof(pval), ckt, prop->key);
 		it = AG_TlistAdd(tl, NULL, "%s (%s)", prop->key, pval);
 		it->p1 = prop;
@@ -180,7 +180,7 @@ Edit(void *obj)
 	AG_Pane *vPane;
 
 	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, AGOBJECT(scope)->name);
+	AG_WindowSetCaption(win, OBJECT(scope)->name);
 	AG_WindowSetPosition(win, AG_WINDOW_UPPER_RIGHT, 0);
 
 	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);

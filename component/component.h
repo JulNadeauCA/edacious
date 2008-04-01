@@ -39,7 +39,9 @@ typedef struct es_port {
 	struct es_component *com;		/* Back pointer to component */
 	int node;				/* Node connection (or -1) */
 	struct es_branch *branch;		/* Branch into node */
-	int selected;				/* Port selected for edition */
+	Uint flags;
+#define ES_PORT_SELECTED	0x01		/* Port is selected */
+#define ES_PORT_DRAWN		0x02		/* For rendering */
 } ES_Port;
 
 /* Ordered pair of ports belonging to the same component. */
@@ -88,7 +90,6 @@ typedef struct es_component {
 #define COMPONENT_FLOATING	0x01		/* Not yet connected */
 	int selected;				/* Selected for edition? */
 	int highlighted;			/* Selected for selection? */
-	AG_Timeout redraw_to;			/* Timer for vg updates */
 	float Tspec;				/* Instance temp (k) */
 	ES_Port ports[COMPONENT_MAX_PORTS];	/* Interface elements */
 	int    nports;
@@ -109,12 +110,13 @@ typedef struct es_component {
 } ES_Component;
 
 #define COMOPS(p) ((ES_ComponentClass *)(AGOBJECT(p)->cls))
+#define COMPONENT(p) ((ES_Component *)(p))
 #define COM(p) ((ES_Component *)(p))
 #define PORT(p,n) (&COM(p)->ports[n])
 #define PAIR(p,n) (&COM(p)->pairs[n])
 #define COM_Z0 50.0				/* Normalizing impedance */
 #define COM_T0 290.0				/* Reference temperature */
-#define PVOLTAGE(p,n) ES_NodeVoltage(COM(p)->ckt,PNODE((p),(n)))
+#define VPORT(p,n) ES_NodeVoltage(COM(p)->ckt,PNODE((p),(n)))
 
 #ifdef DEBUG
 #define PNODE(p,n) ES_PortNode(COM(p),(n))
@@ -125,21 +127,22 @@ typedef struct es_component {
 __BEGIN_DECLS
 extern AG_ObjectClass esComponentClass;
 
-void	 ES_ComponentFreePorts(ES_Component *);
-void	 ES_ComponentSetPorts(void *, const ES_Port *);
-
-void	 ES_ComponentOpenMenu(ES_Component *, VG_View *);
-void	 ES_ComponentCloseMenu(VG_View *);
 void	 ES_ComponentInsert(AG_Event *);
-ES_Port	*ES_ComponentPortOverlap(struct es_circuit *, ES_Component *, float,
-		                 float);
-int	 ES_ComponentHighlightPorts(struct es_circuit *, ES_Component *);
 void	 ES_ComponentConnect(struct es_circuit *, ES_Component *, VG_Vtx *);
 void	 ES_ComponentSelect(ES_Component *);
 void	 ES_ComponentUnselect(ES_Component *);
 void	 ES_ComponentUnselectAll(struct es_circuit *);
 void	 ES_ComponentLog(void *, const char *, ...);
+void	 ES_ComponentOpenMenu(ES_Component *, VG_View *);
+void	 ES_ComponentCloseMenu(VG_View *);
+void	 ES_ComponentSetPorts(void *, const ES_Port *);
+void	 ES_ComponentFreePorts(ES_Component *);
 
+void     ES_ComponentDraw(ES_Component *, VG_View *);
+int	 ES_ComponentHighlightPorts(struct es_circuit *, ES_Component *);
+
+ES_Port	*ES_PortNearestPoint(struct es_circuit *, float, float, void *);
+void     ES_UnselectAllPorts(struct es_circuit *);
 Uint	 ES_PortNode(ES_Component *, int);
 int	 ES_PortIsGrounded(ES_Port *);
 int	 ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);

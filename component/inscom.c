@@ -49,15 +49,14 @@ RemoveComponent(VG_Tool *t, SDLKey key, int state, void *arg)
 	AG_LockVFS(ckt);
 	ES_LockCircuit(ckt);
 scan:
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (!AG_ObjectIsClass(com, "ES_Component:*") ||
-		    com->flags & COMPONENT_FLOATING ||
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (com->flags & COMPONENT_FLOATING ||
 		    !com->selected) {
 			continue;
 		}
 		DEV_BrowserCloseData(com);
 		if (AG_ObjectInUse(com)) {
-			AG_TextMsg(AG_MSG_ERROR, "%s: %s", AGOBJECT(com)->name,
+			AG_TextMsg(AG_MSG_ERROR, "%s: %s", OBJECT(com)->name,
 			    AG_GetError());
 			continue;
 		}

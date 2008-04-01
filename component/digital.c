@@ -55,7 +55,7 @@ Draw(void *p, VG *vg)
 	VG_SetStyle(vg, "component-name");
 	VG_Vertex2(vg, 0.625, 0.000);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_Printf(vg, "%s", AGOBJECT(dig)->name);
+	VG_Printf(vg, "%s", OBJECT(dig)->name);
 	VG_End(vg);
 }
 
@@ -144,13 +144,13 @@ LoadDC_G(void *p, SC_Matrix *G)
 void
 ES_DigitalSetVccPort(void *p, int port)
 {
-	DIG(p)->VccPort = port;
+	DIGITAL(p)->VccPort = port;
 }
 
 void
 ES_DigitalSetGndPort(void *p, int port)
 {
-	DIG(p)->GndPort = port;
+	DIGITAL(p)->GndPort = port;
 }
 
 int

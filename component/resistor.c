@@ -95,9 +95,9 @@ Draw(void *p, VG *vg)
 		VG_TextAlignment(vg, VG_ALIGN_MC);
 		if (esResistorShowValue) {
 			VG_Printf(vg, "%s (%.2f\xce\xa9)",
-			    AGOBJECT(r)->name, r->resistance);
+			    OBJECT(r)->name, r->resistance);
 		} else {
-			VG_Printf(vg, "%s", AGOBJECT(r)->name);
+			VG_Printf(vg, "%s", OBJECT(r)->name);
 		}
 	}
 	VG_End(vg);
@@ -140,7 +140,7 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 	
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
-		fprintf(f, "%s %d %d %g\n", AGOBJECT(r)->name,
+		fprintf(f, "%s %d %d %g\n", OBJECT(r)->name,
 		    PNODE(r,1), PNODE(r,2), r->resistance);
 		break;
 	}
@@ -235,7 +235,7 @@ Init(void *p)
 	r->power_rating = HUGE_VAL;
 	r->tolerance = 0;
 	COM(r)->loadDC_G = LoadDC_G;
-	COM(r)->loadSP= LoadSP;
+	COM(r)->loadSP = LoadSP;
 }
 
 static void *

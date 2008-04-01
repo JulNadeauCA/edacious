@@ -80,7 +80,7 @@ ES_ComponentUnselectAll(ES_Circuit *ckt)
 {
 	ES_Component *com;
 
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		ES_ComponentUnselect(com);
 	}
 }
@@ -107,8 +107,8 @@ OnAttach(AG_Event *event)
 	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*")) {
 		return;
 	}
-	Debug(ckt, "Attaching component: %s\n", AGOBJECT(com)->name);
-	Debug(com, "Attaching to circuit: %s\n", AGOBJECT(ckt)->name);
+	Debug(ckt, "Attaching component: %s\n", OBJECT(com)->name);
+	Debug(com, "Attaching to circuit: %s\n", OBJECT(ckt)->name);
 
 	com->ckt = ckt;
 	
@@ -135,8 +135,8 @@ OnDetach(AG_Event *event)
 		return;
 
 	ES_LockCircuit(ckt);
-	Debug(ckt, "Detaching component: %s\n", AGOBJECT(com)->name);
-	Debug(com, "Detaching from circuit: %s\n", AGOBJECT(ckt)->name);
+	Debug(ckt, "Detaching component: %s\n", OBJECT(com)->name);
+	Debug(com, "Detaching from circuit: %s\n", OBJECT(ckt)->name);
 	AG_PostEvent(ckt, com, "circuit-disconnected", NULL);
 
 	for (i = 0; i <= ckt->n; i++) {
@@ -169,7 +169,7 @@ del_nodes:
 
 		port->branch = NULL;
 		port->node = -1;
-		port->selected = 0;
+		port->flags = 0;
 	}
 
 	for (i = 0; i < com->npairs; i++)
@@ -184,51 +184,16 @@ del_nodes:
 	ES_UnlockCircuit(ckt);
 }
 
-static void
-OnShow(AG_Event *event)
-{
-	ES_Component *com = AG_SELF();
-
-	AG_AddTimeout(com, &com->redraw_to, 50);
-}
-
-static void
-OnHide(AG_Event *event)
-{
-	ES_Component *com = AG_SELF();
-
-	AG_LockTimeouts(com);
-	if (AG_TimeoutIsScheduled(com, &com->redraw_to)) {
-		AG_DelTimeout(com, &com->redraw_to);
-	}
-	AG_UnlockTimeouts(com);
-}
-
 /* Redraw a component schematic block. */
-static Uint32
-RedrawBlock(void *p, Uint32 ival, void *arg)
+void
+ES_ComponentDraw(ES_Component *com, VG_View *vv)
 {
-	ES_Component *com = p;
 	ES_Circuit *ckt = com->ckt;
-	VG_Block *blockSave;
-	VG_Node *nodeSave;
-	VG *vg = ckt->vg;
+	VG *vg = vv->vg;
 	VG_Node *vn;
 	int i;
-	
-	if ((AGOBJECT(com)->flags & AG_OBJECT_RESIDENT) == 0)
-		return (ival);
 
-#ifdef DEBUG
-	if (com->block == NULL) { Fatal("Missing block"); }
-#endif
-
-	VG_Lock(vg);
-	blockSave = vg->curBlock;
-	nodeSave = vg->curNode;
-	VG_SelectBlock(vg, com->block);
-	VG_ClearBlock(vg, com->block);
-
+	/* Invoke the component-specific draw operation. */
 	if (COMOPS(com)->draw != NULL)
 		COMOPS(com)->draw(com, vg);
 
@@ -240,7 +205,7 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 
 		r = hypotf(port->x,port->y);
 		theta = atan2f(port->y,port->x) - com->block->theta;
-		ES_CircuitDrawPort(ckt, port,
+		ES_CircuitDrawPort(vv, ckt, port,
 		    r*cosf(theta),
 		    r*sinf(theta));
 	}
@@ -272,13 +237,8 @@ RedrawBlock(void *p, Uint32 ival, void *arg)
 		}
 	}
 
-	if (com->block->theta != 0) {
+	if (com->block->theta != 0)
 		VG_RotateBlock(vg, com->block, com->block->theta);
-	}
-	VG_Select(vg, nodeSave);
-	VG_SelectBlock(vg, blockSave);
-	VG_Unlock(vg);
-	return (ival);
 }
 
 static void
@@ -308,10 +268,6 @@ Init(void *obj)
 	AG_SetEvent(com, "attached", OnAttach, NULL);
 	AG_SetEvent(com, "detached", OnDetach, NULL);
 	AG_SetEvent(com, "renamed", OnRename, NULL);
-	AG_SetEvent(com, "circuit-shown", OnShow, NULL);
-	AG_SetEvent(com, "circuit-hidden", OnHide, NULL);
-
-	AG_SetTimeout(&com->redraw_to, RedrawBlock, NULL, AG_CANCEL_ONDETACH);
 }
 
 /* Initialize the ports of a component instance from a given model. */
@@ -340,7 +296,7 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 		port->com = com;
 		port->node = -1;
 		port->branch = NULL;
-		port->selected = 0;
+		port->flags = 0;
 		com->nports++;
 		Debug(com, "Added port #%d (%s)\n", i, port->name);
 	}
@@ -431,7 +387,7 @@ ES_ComponentLog(void *p, const char *fmt, ...)
 	if (com->ckt == NULL || com->ckt->console == NULL)
 		return;
 	
-	Strlcpy(buf, AGOBJECT(com)->name, sizeof(buf));
+	Strlcpy(buf, OBJECT(com)->name, sizeof(buf));
 	
 	va_start(args, fmt);
 	ln = AG_ConsoleAppendLine(com->ckt->console, NULL);
@@ -446,11 +402,11 @@ Uint
 ES_PortNode(ES_Component *com, int port)
 {
 	if (port > com->nports) {
-		Fatal("%s: Bad port %d/%u", AGOBJECT(com)->name, port,
+		Fatal("%s: Bad port %d/%u", OBJECT(com)->name, port,
 		    com->nports);
 	}
 	if (com->ports[port].node < 0 || com->ports[port].node > com->ckt->n) {
-		Fatal("%s:%d: Bad node", AGOBJECT(com)->name, port);
+		Fatal("%s:%d: Bad node", OBJECT(com)->name, port);
 	}
 	return (com->ports[port].node);
 }
@@ -467,7 +423,7 @@ ES_FindPort(void *p, const char *portname)
 		if (strcmp(port->name, portname) == 0)
 			return (port);
 	}
-	AG_SetError(_("%s: No such port: <%s>"), AGOBJECT(com)->name, portname);
+	AG_SetError(_("%s: No such port: <%s>"), OBJECT(com)->name, portname);
 	return (NULL);
 }
 
@@ -489,11 +445,11 @@ RemoveComponent(AG_Event *event)
 	AG_ObjectDetach(com);
 	if (!AG_ObjectInUse(com)) {
 		AG_TextTmsg(AG_MSG_INFO, 250, _("Removed component %s."),
-		    AGOBJECT(com)->name);
+		    OBJECT(com)->name);
 		AG_ObjectDestroy(com);
 	} else {
 		AG_TextMsg(AG_MSG_ERROR, _("%s: Component is in use."),
-		    AGOBJECT(com)->name);
+		    OBJECT(com)->name);
 	}
 	ES_CircuitModified(ckt);
 	ES_UnlockCircuit(ckt);
@@ -506,7 +462,7 @@ RemoveSelections(AG_Event *event)
 	ES_Component *com;
 
 	ES_LockCircuit(ckt);
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (!com->selected) {
 			continue;
 		}
@@ -515,7 +471,7 @@ RemoveSelections(AG_Event *event)
 			AG_ObjectDestroy(com);
 		} else {
 			AG_TextMsg(AG_MSG_ERROR, _("%s: Component is in use."),
-			    AGOBJECT(com)->name);
+			    OBJECT(com)->name);
 		}
 		ES_CircuitModified(ckt);
 	}
@@ -582,7 +538,7 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 	int common_class = 1;
 	ES_ComponentClass *comCls = NULL;
 
-	AGOBJECT_FOREACH_CLASS(com2, com->ckt, es_component, "ES_Component:*") {
+	CIRCUIT_FOREACH_COMPONENT(com2, com->ckt) {
 		if (!com2->selected) {
 			continue;
 		}
@@ -604,7 +560,7 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 		    SelectTool, "%p,%p,%p", vgv, com->ckt, &esWireTool);
 		AG_MenuSeparator(pm->item);
 	}
-	AG_MenuSection(pm->item, "[Component: %s]", AGOBJECT(com)->name);
+	AG_MenuSection(pm->item, "[Component: %s]", OBJECT(com)->name);
 	AG_MenuAction(pm->item, _("    Edit parameters"), agIconDoc.s,
 	    EditParameters, "%p", com);
 	AG_MenuAction(pm->item, _("    Destroy instance"), agIconTrash.s,
@@ -657,8 +613,8 @@ ES_ComponentInsert(AG_Event *event)
 	cls = (ES_ComponentClass *)it->p1;
 tryname:
 	snprintf(name, sizeof(name), "%s%d", cls->pfx, n++);
-	AGOBJECT_FOREACH_CHILD(com, ckt, es_component) {
-		if (strcmp(AGOBJECT(com)->name, name) == 0)
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (strcmp(OBJECT(com)->name, name) == 0)
 			break;
 	}
 	if (com != NULL)
@@ -690,19 +646,17 @@ tryname:
 	ES_UnlockCircuit(ckt);
 }
 
-/*
- * Evaluate whether the given point collides with a port in the schematic
- * (that does not belong to the given component if specified).
- */
+/* Return the port nearest the given VG coordinates. */
+/* XXX */
 ES_Port *
-ES_ComponentPortOverlap(ES_Circuit *ckt, ES_Component *ncom, float x, float y)
+ES_PortNearestPoint(ES_Circuit *ckt, float x, float y, void *ignore)
 {
 	ES_Component *ocom;
 	ES_Wire *wire;
 	int i;
 	
-	AGOBJECT_FOREACH_CLASS(ocom, ckt, es_component, "ES_Component:*") {
-		if ((ocom == ncom) || (ocom->flags & COMPONENT_FLOATING)) {
+	CIRCUIT_FOREACH_COMPONENT(ocom, ckt) {
+		if ((ocom == ignore) || (ocom->flags & COMPONENT_FLOATING)) {
 			continue;
 		}
 		for (i = 1; i <= ocom->nports; i++) {
@@ -715,6 +669,9 @@ ES_ComponentPortOverlap(ES_Circuit *ckt, ES_Component *ncom, float x, float y)
 		}
 	}
 	TAILQ_FOREACH(wire, &ckt->wires, wires) {
+		if (wire == ignore) {
+			continue;
+		}
 		for (i = 0; i < 2; i++) {
 			ES_Port *oport = &wire->ports[i];
 
@@ -726,6 +683,23 @@ ES_ComponentPortOverlap(ES_Circuit *ckt, ES_Component *ncom, float x, float y)
 		}
 	}
 	return (NULL);
+}
+
+void
+ES_UnselectAllPorts(ES_Circuit *ckt)
+{
+	ES_Component *com;
+	ES_Wire *wire;
+	int i;
+
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		for (i = 1; i <= com->nports; i++)
+			com->ports[i].flags &= ~(ES_PORT_SELECTED);
+	}
+	TAILQ_FOREACH(wire, &ckt->wires, wires) {
+		for (i = 0; i < 2; i++)
+			wire->ports[i].flags &= ~(ES_PORT_SELECTED);
+	}
 }
 
 /* Evaluate whether the given port is connected to the reference point. */
@@ -746,14 +720,15 @@ ES_ComponentConnect(ES_Circuit *ckt, ES_Component *com, VG_Vtx *vtx)
 	int i;
 
 	ES_LockCircuit(ckt);
-	Debug(ckt, "Connecting component: %s\n", AGOBJECT(com)->name);
-	Debug(com, "Connecting to circuit: %s\n", AGOBJECT(ckt)->name);
+	Debug(ckt, "Connecting component: %s\n", OBJECT(com)->name);
+	Debug(com, "Connecting to circuit: %s\n", OBJECT(ckt)->name);
 	for (i = 1; i <= com->nports; i++) {
 		ES_Port *port = &com->ports[i];
 
-		oport = ES_ComponentPortOverlap(ckt, com,
+		oport = ES_PortNearestPoint(ckt,
 		    vtx->x + port->x,
-		    vtx->y + port->y);
+		    vtx->y + port->y,
+		    com);
 		if (COMOPS(com)->connect == NULL ||
 		    COMOPS(com)->connect(com, port, oport) == -1) {
 			if (oport != NULL) {
@@ -769,7 +744,7 @@ ES_ComponentConnect(ES_Circuit *ckt, ES_Component *com, VG_Vtx *vtx)
 				    port->node, port);
 			}
 		}
-		port->selected = 0;
+		port->flags &= ~(ES_PORT_SELECTED);
 	}
 	com->flags &= ~(COMPONENT_FLOATING);
 
@@ -791,14 +766,15 @@ ES_ComponentHighlightPorts(ES_Circuit *ckt, ES_Component *com)
 	for (i = 1; i <= com->nports; i++) {
 		ES_Port *nport = &com->ports[i];
 
-		oport = ES_ComponentPortOverlap(ckt, com,
+		oport = ES_PortNearestPoint(ckt,
 		    com->block->pos.x + nport->x,
-		    com->block->pos.y + nport->y);
+		    com->block->pos.y + nport->y,
+		    com);
 		if (oport != NULL) {
-			nport->selected = 1;
+			nport->flags |= ES_PORT_SELECTED;
 			nconn++;
 		} else {
-			nport->selected = 0;
+			nport->flags &= ~(ES_PORT_SELECTED);
 		}
 	}
 	return (nconn);

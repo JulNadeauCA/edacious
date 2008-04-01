@@ -64,7 +64,7 @@ Draw(void *p, VG *vg)
 	VG_Vertex2(vg, 0.625, 0.000);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
 
-	VG_Printf(vg, "%s", AGOBJECT(r)->name);
+	VG_Printf(vg, "%s", OBJECT(r)->name);
 	VG_End(vg);
 }
 
@@ -131,7 +131,7 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 		    nRmod, r->Tc1, r->Tc2, r->rsh, r->defw, r->narrow,
 		    COM_T0);
 		fprintf(f, "%s %d %d Rmod%u L=%g W=%g TEMP=%g\n",
-		    AGOBJECT(r)->name, PNODE(r,1), PNODE(r,2),
+		    OBJECT(r)->name, PNODE(r,1), PNODE(r,2),
 		    nRmod, r->l, r->w, COM(r)->Tspec);
 		nRmod++;
 		break;

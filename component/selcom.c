@@ -51,7 +51,7 @@ MouseButtonDown(void *p, float x, float y, int b)
 	if (!multi) {
 		ES_ComponentUnselectAll(ckt);
 	}
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
+	OBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->flags & COMPONENT_FLOATING ||
 		    com->block != blkClosest) {
 			continue;
@@ -92,7 +92,7 @@ LeftButton(VG_Tool *t, int button, int state, float x, float y, void *arg)
 	if (!multi) {
 		ES_ComponentUnselectAll(ckt);
 	}
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
+	OBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->flags & COMPONENT_FLOATING ||
 		    com->block != blkClosest) {
 			continue;
@@ -124,7 +124,7 @@ MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
 	
 	blkClosest = VG_BlockClosest(vg, x, y);
 	
-	AGOBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
+	OBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
 		if (com->flags & COMPONENT_FLOATING) {
 			continue;
 		}

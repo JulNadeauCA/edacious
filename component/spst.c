@@ -77,7 +77,7 @@ Draw(void *p, VG *vg)
 	VG_SetStyle(vg, "component-name");
 	VG_Vertex2(vg, 1.000, 0.250);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_Printf(vg, "%s", AGOBJECT(sw)->name);
+	VG_Printf(vg, "%s", OBJECT(sw)->name);
 	VG_End(vg);
 }
 
@@ -133,7 +133,7 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 	
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
-		fprintf(f, "R%s %d %d %g\n", AGOBJECT(sw)->name,
+		fprintf(f, "R%s %d %d %g\n", OBJECT(sw)->name,
 		    PNODE(sw,1), PNODE(sw,2),
 		    Resistance(sw, PORT(sw,1), PORT(sw,2)));
 		break;
@@ -148,7 +148,7 @@ SwitchAll(AG_Event *event)
 	int nstate = AG_INT(2);
 	ES_Spst *spst;
 
-	AGOBJECT_FOREACH_CLASS(spst, ckt, es_spst, "ES_Component:ES_Spst:*") {
+	OBJECT_FOREACH_CLASS(spst, ckt, es_spst, "ES_Component:ES_Spst:*") {
 		spst->state = (nstate == -1) ? !spst->state : nstate;
 	}
 }

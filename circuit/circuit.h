@@ -104,11 +104,17 @@ typedef struct es_circuit {
 	Uint n;			/* Number of nodes (except ground) */
 } ES_Circuit;
 
-#define ES_CIRCUIT(p) ((ES_Circuit *)(p))
-#define U(com,n) ES_NodeVoltage(COM(com)->ckt,(n))
-#define ESNODE_FOREACH_BRANCH(var, ckt, node) \
-	TAILQ_FOREACH((var), &(ckt)->nodes[node]->branches, branches)
-#define ES_NODE(ckt,n) ES_CircuitGetNode((ckt),(n))
+#define CIRCUIT(p) ((ES_Circuit *)(p))
+#define VNODE(com,n) ES_NodeVoltage(COM(com)->ckt,(n))
+#define CIRCUIT_FOREACH_COMPONENT(com, ckt) \
+	AGOBJECT_FOREACH_CLASS((com),(ckt),es_component,"ES_Component:*")
+#define CIRCUIT_FOREACH_VSOURCE(vs, ckt) \
+	AGOBJECT_FOREACH_CLASS((vs),(ckt),es_vsource,"ES_Component:ES_Vsource:*")
+#define CIRCUIT_FOREACH_SELECTED_COMPONENT(com, ckt)			\
+	CIRCUIT_FOREACH_COMPONENT((com),ckt)				\
+		if ((com)->flags & ES_COMPONENT_SELECTED) {		\
+			continue;					\
+		} else
 
 __BEGIN_DECLS
 extern AG_ObjectClass esCircuitClass;
@@ -127,7 +133,8 @@ ES_Branch	*ES_CircuitAddBranch(ES_Circuit *, int, ES_Port *);
 void		 ES_CircuitDelBranch(ES_Circuit *, int, ES_Branch *);
 ES_Wire		*ES_CircuitAddWire(ES_Circuit *);
 void		 ES_CircuitDelWire(ES_Circuit *, ES_Wire *);
-void	 	 ES_CircuitDrawPort(ES_Circuit *, ES_Port *, float, float);
+void	 	 ES_CircuitDrawPort(VG_View *, ES_Circuit *, ES_Port *, float,
+                                    float);
 
 ES_Node		*ES_CircuitGetNode(ES_Circuit *, int);
 void		 ES_CircuitNodeSymbol(ES_Circuit *, int, char *,
