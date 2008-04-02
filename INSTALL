@@ -1,0 +1,53 @@
+
+Prerequisites
+-------------
+Agar-EDA requires the Agar and FreeSG libraries. You can compile them from
+source or download one of the many precompiled packages at:
+
+	http://libagar.org/download.html
+	http://freesg.org/download.html
+
+Installation under Unix
+-----------------------
+1) Execute the configure script. See `./configure --help' for options.
+    $ ./configure
+
+2) Compile the libraries and executables.
+    $ make depend all
+    # make install
+
+3) Let the developers know of your success/failure. If you happen to run
+   into trouble, please set a valid return address so we can respond.
+    $ cat config.log | mail -s "compiles fine" compile@hypertriton.com
+
+Installation under SGI IRIX
+---------------------------
+Under IRIX, we recommend using gcc3 (or SGI cc) because of gcc 2.95 issues
+with varargs. There are .tardist packages for gcc3, SDL and freetype
+available from: http://www.nekochan.net/.
+
+Installation under Windows
+--------------------------
+Under Windows, Agar-EDA can be compiled under Microsoft Visual Studio,
+Cygwin and MSYS. Precompiled packages may be available from the Agar-EDA
+download page.
+
+Concurrent building
+-------------------
+Under Unix, it is possible to build Agar-EDA outside of the source directory.
+Developers will generally prefer this method, since it results in a faster
+build, does not clutter the source directories with object files and
+facilitates testing on multiple machines using network filesystems.
+
+1) Create the build directory. Where available, a memory filesystem is a
+   good location to build from.
+    $ mkdir w-agareda
+    $ cd w-agareda
+
+2) Run configure from the source directory with --srcdir.
+    $ ~/agar-eda-sources/configure --srcdir=$HOME/agar-eda-sources [...]
+
+3) Now build the libraries and executables as you normally would.
+    $ make depend && make
+    # make install
+
