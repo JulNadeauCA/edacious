@@ -28,57 +28,255 @@
  */
 
 #include <agar/core.h>
+#include <agar/core/limits.h>
 #include <agar/gui.h>
 #include <agar/vg.h>
 
 #include <eda.h>
 #include "schem.h"
 
-static int
-MouseButtonDown(void *p, float x, float y, int b)
+typedef struct es_schem_select_tool {
+	VG_Tool _inherit;
+	int moving;
+} ES_SchemSelectTool;
+
+void *
+VG_SchemFindPoint(ES_Schem *scm, VG_Vector vCurs, void *ignore)
 {
-	VG_Tool *t = p;
-	ES_Schem *scm = t->p;
-	ES_Component *com;
-	AG_Window *pwin;
-	VG_Block *blkClosest;
+	float prox, proxNearest = AG_FLT_MAX;
+	VG_Node *vn, *vnNearest = NULL;
+	VG_Vector v;
+
+	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+		if (vn->ops->pointProximity == NULL ||
+		    vn == ignore ||
+		    !VG_NodeIsClass(vn, "Point")) {
+			continue;
+		}
+		v = vCurs;
+		prox = vn->ops->pointProximity(vn, &v);
+		if (prox <= 0.25f) {
+			if (prox < proxNearest) {
+				proxNearest = prox;
+				vnNearest = vn;
+			}
+		}
+	}
+	return (vnNearest);
+}
+
+void *
+VG_SchemSelectNearest(ES_Schem *scm, VG_Vector vCurs)
+{
+	float prox, proxNearest;
+	VG_Node *vn, *vnNearest;
+	VG_Vector v;
 	int multi = SDL_GetModState() & KMOD_CTRL;
+
+	/* Always prioritize points at a fixed distance. */
+	proxNearest = AG_FLT_MAX;
+	vnNearest = NULL;
+	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+		if (vn->ops->pointProximity == NULL) {
+			continue;
+		}
+		if (!multi) {
+			vn->flags &= ~(VG_NODE_SELECTED);
+		}
+		if (!VG_NodeIsClass(vn, "Point")) {
+			continue;
+		}
+		v = vCurs;
+		prox = vn->ops->pointProximity(vn, &v);
+		if (prox <= 0.25f) {
+			if (prox < proxNearest) {
+				proxNearest = prox;
+				vnNearest = vn;
+			}
+		}
+	}
+	if (vnNearest != NULL) {
+		vnNearest->flags |= VG_NODE_SELECTED;
+		return (vnNearest);
+	}
+
+	/* No point is near, perform a proper query. */
+	proxNearest = AG_FLT_MAX;
+	vnNearest = NULL;
+	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+		if (vn->ops->pointProximity == NULL) {
+			continue;
+		}
+		if (!multi) {
+			vn->flags &= ~(VG_NODE_SELECTED);
+		}
+		v = vCurs;
+		prox = vn->ops->pointProximity(vn, &v);
+		if (prox < proxNearest) {
+			proxNearest = prox;
+			vnNearest = vn;
+		}
+	}
+	if (vnNearest != NULL) {
+		vnNearest->flags |= VG_NODE_SELECTED;
+	}
+	return (vnNearest);
+}
+
+void
+VG_SchemHighlightNearest(ES_Schem *scm, VG_Vector vCurs)
+{
+	float prox, proxNearest;
+	VG_Node *vn, *vnNearest;
+	VG_Vector v;
+
+	/* Always prioritize points at a fixed distance. */
+	proxNearest = AG_FLT_MAX;
+	vnNearest = NULL;
+	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+		if (vn->ops->pointProximity == NULL) {
+			continue;
+		}
+		vn->flags &= ~(VG_NODE_MOUSEOVER);
+		if (!VG_NodeIsClass(vn, "Point")) {
+			continue;
+		}
+		v = vCurs;
+		prox = vn->ops->pointProximity(vn, &v);
+		if (prox <= 0.25f) {
+			if (prox < proxNearest) {
+				proxNearest = prox;
+				vnNearest = vn;
+			}
+		}
+	}
+	if (vnNearest != NULL) {
+		vnNearest->flags |= VG_NODE_MOUSEOVER;
+		return;
+	}
+
+	/* No point is near, perform a proper query. */
+	proxNearest = AG_FLT_MAX;
+	vnNearest = NULL;
+	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+		if (vn->ops->pointProximity == NULL) {
+			continue;
+		}
+		vn->flags &= ~(VG_NODE_MOUSEOVER);
+		v = vCurs;
+		prox = vn->ops->pointProximity(vn, &v);
+		if (prox < proxNearest) {
+			proxNearest = prox;
+			vnNearest = vn;
+		}
+	}
+	if (vnNearest != NULL)
+		vnNearest->flags |= VG_NODE_MOUSEOVER;
+}
+
+static int
+MouseButtonDown(void *p, VG_Vector v, int b)
+{
+	ES_SchemSelectTool *t = p;
+	ES_Schem *scm = VGTOOL(t)->p;
 
 	if (b != SDL_BUTTON_LEFT) {
 		return (0);
 	}
-	printf("select...\n");
+	VG_SchemSelectNearest(scm, v);
+	t->moving = 1;
 	return (1);
 }
 
 static int
-MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
+MouseButtonUp(void *p, VG_Vector v, int b)
 {
-	VG_Tool *t = p;
-	ES_Schem *scm = t->p;
-	VG *vg = scm->vg;
+	ES_SchemSelectTool *t = p;
 
+	if (b != SDL_BUTTON_LEFT) {
+		return (0);
+	}
+	t->moving = 0;
+	return (1);
+}
+
+static int
+MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
+{
+	ES_SchemSelectTool *t = p;
+	ES_Schem *scm = VGTOOL(t)->p;
+	VG_View *vv = VGTOOL(t)->vgv;
+	VG_Node *vn;
+	VG_Vector v;
+
+	if (t->moving) {
+		v = vPos;
+
+		if (!(SDL_GetModState() & (KMOD_SHIFT|KMOD_CTRL))) {
+			VG_ApplyConstraints(vv, &v);
+		}
+		TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+			if (!(vn->flags & VG_NODE_SELECTED)) {
+				continue;
+			}
+			if (vn->ops->moveNode != NULL)
+				vn->ops->moveNode(vn, v, vRel);
+		}
+		return (1);
+	}
+	VG_SchemHighlightNearest(scm, vPos);
+	return (0);
+}
+
+static int
+KeyDown(void *p, int ksym, int kmod, int unicode)
+{
+	ES_SchemSelectTool *t = p;
+	VG_View *vv = VGTOOL(t)->vgv;
+	VG_Node *vn;
+	Uint nDel = 0;
+
+	if (ksym == SDLK_DELETE || ksym == SDLK_BACKSPACE) {
+del:
+		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
+			if (vn->flags & VG_NODE_SELECTED) {
+				if (VG_Delete(vn) == -1) {
+					vn->flags &= ~(VG_NODE_SELECTED);
+					VG_Status(vv, "%s", AG_GetError());
+				} else {
+					nDel++;
+				}
+				goto del;
+			}
+		}
+		return (1);
+	}
+	VG_Status(vv, _("Deleted %u entities"), nDel);
 	return (0);
 }
 
 static void
 Init(void *p)
 {
-	VG_Tool *t = p;
+	ES_SchemSelectTool *t = p;
+
+	t->moving = 0;
 }
 
 VG_ToolOps esSchemSelectTool = {
 	N_("Select"),
 	N_("Select and move entities in the schematic."),
-	&esIconSelectComponent,
-	sizeof(VG_Tool),
+	&esIconSelectArrow,
+	sizeof(ES_SchemSelectTool),
 	VG_NOSNAP,
 	Init,
 	NULL,			/* destroy */
 	NULL,			/* edit */
+	NULL,			/* predraw */
+	NULL,			/* postdraw */
 	MouseMotion,
 	MouseButtonDown,
-	NULL,			/* mousebuttonup */
-	NULL,			/* keydown */
+	MouseButtonUp,
+	KeyDown,
 	NULL			/* keyup */
 };

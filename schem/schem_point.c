@@ -35,7 +35,7 @@
 #include "schem.h"
 
 static int
-MouseButtonDown(void *p, float x, float y, int b)
+MouseButtonDown(void *p, VG_Vector v, int b)
 {
 	VG_Tool *t = p;
 	ES_Schem *scm = VGTOOL(t)->p;
@@ -43,8 +43,8 @@ MouseButtonDown(void *p, float x, float y, int b)
 
 	switch (b) {
 	case SDL_BUTTON_LEFT:
-		VG_Status(vv, _("New point at %.2f,%.2f"), x,y);
-		VG_PointNew(scm->vg->root, VGVECTOR(x,y));
+		VG_Status(vv, _("New point at %.2f,%.2f"), v.x, v.y);
+		VG_PointNew(scm->vg->root, v);
 		return (1);
 	default:
 		return (0);

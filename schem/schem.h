@@ -15,6 +15,10 @@ extern VG_ToolOps esSchemSelectTool;
 extern VG_ToolOps esSchemLineTool;
 
 ES_Schem *ES_SchemNew(void *);
+
+void *VG_SchemFindPoint(ES_Schem *, VG_Vector, void *);
+void *VG_SchemSelectNearest(ES_Schem *, VG_Vector);
+void  VG_SchemHighlightNearest(ES_Schem *, VG_Vector);
 __END_DECLS
 
 #include "close_code.h"

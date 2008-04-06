@@ -36,7 +36,7 @@
 
 typedef struct es_schem_line_tool {
 	VG_Tool _inherit;
-	VG_Node *curLine;
+	VG_Line *vlCur;
 } ES_SchemLineTool;
 
 static void
@@ -44,40 +44,44 @@ Init(void *p)
 {
 	ES_SchemLineTool *t = p;
 
-	t->curLine = NULL;
+	t->vlCur = NULL;
 }
 
 static int
-MouseButtonDown(void *p, float x, float y, int b)
+MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
 	ES_SchemLineTool *t = p;
 	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG *vg = scm->vg;
+	VG_Point *p1, *p2;
 
-	switch (b) {
+	switch (button) {
 	case SDL_BUTTON_LEFT:
-		if (t->curLine == NULL) {
-			VG_Status(vv, _("New line at %.2f,%.2f"), x, y);
-			t->curLine = VG_Begin(vg, VG_LINES);
-			VG_Vertex2(vg, x, y);
-			VG_Vertex2(vg, x, y);
-			VG_End(vg);
+		if (t->vlCur == NULL) {
+			if (!(p1 = VG_SchemFindPoint(scm, vPos, NULL))) {
+				p1 = VG_PointNew(vg->root, vPos);
+			}
+			p2 = VG_PointNew(vg->root, vPos);
+			t->vlCur = VG_LineNew(vg->root, p1, p2);
 		} else {
-			VG_Select(vg, t->curLine);
-			VG_MoveVertex2(vg, 1, x, y);
-			VG_End(vg);
-			VG_Status(vv, _("Added line: %.2f,%.2f -> %.2f,%.2f"),
-			    t->curLine->vtx[0].x, t->curLine->vtx[0].y,
-			    t->curLine->vtx[1].x, t->curLine->vtx[1].y);
-			t->curLine = NULL;
+			if ((p2 = VG_SchemFindPoint(scm, vPos, t->vlCur->p2))) {
+				VG_DelRef(t->vlCur, t->vlCur->p2);
+				VG_Delete(t->vlCur->p2);
+				t->vlCur->p2 = p2;
+				VG_AddRef(t->vlCur, p2);
+			} else {
+				t->vlCur->p2->x = vPos.x;
+				t->vlCur->p2->y = vPos.y;
+			}
+			t->vlCur = NULL;
 		}
 		return (1);
 	case SDL_BUTTON_MIDDLE:
 	case SDL_BUTTON_RIGHT:
-		if (t->curLine != NULL) {
-			VG_Delete(vg, t->curLine);
-			t->curLine = NULL;
+		if (t->vlCur != NULL) {
+			VG_Delete(t->vlCur);
+			t->vlCur = NULL;
 		}
 		return (1);
 	default:
@@ -85,20 +89,48 @@ MouseButtonDown(void *p, float x, float y, int b)
 	}
 }
 
-static int
-MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
+static void
+PostDraw(void *p, VG_View *vv)
 {
 	ES_SchemLineTool *t = p;
+	int x, y;
+
+	VG_GetViewCoords(vv, VGTOOL(t)->vCursor, &x,&y);
+	AG_DrawCircle(vv, x,y, 3, VG_MapColorRGB(vv->vg->selectionColor));
+}
+
+static int
+MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
+{
+	ES_SchemLineTool *t = p;
+	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
+	VG_Point *pEx;
+	float theta, rad;
 	
-	if (t->curLine != NULL) {
-		ES_Schem *scm = VGTOOL(t)->p;
-		VG *vg = scm->vg;
-	
-		VG_Status(vv, _("Line endpoint at %f,%f"), x, y);
-		VG_Select(vg, t->curLine);
-		VG_MoveVertex2(vg, 1, x, y);
-		VG_End(vg);
+	if (t->vlCur != NULL) {
+		pEx = t->vlCur->p1;
+		theta = VG_Atan2(vPos.y - pEx->y,
+		                 vPos.x - pEx->x);
+		rad = VG_Hypot(vPos.x - pEx->x,
+		               vPos.y - pEx->y);
+		if ((pEx = VG_SchemFindPoint(scm, vPos, t->vlCur->p2))) {
+			VG_Status(vv, _("Use Point%u"), VGNODE(pEx)->handle);
+		} else {
+			VG_Status(vv,
+			    _("Create Point at %.2f,%.2f (%.2f|%.2f\xc2\xb0)"),
+			    vPos.x, vPos.y, rad, VG_Degrees(theta));
+		}
+		t->vlCur->p2->x = vPos.x;
+		t->vlCur->p2->y = vPos.y;
+	} else {
+		if ((pEx = VG_SchemFindPoint(scm, vPos, NULL))) {
+			VG_Status(vv, _("Start Line at Point%u"),
+			    VGNODE(pEx)->handle);
+		} else {
+			VG_Status(vv, _("Start Line at %.2f,%.2f"), vPos.x,
+			    vPos.y);
+		}
 	}
 	return (0);
 }
@@ -112,6 +144,8 @@ VG_ToolOps esSchemLineTool = {
 	Init,
 	NULL,			/* destroy */
 	NULL,			/* edit */
+	NULL,			/* predraw */
+	PostDraw,
 	MouseMotion,
 	MouseButtonDown,
 	NULL,			/* mousebuttonup */

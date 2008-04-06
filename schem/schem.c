@@ -35,6 +35,25 @@
 #include <eda.h>
 #include "schem.h"
 
+extern VG_ToolOps esSchemSelectTool;
+extern VG_ToolOps esSchemPointTool;
+extern VG_ToolOps esSchemLineTool;
+extern VG_ToolOps esSchemCircleTool;
+#ifdef DEBUG
+extern VG_ToolOps esSchemProximityTool;
+#endif
+
+static VG_ToolOps *toolOps[] = {
+	&esSchemSelectTool,
+#ifdef DEBUG
+	&esSchemProximityTool,
+#endif
+	&esSchemPointTool,
+	&esSchemLineTool,
+	&esSchemCircleTool,
+	NULL
+};
+
 ES_Schem *
 ES_SchemNew(void *parent)
 {
@@ -128,7 +147,7 @@ Edit(void *obj)
 	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
 	vv = VG_ViewNew(NULL, vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
 	VG_ViewSetSnapMode(vv, VG_GRID);
-	VG_ViewSetScale(vv, 16.0f);
+	VG_ViewSetScale(vv, 64.0f);
 	VG_ViewSetScaleMin(vv, 10.0f);
 	VG_ViewSetGridInterval(vv, 0.5f);
 	
@@ -145,16 +164,16 @@ Edit(void *obj)
 	}
 	mi = AG_MenuAddItem(menu, _("Tools"));
 	{
+		VG_ToolOps **pOps, *ops;
 		VG_Tool *tool;
-
-		tool = VG_ViewRegTool(vv, &esSchemSelectTool, scm);
-		AG_MenuTool(mi, tbRight , _("Select entities"),
-		    esIconSelectArrow.s, 0,0,
-		    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, scm);
-		tool = VG_ViewRegTool(vv, &esSchemLineTool, scm);
-		AG_MenuTool(mi, tbRight , _("Insert line"),
-		    vgIconLine.s, 0,0,
-		    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, scm);
+		
+		for (pOps = &toolOps[0]; *pOps != NULL; pOps++) {
+			ops = *pOps;
+			tool = VG_ViewRegTool(vv, ops, scm);
+			AG_MenuTool(mi, tbRight, ops->name,
+			    ops->icon ? ops->icon->s : NULL, 0,0,
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, scm);
+		}
 	}
 	mi = AG_MenuAddItem(menu, _("View"));
 	{

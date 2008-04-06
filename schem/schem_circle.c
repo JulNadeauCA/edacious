@@ -36,7 +36,7 @@
 
 typedef struct es_schem_circle_tool {
 	VG_Tool _inherit;
-	VG_Node *curCircle;
+	VG_Circle *vcCur;
 } ES_SchemCircleTool;
 
 static void
@@ -44,44 +44,42 @@ Init(void *p)
 {
 	ES_SchemCircleTool *t = p;
 
-	t->curCircle = NULL;
+	t->vcCur = NULL;
 }
 
 static __inline__ void
-AdjustRadius(VG_View *vv, VG_Node *vn, float x, float y)
+AdjustRadius(VG_Circle *vc, VG_Vector vPos)
 {
-	VG_Select(vv->vg, vn);
-	VG_CircleRadius(vv->vg, VG_Distance2(x,y, vn->vtx[0].x,vn->vtx[0].y));
-	VG_End(vv->vg);
-	VG_Status(vv, _("Circle radius: %.2f"),
-	    vn->vg_args.vg_circle.radius);
+	vc->r = VG_Distance(vPos, VG_PointPos(vc->p));
 }
 
 static int
-MouseButtonDown(void *p, float x, float y, int b)
+MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
 	ES_SchemCircleTool *t = p;
 	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG *vg = scm->vg;
+	VG_Point *pCenter;
 
-	switch (b) {
+	switch (button) {
 	case SDL_BUTTON_LEFT:
-		if (t->curCircle == NULL) {
-			VG_Status(vv, _("New circle at %.2f,%.2f"), x, y);
-			t->curCircle = VG_Begin(vg, VG_CIRCLE);
-			VG_Vertex2(vg, x, y);
-			VG_End(vg);
+		if (t->vcCur == NULL) {
+			if (!(pCenter = VG_SchemFindPoint(scm, vPos, NULL))) {
+				pCenter = VG_PointNew(vg->root, vPos);
+			}
+			t->vcCur = VG_CircleNew(vg->root, pCenter, 1.0f);
+			AdjustRadius(t->vcCur, vPos);
 		} else {
-			AdjustRadius(vv, t->curCircle, x, y);
-			t->curCircle = NULL;
+			AdjustRadius(t->vcCur, vPos);
+			t->vcCur = NULL;
 		}
 		return (1);
 	case SDL_BUTTON_MIDDLE:
 	case SDL_BUTTON_RIGHT:
-		if (t->curCircle != NULL) {
-			VG_Delete(vg, t->curCircle);
-			t->curCircle = NULL;
+		if (t->vcCur != NULL) {
+			VG_Delete(t->vcCur);
+			t->vcCur = NULL;
 		}
 		return (1);
 	default:
@@ -90,15 +88,36 @@ MouseButtonDown(void *p, float x, float y, int b)
 }
 
 static int
-MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
+MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 {
 	ES_SchemCircleTool *t = p;
+	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
+	VG_Point *pEx;
 	
-	if (t->curCircle != NULL) {
-		AdjustRadius(vv, t->curCircle, x, y);
+	if (t->vcCur != NULL) {
+		AdjustRadius(t->vcCur, vPos);
+		VG_Status(vv, _("Set radius: %.2f"), t->vcCur->r);
+	} else {
+		if ((pEx = VG_SchemFindPoint(scm, vPos, NULL))) {
+			VG_Status(vv, _("Use Point%u as center"),
+			    VGNODE(pEx)->handle);
+		} else {
+			VG_Status(vv, _("Circle center at %.2f,%.2f"),
+			    vPos.x, vPos.y);
+		}
 	}
 	return (0);
+}
+
+static void
+PostDraw(void *p, VG_View *vv)
+{
+	VG_Tool *t = p;
+	int x, y;
+
+	VG_GetViewCoords(vv, t->vCursor, &x,&y);
+	AG_DrawCircle(vv, x,y, 3, VG_MapColorRGB(vv->vg->selectionColor));
 }
 
 VG_ToolOps esSchemCircleTool = {
@@ -111,7 +130,7 @@ VG_ToolOps esSchemCircleTool = {
 	NULL,			/* destroy */
 	NULL,			/* edit */
 	NULL,			/* predraw */
-	NULL,			/* postdraw */
+	PostDraw,
 	MouseMotion,
 	MouseButtonDown,
 	NULL,			/* mousebuttonup */
