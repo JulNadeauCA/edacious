@@ -89,7 +89,7 @@ PostDraw(void *t, VG_View *vv)
 VG_ToolOps esSchemProximityTool = {
 	N_("Proximity"),
 	N_("Plot proximity functions of selected entities."),
-	&vgIconBlock,
+	&esIconProximity,
 	sizeof(VG_Tool),
 	VG_NOSNAP,
 	NULL,			/* init */

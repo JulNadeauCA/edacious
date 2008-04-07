@@ -22,5 +22,7 @@ extern AG_StaticIcon esIconSelectComponent;
 extern AG_StaticIcon esIconInsertWire;
 extern AG_StaticIcon esIconScope;
 extern AG_StaticIcon esIconConsole;
+extern AG_StaticIcon esIconPortEditor;
+extern AG_StaticIcon esIconProximity;
 __END_DECLS
 #include "close_code.h"
