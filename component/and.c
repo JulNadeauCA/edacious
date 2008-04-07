@@ -35,15 +35,16 @@
 #include "and.h"
 
 const ES_Port esAndPinout[] = {
-	{ 0, "",	0.0, 1.0 },
-	{ 1, "Vcc",	1.0, -0.5 },
-	{ 2, "Gnd",	1.0, +0.5 },
-	{ 3, "A",	0.0, -0.5 },
-	{ 4, "B",	0.0, +0.5 },
-	{ 5, "A&B",	2.0, 0.0 },
+	{ 0, "",	{0.0,  1.0} },
+	{ 1, "Vcc",	{1.0, -0.5} },
+	{ 2, "Gnd",	{1.0, +0.5} },
+	{ 3, "A",	{0.0, -0.5} },
+	{ 4, "B",	{0.0, +0.5} },
+	{ 5, "A&B",	{2.0,  0.0} },
 	{ -1 },
 };
 
+#if 0
 static void
 Draw(void *p, VG *vg)
 {
@@ -57,16 +58,13 @@ Draw(void *p, VG *vg)
 	VG_HLine(vg, 0.00, 0.25, -0.5);
 	VG_HLine(vg, 0.00, 0.25, +0.5);
 	VG_End(vg);
-#if 0
-	VG_VLine(vg, 0.25, -0.625, +0.625);
-#endif
 	VG_Begin(vg, VG_TEXT);
-	VG_SetStyle(vg, "component-name");
 	VG_Vertex2(vg, 1.0, 0);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_Printf(vg, "&");
+	VG_TextPrintf(vg, "&");
 	VG_End(vg);
 }
+#endif
 
 static void
 Init(void *p)
@@ -106,7 +104,7 @@ ES_ComponentClass esAndClass = {
 	N_("AND Gate"),
 	"And",
 	"Digital/AND.vg",
-	Draw,
+	NULL,		/* draw */
 	NULL,		/* instance_menu */
 	NULL,		/* class_menu */
 	NULL,		/* export */

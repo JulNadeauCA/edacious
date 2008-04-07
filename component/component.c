@@ -80,48 +80,24 @@ ES_ComponentUnselectAll(ES_Circuit *ckt)
 {
 	ES_Component *com;
 
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+	CIRCUIT_FOREACH_COMPONENT(com, ckt)
 		ES_ComponentUnselect(com);
-	}
-}
-
-static void
-OnRename(AG_Event *event)
-{
-	ES_Component *com = AG_SELF();
-
-	if (com->block == NULL)
-		return;
-
-	AG_ObjectCopyName(com, com->block->name, sizeof(com->block->name));
 }
 
 static void
 OnAttach(AG_Event *event)
 {
-	char blkName[VG_BLOCK_NAME_MAX];
 	ES_Component *com = AG_SELF();
 	ES_Circuit *ckt = AG_SENDER();
-	VG *vg = ckt->vg;
 	
-	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*")) {
+	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*"))
 		return;
-	}
+
+	ES_LockCircuit(ckt);
 	Debug(ckt, "Attaching component: %s\n", OBJECT(com)->name);
 	Debug(com, "Attaching to circuit: %s\n", OBJECT(ckt)->name);
-
 	com->ckt = ckt;
-	
-	AG_ObjectCopyName(com, blkName, sizeof(blkName));
-#ifdef DEBUG
-	if (com->block != NULL) { Fatal("Block exists"); }
-	if (VG_GetBlock(vg, blkName) != NULL) { Fatal("Duplicate block"); }
-#endif
-	com->block = VG_BeginBlock(vg, blkName, 0);
-	com->block->pos.x = com->ports[0].x;
-	com->block->pos.y = com->ports[0].y;
-/*	VG_Origin(vg, 0, com->ports[0].x, com->ports[0].y); */
-	VG_EndBlock(vg);
+	ES_UnlockCircuit(ckt);
 }
 
 static void
@@ -129,6 +105,8 @@ OnDetach(AG_Event *event)
 {
 	ES_Component *com = AG_SELF();
 	ES_Circuit *ckt = AG_SENDER();
+	ES_Port *port;
+	ES_Pair *pair;
 	u_int i;
 
 	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*"))
@@ -158,87 +136,23 @@ del_nodes:
 		ES_Node *node = ckt->nodes[i];
 		ES_Branch *br;
 
-		if (node->nbranches == 0) {
+		if (node->nBranches == 0) {
 			ES_CircuitDelNode(ckt, i);
 			goto del_nodes;
 		}
 	}
-	
-	for (i = 1; i <= com->nports; i++) {
-		ES_Port *port = &com->ports[i];
 
+	COMPONENT_FOREACH_PORT(port, i, com) {
 		port->branch = NULL;
 		port->node = -1;
 		port->flags = 0;
 	}
-
-	for (i = 0; i < com->npairs; i++)
-		com->pairs[i].nloops = 0;
-
-	if (com->block != NULL) {
-		VG_DestroyBlock(ckt->vg, com->block);
-		com->block = NULL;
+	COMPONENT_FOREACH_PAIR(pair, i, com) {
+		pair->nloops = 0;
 	}
 	com->ckt = NULL;
-	
+
 	ES_UnlockCircuit(ckt);
-}
-
-/* Redraw a component schematic block. */
-void
-ES_ComponentDraw(ES_Component *com, VG_View *vv)
-{
-	ES_Circuit *ckt = com->ckt;
-	VG *vg = vv->vg;
-	VG_Node *vn;
-	int i;
-
-	/* Invoke the component-specific draw operation. */
-	if (COMOPS(com)->draw != NULL)
-		COMOPS(com)->draw(com, vg);
-
-	/* Indicate the nodes associated with connection points. */
-	for (i = 1; i <= com->nports; i++) {
-		ES_Port *port = &com->ports[i];
-		float r, theta;
-		float x, y;
-
-		r = hypotf(port->x,port->y);
-		theta = atan2f(port->y,port->x) - com->block->theta;
-		ES_CircuitDrawPort(vv, ckt, port,
-		    r*cosf(theta),
-		    r*sinf(theta));
-	}
-
-	/* TODO blend */
-	if (com->selected && com->highlighted) {
-		TAILQ_FOREACH(vn, &com->block->nodes, vgbmbs) {
-			if (!(vn->flags & VG_NODE_SELECTED)) {
-				VG_Select(vg, vn);
-				VG_ColorRGB(vg, 250, 250, 180);
-				VG_End(vg);
-			}
-		}
-	} else if (com->selected) {
-		TAILQ_FOREACH(vn, &com->block->nodes, vgbmbs) {
-			if (!(vn->flags & VG_NODE_SELECTED)) {
-				VG_Select(vg, vn);
-				VG_ColorRGB(vg, 240, 240, 50);
-				VG_End(vg);
-			}
-		}
-	} else if (com->highlighted) {
-		TAILQ_FOREACH(vn, &com->block->nodes, vgbmbs) {
-			if (!(vn->flags & VG_NODE_SELECTED)) {
-				VG_Select(vg, vn);
-				VG_ColorRGB(vg, 180, 180, 120);
-				VG_End(vg);
-			}
-		}
-	}
-
-	if (com->block->theta != 0)
-		VG_RotateBlock(vg, com->block, com->block->theta);
 }
 
 static void
@@ -247,15 +161,17 @@ Init(void *obj)
 	ES_Component *com = obj;
 
 	com->ckt = NULL;
-	com->block = NULL;
-	com->selected = 0;
-	com->highlighted = 0;
 	com->Tspec = 27+273.15;
 	com->nports = 0;
 	com->pairs = NULL;
 	com->npairs = 0;
 	com->specs = NULL;
 	com->nspecs = 0;
+
+	com->pos.x = 0.0f;
+	com->pos.y = 0.0f;
+	com->selected = 0;
+	com->highlighted = 0;
 	
 	com->loadDC_G = NULL;
 	com->loadDC_BCD = NULL;
@@ -267,7 +183,6 @@ Init(void *obj)
 
 	AG_SetEvent(com, "attached", OnAttach, NULL);
 	AG_SetEvent(com, "detached", OnDetach, NULL);
-	AG_SetEvent(com, "renamed", OnRename, NULL);
 }
 
 /* Initialize the ports of a component instance from a given model. */
@@ -275,24 +190,22 @@ void
 ES_ComponentSetPorts(void *p, const ES_Port *ports)
 {
 	ES_Component *com = p;
-	const ES_Port *pPort;
+	const ES_Port *modelPort;
 	ES_Pair *pair;
+	ES_Port *iPort, *jPort;
 	int i, j, k;
 
 	/* Instantiate the port array. */
 	ES_ComponentFreePorts(com);
 	com->nports = 0;
-	com->ports[0].x = ports[0].x;
-	com->ports[0].y = ports[0].y;
-	for (i = 1, pPort = &ports[1];
-	     i < COMPONENT_MAX_PORTS && pPort->n >= 0;
-	     i++, pPort++) {
+	for (i = 1, modelPort = &ports[1];
+	     i < COMPONENT_MAX_PORTS && modelPort->n >= 0;
+	     i++, modelPort++) {
 		ES_Port *port = &com->ports[i];
 
-		Strlcpy(port->name, pPort->name, sizeof(port->name));
+		Strlcpy(port->name, modelPort->name, sizeof(port->name));
 		port->n = i;
-		port->x = pPort->x;
-		port->y = pPort->y;
+		port->pos = modelPort->pos;
 		port->com = com;
 		port->node = -1;
 		port->branch = NULL;
@@ -301,31 +214,30 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 		Debug(com, "Added port #%d (%s)\n", i, port->name);
 	}
 
-	/* Find the port pairs. */
+	/* Find all non-redundant port pairs. */
 	com->pairs = Malloc(sizeof(ES_Pair));
 	com->npairs = 0;
-	for (i = 1; i <= com->nports; i++) {
-		for (j = 1; j <= com->nports; j++) {
-			if (i == j)
+	COMPONENT_FOREACH_PORT(iPort, i, com) {
+		COMPONENT_FOREACH_PORT(jPort, j, com) {
+			if (i == j) {
 				continue;
-			
-			/* Skip the redundant pairs. */
+			}
 			for (k = 0; k < com->npairs; k++) {
 				ES_Pair *pair = &com->pairs[k];
 
-				if (pair->p2 == &com->ports[i] &&
-				    pair->p1 == &com->ports[j])
+				if (pair->p2 == iPort &&
+				    pair->p1 == jPort)
 					break;
 			}
-			if (k < com->npairs)
+			if (k < com->npairs) {
 				continue;
-
+			}
 			com->pairs = Realloc(com->pairs,
 			    (com->npairs+1)*sizeof(ES_Pair));
 			pair = &com->pairs[com->npairs++];
 			pair->com = com;
-			pair->p1 = &com->ports[i];
-			pair->p2 = &com->ports[j];
+			pair->p1 = iPort;
+			pair->p2 = jPort;
 			pair->loops = Malloc(sizeof(ES_Loop *));
 			pair->lpols = Malloc(sizeof(int));
 			pair->nloops = 0;
@@ -415,11 +327,10 @@ ES_Port *
 ES_FindPort(void *p, const char *portname)
 {
 	ES_Component *com = p;
+	ES_Port *port;
 	int i;
 
-	for (i = 1; i <= com->nports; i++) {
-		ES_Port *port = &com->ports[i];
-
+	COMPONENT_FOREACH_PORT(port, i, com) {
 		if (strcmp(port->name, portname) == 0)
 			return (port);
 	}
@@ -649,37 +560,33 @@ tryname:
 /* Return the port nearest the given VG coordinates. */
 /* XXX */
 ES_Port *
-ES_PortNearestPoint(ES_Circuit *ckt, float x, float y, void *ignore)
+ES_PortProximity(ES_Circuit *ckt, VG_Vector pos, void *ignore)
 {
-	ES_Component *ocom;
+	ES_Component *com;
 	ES_Wire *wire;
+	ES_Port *port;
+	VG_Vector posRel;
 	int i;
-	
-	CIRCUIT_FOREACH_COMPONENT(ocom, ckt) {
-		if ((ocom == ignore) || (ocom->flags & COMPONENT_FLOATING)) {
+
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if ((com == ignore) || (com->flags & COMPONENT_FLOATING)) {
 			continue;
 		}
-		for (i = 1; i <= ocom->nports; i++) {
-			ES_Port *oport = &ocom->ports[i];
-
-			/* XXX arbitrary fuzz */
-			if (fabs(x-ocom->block->pos.x - oport->x) < 0.25 &&
-			    fabs(y-ocom->block->pos.y - oport->y) < 0.25)
-				return (oport);
+		posRel = VG_Sub(pos, com->pos);
+		COMPONENT_FOREACH_PORT(port, i, com) {
+			/* XXX arbitrary distance */
+			if (VG_Distance(port->pos, posRel) < 0.25f)
+				return (port);
 		}
 	}
-	TAILQ_FOREACH(wire, &ckt->wires, wires) {
+	CIRCUIT_FOREACH_WIRE(wire, ckt) {
 		if (wire == ignore) {
 			continue;
 		}
-		for (i = 0; i < 2; i++) {
-			ES_Port *oport = &wire->ports[i];
-
-			/* XXX arbitrary fuzz */
-			if (fabs(x - oport->x) < 0.25 &&
-			    fabs(y - oport->y) < 0.25) {
-				return (oport);
-			}
+		WIRE_FOREACH_PORT(port, i, wire) {
+			/* XXX arbitrary distance */
+			if (VG_Distance(port->pos, pos) < 0.25f)
+				return (port);
 		}
 	}
 	return (NULL);
@@ -690,15 +597,16 @@ ES_UnselectAllPorts(ES_Circuit *ckt)
 {
 	ES_Component *com;
 	ES_Wire *wire;
+	ES_Port *port;
 	int i;
 
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		for (i = 1; i <= com->nports; i++)
-			com->ports[i].flags &= ~(ES_PORT_SELECTED);
+		COMPONENT_FOREACH_PORT(port, i, com)
+			port->flags &= ~(ES_PORT_SELECTED);
 	}
-	TAILQ_FOREACH(wire, &ckt->wires, wires) {
-		for (i = 0; i < 2; i++)
-			wire->ports[i].flags &= ~(ES_PORT_SELECTED);
+	CIRCUIT_FOREACH_WIRE(wire, ckt) {
+		WIRE_FOREACH_PORT(port, i, wire)
+			port->flags &= ~(ES_PORT_SELECTED);
 	}
 }
 
@@ -709,75 +617,6 @@ ES_PortIsGrounded(ES_Port *port)
 	ES_Circuit *ckt = port->com->ckt;
 
 	return (port->node == 0);
-}
-
-/* Connect a floating component to the circuit. */
-void
-ES_ComponentConnect(ES_Circuit *ckt, ES_Component *com, VG_Vtx *vtx)
-{
-	ES_Port *oport;
-	ES_Branch *br;
-	int i;
-
-	ES_LockCircuit(ckt);
-	Debug(ckt, "Connecting component: %s\n", OBJECT(com)->name);
-	Debug(com, "Connecting to circuit: %s\n", OBJECT(ckt)->name);
-	for (i = 1; i <= com->nports; i++) {
-		ES_Port *port = &com->ports[i];
-
-		oport = ES_PortNearestPoint(ckt,
-		    vtx->x + port->x,
-		    vtx->y + port->y,
-		    com);
-		if (COMOPS(com)->connect == NULL ||
-		    COMOPS(com)->connect(com, port, oport) == -1) {
-			if (oport != NULL) {
-#ifdef DEBUG
-				if (port->node > 0) { Fatal("bad node"); }
-#endif
-				port->node = oport->node;
-				port->branch = ES_CircuitAddBranch(ckt,
-				    oport->node, port);
-			} else {
-				port->node = ES_CircuitAddNode(ckt, 0);
-				port->branch = ES_CircuitAddBranch(ckt,
-				    port->node, port);
-			}
-		}
-		port->flags &= ~(ES_PORT_SELECTED);
-	}
-	com->flags &= ~(COMPONENT_FLOATING);
-
-	AG_PostEvent(ckt, com, "circuit-connected", NULL);
-	ES_CircuitModified(ckt);
-	ES_UnlockCircuit(ckt);
-}
-
-/*
- * Highlight the connection points of the given component with respect
- * to other components in the circuit and return the number of matches.
- */
-int
-ES_ComponentHighlightPorts(ES_Circuit *ckt, ES_Component *com)
-{
-	ES_Port *oport;
-	int i, nconn = 0;
-
-	for (i = 1; i <= com->nports; i++) {
-		ES_Port *nport = &com->ports[i];
-
-		oport = ES_PortNearestPoint(ckt,
-		    com->block->pos.x + nport->x,
-		    com->block->pos.y + nport->y,
-		    com);
-		if (oport != NULL) {
-			nport->flags |= ES_PORT_SELECTED;
-			nconn++;
-		} else {
-			nport->flags &= ~(ES_PORT_SELECTED);
-		}
-	}
-	return (nconn);
 }
 
 AG_ObjectClass esComponentClass = {

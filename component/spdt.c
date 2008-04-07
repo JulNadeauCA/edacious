@@ -36,17 +36,19 @@
 #include "spdt.h"
 
 const ES_Port esSpdtPinout[] = {
-	{ 0, "",  0, +1.000 },
-	{ 1, "A", 0,  0.000 },
-	{ 2, "B", 2, -0.500 },
-	{ 3, "C", 2, +0.500 },
+	{ 0, "",  {0.000, +1.000} },
+	{ 1, "A", {0.000,  0.000} },
+	{ 2, "B", {2.000, -0.500} },
+	{ 3, "C", {2.000, +0.500} },
 	{ -1 },
 };
 
+#if 0
 static void
-Draw(void *p, VG *vg)
+Draw(void *p, VG_Node *vn)
 {
 	ES_Spdt *sw = p;
+	VG_Point *p1, *p2, *p3, *p4, *p5, *p6;
 
 	VG_Begin(vg, VG_LINES);
 	VG_Vertex2(vg, 0.000, 0.000);
@@ -83,12 +85,12 @@ Draw(void *p, VG *vg)
 	VG_End(vg);
 
 	VG_Begin(vg, VG_TEXT);
-	VG_SetStyle(vg, "component-name");
 	VG_Vertex2(vg, 1.200, 0.000);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_Printf(vg, "%s", OBJECT(sw)->name);
+	VG_TextPrintf(vg, "%s", OBJECT(sw)->name);
 	VG_End(vg);
 }
+#endif
 
 static void
 Init(void *p)
@@ -220,7 +222,7 @@ ES_ComponentClass esSpdtClass = {
 	N_("SPDT switch"),
 	"Sw",
 	NULL,			/* schem */
-	Draw,
+	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
 	Export,

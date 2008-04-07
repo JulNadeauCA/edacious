@@ -35,15 +35,16 @@
 #include "or.h"
 
 const ES_Port esOrPinout[] = {
-	{ 0, "",	0.0, 1.0 },
-	{ 1, "Vcc",	1.0, -1.0 },
-	{ 2, "Gnd",	1.0, +1.0 },
-	{ 3, "A",	0.0, -0.75 },
-	{ 4, "B",	0.0, +0.75 },
-	{ 5, "A|B",	2.0, 0.0 },
+	{ 0, "",	{0.0,  1.0} },
+	{ 1, "Vcc",	{1.0, -1.0} },
+	{ 2, "Gnd",	{1.0, +1.0} },
+	{ 3, "A",	{0.0, -0.75} },
+	{ 4, "B",	{0.0, +0.75} },
+	{ 5, "A|B",	{2.0,  0.0} },
 	{ -1 },
 };
 
+#if 0
 static void
 Draw(void *p, VG *vg)
 {
@@ -69,12 +70,12 @@ Draw(void *p, VG *vg)
 	VG_CircleRadius(vg, 0.0625);
 	VG_End(vg);
 	VG_Begin(vg, VG_TEXT);
-	VG_SetStyle(vg, "component-name");
 	VG_Vertex2(vg, 0.750, 0);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_Printf(vg, "%s", OBJECT(com)->name);
+	VG_TextPrintf(vg, "%s", OBJECT(com)->name);
 	VG_End(vg);
 }
+#endif
 
 static void
 Init(void *p)
@@ -114,7 +115,7 @@ ES_ComponentClass esOrClass = {
 	N_("OR Gate"),
 	"Or",
 	"Digital/OR.vg",
-	Draw,
+	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
 	NULL,			/* export */

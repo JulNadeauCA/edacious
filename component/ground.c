@@ -36,8 +36,8 @@
 #include "ground.h"
 
 const ES_Port esGroundPinout[] = {
-	{ 0, "",  0.000, 0.000 },
-	{ 1, "A", 0.000, 0.000 },
+	{ 0, "",  { 0.0f, 0.0f } },
+	{ 1, "A", { 0.0f, 0.0f } },
 	{ -1 },
 };
 
@@ -50,9 +50,8 @@ Connect(void *p, ES_Port *p1, ES_Port *p2)
 
 	if (p2 != NULL && p2->node > 0) {
 		u_int n = p2->node;
-		ES_Node *node = ckt->nodes[n];
 	
-		TAILQ_FOREACH(br, &node->branches, branches) {
+		NODE_FOREACH_BRANCH(br, ckt->nodes[n]) {
 			if (br->port == NULL || br->port->com == NULL ||
 			    br->port->com->flags & COMPONENT_FLOATING) {
 				continue;
@@ -67,6 +66,7 @@ Connect(void *p, ES_Port *p1, ES_Port *p2)
 	return (0);
 }
 
+#if 0
 static void
 Draw(void *p, VG *vg)
 {
@@ -81,6 +81,7 @@ Draw(void *p, VG *vg)
 	VG_Vertex2(vg, +0.150, 0.500);
 	VG_End(vg);
 }
+#endif
 
 static void
 Init(void *p)
@@ -105,7 +106,7 @@ ES_ComponentClass esGroundClass = {
 	N_("Ground"),
 	"Gnd",
 	"Ground.vg",
-	Draw,
+	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
 	NULL,			/* export */

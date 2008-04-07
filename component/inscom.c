@@ -76,37 +76,83 @@ static void
 RotateComponent(ES_Circuit *ckt, ES_Component *com)
 {
 	VG *vg = ckt->vg;
+	ES_Port *port;
+	float r, theta;
 	int i;
 
-	com->block->theta += M_PI_2;
-
-	for (i = 1; i <= com->nports; i++) {
-		float r, theta;
-
-		r = hypotf(com->ports[i].x, com->ports[i].y);
-		theta = atan2f(com->ports[i].y, com->ports[i].x) + M_PI_2;
-		VG_SelectBlock(vg, com->block);
-		com->ports[i].x = r*cosf(theta);
-		com->ports[i].y = r*sinf(theta);
-		VG_EndBlock(vg);
+	COMPONENT_FOREACH_PORT(port, i, com) {
+		r = VG_Hypot(port->pos.x, port->pos.y);
+		theta = VG_Atan2(port->pos.y, port->pos.x) + M_PI_2;
+		port->pos.x = r*VG_Cos(theta);
+		port->pos.y = r*VG_Sin(theta);
 	}
 }
 
+/* Highlight the component connections that would be made to existing nodes. */
+static void
+HighlightConnections(ES_Circuit *ckt, ES_Component *com)
+{
+	ES_Port *port, *nearestPort;
+	int i;
+
+	COMPONENT_FOREACH_PORT(port, i, com) {
+		nearestPort = ES_PortProximity(ckt, port->pos, com);
+		if (nearestPort != NULL) {
+			port->flags |= ES_PORT_SELECTED;
+		} else {
+			port->flags &= ~(ES_PORT_SELECTED);
+		}
+	}
+}
+
+/* Connect a floating component to the circuit. */
+static void
+ConnectComponent(ES_Circuit *ckt, ES_Component *com, VG_Vector pos)
+{
+	ES_Port *port, *nearestPort;
+	ES_Branch *br;
+	int i;
+
+	ES_LockCircuit(ckt);
+	Debug(ckt, "Connecting component: %s\n", OBJECT(com)->name);
+	Debug(com, "Connecting to circuit: %s\n", OBJECT(ckt)->name);
+	com->pos = pos;
+	COMPONENT_FOREACH_PORT(port, i, com) {
+		nearestPort = ES_PortProximity(ckt, port->pos, com);
+		if (COMOPS(com)->connect == NULL ||
+		    COMOPS(com)->connect(com, port, nearestPort) == -1) {
+			if (nearestPort != NULL) {
+				port->node = nearestPort->node;
+				port->branch = ES_CircuitAddBranch(ckt,
+				    nearestPort->node, port);
+			} else {
+				port->node = ES_CircuitAddNode(ckt, 0);
+				port->branch = ES_CircuitAddBranch(ckt,
+				    port->node, port);
+			}
+		}
+		port->flags &= ~(ES_PORT_SELECTED);
+	}
+	com->flags &= ~(COMPONENT_FLOATING);
+
+	AG_PostEvent(ckt, com, "circuit-connected", NULL);
+	ES_CircuitModified(ckt);
+	ES_UnlockCircuit(ckt);
+}
+
+
 static int
-MouseButtonDown(void *p, float x, float y, int b)
+MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
 	VG *vg = ckt->vg;
-	VG_Vtx vtx;
 	int i;
 	
-	switch (b) {
+	switch (button) {
 	case SDL_BUTTON_LEFT:
 		if (esInscomCur != NULL) {
-			vtx.x = x;
-			vtx.y = y;
-			ES_ComponentConnect(ckt, esInscomCur, &vtx);
+			ConnectComponent(ckt, esInscomCur, vPos);
 			ES_ComponentUnselectAll(ckt);
 			ES_ComponentSelect(esInscomCur);
 			esInscomCur = NULL;
@@ -137,19 +183,15 @@ remove:
 
 /* Move a floating component and highlight the overlapping nodes. */
 static int
-MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
+MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 {
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
 	VG *vg = ckt->vg;
-	int nconn;
-#if 0
-	vg->origin[1].x = x;
-	vg->origin[1].y = y;
-#endif
+
 	if (esInscomCur != NULL) {
-		VG_MoveBlock(vg, esInscomCur->block, x, y, -1);
-		nconn = ES_ComponentHighlightPorts(ckt, esInscomCur);
+		esInscomCur->pos = vPos;
+		HighlightConnections(ckt, esInscomCur);
 		return (1);
 	}
 	return (0);
@@ -174,6 +216,8 @@ VG_ToolOps esInscomOps = {
 	Init,
 	NULL,			/* destroy */
 	NULL,			/* edit */
+	NULL,			/* predraw */
+	NULL,			/* postdraw */
 	MouseMotion,
 	MouseButtonDown,
 	NULL,			/* mousebuttonup */

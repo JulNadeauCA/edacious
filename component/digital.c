@@ -35,6 +35,7 @@
 #include "eda.h"
 #include "digital.h"
 
+#if 0
 static void
 Draw(void *p, VG *vg)
 {
@@ -52,12 +53,12 @@ Draw(void *p, VG *vg)
 	VG_End(vg);
 
 	VG_Begin(vg, VG_TEXT);
-	VG_SetStyle(vg, "component-name");
 	VG_Vertex2(vg, 0.625, 0.000);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_Printf(vg, "%s", OBJECT(dig)->name);
+	VG_TextPrintf(vg, "%s", OBJECT(dig)->name);
 	VG_End(vg);
 }
+#endif
 
 static int
 Load(void *p, AG_DataSource *buf, const AG_Version *ver)
@@ -277,7 +278,7 @@ ES_ComponentClass esDigitalClass = {
 	N_("Digital component"),
 	"Digital",
 	"Digital/Digital.vg",
-	Draw,
+	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
 	NULL,			/* export */

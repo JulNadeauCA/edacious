@@ -19,8 +19,10 @@
 
 #include "begin_code.h"
 
-#define CIRCUIT_NAME_MAX	256
-#define CIRCUIT_DESCR_MAX	256
+#define CIRCUIT_DESCR_MAX	512
+#define CIRCUIT_AUTHORS_MAX	128
+#define CIRCUIT_KEYWORDS_MAX	128
+
 #define CIRCUIT_MAX_BRANCHES	32
 #define CIRCUIT_MAX_NODES	(0xffff-1)
 #define CKTNODE_SYM_MAX		24
@@ -41,14 +43,14 @@ typedef struct es_node {
 #define CKTNODE_REFERENCE	0x02	/* Reference node (eg. ground) */
 
 	TAILQ_HEAD(,es_branch) branches;
-	Uint		      nbranches;
+	Uint		      nBranches;
 } ES_Node;
 
 typedef struct es_wire {
 	Uint flags;
 #define ES_WIRE_FIXED	0x01		/* Don't allow moving */
 	Uint cat;			/* Category */
-	struct es_port ports[2];	/* Ports */
+	struct es_port ports[2];	/* Connection points */
 	TAILQ_ENTRY(es_wire) wires;
 } ES_Wire;
 
@@ -82,11 +84,12 @@ struct ag_console;
 
 typedef struct es_circuit {
 	struct ag_object obj;
-	char descr[CIRCUIT_DESCR_MAX];	/* Short description */
-	VG *vg;				/* Schematics drawing */
-	VG_Block *vgblk;		/* Circuit display block */
-	struct ag_console *console;	/* Log console */
-	ES_Sim *sim;			/* Current simulation mode */
+	char descr[CIRCUIT_DESCR_MAX];		/* Description */
+	char authors[CIRCUIT_AUTHORS_MAX];	/* Authors */
+	char keywords[CIRCUIT_KEYWORDS_MAX];	/* Keywords */
+	VG *vg;					/* Schematics */
+	struct ag_console *console;		/* Log console */
+	ES_Sim *sim;				/* Current simulation mode */
 	Uint flags;
 #define CIRCUIT_SHOW_NODES	0x01
 #define CIRCUIT_SHOW_NODENAMES	0x02
@@ -106,6 +109,7 @@ typedef struct es_circuit {
 
 #define CIRCUIT(p) ((ES_Circuit *)(p))
 #define VNODE(com,n) ES_NodeVoltage(COM(com)->ckt,(n))
+
 #define CIRCUIT_FOREACH_COMPONENT(com, ckt) \
 	AGOBJECT_FOREACH_CLASS((com),(ckt),es_component,"ES_Component:*")
 #define CIRCUIT_FOREACH_VSOURCE(vs, ckt) \
@@ -115,6 +119,17 @@ typedef struct es_circuit {
 		if ((com)->flags & ES_COMPONENT_SELECTED) {		\
 			continue;					\
 		} else
+
+#define CIRCUIT_FOREACH_WIRE(wire, ckt) \
+	AG_TAILQ_FOREACH(wire, &(ckt)->wires, wires)
+
+#define WIRE_FOREACH_PORT(port, i, wire) \
+	for ((i) = 0; \
+	    ((i) < 2 && ((port) = &(wire)->ports[i])); \
+	     (i)++)
+
+#define NODE_FOREACH_BRANCH(br, node) \
+	AG_TAILQ_FOREACH(br, &(node)->branches, branches)
 
 __BEGIN_DECLS
 extern AG_ObjectClass esCircuitClass;

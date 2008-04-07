@@ -35,12 +35,13 @@
 #include "vsource.h"
 
 const ES_Port esVsourcePinout[] = {
-	{ 0, "",  0, 0 },
-	{ 1, "v+", 0, 0 },
-	{ 2, "v-", 0, 2 },
+	{ 0, "",   {0.0, 0.0} },
+	{ 1, "v+", {0.0, 0.0} },
+	{ 2, "v-", {0.0, 2.0} },
 	{ -1 },
 };
 
+#if 0
 enum {
 	VSOURCE_SYM_LINEAR,
 	VSOURCE_SYM_CIRCULAR
@@ -71,10 +72,9 @@ Draw(void *p, VG *vg)
 		VG_End(vg);
 		VG_Begin(vg, VG_TEXT);
 		{
-			VG_SetStyle(vg, "component-name");
 			VG_Vertex2(vg, -0.0468, 0.0625);
 			VG_TextAlignment(vg, VG_ALIGN_TR);
-			VG_Printf(vg, "%s\n%.2fV\n", OBJECT(vs)->name,
+			VG_TextPrintf(vg, "%s\n%.2fV\n", OBJECT(vs)->name,
 			    vs->voltage);
 		}
 		VG_End(vg);
@@ -96,31 +96,29 @@ Draw(void *p, VG *vg)
 		VG_End(vg);
 		VG_Begin(vg, VG_TEXT);
 		{
-			VG_SetStyle(vg, "component-name");
 			VG_Vertex2(vg, 0.0, 1.0);
 			VG_TextAlignment(vg, VG_ALIGN_MC);
-			VG_Printf(vg, "%s", OBJECT(vs)->name);
+			VG_TextPrintf(vg, "%s", OBJECT(vs)->name);
 		}
 		VG_End(vg);
 		VG_Begin(vg, VG_TEXT);
 		{
-			VG_SetStyle(vg, "component-name");
 			VG_Vertex2(vg, 0.0, 0.6);
 			VG_TextAlignment(vg, VG_ALIGN_MC);
-			VG_Printf(vg, "+");
+			VG_TextPrintf(vg, "+");
 		}
 		VG_End(vg);
 		VG_Begin(vg, VG_TEXT);
 		{
-			VG_SetStyle(vg, "component-name");
 			VG_Vertex2(vg, 0.0, 1.4);
 			VG_TextAlignment(vg, VG_ALIGN_MC);
-			VG_Printf(vg, "-");
+			VG_TextPrintf(vg, "-");
 		}
 		VG_End(vg);
 		break;
 	}
 }
+#endif
 
 /* Find the pairs connecting two contiguous ports, and its polarity. */
 static int
@@ -128,10 +126,10 @@ FindContigPair(ES_Port *pA, ES_Port *pB, ES_Pair **Rdip, int *Rpol)
 {
 	ES_Component *com = pA->com;
 	ES_Circuit *ckt = com->ckt;
-	unsigned int i;
+	ES_Pair *dip;
+	Uint i;
 
-	for (i = 0; i < com->npairs; i++) {
-		ES_Pair *dip = &com->pairs[i];
+	COMPONENT_FOREACH_PAIR(dip, i, com) {
 		ES_Node *node;
 		ES_Branch *br;
 		int pol;
@@ -150,7 +148,7 @@ FindContigPair(ES_Port *pA, ES_Port *pB, ES_Pair **Rdip, int *Rpol)
 			continue;
 		}
 
-		TAILQ_FOREACH(br, &node->branches, branches) {
+		NODE_FOREACH_BRANCH(br, node) {
 			if (br->port == pB)
 				break;
 		}
@@ -171,7 +169,7 @@ static void
 InsertVoltageLoop(ES_Vsource *vs)
 {
 	ES_Loop *lnew;
-	unsigned int i;
+	Uint i;
 
 	/* Create a new voltage source loop entry. */
 	lnew = Malloc(sizeof(ES_Loop));
@@ -207,20 +205,21 @@ InsertVoltageLoop(ES_Vsource *vs)
  * with respect to the loop are recorded in a separate array.
  */
 static void
-FindLoops(ES_Vsource *vs, ES_Port *pcur)
+FindLoops(ES_Vsource *vs, ES_Port *portCur)
 {
 	ES_Circuit *ckt = COM(vs)->ckt;
-	ES_Node *node = ckt->nodes[pcur->node];
+	ES_Node *nodeCur = ckt->nodes[portCur->node], *nodeNext;
+	ES_Port *portNext;
 	ES_Branch *br;
-	unsigned int i;
+	Uint i;
 
-	node->flags |= CKTNODE_EXAM;
+	nodeCur->flags |= CKTNODE_EXAM;
 
 	vs->lstack = Realloc(vs->lstack, (vs->nlstack+1)*sizeof(ES_Port *));
-	vs->lstack[vs->nlstack++] = pcur;
+	vs->lstack[vs->nlstack++] = portCur;
 
-	TAILQ_FOREACH(br, &node->branches, branches) {
-		if (br->port == pcur) {
+	NODE_FOREACH_BRANCH(br, nodeCur) {
+		if (br->port == portCur) {
 			continue;
 		}
 		if (br->port->com == COM(vs) &&
@@ -236,29 +235,27 @@ FindLoops(ES_Vsource *vs, ES_Port *pcur)
 		if (br->port->com == NULL) {
 			continue;
 		}
-		for (i = 1; i <= br->port->com->nports; i++) {
-			ES_Port *pnext = &br->port->com->ports[i];
-			ES_Node *nnext = ckt->nodes[pnext->node];
-
-			if ((pnext == pcur) ||
-			    (pnext->com == br->port->com &&
-			     pnext->n == br->port->n) ||
-			    (nnext->flags & CKTNODE_EXAM)) {
+		COMPONENT_FOREACH_PORT(portNext, i, br->port->com) {
+			nodeNext = ckt->nodes[portNext->node];
+			if ((portNext == portCur) ||
+			    (portNext->com == br->port->com &&
+			     portNext->n == br->port->n) ||
+			    (nodeNext ->flags & CKTNODE_EXAM)) {
 				continue;
 			}
-			FindLoops(vs, pnext);
+			FindLoops(vs, portNext);
 		}
 	}
 
 	vs->nlstack--;
-	node->flags &= ~(CKTNODE_EXAM);
+	nodeCur->flags &= ~(CKTNODE_EXAM);
 }
 
 /* Isolate the loops relative to the given voltage source. */
 void
 ES_VsourceFindLoops(ES_Vsource *vs)
 {
-	unsigned int i;
+	Uint i;
 
 	vs->lstack = Malloc(sizeof(ES_Port *));
 	FindLoops(vs, PORT(vs,1));
@@ -271,7 +268,7 @@ ES_VsourceFindLoops(ES_Vsource *vs)
 /*
  * Ideal voltage sources require the addition of one unknown (iE), and a
  * branch current equation (br). Voltage sources contribute two entries to
- * the B/C matrices and one entry to the right-hand side vector e.
+ * the B/C matrices and one entry to the RHS vector.
  *
  *    |  Vk  Vj  iE  | RHS
  *    |--------------|-----
@@ -326,7 +323,7 @@ Connected(AG_Event *event)
 	ckt->vsrcs[ckt->m] = vs;
 	ckt->m++;
 
-	ES_CircuitLog(ckt, "added vsource: %d", ckt->m-1);
+	Debug(ckt, "Added voltage source #%d\n", ckt->m-1);
 }
 
 static void
@@ -342,7 +339,7 @@ Disconnected(AG_Event *event)
 				for (; i < ckt->m; i++)
 					ckt->vsrcs[i] = ckt->vsrcs[i+1];
 			}
-			ES_CircuitLog(ckt, "removed vsource: %d", i);
+			Debug(ckt, "Removed voltage source #%d\n", i);
 			break;
 		}
 	}
@@ -377,7 +374,7 @@ void
 ES_VsourceFreeLoops(ES_Vsource *vs)
 {
 	ES_Loop *loop, *nloop;
-	unsigned int i;
+	Uint i;
 
 	for (loop = TAILQ_FIRST(&vs->loops);
 	     loop != TAILQ_END(&vs->loops);
@@ -459,7 +456,7 @@ PollLoops(AG_Event *event)
 	AG_Tlist *tl = AG_SELF();
 	AG_TlistItem *it;
 	ES_Loop *l;
-	unsigned int i, j;
+	Uint i, j;
 	int k;
 
 	AG_TlistClear(tl);
@@ -520,7 +517,7 @@ ES_ComponentClass esVsourceClass = {
 	N_("Independent voltage source"),
 	"V",
 	"Sources/Vsource.vg",
-	Draw,
+	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
 	Export,

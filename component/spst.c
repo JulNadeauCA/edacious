@@ -36,12 +36,13 @@
 #include "spst.h"
 
 const ES_Port esSpstPinout[] = {
-	{ 0, "",  0, 1 },
-	{ 1, "A", 0, 0 },
-	{ 2, "B", 2, 0 },
+	{ 0, "",  {0.0, 1.0} },
+	{ 1, "A", {0.0, 0.0} },
+	{ 2, "B", {2.0, 0.0} },
 	{ -1 },
 };
 
+#if 0
 static void
 Draw(void *p, VG *vg)
 {
@@ -74,12 +75,12 @@ Draw(void *p, VG *vg)
 	VG_End(vg);
 
 	VG_Begin(vg, VG_TEXT);
-	VG_SetStyle(vg, "component-name");
 	VG_Vertex2(vg, 1.000, 0.250);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_Printf(vg, "%s", OBJECT(sw)->name);
+	VG_TextPrintf(vg, "%s", OBJECT(sw)->name);
 	VG_End(vg);
 }
+#endif
 
 static void
 Init(void *p)
@@ -208,7 +209,7 @@ ES_ComponentClass esSpstClass = {
 	N_("SPST switch"),
 	"Sw",
 	NULL,			/* schem */
-	Draw,
+	NULL,			/* draw */
 	InstanceMenu,
 	ClassMenu,
 	Export,

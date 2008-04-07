@@ -42,8 +42,7 @@ InitTool(void *p)
 }
 
 static int
-ConnectWire(ES_Circuit *ckt, ES_Wire *wire, float x1, float y1, float x2,
-    float y2)
+ConnectWire(ES_Circuit *ckt, ES_Wire *wire, VG_Vector p1, VG_Vector p2)
 {
 	ES_Port *port1, *port2;
 	int N1, N2, N3;
@@ -51,8 +50,8 @@ ConnectWire(ES_Circuit *ckt, ES_Wire *wire, float x1, float y1, float x2,
 
 	ES_LockCircuit(ckt);
 
-	port1 = ES_PortNearestPoint(ckt, x1,y1, NULL);
-	port2 = ES_PortNearestPoint(ckt, x2,y2, NULL);
+	port1 = ES_PortProximity(ckt, p1, NULL);
+	port2 = ES_PortProximity(ckt, p2, NULL);
 	if ((port1 != NULL && port1->node != -1) &&
 	    (port2 != NULL && port2->node != -1) &&
 	    (port1->node == port2->node)) {
@@ -100,46 +99,39 @@ UpdateStatus(VG_View *vv, ES_Port *port)
 }
 
 static int
-MouseButtonDown(void *p, float xCurs, float yCurs, int b)
+MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
 	VG_Tool *t = p;
 	char name[AG_OBJECT_NAME_MAX];
-	float x, y;
+	VG_Vector v;
 	ES_Circuit *ckt = t->p;
 	ES_Component *com;
 	ES_Wire *wire;
 	ES_Port *port;
 	int i;
 	
-	if ((port = ES_PortNearestPoint(ckt, xCurs, yCurs, esCurWire))
-	    != NULL) {
+	if ((port = ES_PortProximity(ckt, vPos, esCurWire)) != NULL) {
 		if (port->com != NULL) {			/* Component */
-			x = port->com->block->pos.x+port->x;
-			y = port->com->block->pos.y+port->y;
+			v = VG_Add(port->com->pos, port->pos);
 		} else {					/* Wire */
-			x = port->x;
-			y = port->y;
+			v = port->pos;
 		}
 	} else {
-		x = xCurs;
-		y = yCurs;
+		v = vPos;
 	}
-	switch (b) {
+	switch (button) {
 	case SDL_BUTTON_LEFT:
 		if (esCurWire == NULL) {
 			wire = ES_CircuitAddWire(ckt);
-			wire->ports[0].x = x;
-			wire->ports[0].y = y;
-			wire->ports[1].x = x;
-			wire->ports[1].y = y;
+			wire->ports[0].pos = v;
+			wire->ports[1].pos = v;
 			esCurWire = wire;
 		} else {
 			wire = esCurWire;
 			wire->ports[0].flags &= ~(ES_PORT_SELECTED);
 			wire->ports[1].flags &= ~(ES_PORT_SELECTED);
-			if (ConnectWire(ckt, wire,
-			    wire->ports[0].x, wire->ports[0].y,
-			    wire->ports[1].x, wire->ports[1].y) == -1) {
+			if (ConnectWire(ckt, wire, wire->ports[0].pos,
+			    wire->ports[1].pos) == -1) {
 				AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
 				VG_Status(t->vgv, _("Could not connect: %s"),
 				    AG_GetError());
@@ -160,17 +152,17 @@ MouseButtonDown(void *p, float xCurs, float yCurs, int b)
 }
 
 static int
-MouseButtonUp(void *p, float x, float y, int b)
+MouseButtonUp(void *p, VG_Vector vPos, int button)
 {
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
 	ES_Port *port;
 
-	switch (b) {
+	switch (button) {
 	case SDL_BUTTON_LEFT:
 	case SDL_BUTTON_MIDDLE:
 		ES_UnselectAllPorts(ckt);
-		if ((port = ES_PortNearestPoint(ckt, x,y, esCurWire)) != NULL) {
+		if ((port = ES_PortProximity(ckt, vPos, esCurWire)) != NULL) {
 			port->flags |= ES_PORT_SELECTED;
 		}
 		UpdateStatus(t->vgv, port);
@@ -181,7 +173,7 @@ MouseButtonUp(void *p, float x, float y, int b)
 }
 
 static int
-MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
+MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 {
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
@@ -190,13 +182,12 @@ MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
 	int i;
 
 	ES_UnselectAllPorts(ckt);
-	if ((port = ES_PortNearestPoint(ckt, x, y, esCurWire)) != NULL) {
+	if ((port = ES_PortProximity(ckt, vPos, esCurWire)) != NULL) {
 		port->flags |= ES_PORT_SELECTED;
 	}
 	UpdateStatus(t->vgv, port);
 	if (esCurWire != NULL) {
-		esCurWire->ports[1].x = x;
-		esCurWire->ports[1].y = y;
+		esCurWire->ports[1].pos = vPos;
 	}
 	return (0);
 }
@@ -208,11 +199,13 @@ VG_ToolOps esWireTool = {
 	sizeof(VG_Tool),
 	0,
 	InitTool,
-	NULL,				/* destroy */
-	NULL,				/* edit */
+	NULL,			/* destroy */
+	NULL,			/* edit */
+	NULL,			/* predraw */
+	NULL,			/* postdraw */
 	MouseMotion,
 	MouseButtonDown,
 	MouseButtonUp,
-	NULL,				/* keydown */
-	NULL				/* keyup */
+	NULL,			/* keydown */
+	NULL			/* keyup */
 };

@@ -34,8 +34,9 @@
 #include "eda.h"
 
 static int
-MouseButtonDown(void *p, float x, float y, int b)
+MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
+#if 0
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
 	ES_Component *com;
@@ -72,6 +73,7 @@ MouseButtonDown(void *p, float x, float y, int b)
 		AG_WidgetFocus(t->vgv);
 		AG_WindowFocus(pwin);
 	}
+#endif
 	return (1);
 }
 
@@ -113,8 +115,9 @@ LeftButton(VG_Tool *t, int button, int state, float x, float y, void *arg)
 #endif
 
 static int
-MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
+MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 {
+#if 0
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
 	VG *vg = ckt->vg;
@@ -130,6 +133,7 @@ MouseMotion(void *p, float x, float y, float xrel, float yrel, int b)
 		}
 		com->highlighted = (com->block == blkClosest);
 	}
+#endif
 	return (0);
 }
 
@@ -151,6 +155,8 @@ VG_ToolOps esSelcomOps = {
 	Init,
 	NULL,			/* destroy */
 	NULL,			/* edit */
+	NULL,			/* predraw */
+	NULL,			/* postdraw */
 	MouseMotion,
 	MouseButtonDown,
 	NULL,			/* mousebuttonup */

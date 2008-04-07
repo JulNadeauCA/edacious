@@ -35,12 +35,13 @@
 #include "semiresistor.h"
 
 const ES_Port esSemiResistorPinout[] = {
-	{ 0, "",  0.000, 0.625 },
-	{ 1, "A", 0.000, 0.000 },
-	{ 2, "B", 1.250, 0.000 },
+	{ 0, "",  {0.000, 0.625} },
+	{ 1, "A", {0.000, 0.000} },
+	{ 2, "B", {1.250, 0.000} },
 	{ -1 },
 };
 
+#if 0
 static void
 Draw(void *p, VG *vg)
 {
@@ -60,13 +61,13 @@ Draw(void *p, VG *vg)
 	VG_End(vg);
 
 	VG_Begin(vg, VG_TEXT);
-	VG_SetStyle(vg, "component-name");
 	VG_Vertex2(vg, 0.625, 0.000);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
 
-	VG_Printf(vg, "%s", OBJECT(r)->name);
+	VG_TextPrintf(vg, "%s", OBJECT(r)->name);
 	VG_End(vg);
 }
+#endif
 
 static void
 Init(void *p)
@@ -199,7 +200,7 @@ ES_ComponentClass esSemiResistorClass = {
 	N_("Semiconductor resistor"),
 	"R",
 	"Resistor.vg",
-	Draw,
+	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
 	Export,

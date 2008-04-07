@@ -35,72 +35,38 @@
 #include "resistor.h"
 
 const ES_Port esResistorPinout[] = {
-	{ 0, "",  0.000, 0.625 },
-	{ 1, "A", 0.000, 0.000 },
-	{ 2, "B", 1.250, 0.000 },
+	{ 0, "",  {0.000, 0.625} },
+	{ 1, "A", {0.000, 0.000} },
+	{ 2, "B", {1.250, 0.000} },
 	{ -1 },
 };
 
-int esResistorShowValue = 0;
-enum {
-	RESISTOR_BOX_STYLE,
-	RESISTOR_AMERICAN_STYLE
-} esResistorStyle = RESISTOR_BOX_STYLE;
-
 static void
-Draw(void *p, VG *vg)
+Draw(void *p, VG_Node *vn)
 {
 	ES_Resistor *r = p;
+	VG_Point *p1, *p2, *p3, *p4;
+	VG_Point *pTL, *pTR, *pBL, *pBR;
+	VG_Text *vt;
 
-	switch (esResistorStyle) {
-	case RESISTOR_BOX_STYLE:
-		VG_Begin(vg, VG_LINES);
-		{
-			VG_Vertex2(vg, 0.000, 0.000);
-			VG_Vertex2(vg, 0.156, 0.000);
-			VG_Vertex2(vg, 1.250, 0.000);
-			VG_Vertex2(vg, 1.09375, 0.000);
-		}
-		VG_End(vg);
-		VG_Begin(vg, VG_LINE_LOOP);
-		{
-			VG_Vertex2(vg, 0.156, -0.240);
-			VG_Vertex2(vg, 0.156,  0.240);
-			VG_Vertex2(vg, 1.09375,  0.240);
-			VG_Vertex2(vg, 1.09375, -0.240);
-		}
-		VG_End(vg);
-		break;
-	case RESISTOR_AMERICAN_STYLE:
-		VG_Begin(vg, VG_LINE_STRIP);
-		{
-			VG_Vertex2(vg, 0.000, 0.125);
-			VG_Vertex2(vg, 0.125, 0.000);
-			VG_Vertex2(vg, 0.250, 0.125);
-			VG_Vertex2(vg, 0.375, 0.000);
-			VG_Vertex2(vg, 0.500, 0.125);
-			VG_Vertex2(vg, 0.625, 0.000);
-			VG_Vertex2(vg, 0.750, 0.125);
-			VG_Vertex2(vg, 0.875, 0.000);
-			VG_Vertex2(vg, 1.000, 0.000);
-		}
-		VG_End(vg);
-		break;
-	}
+	p1 = VG_PointNew(vn, VGVECTOR(0.00000f, 0.0f));
+	p2 = VG_PointNew(vn, VGVECTOR(0.15600f, 0.0f));
+	p3 = VG_PointNew(vn, VGVECTOR(1.25000f, 0.0f));
+	p4 = VG_PointNew(vn, VGVECTOR(0.09375f, 0.0f));
+	pTL = VG_PointNew(vn, VGVECTOR(0.15600f, -0.240f));
+	pTR = VG_PointNew(vn, VGVECTOR(1.09375f, -0.240f));
+	pBL = VG_PointNew(vn, VGVECTOR(0.15600f, +0.240f));
+	pBR = VG_PointNew(vn, VGVECTOR(1.09375f, +0.240f));
 
-	VG_Begin(vg, VG_TEXT);
-	{
-		VG_SetStyle(vg, "component-name");
-		VG_Vertex2(vg, 0.625, 0.000);
-		VG_TextAlignment(vg, VG_ALIGN_MC);
-		if (esResistorShowValue) {
-			VG_Printf(vg, "%s (%.2f\xce\xa9)",
-			    OBJECT(r)->name, r->resistance);
-		} else {
-			VG_Printf(vg, "%s", OBJECT(r)->name);
-		}
-	}
-	VG_End(vg);
+	VG_LineNew(vn, p1,p2);	 VG_LineNew(vn, p3,p4);
+	VG_LineNew(vn, p2,pTL);	 VG_LineNew(vn, p2,pBL);
+	VG_LineNew(vn, p3,pTR);	 VG_LineNew(vn, p3,pBR);
+	VG_LineNew(vn, pTL,pTR); VG_LineNew(vn, pBL,pBR);
+
+	p1 = VG_PointNew(vn, VGVECTOR(0.625f, 0.000f));
+	vt = VG_TextNew(vn, p1);
+	VG_TextAlignment(vt, VG_ALIGN_MC);
+	VG_TextPrintf(vt, "%s", OBJECT(r)->name);
 }
 
 static int
