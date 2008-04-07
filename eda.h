@@ -3,7 +3,6 @@
 #ifndef _AGAR_EDA_H_
 #define _AGAR_EDA_H_
 
-#include <config/edition.h>
 #include <config/debug.h>
 
 #include <agar/core/snprintf.h>
