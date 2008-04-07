@@ -559,6 +559,7 @@ EditMenu(AG_Event *event)
 int
 main(int argc, char *argv[])
 {
+	Uint videoFlags = AG_VIDEO_OPENGL_OR_SDL|AG_VIDEO_RESIZABLE;
 	int c, i, fps = -1;
 	char *s;
 
@@ -595,10 +596,11 @@ main(int argc, char *argv[])
 			break;
 #ifdef HAVE_OPENGL
 		case 'g':
-			AG_SetBool(agConfig, "view.opengl", 1);
+			videoFlags &= ~(AG_VIDEO_OPENGL_OR_SDL);
+			videoFlags |= AG_VIDEO_OPENGL;
 			break;
 		case 'G':
-			AG_SetBool(agConfig, "view.opengl", 0);
+			videoFlags &= ~(AG_VIDEO_OPENGL_OR_SDL);
 			break;
 #endif
 		case '?':
@@ -613,8 +615,7 @@ main(int argc, char *argv[])
 		}
 	}
 #endif /* HAVE_GETOPT */
-	if (AG_InitVideo(800, 600, 32,
-	    AG_VIDEO_OPENGL_OR_SDL|AG_VIDEO_RESIZABLE) == -1) {
+	if (AG_InitVideo(800, 600, 32, videoFlags) == -1) {
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (-1);
 	}
