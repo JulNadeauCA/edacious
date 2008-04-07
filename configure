@@ -351,11 +351,16 @@ echo "#ifndef SYSCONFDIR" > config/sysconfdir.h
 echo "#define SYSCONFDIR \"${SYSCONFDIR}\"" >> config/sysconfdir.h
 echo "#endif /* SYSCONFDIR */" >> config/sysconfdir.h
 
-VERSION="03182008"
+VERSION="04052008"
 echo "#ifndef VERSION" > config/version.h
 echo "#define VERSION \"$VERSION\"" >> config/version.h
 echo "#endif" >> config/version.h
 echo "hdefs[\"VERSION\"] = \"$VERSION\"" >>configure.lua
+RELEASE=""""
+echo "#ifndef RELEASE" > config/release.h
+echo "#define RELEASE \"$RELEASE\"" >> config/release.h
+echo "#endif" >> config/release.h
+echo "hdefs[\"RELEASE\"] = \"$RELEASE\"" >>configure.lua
 SHAREDIR="$PREFIX/share/agar-eda"
 echo "SHAREDIR=$SHAREDIR" >>Makefile.config
 echo "mdefs[\"SHAREDIR\"] = \"$SHAREDIR\"" >>configure.lua
@@ -1273,8 +1278,8 @@ echo "CFLAGS=$CFLAGS" >>Makefile.config
 echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
 echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
 echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
-CFLAGS="$CFLAGS -D_USE_AGAR_QUEUE"
-CXXFLAGS="$CXXFLAGS -D_USE_AGAR_QUEUE"
+CFLAGS="$CFLAGS -I$SRC"
+CXXFLAGS="$CXXFLAGS -I$SRC"
 echo "CFLAGS=$CFLAGS" >>Makefile.config
 echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
 echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
@@ -1297,9 +1302,6 @@ if [ "${HAVE_AGAR_VG}" != "yes" ]
 	echo "(http://hypertriton.com/agar-vg)"
 	exit 1
 fi
-CFLAGS="$CFLAGS -I$SRC"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
 if [ "${enable_warnings}" != "no" ]
  then
 CFLAGS="$CFLAGS -Wall -Werror -Wmissing-prototypes"
@@ -1308,17 +1310,6 @@ echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
 CFLAGS="$CFLAGS -Wno-unused"
 echo "CFLAGS=$CFLAGS" >>Makefile.config
 echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-fi
-if [ "${enable_edition}" != "no" ]
- then
-EDITION="1"
-echo "#ifndef EDITION" > config/edition.h
-echo "#define EDITION \"$EDITION\"" >> config/edition.h
-echo "#endif" >> config/edition.h
-echo "hdefs[\"EDITION\"] = \"$EDITION\"" >>configure.lua
-else
-echo "#undef EDITION" >config/edition.h
-echo "hdefs[\"EDITION\"] = nil" >>configure.lua
 fi
 if [ "${enable_static}" = "yes" ]
  then

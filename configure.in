@@ -4,7 +4,8 @@ REGISTER("--enable-static",	"Produce a static binary [default: no]")
 REGISTER("--enable-warnings",	"Enable compiler warnings [default: no]")
 REGISTER("--enable-edition",	"Enable graphical editor [default: yes]")
 
-HDEFINE(VERSION, "03182008")
+HDEFINE(VERSION, "04052008")
+HDEFINE(RELEASE, "")
 
 MDEFINE(SHAREDIR, "$PREFIX/share/agar-eda")
 HDEFINE(SHAREDIR, "$PREFIX/share/agar-eda")
@@ -26,7 +27,13 @@ C_DEFINE(_ES_INTERNAL)
 C_DEFINE(_USE_AGAR_STD)
 C_DEFINE(_USE_AGAR_CORE)
 C_DEFINE(_USE_AGAR_QUEUE)
-C_DEFINE(_USE_AGAR_QUEUE)
+
+C_INCDIR($SRC)
+
+C_NO_SECURE_WARNINGS();
+#C_EXTRA_WARNINGS();
+#C_FATAL_WARNINGS();
+
 
 if [ "${HAVE_AGAR}" != "yes" ]; then
 	echo "This application requires Agar"
@@ -44,18 +51,10 @@ if [ "${HAVE_AGAR_VG}" != "yes" ]; then
 	exit 1
 fi
 
-MDEFINE(CFLAGS, "$CFLAGS -I$SRC")
 if [ "${enable_warnings}" != "no" ]; then
 	MDEFINE(CFLAGS, "$CFLAGS -Wall -Werror -Wmissing-prototypes")
 	MDEFINE(CFLAGS, "$CFLAGS -Wno-unused")
 fi
-
-if [ "${enable_edition}" != "no" ]; then
-	HDEFINE(EDITION, 1)
-else
-	HUNDEF(EDITION)
-fi
-
 if [ "${enable_static}" = "yes" ]; then
 	MDEFINE(LDFLAGS, "-static")
 fi
