@@ -35,36 +35,35 @@
 
 #include "eda.h"
 
-#include <schem/schem.h>
-#include <circuit/circuit.h>
-#include <circuit/scope.h>
 #include <circuit/spice.h>
+#include <circuit/scope.h>
 
-#include <icons.h>
+#include <sources/vsource.h>
+#include <sources/vsine.h>
+#include <sources/vsquare.h>
+
+#include <component/and.h>
+#include <component/digital.h>
+#include <component/ground.h>
+#include <component/inverter.h>
+#include <component/led.h>
+#include <component/logic_probe.h>
+#include <component/or.h>
+#include <component/resistor.h>
+#include <component/semiresistor.h>
+#include <component/spst.h>
+#include <component/spdt.h>
+
 #include <icons_data.h>
 
-#include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
 
+#include <config/enable_nls.h>
 #include <config/have_getopt.h>
 #include <config/have_agar_dev.h>
 
-extern ES_ComponentClass esDigitalClass;
-extern ES_ComponentClass esVsourceClass;
-extern ES_ComponentClass esGroundClass;
-extern ES_ComponentClass esResistorClass;
-extern ES_ComponentClass esSemiResistorClass;
-extern ES_ComponentClass esInverterClass;
-extern ES_ComponentClass esAndClass;
-extern ES_ComponentClass esOrClass;
-extern ES_ComponentClass esSpstClass;
-extern ES_ComponentClass esSpdtClass;
-extern ES_ComponentClass esLedClass;
-extern ES_ComponentClass esLogicProbeClass;
-extern ES_ComponentClass esVSquareClass;
-extern ES_ComponentClass esVSineClass;
-
-void *edaModels[] = {
+void *esComponentClasses[] = {
 	&esVsourceClass,
 	&esGroundClass,
 	&esResistorClass,
@@ -81,25 +80,31 @@ void *edaModels[] = {
 	NULL
 };
 
+const void *esSchematicClasses[] = {
+	&esSchemPortOps,
+	NULL
+};
+
+void *esBaseClasses[] = {
+	&esComponentClass,
+	&esDigitalClass,
+	&esCircuitClass,
+	&esScopeClass,
+	&esSchemClass,
+	NULL
+};
+
+const char *esEditableClasses[] = {
+	"ES_Circuit:*",
+	"ES_Schem:*",
+	"ES_Scope:*",
+	NULL
+};
+
 AG_Menu *appMenu = NULL;
 AG_Object vfsRoot;
 static void *objFocus = NULL;
 static AG_Mutex objLock;
-
-static void
-RegisterClasses(void)
-{
-	void **model;
-
-	AG_RegisterClass(&esComponentClass);
-	AG_RegisterClass(&esDigitalClass);
-	AG_RegisterClass(&esCircuitClass);
-	AG_RegisterClass(&esScopeClass);
-	AG_RegisterClass(&esSchemClass);
-	for (model = &edaModels[0]; *model != NULL; model++) {
-		AG_RegisterClass(*model);
-	}
-}
 
 static void
 SaveAndClose(AG_Object *obj, AG_Window *win)
@@ -156,14 +161,15 @@ static void
 WindowGainedFocus(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
-	
+	const char **s;
+
 	AG_MutexLock(&objLock);
-	if (AG_ObjectIsClass(obj, "ES_Circuit:*") ||
-	    AG_ObjectIsClass(obj, "ES_Scope:*") ||
-	    AG_ObjectIsClass(obj, "ES_Schem:*")) {
-		objFocus = obj;
-	} else {
-		objFocus = NULL;
+	objFocus = NULL;
+	for (s = &esEditableClasses[0]; *s != NULL; s++) {
+		if (AG_ObjectIsClass(obj, *s)) {
+			objFocus = obj;
+			break;
+		}
 	}
 	AG_MutexUnlock(&objLock);
 }
@@ -187,8 +193,22 @@ ES_CreateEditionWindow(void *p)
 	AG_AddEvent(win, "window-gainfocus", WindowGainedFocus, "%p", obj);
 	AG_AddEvent(win, "window-lostfocus", WindowLostFocus, "%p", obj);
 	AG_AddEvent(win, "window-hidden", WindowLostFocus, "%p", obj);
+	AG_SetPointer(win, "object", obj);
 	AG_WindowShow(win);
 	return (win);
+}
+
+void
+ES_CloseEditionWindow(void *p)
+{
+	AG_Window *win;
+	void *wObj;
+
+	TAILQ_FOREACH(win, &agView->windows, windows) {
+		if (AG_GetProp(p, "object", AG_PROP_POINTER, (void *)&wObj) &&
+		    wObj == p)
+			AG_ViewDetach(win);
+	}
 }
 
 static void
@@ -219,7 +239,7 @@ SetArchivePath(void *obj, const char *path)
 
 	AG_ObjectSetArchivePath(obj, path);
 
-	if ((c = strrchr(path, ES_PATHSEPC)) != NULL && c[1] != '\0') {
+	if ((c = strrchr(path, ES_PATHSEP)) != NULL && c[1] != '\0') {
 		AG_ObjectSetName(obj, "%s", &c[1]);
 	} else {
 		AG_ObjectSetName(obj, "%s", path);
@@ -256,18 +276,15 @@ OpenDlg(AG_Event *event)
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Open..."));
 
-	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
-	fd = AG_FileDlgNewMRU(hPane->div[0], "agar-eda.mru.circuits",
-	    AG_FILEDLG_LOAD|AG_FILEDLG_ASYNC|AG_FILEDLG_EXPAND|
-	    AG_FILEDLG_CLOSEWIN);
-	AG_FileDlgSetOptionContainer(fd, hPane->div[1]);
+	fd = AG_FileDlgNewMRU(win, "agar-eda.mru.circuits",
+	    AG_FILEDLG_LOAD|AG_FILEDLG_EXPAND|AG_FILEDLG_CLOSEWIN);
+	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 
 	AG_FileDlgAddType(fd, _("Agar-EDA circuit model"), "*.ecm",
 	    OpenNativeObject, "%p", &esCircuitClass);
 	AG_FileDlgAddType(fd, _("Agar-EDA component schematic"), "*.eschem",
 	    OpenNativeObject, "%p", &esSchemClass);
 
-	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 70, 40);
 	AG_WindowShow(win);
 }
 
@@ -353,6 +370,7 @@ SaveAsDlg(AG_Event *event)
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Save %s as..."), obj->name);
+
 	fd = AG_FileDlgNewMRU(win, "agar-eda.mru.circuits",
 	    AG_FILEDLG_SAVE|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
@@ -469,7 +487,7 @@ static void
 FileMenu(AG_Event *event)
 {
 	AG_MenuItem *m = AG_SENDER();
-	AG_MenuItem *node;
+	AG_MenuItem *node, *node2;
 
 	AG_MenuActionKb(m, _("New circuit..."), esIconCircuit.s,
 	    SDLK_n, KMOD_CTRL,
@@ -512,16 +530,16 @@ FileMenu(AG_Event *event)
 		    NewObject, "%p", &esDigitalInputClass);
 		AG_MenuAction(node, _("Digital output..."), agIconDoc.s,
 		    NewObject, "%p", &esDigitalOutputClass);
+
 		AG_MenuSeparator(node);
+
 		OBJECT_FOREACH_CLASS(dev, &vfsRoot, es_device, "ES_Device:*") {
 			AG_MenuAction(node, OBJECT(dev)->name, agIconGear.s,
 			    EditDevice, "%p", dev);
 		}
 	}
 #endif
-	
 	AG_MenuSeparator(m);
-	
 	AG_MenuActionKb(m, _("Quit"), agIconClose.s,
 	    SDLK_q, KMOD_CTRL,
 	    Quit, NULL);
@@ -562,6 +580,8 @@ main(int argc, char *argv[])
 	Uint videoFlags = AG_VIDEO_OPENGL_OR_SDL|AG_VIDEO_RESIZABLE;
 	int c, i, fps = -1;
 	char *s;
+	void **cls;
+	const void **clsSchem;
 
 #ifdef ENABLE_NLS
 	bindtextdomain("agar-eda", LOCALEDIR);
@@ -630,8 +650,13 @@ main(int argc, char *argv[])
 	AG_ObjectSetName(&vfsRoot, _("Editor VFS"));
 	AG_MutexInit(&objLock);
 
-	/* Register our classes. */
-	RegisterClasses();
+	/* Register our built-in classes. */
+	for (cls = &esBaseClasses[0]; *cls != NULL; cls++)
+		AG_RegisterClass(*cls);
+	for (cls = &esComponentClasses[0]; *cls != NULL; cls++)
+		AG_RegisterClass(*cls);
+	for (clsSchem = &esSchematicClasses[0]; *clsSchem != NULL; clsSchem++)
+		VG_RegisterClass(*clsSchem);
 
 	/* Load our built-in icons. */
 	esIcon_Init();
