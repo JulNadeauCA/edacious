@@ -3,8 +3,6 @@
 #ifndef _COMPONENT_COMPONENT_H_
 #define _COMPONENT_COMPONENT_H_
 
-#include <circuit/circuit.h>
-
 #include "begin_code.h"
 
 #define COMPONENT_MAX_PORTS	128

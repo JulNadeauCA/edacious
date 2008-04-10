@@ -28,11 +28,7 @@
  * TODO simulate hysteresis, etc.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
-#include "eda.h"
+#include <eda.h>
 #include "spdt.h"
 
 const ES_Port esSpdtPinout[] = {

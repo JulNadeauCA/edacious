@@ -27,11 +27,7 @@
  * Independent sinusoidal voltage source.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
-#include "eda.h"
+#include <eda.h>
 #include "vsine.h"
 
 const ES_Port esVSinePorts[] = {

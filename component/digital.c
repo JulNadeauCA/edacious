@@ -28,11 +28,7 @@
  * voltage and current behavior.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
-#include "eda.h"
+#include <eda.h>
 #include "digital.h"
 
 #if 0

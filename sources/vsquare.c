@@ -27,11 +27,7 @@
  * Independent square-wave voltage source.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
-#include "eda.h"
+#include <eda.h>
 #include "vsquare.h"
 
 const ES_Port esVSquarePorts[] = {

@@ -32,12 +32,7 @@
  *	  of a circuit containing nonlinear elements.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/sc.h>
-
-#include "eda.h"
-#include "sim.h"
+#include <eda.h>
 
 /* Formulate the KCL/branch equations and compute A=LU. */
 static int

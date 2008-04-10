@@ -17,6 +17,8 @@ typedef struct es_vsine {
 #define ES_VSINE(com) ((struct es_vsine *)(com))
 
 __BEGIN_DECLS
+extern ES_ComponentClass esVSineClass;
+
 void	 ES_VSineInit(void *, const char *);
 void	 ES_VSineReinit(void *);
 void	 ES_VSineDestroy(void *);

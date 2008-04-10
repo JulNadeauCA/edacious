@@ -27,11 +27,7 @@
  * Model for the ideal digital AND gate.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
-#include "eda.h"
+#include <eda.h>
 #include "and.h"
 
 const ES_Port esAndPinout[] = {

@@ -27,12 +27,8 @@
  * Generic interface to different simulation modes.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-
+#include <eda.h>
 #include <stdarg.h>
-
-#include "eda.h"
 
 extern const ES_SimOps esSimDcOps;
 

@@ -28,12 +28,7 @@
  * to the user-specified Circuit values.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-#include <agar/sc.h>
-
-#include "eda.h"
+#include <eda.h>
 #include "scope.h"
 
 ES_Scope *
@@ -138,7 +133,7 @@ AddPlotFromSrc(AG_Event *event)
 	AG_Prop *prop = AG_PTR(3);
 	SC_Plot *pl;
 
-	AG_PropPath(prop_path, sizeof(prop_path), ckt, prop->key);
+	AG_PropCopyPath(prop_path, sizeof(prop_path), ckt, prop->key);
 	pl = SC_PlotFromProp(ptr, SC_PLOT_LINEAR, prop->key, ckt, prop_path);
 	SC_PlotSetXoffs(pl, ptr->xMax-1);
 	SC_PlotSetScale(pl, 0.0, 15.0);

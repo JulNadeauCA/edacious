@@ -27,11 +27,7 @@
  * Independent voltage source class.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
-#include "eda.h"
+#include <eda.h>
 #include "vsource.h"
 
 const ES_Port esVsourcePinout[] = {
@@ -474,7 +470,7 @@ PollLoops(AG_Event *event)
 		for (i = 0; i < l->npairs; i++) {
 			ES_Pair *dip = l->pairs[i];
 
-			snprintf(text, sizeof(text), "%s:(%s,%s)",
+			Snprintf(text, sizeof(text), "%s:(%s,%s)",
 			    OBJECT(dip->com)->name, dip->p1->name,
 			    dip->p2->name);
 			it = AG_TlistAddPtr(tl, NULL, text,

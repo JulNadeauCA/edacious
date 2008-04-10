@@ -27,11 +27,7 @@
  * Model for the semiconductor resistor.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
-#include "eda.h"
+#include <eda.h>
 #include "semiresistor.h"
 
 const ES_Port esSemiResistorPinout[] = {

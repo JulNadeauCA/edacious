@@ -27,11 +27,7 @@
  * "Select component" tool.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
-#include "eda.h"
+#include <eda.h>
 
 static int
 MouseButtonDown(void *p, VG_Vector vPos, int button)

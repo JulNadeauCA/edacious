@@ -28,11 +28,7 @@
  * replaced by node 0.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
-#include "eda.h"
+#include <eda.h>
 #include "ground.h"
 
 const ES_Port esGroundPinout[] = {

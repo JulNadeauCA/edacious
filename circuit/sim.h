@@ -1,9 +1,5 @@
 /*	Public domain	*/
 
-#ifndef _CIRCUIT_SIM_H_
-#define _CIRCUIT_SIM_H_
-#include "begin_code.h"
-
 struct es_circuit;
 struct ag_console;
 
@@ -30,14 +26,9 @@ typedef struct es_sim {
 
 #define SIM(p) ((ES_Sim *)p)
 
-#include <circuit/dc.h>
-
 __BEGIN_DECLS
 void ES_SimInit(void *, const ES_SimOps *);
 void ES_SimDestroy(void *);
 void ES_SimEdit(AG_Event *);
 void ES_SimLog(void *, const char *, ...);
 __END_DECLS
-
-#include "close_code.h"
-#endif	/* _CIRCUIT_SIM_H_ */

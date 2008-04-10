@@ -27,14 +27,7 @@
  * Base class for components in circuits.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-#include <agar/dev.h>
-
-#include <string.h>
-
-#include "eda.h"
+#include <eda.h>
 
 void
 ES_ComponentFreePorts(ES_Component *com)
@@ -343,7 +336,8 @@ EditParameters(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
 
-	DEV_BrowserOpenData(com);
+	/* XXX */
+//	DEV_BrowserOpenData(com);
 }
 
 static void
@@ -412,7 +406,8 @@ SaveComponentTo(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
 
-	DEV_BrowserSaveTo(com, _(COMOPS(com)->name));
+	/* XXX */
+//	DEV_BrowserSaveTo(com, _(COMOPS(com)->name));
 }
 
 static void
@@ -420,7 +415,8 @@ LoadComponentFrom(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
 
-	DEV_BrowserLoadFrom(com, _(COMOPS(com)->name));
+	/* XXX */
+//	DEV_BrowserLoadFrom(com, _(COMOPS(com)->name));
 }
 
 static void
@@ -523,7 +519,7 @@ ES_ComponentInsert(AG_Event *event)
 	}
 	cls = (ES_ComponentClass *)it->p1;
 tryname:
-	snprintf(name, sizeof(name), "%s%d", cls->pfx, n++);
+	Snprintf(name, sizeof(name), "%s%d", cls->pfx, n++);
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (strcmp(OBJECT(com)->name, name) == 0)
 			break;

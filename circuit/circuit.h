@@ -3,21 +3,10 @@
 #ifndef _CIRCUIT_CIRCUIT_H_
 #define _CIRCUIT_CIRCUIT_H_
 
-#include <agar/core.h>
-#include <agar/vg.h>
-#include <agar/sc.h>
-
-#include <agar/config/_mk_have_unsigned_typedefs.h>
-#ifndef _MK_HAVE_UNSIGNED_TYPEDEFS
-#define Uchar unsigned char
-#define Uint unsigned int
-#define Ulong unsigned long
-#endif
-
-#include <component/component.h>
-#include <circuit/sim.h>
-
 #include "begin_code.h"
+
+#include <circuit/sim.h>
+#include <circuit/dc.h>
 
 #define CIRCUIT_DESCR_MAX	512
 #define CIRCUIT_AUTHORS_MAX	128
@@ -89,7 +78,7 @@ typedef struct es_circuit {
 	char keywords[CIRCUIT_KEYWORDS_MAX];	/* Keywords */
 	VG *vg;					/* Schematics */
 	struct ag_console *console;		/* Log console */
-	ES_Sim *sim;				/* Current simulation mode */
+	ES_Sim *sim;			/* Current simulation mode */
 	Uint flags;
 #define CIRCUIT_SHOW_NODES	0x01
 #define CIRCUIT_SHOW_NODENAMES	0x02

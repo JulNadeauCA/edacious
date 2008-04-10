@@ -27,12 +27,7 @@
  * "Insert component" tool.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-#include <agar/dev.h>
-
-#include "eda.h"
+#include <eda.h>
 
 ES_Component *esInscomCur = NULL;
 
@@ -54,7 +49,7 @@ scan:
 		    !com->selected) {
 			continue;
 		}
-		DEV_BrowserCloseData(com);
+		ES_CloseEditionWindow(com);
 		if (AG_ObjectInUse(com)) {
 			AG_TextMsg(AG_MSG_ERROR, "%s: %s", OBJECT(com)->name,
 			    AG_GetError());

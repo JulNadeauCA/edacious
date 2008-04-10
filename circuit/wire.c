@@ -27,11 +27,7 @@
  * "Wire" tool. This tool either merges nodes or creates new ones.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
-#include "eda.h"
+#include <eda.h>
 
 static ES_Wire *esCurWire;
 

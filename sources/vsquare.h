@@ -19,6 +19,8 @@ typedef struct es_vsquare {
 #define ES_VSQUARE(com) ((struct es_vsquare *)(com))
 
 __BEGIN_DECLS
+extern ES_ComponentClass esVSquareClass;
+
 void	 ES_VSquareStep(void *, Uint);
 void	 ES_VSquareUpdate(void *);
 __END_DECLS

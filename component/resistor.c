@@ -27,11 +27,7 @@
  * Model for the resistor.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
-#include "eda.h"
+#include <eda.h>
 #include "resistor.h"
 
 const ES_Port esResistorPinout[] = {
@@ -41,6 +37,7 @@ const ES_Port esResistorPinout[] = {
 	{ -1 },
 };
 
+#if 0
 static void
 Draw(void *p, VG_Node *vn)
 {
@@ -68,6 +65,7 @@ Draw(void *p, VG_Node *vn)
 	VG_TextAlignment(vt, VG_ALIGN_MC);
 	VG_TextPrintf(vt, "%s", OBJECT(r)->name);
 }
+#endif
 
 static int
 Load(void *p, AG_DataSource *buf, const AG_Version *ver)
@@ -238,7 +236,7 @@ ES_ComponentClass esResistorClass = {
 	N_("Resistor"),
 	"R",
 	"Resistor.vg",
-	Draw,
+	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
 	Export,

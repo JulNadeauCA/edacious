@@ -27,15 +27,11 @@
  * Electrical circuit.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-#include <agar/sc.h>
-#include <agar/dev.h>
-
-#include "eda.h"
+#include <eda.h>
 #include "spice.h"
 #include "scope.h"
+
+#include <sources/vsource.h>
 
 static void InitNode(ES_Node *, Uint);
 static void InitGround(ES_Circuit *);
@@ -156,12 +152,12 @@ ES_CircuitModified(ES_Circuit *ckt)
 #if 1
 	AG_ObjectFreeProps(OBJECT(ckt));
 	for (i = 1; i <= ckt->n; i++) {
-		snprintf(key, sizeof(key), "v%u", i);
+		Snprintf(key, sizeof(key), "v%u", i);
 		pr = SC_SetReal(ckt, key, 0.0);
 		SC_SetRealRdFn(pr, ReadNodeVoltage);
 	}
 	for (i = 1; i <= ckt->m; i++) {
-		snprintf(key, sizeof(key), "I%u", i);
+		Snprintf(key, sizeof(key), "I%u", i);
 		pr = SC_SetReal(ckt, key, 0.0);
 		SC_SetRealRdFn(pr, ReadBranchCurrent);
 	}
@@ -748,7 +744,7 @@ ES_CircuitNodeSymbol(ES_Circuit *ckt, int n, char *dst, size_t dst_len)
 			return;
 		}
 	}
-	snprintf(dst, dst_len, "n%d", n);
+	Snprintf(dst, dst_len, "n%d", n);
 	return;
 }
 
@@ -1362,7 +1358,7 @@ PollComponentPorts(AG_Event *event)
 
 	AG_ObjectLock(com);
 	COMPONENT_FOREACH_PORT(port, i, com) {
-		snprintf(text, sizeof(text),
+		Snprintf(text, sizeof(text),
 		    "%d (%s) -> n%d [%.03fV]",
 		    port->n, port->name, port->node,
 		    ES_NodeVoltage(ckt, port->node));
@@ -1396,7 +1392,7 @@ PollComponentPairs(AG_Event *event)
 		ES_Pair *pair = &com->pairs[i];
 		AG_TlistItem *it;
 
-		snprintf(text, sizeof(text), "%s:(%s,%s)",
+		Snprintf(text, sizeof(text), "%s:(%s,%s)",
 		    OBJECT(com)->name, pair->p1->name, pair->p2->name);
 		it = AG_TlistAddPtr(tl, NULL, text, pair);
 		it->depth = 0;
@@ -1405,7 +1401,7 @@ PollComponentPairs(AG_Event *event)
 			ES_Loop *dloop = pair->loops[j];
 			int dpol = pair->lpols[j];
 
-			snprintf(text, sizeof(text), "%s:L%u (%s)",
+			Snprintf(text, sizeof(text), "%s:L%u (%s)",
 			    OBJECT(dloop->origin)->name,
 			    dloop->name,
 			    dpol == 1 ? "+" : "-");
@@ -1427,14 +1423,15 @@ NewScope(AG_Event *event)
 	Uint nscope = 0;
 
 tryname:
-	snprintf(name, sizeof(name), _("Scope #%u"), nscope++);
+	Snprintf(name, sizeof(name), _("Scope #%u"), nscope++);
 	if (AG_ObjectFindChild(ckt, name) != NULL) {
 		goto tryname;
 	}
 	scope = ES_ScopeNew(ckt, name);
-	DEV_BrowserOpenData(scope);
+	ES_CreateEditionWindow(scope);
 }
 
+#if 0
 static void
 DrawNodeAnnotations(VG_View *vv, ES_Circuit *ckt, ES_Port *port)
 {
@@ -1472,6 +1469,7 @@ DrawNodeAnnotations(VG_View *vv, ES_Circuit *ckt, ES_Port *port)
 		}
 	}
 }
+#endif
 
 static void
 Draw(AG_Event *event)
@@ -1494,9 +1492,9 @@ Draw(AG_Event *event)
 		if (COMOPS(com)->draw != NULL) {
 			COMOPS(com)->draw(com, vg->root);
 		}
-		COMPONENT_FOREACH_PORT(port, i, com) {
-			DrawNodeAnnotations(vv, ckt, port);
-		}
+//		COMPONENT_FOREACH_PORT(port, i, com) {
+//			DrawNodeAnnotations(vv, ckt, port);
+//		}
 	}
 #if 0
 	/* Apply highlighting on components. */
@@ -1514,9 +1512,9 @@ Draw(AG_Event *event)
 		p1 = VG_PointNew(vg->root, wire->ports[0].pos);
 		p2 = VG_PointNew(vg->root, wire->ports[1].pos);
 		vl = VG_LineNew(vg->root, p1, p2);
-		for (i = 0; i < 2; i++) {
-			DrawNodeAnnotations(vv, ckt, &wire->ports[i]);
-		}
+//		for (i = 0; i < 2; i++) {
+//			DrawNodeAnnotations(vv, ckt, &wire->ports[i]);
+//		}
 	}
 	ES_UnlockCircuit(ckt);
 }
@@ -1612,8 +1610,7 @@ Edit(void *p)
 		ntab = AG_NotebookAddTab(nb, _("Models"), AG_BOX_VERT);
 		{
 			char tname[AG_OBJECT_TYPE_MAX];
-			extern void *edaModels[];
-			void **model;
+			void **cc;
 			int i;
 
 			tl = AG_TlistNew(ntab, AG_TLIST_EXPAND);
@@ -1627,10 +1624,10 @@ Edit(void *p)
 			    _("Insert component"),
 			    ES_ComponentInsert, "%p,%p,%p", vv, tl, ckt);
 #endif
-			for (model = &edaModels[0]; *model != NULL; model++)
+			for (cc = &esComponentClasses[0]; *cc != NULL; cc++)
 				AG_TlistAddPtr(tl, NULL,
-				    ((ES_ComponentClass *)*model)->name,
-				    (void *)*model);
+				    ((ES_ComponentClass *)*cc)->name,
+				    (void *)*cc);
 		}
 
 		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
