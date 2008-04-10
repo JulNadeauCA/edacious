@@ -27,13 +27,8 @@
  * Tool for selecting and moving entities in a component schematic.
  */
 
-#include <agar/core.h>
-#include <agar/core/limits.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
 #include <eda.h>
-#include "schem.h"
+#include <agar/core/limits.h>
 
 typedef struct es_schem_select_tool {
 	VG_Tool _inherit;
@@ -48,6 +43,32 @@ VG_SchemFindPoint(ES_Schem *scm, VG_Vector vCurs, void *ignore)
 	VG_Vector v;
 
 	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+		if (vn->ops->pointProximity == NULL ||
+		    vn == ignore ||
+		    !VG_NodeIsClass(vn, "Point")) {
+			continue;
+		}
+		v = vCurs;
+		prox = vn->ops->pointProximity(vn, &v);
+		if (prox <= 0.25f) {
+			if (prox < proxNearest) {
+				proxNearest = prox;
+				vnNearest = vn;
+			}
+		}
+	}
+	return (vnNearest);
+}
+
+void *
+VG_SchemHighlightNearestPoint(ES_Schem *scm, VG_Vector vCurs, void *ignore)
+{
+	float prox, proxNearest = AG_FLT_MAX;
+	VG_Node *vn, *vnNearest = NULL;
+	VG_Vector v;
+
+	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+		vn->flags &= ~(VG_NODE_MOUSEOVER);
 		if (vn->ops->pointProximity == NULL ||
 		    vn == ignore ||
 		    !VG_NodeIsClass(vn, "Point")) {
@@ -123,7 +144,7 @@ VG_SchemSelectNearest(ES_Schem *scm, VG_Vector vCurs)
 	return (vnNearest);
 }
 
-void
+void *
 VG_SchemHighlightNearest(ES_Schem *scm, VG_Vector vCurs)
 {
 	float prox, proxNearest;
@@ -152,7 +173,7 @@ VG_SchemHighlightNearest(ES_Schem *scm, VG_Vector vCurs)
 	}
 	if (vnNearest != NULL) {
 		vnNearest->flags |= VG_NODE_MOUSEOVER;
-		return;
+		return (vnNearest);
 	}
 
 	/* No point is near, perform a proper query. */
@@ -170,8 +191,10 @@ VG_SchemHighlightNearest(ES_Schem *scm, VG_Vector vCurs)
 			vnNearest = vn;
 		}
 	}
-	if (vnNearest != NULL)
+	if (vnNearest != NULL) {
 		vnNearest->flags |= VG_NODE_MOUSEOVER;
+	}
+	return (vnNearest);
 }
 
 static int
@@ -249,9 +272,9 @@ del:
 				goto del;
 			}
 		}
+		VG_Status(vv, _("Deleted %u entities"), nDel);
 		return (1);
 	}
-	VG_Status(vv, _("Deleted %u entities"), nDel);
 	return (0);
 }
 

@@ -2,6 +2,7 @@
 
 #include "begin_code.h"
 
+/* Component schematic block */
 typedef struct es_schem {
 	struct ag_object _inherit;
 	VG *vg;
@@ -9,16 +10,25 @@ typedef struct es_schem {
 
 #define SCHEM(p) ((ES_Schem *)(p))
 
+#include <schem/schem_port.h>
+
 __BEGIN_DECLS
 extern AG_ObjectClass esSchemClass;
+#ifdef DEBUG
+extern VG_ToolOps esSchemProximityTool;
+#endif
 extern VG_ToolOps esSchemSelectTool;
+extern VG_ToolOps esSchemPointTool;
 extern VG_ToolOps esSchemLineTool;
+extern VG_ToolOps esSchemCircleTool;
+extern VG_ToolOps esSchemTextTool;
+extern VG_ToolOps esSchemPortTool;
 
 ES_Schem *ES_SchemNew(void *);
-
-void *VG_SchemFindPoint(ES_Schem *, VG_Vector, void *);
-void *VG_SchemSelectNearest(ES_Schem *, VG_Vector);
-void  VG_SchemHighlightNearest(ES_Schem *, VG_Vector);
+void     *VG_SchemFindPoint(ES_Schem *, VG_Vector, void *);
+void     *VG_SchemSelectNearest(ES_Schem *, VG_Vector);
+void     *VG_SchemHighlightNearest(ES_Schem *, VG_Vector);
+void     *VG_SchemHighlightNearestPoint(ES_Schem *, VG_Vector, void *);
 __END_DECLS
 
 #include "close_code.h"

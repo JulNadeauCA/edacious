@@ -27,13 +27,8 @@
  * Generate plots of proximity functions for debugging purposes.
  */
 
-#include <agar/core.h>
-#include <agar/core/limits.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
 #include <eda.h>
-#include "schem.h"
+#include <agar/core/limits.h>
 
 #ifdef DEBUG
 

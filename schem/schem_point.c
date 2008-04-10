@@ -27,12 +27,7 @@
  * Point tool.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
 #include <eda.h>
-#include "schem.h"
 
 static int
 MouseButtonDown(void *p, VG_Vector v, int b)

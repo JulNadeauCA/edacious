@@ -28,20 +28,7 @@
  * functionality for ports and labels.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
 #include <eda.h>
-#include "schem.h"
-
-extern VG_ToolOps esSchemSelectTool;
-extern VG_ToolOps esSchemPointTool;
-extern VG_ToolOps esSchemLineTool;
-extern VG_ToolOps esSchemCircleTool;
-#ifdef DEBUG
-extern VG_ToolOps esSchemProximityTool;
-#endif
 
 static VG_ToolOps *toolOps[] = {
 	&esSchemSelectTool,
@@ -51,6 +38,8 @@ static VG_ToolOps *toolOps[] = {
 	&esSchemPointTool,
 	&esSchemLineTool,
 	&esSchemCircleTool,
+	&esSchemTextTool,
+	&esSchemPortTool,
 	NULL
 };
 
@@ -127,6 +116,15 @@ CreateView(AG_Event *event)
 	AG_WindowShow(win);
 }
 
+static void
+SetSnappingMode(AG_Event *event)
+{
+	VG_View *vv = AG_PTR(1);
+	int snapMode = AG_INT(2);
+	
+	VG_ViewSetSnapMode(vv, snapMode);
+}
+
 static void *
 Edit(void *obj)
 {
@@ -134,22 +132,24 @@ Edit(void *obj)
 	VG *vg = scm->vg;
 	VG_View *vv;
 	AG_Window *win;
-	AG_Toolbar *tbRight;
+	AG_Toolbar *tbRight, *tbSnap;
 	AG_Menu *menu;
 	AG_MenuItem *mi, *miSub;
-	AG_Box *box;
+	AG_Box *box, *box2;
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Component schematic: %s"),
 	    OBJECT(scm)->name);
 	
-	menu = AG_MenuNew(win, AG_MENU_HFILL);
-	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
 	vv = VG_ViewNew(NULL, vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
 	VG_ViewSetSnapMode(vv, VG_GRID);
 	VG_ViewSetScale(vv, 64.0f);
 	VG_ViewSetScaleMin(vv, 10.0f);
-	VG_ViewSetGridInterval(vv, 0.5f);
+	VG_ViewSetGridInterval(vv, 0.125f);
+	
+	menu = AG_MenuNew(win, AG_MENU_HFILL);
+	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
+	tbSnap = VG_SnapToolbar(NULL, vv, AG_TOOLBAR_VERT);
 	
 	mi = AG_MenuAddItem(menu, _("File"));
 	{
@@ -160,7 +160,14 @@ Edit(void *obj)
 	mi = AG_MenuAddItem(menu, _("Edit"));
 	{
 		miSub = AG_MenuNode(mi, _("Snapping mode"), NULL);
-		VG_SnapMenu(menu, miSub, vv);
+		{
+			AG_MenuActionKb(miSub, _("No snapping"),
+			    vgIconSnapFree.s, SDLK_f, KMOD_CTRL,
+			    SetSnappingMode, "%p,%i", vv, VG_FREE_POSITIONING);
+			AG_MenuActionKb(miSub, _("Snap to grid"),
+			    vgIconSnapGrid.s, SDLK_g, KMOD_CTRL,
+			    SetSnappingMode, "%p,%i", vv, VG_GRID);
+		}
 	}
 	mi = AG_MenuAddItem(menu, _("Tools"));
 	{
@@ -190,10 +197,17 @@ Edit(void *obj)
 	}
 
 	box = AG_BoxNewHoriz(win, AG_BOX_EXPAND);
+	AG_BoxSetPadding(box, 0);
 	{
 		AG_ObjectAttach(box, vv);
-		AG_ObjectAttach(box, tbRight);
 		AG_WidgetFocus(vv);
+		box2 = AG_BoxNewVert(box, AG_BOX_VFILL);
+		AG_BoxSetPadding(box2, 0);
+		{
+			AG_ObjectAttach(box2, tbRight);
+			AG_SpacerNewHoriz(box2);
+			AG_ObjectAttach(box2, tbSnap);
+		}
 	}
 
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 70, 65);

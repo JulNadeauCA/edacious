@@ -27,12 +27,7 @@
  * Line tool.
  */
 
-#include <agar/core.h>
-#include <agar/gui.h>
-#include <agar/vg.h>
-
 #include <eda.h>
-#include "schem.h"
 
 typedef struct es_schem_line_tool {
 	VG_Tool _inherit;

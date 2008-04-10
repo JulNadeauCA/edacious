@@ -24,57 +24,70 @@
  */
 
 /*
- * Circle tool.
+ * Text tool.
  */
 
 #include <eda.h>
 
-typedef struct es_schem_circle_tool {
+typedef struct es_schem_text_tool {
 	VG_Tool _inherit;
-	VG_Circle *vcCur;
-} ES_SchemCircleTool;
+	VG_Text *vtCur;
+} ES_SchemTextTool;
 
 static void
 Init(void *p)
 {
-	ES_SchemCircleTool *t = p;
+	ES_SchemTextTool *t = p;
 
-	t->vcCur = NULL;
+	t->vtCur = NULL;
 }
 
-static __inline__ void
-AdjustRadius(VG_Circle *vc, VG_Vector vPos)
+static void
+SetTextString(AG_Event *event)
 {
-	vc->r = VG_Distance(vPos, VG_PointPos(vc->p));
+	VG_Text *vt = AG_PTR(1);
+	char *s = AG_STRING(2);
+
+	VG_TextPrintf(vt, "%s", s);
 }
 
 static int
 MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
-	ES_SchemCircleTool *t = p;
+	ES_SchemTextTool *t = p;
 	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG *vg = scm->vg;
-	VG_Point *pCenter;
+	VG_Point *p1, *p2;
 
 	switch (button) {
 	case SDL_BUTTON_LEFT:
-		if (t->vcCur == NULL) {
-			if (!(pCenter = VG_SchemFindPoint(scm, vPos, NULL))) {
-				pCenter = VG_PointNew(vg->root, vPos);
+		if (t->vtCur == NULL) {
+			if (!(p1 = VG_SchemFindPoint(scm, vPos, NULL))) {
+				p1 = VG_PointNew(vg->root, vPos);
 			}
-			t->vcCur = VG_CircleNew(vg->root, pCenter, 1.0f);
-			AdjustRadius(t->vcCur, vPos);
+			p2 = VG_PointNew(vg->root, vPos);
+			t->vtCur = VG_TextNew(vg->root, p1, p2);
+			AG_TextPromptString(_("Enter text string: "),
+			    SetTextString, "%p", t->vtCur);
 		} else {
-			AdjustRadius(t->vcCur, vPos);
-			t->vcCur = NULL;
+			if ((p2 = VG_SchemFindPoint(scm, vPos, t->vtCur->p2))) {
+				VG_DelRef(t->vtCur, t->vtCur->p2);
+				VG_Delete(t->vtCur->p2);
+				t->vtCur->p2 = p2;
+				VG_AddRef(t->vtCur, p2);
+			} else {
+				t->vtCur->p2->x = vPos.x;
+				t->vtCur->p2->y = vPos.y;
+			}
+			t->vtCur = NULL;
 		}
 		return (1);
 	case SDL_BUTTON_MIDDLE:
 	case SDL_BUTTON_RIGHT:
-		if (t->vcCur != NULL) {
-			VG_Delete(t->vcCur);
-			t->vcCur = NULL;
+		if (t->vtCur != NULL) {
+			VG_Delete(t->vtCur);
+			t->vtCur = NULL;
 		}
 		return (1);
 	default:
@@ -82,44 +95,59 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	}
 }
 
-static int
-MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
+static void
+PostDraw(void *p, VG_View *vv)
 {
-	ES_SchemCircleTool *t = p;
+	ES_SchemTextTool *t = p;
+	int x, y;
+
+	VG_GetViewCoords(vv, VGTOOL(t)->vCursor, &x,&y);
+	AG_DrawCircle(vv, x,y, 3, VG_MapColorRGB(vv->vg->selectionColor));
+}
+
+static int
+MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
+{
+	ES_SchemTextTool *t = p;
 	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Point *pEx;
+	float theta, rad;
 	
-	if (t->vcCur != NULL) {
-		AdjustRadius(t->vcCur, vPos);
-		VG_Status(vv, _("Set radius: %.2f"), t->vcCur->r);
-	} else {
-		if ((pEx = VG_SchemFindPoint(scm, vPos, NULL))) {
-			VG_Status(vv, _("Use Point%u as center"),
+	if (t->vtCur != NULL) {
+		pEx = t->vtCur->p1;
+		theta = VG_Atan2(vPos.y - pEx->y,
+		                 vPos.x - pEx->x);
+		rad = VG_Hypot(vPos.x - pEx->x,
+		               vPos.y - pEx->y);
+		if ((pEx = VG_SchemFindPoint(scm, vPos, t->vtCur->p2))) {
+			VG_Status(vv, _("End baseline at Point%u"),
 			    VGNODE(pEx)->handle);
 		} else {
-			VG_Status(vv, _("Circle center at %.2f,%.2f"),
-			    vPos.x, vPos.y);
+			VG_Status(vv,
+			    _("End baseline at %.2f,%.2f "
+			      "(%.2f|%.2f\xc2\xb0)"),
+			    vPos.x, vPos.y, rad, VG_Degrees(theta));
+		}
+		t->vtCur->p2->x = vPos.x;
+		t->vtCur->p2->y = vPos.y;
+	} else {
+		if ((pEx = VG_SchemFindPoint(scm, vPos, NULL))) {
+			VG_Status(vv, _("Start baseline at Point%u"),
+			    VGNODE(pEx)->handle);
+		} else {
+			VG_Status(vv, _("Start baseline at %.2f,%.2f"), vPos.x,
+			    vPos.y);
 		}
 	}
 	return (0);
 }
 
-static void
-PostDraw(void *p, VG_View *vv)
-{
-	VG_Tool *t = p;
-	int x, y;
-
-	VG_GetViewCoords(vv, t->vCursor, &x,&y);
-	AG_DrawCircle(vv, x,y, 3, VG_MapColorRGB(vv->vg->selectionColor));
-}
-
-VG_ToolOps esSchemCircleTool = {
-	N_("Circle"),
-	N_("Insert circles in the component schematic."),
-	&vgIconCircle,
-	sizeof(ES_SchemCircleTool),
+VG_ToolOps esSchemTextTool = {
+	N_("Text"),
+	N_("Insert text in the component schematic."),
+	&vgIconText,
+	sizeof(ES_SchemTextTool),
 	0,
 	Init,
 	NULL,			/* destroy */
