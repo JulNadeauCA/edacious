@@ -45,7 +45,7 @@
 #include <string.h>
 
 #ifdef WIN32
-# define ES_PATHSEP '\'
+# define ES_PATHSEP '\\'
 #else
 # define ES_PATHSEP '/'
 #endif
