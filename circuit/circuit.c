@@ -1262,7 +1262,6 @@ FindCircuitObjs(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 {
 	AG_Object *cob;
 	AG_TlistItem *it;
-	SDL_Surface *icon;
 
 	it = AG_TlistAdd(tl, NULL, "%s%s", pob->name,
 	    (pob->flags & AG_OBJECT_RESIDENT) ? " (resident)" : "");
