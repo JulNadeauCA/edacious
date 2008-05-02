@@ -36,13 +36,13 @@ typedef struct es_schem_select_tool {
 } ES_SchemSelectTool;
 
 void *
-VG_SchemFindPoint(ES_Schem *scm, VG_Vector vCurs, void *ignore)
+VG_SchemFindPoint(VG_View *vv, VG_Vector vCurs, void *ignore)
 {
 	float prox, proxNearest = AG_FLT_MAX;
 	VG_Node *vn, *vnNearest = NULL;
 	VG_Vector v;
 
-	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+	TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
 		if (vn->ops->pointProximity == NULL ||
 		    vn == ignore ||
 		    !VG_NodeIsClass(vn, "Point")) {
@@ -50,7 +50,7 @@ VG_SchemFindPoint(ES_Schem *scm, VG_Vector vCurs, void *ignore)
 		}
 		v = vCurs;
 		prox = vn->ops->pointProximity(vn, &v);
-		if (prox <= 0.25f) {
+		if (prox < vv->gridIval) {
 			if (prox < proxNearest) {
 				proxNearest = prox;
 				vnNearest = vn;
@@ -61,7 +61,8 @@ VG_SchemFindPoint(ES_Schem *scm, VG_Vector vCurs, void *ignore)
 }
 
 void *
-VG_SchemHighlightNearestPoint(ES_Schem *scm, VG_Vector vCurs, void *ignore)
+VG_SchemHighlightNearestPoint(VG_View *vv, ES_Schem *scm, VG_Vector vCurs,
+    void *ignore)
 {
 	float prox, proxNearest = AG_FLT_MAX;
 	VG_Node *vn, *vnNearest = NULL;
@@ -76,7 +77,7 @@ VG_SchemHighlightNearestPoint(ES_Schem *scm, VG_Vector vCurs, void *ignore)
 		}
 		v = vCurs;
 		prox = vn->ops->pointProximity(vn, &v);
-		if (prox <= 0.25f) {
+		if (prox < vv->gridIval) {
 			if (prox < proxNearest) {
 				proxNearest = prox;
 				vnNearest = vn;
@@ -87,7 +88,7 @@ VG_SchemHighlightNearestPoint(ES_Schem *scm, VG_Vector vCurs, void *ignore)
 }
 
 void *
-VG_SchemSelectNearest(ES_Schem *scm, VG_Vector vCurs)
+VG_SchemSelectNearest(VG_View *vv, ES_Schem *scm, VG_Vector vCurs)
 {
 	float prox, proxNearest;
 	VG_Node *vn, *vnNearest;
@@ -202,11 +203,12 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 {
 	ES_SchemSelectTool *t = p;
 	ES_Schem *scm = VGTOOL(t)->p;
+	VG_View *vv = VGTOOL(t)->vgv;
 
 	if (b != SDL_BUTTON_LEFT) {
 		return (0);
 	}
-	VG_SchemSelectNearest(scm, v);
+	VG_SchemSelectNearest(vv, scm, v);
 	t->moving = 1;
 	return (1);
 }

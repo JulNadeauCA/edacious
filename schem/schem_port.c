@@ -94,11 +94,11 @@ static float
 PointProximity(void *p, VG_Vector *vPt)
 {
 	ES_SchemPort *sp = p;
+	VG_Vector pos = VG_PointPos(sp->p);
 	float d;
 
-	d = VG_Distance(VG_PointPos(sp->p), *vPt);
-	vPt->x = sp->p->x;
-	vPt->y = sp->p->y;
+	d = VG_Distance(pos, *vPt);
+	*vPt = pos;
 	return (d);
 }
 
@@ -157,11 +157,10 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	if (button != SDL_BUTTON_LEFT) {
 		return (0);
 	}
-	if ((vp = VG_SchemFindPoint(scm, vPos, NULL)) != NULL) {
-//		sp = ES_SchemPortNew(scm->vg->root, vp);
-		VG_Status(vv, _("Not yet"));
+	if ((vp = VG_SchemFindPoint(vv, vPos, NULL)) != NULL) {
+		sp = ES_SchemPortNew(vp, vp);
 	} else {
-		VG_Status(vv, _("Must select a point to create a port"));
+		VG_Status(vv, _("Select a point to create a port"));
 	}
 	return (1);
 }
@@ -174,7 +173,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Point *vp;
 
-	if ((vp = VG_SchemHighlightNearestPoint(scm, vPos, NULL)) != NULL) {
+	if ((vp = VG_SchemHighlightNearestPoint(vv, scm, vPos, NULL)) != NULL) {
 		VG_Status(vv, _("Create port on Point%u"), VGNODE(vp)->handle);
 	} else {
 		VG_Status(vv, _("Select a Point"));

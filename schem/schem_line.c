@@ -54,20 +54,19 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	switch (button) {
 	case SDL_BUTTON_LEFT:
 		if (t->vlCur == NULL) {
-			if (!(p1 = VG_SchemFindPoint(scm, vPos, NULL))) {
+			if (!(p1 = VG_SchemFindPoint(vv, vPos, NULL))) {
 				p1 = VG_PointNew(vg->root, vPos);
 			}
 			p2 = VG_PointNew(vg->root, vPos);
 			t->vlCur = VG_LineNew(vg->root, p1, p2);
 		} else {
-			if ((p2 = VG_SchemFindPoint(scm, vPos, t->vlCur->p2))) {
+			if ((p2 = VG_SchemFindPoint(vv, vPos, t->vlCur->p2))) {
 				VG_DelRef(t->vlCur, t->vlCur->p2);
 				VG_Delete(t->vlCur->p2);
 				t->vlCur->p2 = p2;
 				VG_AddRef(t->vlCur, p2);
 			} else {
-				t->vlCur->p2->x = vPos.x;
-				t->vlCur->p2->y = vPos.y;
+				VG_SetPosition(t->vlCur->p2, vPos);
 			}
 			t->vlCur = NULL;
 		}
@@ -101,25 +100,26 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Point *pEx;
+	VG_Vector pos;
 	float theta, rad;
 	
 	if (t->vlCur != NULL) {
 		pEx = t->vlCur->p1;
-		theta = VG_Atan2(vPos.y - pEx->y,
-		                 vPos.x - pEx->x);
-		rad = VG_Hypot(vPos.x - pEx->x,
-		               vPos.y - pEx->y);
-		if ((pEx = VG_SchemFindPoint(scm, vPos, t->vlCur->p2))) {
+		pos = VG_PointPos(pEx);
+		theta = VG_Atan2(vPos.y - pos.y,
+		                 vPos.x - pos.x);
+		rad = VG_Hypot(vPos.x - pos.x,
+		               vPos.y - pos.y);
+		if ((pEx = VG_SchemFindPoint(vv, vPos, t->vlCur->p2))) {
 			VG_Status(vv, _("Use Point%u"), VGNODE(pEx)->handle);
 		} else {
 			VG_Status(vv,
 			    _("Create Point at %.2f,%.2f (%.2f|%.2f\xc2\xb0)"),
 			    vPos.x, vPos.y, rad, VG_Degrees(theta));
 		}
-		t->vlCur->p2->x = vPos.x;
-		t->vlCur->p2->y = vPos.y;
+		VG_SetPosition(t->vlCur->p2, vPos);
 	} else {
-		if ((pEx = VG_SchemFindPoint(scm, vPos, NULL))) {
+		if ((pEx = VG_SchemFindPoint(vv, vPos, NULL))) {
 			VG_Status(vv, _("Start Line at Point%u"),
 			    VGNODE(pEx)->handle);
 		} else {

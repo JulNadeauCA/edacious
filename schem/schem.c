@@ -125,6 +125,38 @@ SetSnappingMode(AG_Event *event)
 	VG_ViewSetSnapMode(vv, snapMode);
 }
 
+static void
+FindSchemNodes(AG_Tlist *tl, VG_Node *node, int depth)
+{
+	AG_TlistItem *it;
+	VG_Node *cNode;
+
+	it = AG_TlistAdd(tl, NULL, "%s%u", node->ops->name, node->handle);
+	it->depth = depth;
+	it->p1 = node;
+	it->selected = (node->flags & VG_NODE_SELECTED);
+
+	if (!TAILQ_EMPTY(&node->cNodes)) {
+		it->flags |= AG_TLIST_HAS_CHILDREN;
+	}
+	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
+	    AG_TlistVisibleChildren(tl, it)) {
+		TAILQ_FOREACH(cNode, &node->cNodes, tree)
+			FindSchemNodes(tl, cNode, depth+1);
+	}
+}
+
+static void
+PollSchemNodes(AG_Event *event)
+{
+	AG_Tlist *tl = AG_SELF();
+	ES_Schem *scm = AG_PTR(1);
+
+	AG_TlistBegin(tl);
+	FindSchemNodes(tl, (VG_Node *)scm->vg->root, 0);
+	AG_TlistEnd(tl);
+}
+
 static void *
 Edit(void *obj)
 {
@@ -135,7 +167,9 @@ Edit(void *obj)
 	AG_Toolbar *tbRight, *tbSnap;
 	AG_Menu *menu;
 	AG_MenuItem *mi, *miSub;
-	AG_Box *box, *box2;
+	AG_Box *tlBox, *tbBox;
+	AG_Pane *hPane;
+	AG_Tlist *tlItems;
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Component schematic: %s"),
@@ -143,10 +177,10 @@ Edit(void *obj)
 	
 	vv = VG_ViewNew(NULL, vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
 	VG_ViewSetSnapMode(vv, VG_GRID);
-	VG_ViewSetScale(vv, 64.0f);
+	VG_ViewSetScale(vv, 70.0f);
 	VG_ViewSetScaleMin(vv, 10.0f);
-	VG_ViewSetGridInterval(vv, 0.125f);
-	
+	VG_ViewSetGridInterval(vv, 0.50f);
+
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
 	tbSnap = VG_SnapToolbar(NULL, vv, AG_TOOLBAR_VERT);
@@ -196,17 +230,27 @@ Edit(void *obj)
 #endif
 	}
 
-	box = AG_BoxNewHoriz(win, AG_BOX_EXPAND);
-	AG_BoxSetPadding(box, 0);
+	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
+	AG_BoxSetType(hPane->div[1], AG_BOX_HORIZ);
 	{
-		AG_ObjectAttach(box, vv);
-		AG_WidgetFocus(vv);
-		box2 = AG_BoxNewVert(box, AG_BOX_VFILL);
-		AG_BoxSetPadding(box2, 0);
+		tlBox = AG_BoxNewVert(hPane->div[0], AG_BOX_EXPAND);
+		AG_BoxSetPadding(tlBox, 0);
 		{
-			AG_ObjectAttach(box2, tbRight);
-			AG_SpacerNewHoriz(box2);
-			AG_ObjectAttach(box2, tbSnap);
+			tlItems = AG_TlistNewPolled(tlBox,
+			    AG_TLIST_TREE|AG_TLIST_EXPAND|AG_TLIST_NOSELSTATE,
+			    PollSchemNodes, "%p", scm);
+			AG_TlistSizeHint(tlItems, "<Point1234>", 4);
+		}
+		
+		AG_ObjectAttach(hPane->div[1], vv);
+		AG_WidgetFocus(vv);
+
+		tbBox = AG_BoxNewVert(hPane->div[1], AG_BOX_VFILL);
+		AG_BoxSetPadding(tbBox, 0);
+		{
+			AG_ObjectAttach(tbBox, tbRight);
+			AG_SpacerNewHoriz(tbBox);
+			AG_ObjectAttach(tbBox, tbSnap);
 		}
 	}
 

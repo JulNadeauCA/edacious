@@ -36,9 +36,10 @@ static int
 MouseButtonDown(void *t, VG_Vector v, int button)
 {
 	ES_Schem *scm = VGTOOL(t)->p;
+	VG_View *vv = VGTOOL(t)->vgv;
 
 	if (button == SDL_BUTTON_LEFT) {
-		VG_SchemSelectNearest(scm, v);
+		VG_SchemSelectNearest(vv, scm, v);
 		return (1);
 	}
 	return (0);

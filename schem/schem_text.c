@@ -63,7 +63,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	switch (button) {
 	case SDL_BUTTON_LEFT:
 		if (t->vtCur == NULL) {
-			if (!(p1 = VG_SchemFindPoint(scm, vPos, NULL))) {
+			if (!(p1 = VG_SchemFindPoint(vv, vPos, NULL))) {
 				p1 = VG_PointNew(vg->root, vPos);
 			}
 			p2 = VG_PointNew(vg->root, vPos);
@@ -71,14 +71,13 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			AG_TextPromptString(_("Enter text string: "),
 			    SetTextString, "%p", t->vtCur);
 		} else {
-			if ((p2 = VG_SchemFindPoint(scm, vPos, t->vtCur->p2))) {
+			if ((p2 = VG_SchemFindPoint(vv, vPos, t->vtCur->p2))) {
 				VG_DelRef(t->vtCur, t->vtCur->p2);
 				VG_Delete(t->vtCur->p2);
 				t->vtCur->p2 = p2;
 				VG_AddRef(t->vtCur, p2);
 			} else {
-				t->vtCur->p2->x = vPos.x;
-				t->vtCur->p2->y = vPos.y;
+				VG_SetPosition(t->vtCur->p2, vPos);
 			}
 			t->vtCur = NULL;
 		}
@@ -112,15 +111,17 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Point *pEx;
+	VG_Vector pos;
 	float theta, rad;
 	
 	if (t->vtCur != NULL) {
 		pEx = t->vtCur->p1;
-		theta = VG_Atan2(vPos.y - pEx->y,
-		                 vPos.x - pEx->x);
-		rad = VG_Hypot(vPos.x - pEx->x,
-		               vPos.y - pEx->y);
-		if ((pEx = VG_SchemFindPoint(scm, vPos, t->vtCur->p2))) {
+		pos = VG_PointPos(pEx);
+		theta = VG_Atan2(vPos.y - pos.y,
+		                 vPos.x - pos.x);
+		rad = VG_Hypot(vPos.x - pos.x,
+		               vPos.y - pos.y);
+		if ((pEx = VG_SchemFindPoint(vv, vPos, t->vtCur->p2))) {
 			VG_Status(vv, _("End baseline at Point%u"),
 			    VGNODE(pEx)->handle);
 		} else {
@@ -129,10 +130,9 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 			      "(%.2f|%.2f\xc2\xb0)"),
 			    vPos.x, vPos.y, rad, VG_Degrees(theta));
 		}
-		t->vtCur->p2->x = vPos.x;
-		t->vtCur->p2->y = vPos.y;
+		VG_SetPosition(t->vtCur->p2, vPos);
 	} else {
-		if ((pEx = VG_SchemFindPoint(scm, vPos, NULL))) {
+		if ((pEx = VG_SchemFindPoint(vv, vPos, NULL))) {
 			VG_Status(vv, _("Start baseline at Point%u"),
 			    VGNODE(pEx)->handle);
 		} else {

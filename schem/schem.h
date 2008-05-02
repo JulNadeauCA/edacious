@@ -25,10 +25,11 @@ extern VG_ToolOps esSchemTextTool;
 extern VG_ToolOps esSchemPortTool;
 
 ES_Schem *ES_SchemNew(void *);
-void     *VG_SchemFindPoint(ES_Schem *, VG_Vector, void *);
-void     *VG_SchemSelectNearest(ES_Schem *, VG_Vector);
+void     *VG_SchemFindPoint(VG_View *, VG_Vector, void *);
+void     *VG_SchemSelectNearest(VG_View *, ES_Schem *, VG_Vector);
 void     *VG_SchemHighlightNearest(ES_Schem *, VG_Vector);
-void     *VG_SchemHighlightNearestPoint(ES_Schem *, VG_Vector, void *);
+void     *VG_SchemHighlightNearestPoint(VG_View *, ES_Schem *, VG_Vector,
+                                        void *);
 __END_DECLS
 
 #include "close_code.h"

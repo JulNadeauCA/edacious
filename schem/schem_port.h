@@ -27,11 +27,11 @@ ES_SchemPortNew(void *pNode, VG_Point *pCenter)
 	sp = AG_Malloc(sizeof(ES_SchemPort));
 	VG_NodeInit(sp, &esSchemPortOps);
 	sp->p = pCenter;
+	VG_NodeAttach(pNode, sp);
+	VG_AddRef(sp, pCenter);
+
 	sp->lbl = VG_TextNew(sp, p1, p2);
 	VG_TextPrintfPolled(sp->lbl, "Port%u", &sp->n);
-
-	VG_AddRef(sp, pCenter);
-	VG_NodeAttach(pNode, sp);
 	return (sp);
 }
 __END_DECLS
