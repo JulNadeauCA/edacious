@@ -2,8 +2,8 @@ TOP=	..
 include ${TOP}/Makefile.config
 
 LIB=	schem
-SRCS=	schem.c schem_select.c schem_line.c schem_circle.c schem_point.c \
-	schem_proximity.c schem_text.c schem_port.c
+SRCS=	schem.c select_tool.c line_tool.c circle_tool.c point_tool.c \
+	proximity_tool.c text_tool.c port.c
 
 CFLAGS+=${AGAR_SC_CFLAGS} ${AGAR_CFLAGS}
 
