@@ -48,8 +48,10 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_SchemPort *sp = p;
 
-	sp->p = VG_ReadRef(ds, sp, "Point");
-	sp->lbl = VG_ReadRef(ds, sp, "Text");
+	if ((sp->p = VG_ReadRef(ds, sp, "Point")) == NULL ||
+	    (sp->lbl = VG_ReadRef(ds, sp, "Text")) == NULL) {
+		return (-1);
+	}
 	sp->n = (Uint)AG_ReadUint32(ds);
 	AG_CopyString(sp->sym, ds, sizeof(sp->sym));
 	return (0);
