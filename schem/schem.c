@@ -177,9 +177,9 @@ Edit(void *obj)
 	
 	vv = VG_ViewNew(NULL, vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
 	VG_ViewSetSnapMode(vv, VG_GRID);
-	VG_ViewSetScale(vv, 70.0f);
+	VG_ViewSetScale(vv, 30.0f);
 	VG_ViewSetScaleMin(vv, 10.0f);
-	VG_ViewSetGridInterval(vv, 0.50f);
+	VG_ViewSetGridInterval(vv, 0.5f);
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
