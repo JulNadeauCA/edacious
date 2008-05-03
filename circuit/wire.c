@@ -46,8 +46,8 @@ ConnectWire(ES_Circuit *ckt, ES_Wire *wire, VG_Vector p1, VG_Vector p2)
 
 	ES_LockCircuit(ckt);
 
-	port1 = ES_PortProximity(ckt, p1, NULL);
-	port2 = ES_PortProximity(ckt, p2, NULL);
+	port1 = VG_PointProximity(ckt->vg, "SchemPort", &p1, NULL, NULL);
+	port2 = VG_PointProximity(ckt->vg, "SchemPort", &p2, NULL, NULL);
 	if ((port1 != NULL && port1->node != -1) &&
 	    (port2 != NULL && port2->node != -1) &&
 	    (port1->node == port2->node)) {
@@ -106,7 +106,8 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	ES_Port *port;
 	int i;
 	
-	if ((port = ES_PortProximity(ckt, vPos, esCurWire)) != NULL) {
+	port = VG_PointProximity(ckt->vg, "SchemPort", &vPos, NULL, esCurWire);
+	if (port != NULL) {
 		if (port->com != NULL) {			/* Component */
 			v = VG_Add(port->com->pos, port->pos);
 		} else {					/* Wire */
@@ -158,7 +159,9 @@ MouseButtonUp(void *p, VG_Vector vPos, int button)
 	case SDL_BUTTON_LEFT:
 	case SDL_BUTTON_MIDDLE:
 		ES_UnselectAllPorts(ckt);
-		if ((port = ES_PortProximity(ckt, vPos, esCurWire)) != NULL) {
+		port = VG_PointProximity(ckt->vg, "SchemPort", &vPos, NULL,
+		    esCurWire);
+		if (port != NULL) {
 			port->flags |= ES_PORT_SELECTED;
 		}
 		UpdateStatus(t->vgv, port);
@@ -178,7 +181,8 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	int i;
 
 	ES_UnselectAllPorts(ckt);
-	if ((port = ES_PortProximity(ckt, vPos, esCurWire)) != NULL) {
+	port = VG_PointProximity(ckt->vg, "SchemPort", &vPos, NULL, esCurWire);
+	if (port != NULL) {
 		port->flags |= ES_PORT_SELECTED;
 	}
 	UpdateStatus(t->vgv, port);
