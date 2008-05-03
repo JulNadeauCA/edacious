@@ -24,7 +24,7 @@
  */
 
 /*
- * Connection point in the schematic.
+ * Port entity. Defines a connection point in the schematic.
  */
 
 #include <eda.h>
@@ -137,95 +137,4 @@ const VG_NodeOps esSchemPortOps = {
 	NULL,			/* lineProximity */
 	Delete,
 	Move
-};
-
-/****************/
-/* Edition tool */
-/****************/
-
-typedef struct es_schem_select_tool {
-	VG_Tool _inherit;
-} ES_SchemPortTool;
-
-static int
-MouseButtonDown(void *p, VG_Vector vPos, int button)
-{
-	ES_SchemPortTool *t = p;
-	ES_Schem *scm = VGTOOL(t)->p;
-	VG_View *vv = VGTOOL(t)->vgv;
-	VG_Point *vp;
-	ES_SchemPort *sp;
-
-	if (button != SDL_BUTTON_LEFT) {
-		return (0);
-	}
-	if ((vp = VG_SchemFindPoint(vv, vPos, NULL)) != NULL) {
-		sp = ES_SchemPortNew(vp, vp);
-	} else {
-		VG_Status(vv, _("Select a point to create a port"));
-	}
-	return (1);
-}
-
-static int
-MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
-{
-	ES_SchemPortTool *t = p;
-	ES_Schem *scm = VGTOOL(t)->p;
-	VG_View *vv = VGTOOL(t)->vgv;
-	VG_Point *vp;
-
-	if ((vp = VG_SchemHighlightNearestPoint(vv, scm, vPos, NULL)) != NULL) {
-		VG_Status(vv, _("Create port on Point%u"), VGNODE(vp)->handle);
-	} else {
-		VG_Status(vv, _("Select a Point"));
-	}
-	return (0);
-}
-
-static int
-KeyDown(void *p, int ksym, int kmod, int unicode)
-{
-	ES_SchemPortTool *t = p;
-	VG_View *vv = VGTOOL(t)->vgv;
-	VG_Node *vn;
-	Uint nDel = 0;
-
-	if (ksym == SDLK_DELETE || ksym == SDLK_BACKSPACE) {
-del:
-		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
-			if (!VG_NodeIsClass(vn, "SchemPort") ||
-			    !(vn->flags & VG_NODE_SELECTED)) {
-				continue;
-			}
-			if (VG_Delete(vn) == -1) {
-				vn->flags &= ~(VG_NODE_SELECTED);
-				VG_Status(vv, "%s", AG_GetError());
-			} else {
-				nDel++;
-			}
-			goto del;
-		}
-		VG_Status(vv, _("Deleted %u ports"), nDel);
-		return (1);
-	}
-	return (0);
-}
-
-VG_ToolOps esSchemPortTool = {
-	N_("Port Editor"),
-	N_("Create connection points for the schematic."),
-	&esIconPortEditor,
-	sizeof(ES_SchemPortTool),
-	VG_NOSNAP,
-	NULL,
-	NULL,			/* destroy */
-	NULL,			/* edit */
-	NULL,			/* predraw */
-	NULL,			/* postdraw */
-	MouseMotion,
-	MouseButtonDown,
-	NULL,			/* mousebuttonup */
-	KeyDown,
-	NULL			/* keyup */
 };
