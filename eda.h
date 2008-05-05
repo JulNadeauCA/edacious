@@ -35,9 +35,9 @@
 #define Ulong unsigned long
 #endif
 
+#include <schem/schem.h>
 #include <component/component.h>
 #include <circuit/circuit.h>
-#include <schem/schem.h>
 
 #include <icons.h>
 
@@ -48,6 +48,19 @@
 # define ES_PATHSEP '\\'
 #else
 # define ES_PATHSEP '/'
+#endif
+
+#ifndef MIN
+#define	MIN(a,b) (((a)<(b))?(a):(b))
+#endif
+#ifndef MAX
+#define	MAX(a,b) (((a)>(b))?(a):(b))
+#endif
+#ifndef MIN3
+#define	MIN3(a,b,c) MIN((a),MIN((b),(c)))
+#endif
+#ifndef MAX3
+#define	MAX3(a,b,c) MAX((a),MAX((b),(c)))
 #endif
 
 #define Fatal AG_FatalError
