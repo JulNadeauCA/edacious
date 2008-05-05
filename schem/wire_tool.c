@@ -24,7 +24,8 @@
  */
 
 /*
- * "Wire" tool. This tool either merges nodes or creates new ones.
+ * "Wire" tool. This tool insert a wire in the schematic and modifies the
+ * circuit topology (i.e., merging circuit nodes or creating new ones).
  */
 
 #include <eda.h>
@@ -107,28 +108,22 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	int i;
 	
 	port = VG_PointProximity(ckt->vg, "SchemPort", &vPos, NULL, esCurWire);
-	if (port != NULL) {
-		if (port->com != NULL) {			/* Component */
-			v = VG_Add(port->com->pos, port->pos);
-		} else {					/* Wire */
-			v = port->pos;
-		}
-	} else {
-		v = vPos;
-	}
+	v = (port != NULL) ? VG_PointPos(port->schemPort->p) : vPos;
+
 	switch (button) {
 	case SDL_BUTTON_LEFT:
 		if (esCurWire == NULL) {
 			wire = ES_CircuitAddWire(ckt);
-			wire->ports[0].pos = v;
-			wire->ports[1].pos = v;
+			VG_Translate(wire->ports[0].schemPort->p, v);
+			VG_Translate(wire->ports[1].schemPort->p, v);
 			esCurWire = wire;
 		} else {
 			wire = esCurWire;
 			wire->ports[0].flags &= ~(ES_PORT_SELECTED);
 			wire->ports[1].flags &= ~(ES_PORT_SELECTED);
-			if (ConnectWire(ckt, wire, wire->ports[0].pos,
-			    wire->ports[1].pos) == -1) {
+			if (ConnectWire(ckt, wire,
+			    VG_PointPos(wire->ports[0].schemPort->p),
+			    VG_PointPos(wire->ports[1].schemPort->p)) == -1) {
 				AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
 				VG_Status(t->vgv, _("Could not connect: %s"),
 				    AG_GetError());
@@ -187,7 +182,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	}
 	UpdateStatus(t->vgv, port);
 	if (esCurWire != NULL) {
-		esCurWire->ports[1].pos = vPos;
+		VG_Translate(esCurWire->ports[1].schemPort->p, vRel);
 	}
 	return (0);
 }
