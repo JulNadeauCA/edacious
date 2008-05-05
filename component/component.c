@@ -139,6 +139,7 @@ del_nodes:
 		port->branch = NULL;
 		port->node = -1;
 		port->flags = 0;
+		port->schemPort = NULL;
 	}
 	COMPONENT_FOREACH_PAIR(pair, i, com) {
 		pair->nloops = 0;
@@ -198,11 +199,11 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 
 		Strlcpy(port->name, modelPort->name, sizeof(port->name));
 		port->n = i;
-		port->pos = modelPort->pos;
 		port->com = com;
 		port->node = -1;
 		port->branch = NULL;
 		port->flags = 0;
+		port->schemPort = NULL;
 		com->nports++;
 		Debug(com, "Added port #%d (%s)\n", i, port->name);
 	}
@@ -551,41 +552,6 @@ tryname:
 //		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
 	
 	ES_UnlockCircuit(ckt);
-}
-
-/* Return the port nearest the given VG coordinates. */
-/* XXX */
-ES_Port *
-ES_PortProximity(ES_Circuit *ckt, VG_Vector pos, void *ignore)
-{
-	ES_Component *com;
-	ES_Wire *wire;
-	ES_Port *port;
-	VG_Vector posRel;
-	int i;
-
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if ((com == ignore) || (com->flags & COMPONENT_FLOATING)) {
-			continue;
-		}
-		posRel = VG_Sub(pos, com->pos);
-		COMPONENT_FOREACH_PORT(port, i, com) {
-			/* XXX arbitrary distance */
-			if (VG_Distance(port->pos, posRel) < 0.25f)
-				return (port);
-		}
-	}
-	CIRCUIT_FOREACH_WIRE(wire, ckt) {
-		if (wire == ignore) {
-			continue;
-		}
-		WIRE_FOREACH_PORT(port, i, wire) {
-			/* XXX arbitrary distance */
-			if (VG_Distance(port->pos, pos) < 0.25f)
-				return (port);
-		}
-	}
-	return (NULL);
 }
 
 void

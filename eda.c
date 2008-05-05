@@ -256,9 +256,11 @@ OpenNativeObject(AG_Event *event)
 
 	obj = AG_ObjectNew(&vfsRoot, NULL, cls);
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
-		AG_TextMsgFromError();
-		AG_ObjectDetach(obj);
+		AG_TextMsg(AG_MSG_ERROR, "%s: %s", path, AG_GetError());
+#if 0
+		AG_ObjectDetach(obj);		/* XXX */
 		AG_ObjectDestroy(obj);
+#endif
 		return;
 	}
 	SetArchivePath(obj, path);

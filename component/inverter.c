@@ -30,12 +30,12 @@
 #include <eda.h>
 #include "inverter.h"
 
-const ES_Port esInverterPinout[] = {
-	{ 0, "",	{0.0,  1.0} },
-	{ 1, "Vcc",	{1.0, -1.0} },
-	{ 2, "Gnd",	{1.0,  1.0} },
-	{ 3, "A",	{0.0,  0.0} },
-	{ 4, "A-bar",	{2.0,  0.0} },
+const ES_Port esInverterPorts[] = {
+	{ 0, "" },
+	{ 1, "Vcc" },
+	{ 2, "Gnd" },
+	{ 3, "A" },
+	{ 4, "A-bar" },
 	{ -1 },
 };
 
@@ -77,7 +77,7 @@ Init(void *p)
 {
 	ES_Inverter *inv = p;
 
-	ES_ComponentSetPorts(inv, esInverterPinout);
+	ES_ComponentSetPorts(inv, esInverterPorts);
 	COM(inv)->intUpdate = ES_InverterUpdate;
 #if 0
 	ES_SetSpec(inv, "Tp", _("Propagation delay from A to A-bar"),

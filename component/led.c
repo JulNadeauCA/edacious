@@ -30,10 +30,10 @@
 #include <eda.h>
 #include "led.h"
 
-const ES_Port esLedPinout[] = {
-	{ 0, "",  {0.000, 0.625} },
-	{ 1, "A", {0.000, 0.000} },
-	{ 2, "C", {1.250, 0.000} },
+const ES_Port esLedPorts[] = {
+	{ 0, "" },
+	{ 1, "A" },
+	{ 2, "C" },
 	{ -1 },
 };
 
@@ -92,7 +92,7 @@ Init(void *p)
 {
 	ES_Led *r = p;
 
-	ES_ComponentSetPorts(r, esLedPinout);
+	ES_ComponentSetPorts(r, esLedPorts);
 	r->Vforw = 30e-3;
 	r->Vrev = 5.0;
 	r->I = 2500e-3;

@@ -30,10 +30,10 @@
 #include <eda.h>
 #include "vsource.h"
 
-const ES_Port esVsourcePinout[] = {
-	{ 0, "",   {0.0, 0.0} },
-	{ 1, "v+", {0.0, 0.0} },
-	{ 2, "v-", {0.0, 2.0} },
+const ES_Port esVsourcePorts[] = {
+	{ 0, "" },
+	{ 1, "v+" },
+	{ 2, "v-" },
 	{ -1 },
 };
 
@@ -346,7 +346,7 @@ Init(void *p)
 {
 	ES_Vsource *vs = p;
 
-	ES_ComponentSetPorts(vs, esVsourcePinout);
+	ES_ComponentSetPorts(vs, esVsourcePorts);
 	vs->voltage = 5;
 	vs->lstack = NULL;
 	vs->nlstack = 0;

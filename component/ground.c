@@ -31,9 +31,9 @@
 #include <eda.h>
 #include "ground.h"
 
-const ES_Port esGroundPinout[] = {
-	{ 0, "",  { 0.0f, 0.0f } },
-	{ 1, "A", { 0.0f, 0.0f } },
+const ES_Port esGroundPorts[] = {
+	{ 0, "", },
+	{ 1, "A", },
 	{ -1 },
 };
 
@@ -84,7 +84,7 @@ Init(void *p)
 {
 	ES_Ground *gnd = p;
 
-	ES_ComponentSetPorts(gnd, esGroundPinout);
+	ES_ComponentSetPorts(gnd, esGroundPorts);
 }
 
 ES_ComponentClass esGroundClass = {

@@ -33,12 +33,12 @@ enum circuit_format {
 typedef struct es_port {
 	int n;					/* Port number */
 	char name[COMPONENT_PORT_NAME_MAX];	/* Port name */
-	VG_Vector pos;				/* Position in schematic */
 	struct es_component *com;		/* Back pointer to component */
 	int node;				/* Node connection (or -1) */
 	struct es_branch *branch;		/* Branch into node */
 	Uint flags;
 #define ES_PORT_SELECTED	0x01		/* Port is selected */
+	ES_SchemPort *schemPort;		/* Entity in schematic */
 } ES_Port;
 
 /* Ordered pair of ports belonging to the same component. */
@@ -144,7 +144,6 @@ void	 ES_ComponentCloseMenu(VG_View *);
 void	 ES_ComponentSetPorts(void *, const ES_Port *);
 void	 ES_ComponentFreePorts(ES_Component *);
 
-ES_Port	*ES_PortProximity(struct es_circuit *, VG_Vector, void *);
 void     ES_UnselectAllPorts(struct es_circuit *);
 Uint	 ES_PortNode(ES_Component *, int);
 int	 ES_PortIsGrounded(ES_Port *);

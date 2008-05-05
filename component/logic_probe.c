@@ -30,9 +30,9 @@
 #include <eda.h>
 #include "logic_probe.h"
 
-const ES_Port esLogicProbePinout[] = {
-	{ 0, "",  {0.000, 0.625} },
-	{ 1, "A", {0.000, 0.000} },
+const ES_Port esLogicProbePorts[] = {
+	{ 0, "" },
+	{ 1, "A" },
 	{ -1 },
 };
 
@@ -87,7 +87,7 @@ Init(void *p)
 {
 	ES_LogicProbe *r = p;
 
-	ES_ComponentSetPorts(r, esLogicProbePinout);
+	ES_ComponentSetPorts(r, esLogicProbePorts);
 	r->Vhigh = 5.0;
 	r->state = 0;
 	COM(r)->intUpdate = ES_LogicProbeUpdate;

@@ -30,13 +30,13 @@
 #include <eda.h>
 #include "or.h"
 
-const ES_Port esOrPinout[] = {
-	{ 0, "",	{0.0,  1.0} },
-	{ 1, "Vcc",	{1.0, -1.0} },
-	{ 2, "Gnd",	{1.0, +1.0} },
-	{ 3, "A",	{0.0, -0.75} },
-	{ 4, "B",	{0.0, +0.75} },
-	{ 5, "A|B",	{2.0,  0.0} },
+const ES_Port esOrPorts[] = {
+	{ 0, "" },
+	{ 1, "Vcc" },
+	{ 2, "Gnd" },
+	{ 3, "A" },
+	{ 4, "B" },
+	{ 5, "A|B" },
 	{ -1 },
 };
 
@@ -78,7 +78,7 @@ Init(void *p)
 {
 	ES_Or *gate = p;
 
-	ES_ComponentSetPorts(gate, esOrPinout);
+	ES_ComponentSetPorts(gate, esOrPorts);
 	COM(gate)->intUpdate = ES_OrUpdate;
 	ES_LogicOutput(gate, "A|B", ES_HI_Z);
 }

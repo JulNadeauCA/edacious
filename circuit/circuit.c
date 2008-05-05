@@ -344,7 +344,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		for (i = 0; i < 2; i++) {
 			ES_Port *port = &wire->ports[i];
 
-			port->pos = VG_ReadVector(ds);
 			port->node = (int)AG_ReadUint32(ds);
 		}
 	}
@@ -397,7 +396,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 
 			port->n = (int)AG_ReadUint32(ds);
 			AG_CopyString(port->name, ds, sizeof(port->name));
-			port->pos = VG_ReadVector(ds);
 			port->node = (int)AG_ReadUint32(ds);
 			node = ckt->nodes[port->node];
 
@@ -473,7 +471,6 @@ Save(void *p, AG_DataSource *ds)
 		for (i = 0; i < 2; i++) {
 			ES_Port *port = &wire->ports[i];
 
-			VG_WriteVector(ds, &port->pos);
 			AG_WriteUint32(ds, (Uint32)port->node);
 #ifdef DEBUG
 			if (port->node == -1) { Fatal("Illegal wire port"); }
@@ -522,7 +519,6 @@ Save(void *p, AG_DataSource *ds)
 		COMPONENT_FOREACH_PORT(port, i, com) {
 			AG_WriteUint32(ds, (Uint32)port->n);
 			AG_WriteString(ds, port->name);
-			VG_WriteVector(ds, &port->pos);
 			AG_WriteUint32(ds, (Uint32)port->node);
 		}
 		count++;
@@ -575,7 +571,6 @@ ES_CircuitAddWire(ES_Circuit *ckt)
 
 		port->n = i+1;
 		port->name[0] = '\0';
-		port->pos = VGVECTOR(0.0f, 0.0f);
 		port->com = NULL;
 		port->node = -1;
 		port->branch = NULL;
@@ -1470,6 +1465,7 @@ DrawNodeAnnotations(VG_View *vv, ES_Circuit *ckt, ES_Port *port)
 }
 #endif
 
+#if 0
 static void
 Draw(AG_Event *event)
 {
@@ -1491,32 +1487,27 @@ Draw(AG_Event *event)
 		if (COMOPS(com)->draw != NULL) {
 			COMOPS(com)->draw(com, vg->root);
 		}
-//		COMPONENT_FOREACH_PORT(port, i, com) {
-//			DrawNodeAnnotations(vv, ckt, port);
-//		}
-	}
-#if 0
-	/* Apply highlighting on components. */
-	if (com->selected || com->highlighted) {
-		TAILQ_FOREACH(vn, &com->block->nodes, vgbmbs) {
-			if (com->selected)
-				vn->flags |= VG_NODE_SELECTED;
-			if (com->highlighted)
-				vn->flags |= VG_NODE_MOUSEOVER;
+		COMPONENT_FOREACH_PORT(port, i, com) {
+			DrawNodeAnnotations(vv, ckt, port);
 		}
 	}
-#endif
 	/* Draw the wires and ports. */
 	CIRCUIT_FOREACH_WIRE(wire, ckt) {
-		p1 = VG_PointNew(vg->root, wire->ports[0].pos);
-		p2 = VG_PointNew(vg->root, wire->ports[1].pos);
+		ES_SchemPort *sp1 = wire->ports[0].schemPort;
+		ES_SchemPort *sp2 = wire->ports[1].schemPort;
+		if (sp1 == NULL || sp2 == NULL) {
+			continue;
+		}
+		p1 = VG_PointNew(vg->root, VG_PointPos(sp1->p));
+		p2 = VG_PointNew(vg->root, VG_PointPos(sp2->p));
 		vl = VG_LineNew(vg->root, p1, p2);
-//		for (i = 0; i < 2; i++) {
-//			DrawNodeAnnotations(vv, ckt, &wire->ports[i]);
-//		}
+		for (i = 0; i < 2; i++) {
+			DrawNodeAnnotations(vv, ckt, &wire->ports[i]);
+		}
 	}
 	ES_UnlockCircuit(ckt);
 }
+#endif
 
 static void *
 Edit(void *p)
@@ -1535,7 +1526,9 @@ Edit(void *p)
 	tbTop = AG_ToolbarNew(NULL, AG_TOOLBAR_HORIZ, 1, 0);
 	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
 	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
+#if 0
 	VG_ViewDrawFn(vv, Draw, "%p", ckt);
+#endif
 	VG_ViewSetSnapMode(vv, VG_GRID);
 	VG_ViewSetScale(vv, 30.0f);
 	VG_ViewSetScaleMin(vv, 10.0f);

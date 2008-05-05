@@ -66,6 +66,7 @@ scan:
 	return (1);
 }
 
+#if 0
 /* Rotate a floating component by 90 degrees. */
 static void
 RotateComponent(ES_Circuit *ckt, ES_Component *com)
@@ -82,16 +83,24 @@ RotateComponent(ES_Circuit *ckt, ES_Component *com)
 		port->pos.y = r*VG_Sin(theta);
 	}
 }
+#endif
 
 /* Highlight the component connections that would be made to existing nodes. */
 static void
 HighlightConnections(ES_Circuit *ckt, ES_Component *com)
 {
 	ES_Port *port, *nearestPort;
+	VG_Vector pos;
 	int i;
 
 	COMPONENT_FOREACH_PORT(port, i, com) {
-		nearestPort = ES_PortProximity(ckt, port->pos, com);
+		if (port->schemPort == NULL) {
+			fprintf(stderr, "Port%d has no schem entity!\n", i);
+			continue;
+		}
+		pos = VG_PointPos(port->schemPort->p);
+		nearestPort = VG_PointProximityMax(ckt->vg, "SchemPort", &pos,
+		    NULL, com, ckt->vg->gridIval);
 		if (nearestPort != NULL) {
 			port->flags |= ES_PORT_SELECTED;
 		} else {
@@ -104,6 +113,7 @@ HighlightConnections(ES_Circuit *ckt, ES_Component *com)
 static void
 ConnectComponent(ES_Circuit *ckt, ES_Component *com, VG_Vector pos)
 {
+	VG_Vector portPos;
 	ES_Port *port, *nearestPort;
 	ES_Branch *br;
 	int i;
@@ -113,7 +123,9 @@ ConnectComponent(ES_Circuit *ckt, ES_Component *com, VG_Vector pos)
 	Debug(com, "Connecting to circuit: %s\n", OBJECT(ckt)->name);
 	com->pos = pos;
 	COMPONENT_FOREACH_PORT(port, i, com) {
-		nearestPort = ES_PortProximity(ckt, port->pos, com);
+		portPos = VG_PointPos(port->schemPort->p);
+		nearestPort = VG_PointProximityMax(ckt->vg, "SchemPort",
+		    &portPos, NULL, com, ckt->vg->gridIval);
 		if (COMOPS(com)->connect == NULL ||
 		    COMOPS(com)->connect(com, port, nearestPort) == -1) {
 			if (nearestPort != NULL) {
@@ -154,11 +166,12 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			VG_ViewSelectTool(t->vgv, NULL, NULL);
 		}
 		break;
+#if 0
 	case SDL_BUTTON_MIDDLE:
-		if (esInscomCur != NULL) {
+		if (esInscomCur != NULL)
 			RotateComponent(ckt, esInscomCur);
-		}
 		break;
+#endif
 	default:
 		return (0);
 	}

@@ -30,10 +30,10 @@
 #include <eda.h>
 #include "resistor.h"
 
-const ES_Port esResistorPinout[] = {
-	{ 0, "",  {0.000, 0.625} },
-	{ 1, "A", {0.000, 0.000} },
-	{ 2, "B", {1.250, 0.000} },
+const ES_Port esResistorPorts[] = {
+	{ 0, "" },
+	{ 1, "A" },
+	{ 2, "B" },
 	{ -1 },
 };
 
@@ -194,7 +194,7 @@ Init(void *p)
 {
 	ES_Resistor *r = p;
 
-	ES_ComponentSetPorts(r, esResistorPinout);
+	ES_ComponentSetPorts(r, esResistorPorts);
 	r->resistance = 1;
 	r->power_rating = HUGE_VAL;
 	r->tolerance = 0;

@@ -31,11 +31,11 @@
 #include <eda.h>
 #include "spdt.h"
 
-const ES_Port esSpdtPinout[] = {
-	{ 0, "",  {0.000, +1.000} },
-	{ 1, "A", {0.000,  0.000} },
-	{ 2, "B", {2.000, -0.500} },
-	{ 3, "C", {2.000, +0.500} },
+const ES_Port esSpdtPorts[] = {
+	{ 0, "" },
+	{ 1, "A" },
+	{ 2, "B" },
+	{ 3, "C" },
 	{ -1 },
 };
 
@@ -93,7 +93,7 @@ Init(void *p)
 {
 	ES_Spdt *sw = p;
 
-	ES_ComponentSetPorts(sw, esSpdtPinout);
+	ES_ComponentSetPorts(sw, esSpdtPorts);
 	sw->on_resistance = 1.0;
 	sw->off_resistance = HUGE_VAL;
 	sw->state = 1;

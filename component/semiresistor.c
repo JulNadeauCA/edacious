@@ -30,10 +30,10 @@
 #include <eda.h>
 #include "semiresistor.h"
 
-const ES_Port esSemiResistorPinout[] = {
-	{ 0, "",  {0.000, 0.625} },
-	{ 1, "A", {0.000, 0.000} },
-	{ 2, "B", {1.250, 0.000} },
+const ES_Port esSemiResistorPorts[] = {
+	{ 0, "" },
+	{ 1, "A" },
+	{ 2, "B" },
 	{ -1 },
 };
 
@@ -70,7 +70,7 @@ Init(void *p)
 {
 	ES_SemiResistor *r = p;
 
-	ES_ComponentSetPorts(r, esSemiResistorPinout);
+	ES_ComponentSetPorts(r, esSemiResistorPorts);
 	r->l = 2e-6;
 	r->w = 1e-6;
 	r->rsh = 1000;

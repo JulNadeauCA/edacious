@@ -30,13 +30,13 @@
 #include <eda.h>
 #include "and.h"
 
-const ES_Port esAndPinout[] = {
-	{ 0, "",	{0.0,  1.0} },
-	{ 1, "Vcc",	{1.0, -0.5} },
-	{ 2, "Gnd",	{1.0, +0.5} },
-	{ 3, "A",	{0.0, -0.5} },
-	{ 4, "B",	{0.0, +0.5} },
-	{ 5, "A&B",	{2.0,  0.0} },
+const ES_Port esAndPorts[] = {
+	{ 0, ""	},
+	{ 1, "Vcc" },
+	{ 2, "Gnd" },
+	{ 3, "A" },
+	{ 4, "B" },
+	{ 5, "A&B" },
 	{ -1 },
 };
 
@@ -67,7 +67,7 @@ Init(void *p)
 {
 	ES_And *gate = p;
 
-	ES_ComponentSetPorts(gate, esAndPinout);
+	ES_ComponentSetPorts(gate, esAndPorts);
 	COM(gate)->intUpdate = ES_AndUpdate;
 	ES_LogicOutput(gate, "A&B", ES_HI_Z);
 }

@@ -31,10 +31,10 @@
 #include <eda.h>
 #include "spst.h"
 
-const ES_Port esSpstPinout[] = {
-	{ 0, "",  {0.0, 1.0} },
-	{ 1, "A", {0.0, 0.0} },
-	{ 2, "B", {2.0, 0.0} },
+const ES_Port esSpstPorts[] = {
+	{ 0, "" },
+	{ 1, "A" },
+	{ 2, "B" },
 	{ -1 },
 };
 
@@ -83,7 +83,7 @@ Init(void *p)
 {
 	ES_Spst *sw = p;
 
-	ES_ComponentSetPorts(sw, esSpstPinout);
+	ES_ComponentSetPorts(sw, esSpstPorts);
 	sw->on_resistance = 1.0;
 	sw->off_resistance = HUGE_VAL;
 	sw->state = 0;
