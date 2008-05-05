@@ -24,7 +24,7 @@
  */
 
 /*
- * Port entity. Defines a connection point in the schematic.
+ * Wire entity. Displays connections between ports.
  */
 
 #include <eda.h>
@@ -34,100 +34,92 @@
 static void
 Init(void *p)
 {
-	ES_SchemPort *sp = p;
+	ES_SchemWire *sw = p;
 
-	sp->p = NULL;
-	sp->lbl = NULL;
-	sp->n = 0;
-	sp->sym[0] = '\0';
-	sp->r = 0.0625f;
+	sw->p1 = NULL;
+	sw->p2 = NULL;
+	sw->thickness = 1;
 }
 
 static int
 Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 {
-	ES_SchemPort *sp = p;
+	ES_SchemWire *sw = p;
 
-	if ((sp->p = VG_ReadRef(ds, sp, "Point")) == NULL ||
-	    (sp->lbl = VG_ReadRef(ds, sp, "Text")) == NULL) {
+	if ((sw->p1 = VG_ReadRef(ds, sw, "SchemPort")) == NULL ||
+	    (sw->p2 = VG_ReadRef(ds, sw, "SchemPort")) == NULL) {
 		return (-1);
 	}
-	sp->n = (Uint)AG_ReadUint32(ds);
-	AG_CopyString(sp->sym, ds, sizeof(sp->sym));
+	sw->thickness = (Uint)AG_ReadUint32(ds);
 	return (0);
 }
 
 static void
 Save(void *p, AG_DataSource *ds)
 {
-	ES_SchemPort *sp = p;
+	ES_SchemWire *sw = p;
 
-	VG_WriteRef(ds, sp->p);
-	VG_WriteRef(ds, sp->lbl);
-	AG_WriteUint32(ds, (Uint32)sp->n);
-	AG_WriteString(ds, sp->sym);
+	VG_WriteRef(ds, sw->p1);
+	VG_WriteRef(ds, sw->p2);
+	AG_WriteUint32(ds, (Uint32)sw->thickness);
 }
 
 static void
 Draw(void *p, VG_View *vv)
 {
-	ES_SchemPort *sp = p;
-	VG_Vector vPos = VG_PointPos(sp->p);
-	int x, y;
+	ES_SchemWire *sw = p;
+	VG_Vector v1 = VG_PointPos(sw->p1);
+	VG_Vector v2 = VG_PointPos(sw->p2);
+	int x1, y1, x2, y2;
 	
-	VG_TextPrintf(sp->lbl, "Port%u", sp->n);
-	VG_GetViewCoords(vv, vPos, &x, &y);
-	AG_DrawCircle(vv, x, y, (int)(sp->r*vv->scale),
-	    VG_MapColorRGB(VGNODE(sp)->color));
+	VG_GetViewCoords(vv, v1, &x1, &y1);
+	VG_GetViewCoords(vv, v2, &x2, &y2);
+	AG_DrawLine(vv, x1,y1, x2,y2, VG_MapColorRGB(VGNODE(sw)->color));
 }
 
 static void
 Extent(void *p, VG_View *vv, VG_Rect *r)
 {
-	ES_SchemPort *sp = p;
-	VG_Vector vPos = VG_PointPos(sp->p);
+	ES_SchemWire *sw = p;
+	VG_Vector p1, p2;
 
-	r->x = vPos.x - sp->r;
-	r->y = vPos.y - sp->r;
-	r->w = sp->r*2.0f;
-	r->h = sp->r*2.0f;
+	p1 = VG_PointPos(sw->p1);
+	p2 = VG_PointPos(sw->p2);
+	r->x = MIN(p1.x, p2.x);
+	r->y = MIN(p1.y, p2.y);
+	r->w = MAX(p1.x, p2.x) - r->x;
+	r->h = MAX(p1.y, p2.y) - r->y;
 }
 
 static float
 PointProximity(void *p, VG_Vector *vPt)
 {
-	ES_SchemPort *sp = p;
-	VG_Vector pos = VG_PointPos(sp->p);
-	float d;
+	ES_SchemWire *sw = p;
+	VG_Vector v1 = VG_PointPos(sw->p1);
+	VG_Vector v2 = VG_PointPos(sw->p2);
 
-	d = VG_Distance(pos, *vPt);
-	*vPt = pos;
-	return (d);
+	return VG_PointLineDistance(v1, v2, vPt);
 }
 
 static void
 Delete(void *p)
 {
-	ES_SchemPort *sp = p;
+	ES_SchemWire *sw = p;
 
-	if (VG_DelRef(sp, sp->p) == 0)
-		VG_Delete(sp->p);
-	if (VG_DelRef(sp, sp->lbl) == 0)
-		VG_Delete(sp->lbl);
+	if (VG_DelRef(sw, sw->p1) == 0) { VG_Delete(sw->p1); }
+	if (VG_DelRef(sw, sw->p2) == 0) { VG_Delete(sw->p2); }
 }
 
 static void
 Move(void *p, VG_Vector vCurs, VG_Vector vRel)
 {
-	ES_SchemPort *sp = p;
-
-	sp->r = VG_Distance(VG_PointPos(sp->p), vCurs);
+	/* TODO */
 }
 
-const VG_NodeOps esSchemPortOps = {
-	N_("SchemPort"),
-	&esIconPortEditor,
-	sizeof(ES_SchemPort),
+const VG_NodeOps esSchemWireOps = {
+	N_("SchemWire"),
+	&esIconInsertWire,
+	sizeof(ES_SchemWire),
 	Init,
 	NULL,			/* destroy */
 	Load,

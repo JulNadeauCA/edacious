@@ -10,7 +10,8 @@ typedef struct es_schem {
 
 #define SCHEM(p) ((ES_Schem *)(p))
 
-#include <schem/schem_port.h>
+#include <schem/port.h>
+#include <schem/wire.h>
 
 __BEGIN_DECLS
 extern AG_ObjectClass esSchemClass;
