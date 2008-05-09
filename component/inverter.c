@@ -171,11 +171,10 @@ ES_ComponentClass esInverterClass = {
 	},
 	N_("Inverter"),
 	"Inv",
-	"Digital/Inverter.vg",
+	"Inverter.eschem",
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
 	NULL,			/* export */
 	NULL			/* connect */
 };
-

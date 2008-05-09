@@ -116,7 +116,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 	
 	if (t->vtCur != NULL) {
 		pEx = t->vtCur->p1;
-		pos = VG_PointPos(pEx);
+		pos = VG_Pos(pEx);
 		theta = VG_Atan2(vPos.y - pos.y,
 		                 vPos.x - pos.x);
 		rad = VG_Hypot(vPos.x - pos.x,

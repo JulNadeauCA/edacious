@@ -35,6 +35,15 @@ typedef struct es_schem_select_tool {
 	VG_Tool _inherit;
 } ES_SchemPortTool;
 
+static void
+SetPortName(AG_Event *event)
+{
+	ES_SchemPort *sp = AG_PTR(1);
+	char *s = AG_STRING(2);
+
+	Strlcpy(sp->name, s, sizeof(sp->name));
+}
+
 static int
 MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
@@ -49,6 +58,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	}
 	if ((vp = VG_SchemFindPoint(vv, vPos, NULL)) != NULL) {
 		sp = ES_SchemPortNew(vp, vp);
+		AG_TextPromptString(_("Port name: "), SetPortName, "%p", sp);
 	} else {
 		VG_Status(vv, _("Select a point to create a port"));
 	}

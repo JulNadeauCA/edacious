@@ -99,7 +99,7 @@ ES_ComponentClass esAndClass = {
 	},
 	N_("AND Gate"),
 	"And",
-	"Digital/AND.vg",
+	"AndGate.eschem",
 	NULL,		/* draw */
 	NULL,		/* instance_menu */
 	NULL,		/* class_menu */

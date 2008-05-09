@@ -1,5 +1,7 @@
 /*	Public domain	*/
 
+#define ES_SCHEM_NAME_MAX 128
+
 #include "begin_code.h"
 
 /* Component schematic block */
@@ -12,6 +14,7 @@ typedef struct es_schem {
 
 #include <schem/port.h>
 #include <schem/wire.h>
+#include <schem/block.h>
 
 __BEGIN_DECLS
 extern AG_ObjectClass esSchemClass;
@@ -28,7 +31,7 @@ extern VG_ToolOps esSchemPortTool;
 ES_Schem *ES_SchemNew(void *);
 void     *VG_SchemFindPoint(VG_View *, VG_Vector, void *);
 void     *VG_SchemSelectNearest(VG_View *, ES_Schem *, VG_Vector);
-void     *VG_SchemHighlightNearest(ES_Schem *, VG_Vector);
+void     *VG_SchemHighlightNearest(VG_View *, ES_Schem *, VG_Vector);
 void     *VG_SchemHighlightNearestPoint(VG_View *, ES_Schem *, VG_Vector,
                                         void *);
 __END_DECLS

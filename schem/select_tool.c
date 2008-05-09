@@ -49,7 +49,7 @@ VG_SchemFindPoint(VG_View *vv, VG_Vector vCurs, void *ignore)
 			continue;
 		}
 		v = vCurs;
-		prox = vn->ops->pointProximity(vn, &v);
+		prox = vn->ops->pointProximity(vn, vv, &v);
 		if (prox < vv->gridIval) {
 			if (prox < proxNearest) {
 				proxNearest = prox;
@@ -76,7 +76,7 @@ VG_SchemHighlightNearestPoint(VG_View *vv, ES_Schem *scm, VG_Vector vCurs,
 			continue;
 		}
 		v = vCurs;
-		prox = vn->ops->pointProximity(vn, &v);
+		prox = vn->ops->pointProximity(vn, vv, &v);
 		if (prox < vv->gridIval) {
 			if (prox < proxNearest) {
 				proxNearest = prox;
@@ -109,7 +109,7 @@ VG_SchemSelectNearest(VG_View *vv, ES_Schem *scm, VG_Vector vCurs)
 			continue;
 		}
 		v = vCurs;
-		prox = vn->ops->pointProximity(vn, &v);
+		prox = vn->ops->pointProximity(vn, vv, &v);
 		if (prox <= 0.25f) {
 			if (prox < proxNearest) {
 				proxNearest = prox;
@@ -133,7 +133,7 @@ VG_SchemSelectNearest(VG_View *vv, ES_Schem *scm, VG_Vector vCurs)
 			vn->flags &= ~(VG_NODE_SELECTED);
 		}
 		v = vCurs;
-		prox = vn->ops->pointProximity(vn, &v);
+		prox = vn->ops->pointProximity(vn, vv, &v);
 		if (prox < proxNearest) {
 			proxNearest = prox;
 			vnNearest = vn;
@@ -146,7 +146,7 @@ VG_SchemSelectNearest(VG_View *vv, ES_Schem *scm, VG_Vector vCurs)
 }
 
 void *
-VG_SchemHighlightNearest(ES_Schem *scm, VG_Vector vCurs)
+VG_SchemHighlightNearest(VG_View *vv, ES_Schem *scm, VG_Vector vCurs)
 {
 	float prox, proxNearest;
 	VG_Node *vn, *vnNearest;
@@ -164,7 +164,7 @@ VG_SchemHighlightNearest(ES_Schem *scm, VG_Vector vCurs)
 			continue;
 		}
 		v = vCurs;
-		prox = vn->ops->pointProximity(vn, &v);
+		prox = vn->ops->pointProximity(vn, vv, &v);
 		if (prox <= 0.25f) {
 			if (prox < proxNearest) {
 				proxNearest = prox;
@@ -186,7 +186,7 @@ VG_SchemHighlightNearest(ES_Schem *scm, VG_Vector vCurs)
 		}
 		vn->flags &= ~(VG_NODE_MOUSEOVER);
 		v = vCurs;
-		prox = vn->ops->pointProximity(vn, &v);
+		prox = vn->ops->pointProximity(vn, vv, &v);
 		if (prox < proxNearest) {
 			proxNearest = prox;
 			vnNearest = vn;
@@ -249,7 +249,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 		}
 		return (1);
 	}
-	VG_SchemHighlightNearest(scm, vPos);
+	VG_SchemHighlightNearest(vv, scm, vPos);
 	return (0);
 }
 

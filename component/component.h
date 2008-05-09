@@ -38,7 +38,7 @@ typedef struct es_port {
 	struct es_branch *branch;		/* Branch into node */
 	Uint flags;
 #define ES_PORT_SELECTED	0x01		/* Port is selected */
-	ES_SchemPort *schemPort;		/* Entity in schematic */
+	ES_SchemPort *schemPort;		/* Schematic port */
 } ES_Port;
 
 /* Ordered pair of ports belonging to the same component. */
@@ -70,7 +70,7 @@ typedef struct es_component_class {
 	AG_ObjectClass obj;
 	const char *name;	/* Name (e.g., "Resistor") */
 	const char *pfx;	/* Prefix (e.g., "R") */
-	const char *schem;	/* Schematic filename (or NULL if generated) */
+	const char *schemFile;	/* Schematic filename (or NULL if generated) */
 
 	void	 (*draw)(void *, VG_Node *);
 	void	 (*instance_menu)(void *, struct ag_menu_item *);
@@ -82,7 +82,6 @@ typedef struct es_component_class {
 typedef struct es_component {
 	struct ag_object obj;
 	struct es_circuit *ckt;			/* Back pointer to circuit */
-	VG_Vector pos;				/* Position in schematic */
 	Uint flags;
 #define COMPONENT_FLOATING	0x01		/* Not yet connected */
 	int selected;				/* Selected for edition? */
@@ -94,7 +93,7 @@ typedef struct es_component {
 	int     npairs;
 	ES_Spec	*specs;				/* Model specifications */
 	int	nspecs;
-
+	
 	int (*loadDC_G)(void *, SC_Matrix *G);
 	int (*loadDC_BCD)(void *, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D);
 	int (*loadDC_RHS)(void *, SC_Vector *i, SC_Vector *e);
@@ -103,6 +102,7 @@ typedef struct es_component {
 	void (*intStep)(void *, Uint);
 	void (*intUpdate)(void *);
 
+	TAILQ_HEAD(,es_schem_block) blocks;	/* Schematic block(s) */
 	TAILQ_ENTRY(es_component) components;
 } ES_Component;
 

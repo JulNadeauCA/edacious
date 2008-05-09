@@ -110,7 +110,7 @@ ES_ComponentClass esOrClass = {
 	},
 	N_("OR Gate"),
 	"Or",
-	"Digital/OR.vg",
+	"OrGate.eschem",
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

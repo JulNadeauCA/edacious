@@ -273,7 +273,7 @@ ES_ComponentClass esDigitalClass = {
 	},
 	N_("Digital component"),
 	"Digital",
-	"Digital/Digital.vg",
+	"Digital.eschem",
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

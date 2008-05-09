@@ -195,7 +195,7 @@ ES_ComponentClass esSemiResistorClass = {
 	},
 	N_("Semiconductor resistor"),
 	"R",
-	"Resistor.vg",
+	"Resistor.eschem",
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

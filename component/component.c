@@ -47,13 +47,24 @@ ES_ComponentFreePorts(ES_Component *com)
 static void
 FreeDataset(void *p)
 {
-	ES_ComponentFreePorts(p);
+	ES_Component *com = p;
+	ES_SchemBlock *sb, *sbNext;
+
+	for (sb = TAILQ_FIRST(&com->blocks);
+	     sb != TAILQ_END(&com->blocks);
+	     sb = sbNext) {
+		sbNext = TAILQ_NEXT(sb, blocks);
+		VG_NodeDetach(sb);
+		VG_NodeDestroy(sb);
+	}
+	TAILQ_INIT(&com->blocks);
+	
+	ES_ComponentFreePorts(com);
 }
 
 static void
 Destroy(void *p)
 {
-	ES_ComponentFreePorts(p);
 }
 
 void
@@ -90,6 +101,27 @@ OnAttach(AG_Event *event)
 	Debug(ckt, "Attaching component: %s\n", OBJECT(com)->name);
 	Debug(com, "Attaching to circuit: %s\n", OBJECT(ckt)->name);
 	com->ckt = ckt;
+
+	if (COMOPS(com)->schemFile != NULL) {
+		char path[FILENAME_MAX];
+		ES_SchemBlock *sb;
+
+		sb = ES_SchemBlockNew(ckt->vg->root, OBJECT(com)->name);
+		
+		Strlcpy(path, "/home/vedge/src/agar-eda/Schematics/",
+		    sizeof(path));
+		Strlcat(path, COMOPS(com)->schemFile, sizeof(path));
+		if (ES_SchemBlockLoad(sb, path) == -1) {
+			AG_TextMsgFromError();
+			VG_NodeDetach(sb);
+			VG_NodeDestroy(sb);
+			return;
+		}
+
+		TAILQ_INSERT_TAIL(&com->blocks, sb, blocks);
+		sb->com = com;
+	}
+
 	ES_UnlockCircuit(ckt);
 }
 
@@ -162,8 +194,6 @@ Init(void *obj)
 	com->specs = NULL;
 	com->nspecs = 0;
 
-	com->pos.x = 0.0f;
-	com->pos.y = 0.0f;
 	com->selected = 0;
 	com->highlighted = 0;
 	
@@ -174,6 +204,7 @@ Init(void *obj)
 	com->loadSP = NULL;
 	com->intStep = NULL;
 	com->intUpdate = NULL;
+	TAILQ_INIT(&com->blocks);
 
 	AG_SetEvent(com, "attached", OnAttach, NULL);
 	AG_SetEvent(com, "detached", OnDetach, NULL);

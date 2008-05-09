@@ -69,7 +69,7 @@ PostDraw(void *t, VG_View *vv)
 				}
 				VG_GetVGCoordsFlt(vv,
 				    VGVECTOR(r.x+(r.w/2), r.y+(r.h/2)), &v);
-				prox = vn->ops->pointProximity(vn, &v);
+				prox = vn->ops->pointProximity(vn, vv, &v);
 				break;
 			}
 			if (prox < vRange) {

@@ -512,7 +512,7 @@ ES_ComponentClass esVsourceClass = {
 	},
 	N_("Independent voltage source"),
 	"V",
-	"Sources/Vsource.vg",
+	"Vsource.eschem",
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

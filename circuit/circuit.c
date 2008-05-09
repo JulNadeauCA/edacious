@@ -1509,6 +1509,38 @@ Draw(AG_Event *event)
 }
 #endif
 
+static void
+FindSchemNodes(AG_Tlist *tl, VG_Node *node, int depth)
+{
+	AG_TlistItem *it;
+	VG_Node *cNode;
+
+	it = AG_TlistAdd(tl, NULL, "%s%u", node->ops->name, node->handle);
+	it->depth = depth;
+	it->p1 = node;
+	it->selected = (node->flags & VG_NODE_SELECTED);
+
+	if (!TAILQ_EMPTY(&node->cNodes)) {
+		it->flags |= AG_TLIST_HAS_CHILDREN;
+	}
+	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
+	    AG_TlistVisibleChildren(tl, it)) {
+		TAILQ_FOREACH(cNode, &node->cNodes, tree)
+			FindSchemNodes(tl, cNode, depth+1);
+	}
+}
+
+static void
+PollSchemNodes(AG_Event *event)
+{
+	AG_Tlist *tl = AG_SELF();
+	ES_Circuit *ckt = AG_PTR(1);
+
+	AG_TlistBegin(tl);
+	FindSchemNodes(tl, (VG_Node *)ckt->vg->root, 0);
+	AG_TlistEnd(tl);
+}
+
 static void *
 Edit(void *p)
 {
@@ -1664,6 +1696,14 @@ Edit(void *p)
 				AG_SetEvent(tl, "tlist-poll",
 				    PollComponentPairs, "%p", ckt);
 			}
+		}
+		
+		ntab = AG_NotebookAddTab(nb, _("Schematics"), AG_BOX_VERT);
+		{
+			tl = AG_TlistNewPolled(ntab,
+			    AG_TLIST_TREE|AG_TLIST_EXPAND|AG_TLIST_NOSELSTATE,
+			    PollSchemNodes, "%p", ckt);
+			AG_TlistSizeHint(tl, "<Point1234>", 4);
 		}
 
 		box = AG_BoxNewVert(pane->div[1], AG_BOX_EXPAND);

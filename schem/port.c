@@ -38,9 +38,9 @@ Init(void *p)
 
 	sp->p = NULL;
 	sp->lbl = NULL;
-	sp->n = 0;
-	sp->sym[0] = '\0';
-	sp->r = 0.0625f;
+	sp->name[0] = '\0';
+	sp->r = 0.1875f;
+	VG_SetColorRGB(sp, 250, 250, 0);
 }
 
 static int
@@ -52,8 +52,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	    (sp->lbl = VG_ReadRef(ds, sp, "Text")) == NULL) {
 		return (-1);
 	}
-	sp->n = (Uint)AG_ReadUint32(ds);
-	AG_CopyString(sp->sym, ds, sizeof(sp->sym));
+	AG_CopyString(sp->name, ds, sizeof(sp->name));
 	return (0);
 }
 
@@ -64,19 +63,17 @@ Save(void *p, AG_DataSource *ds)
 
 	VG_WriteRef(ds, sp->p);
 	VG_WriteRef(ds, sp->lbl);
-	AG_WriteUint32(ds, (Uint32)sp->n);
-	AG_WriteString(ds, sp->sym);
+	AG_WriteString(ds, sp->name);
 }
 
 static void
 Draw(void *p, VG_View *vv)
 {
 	ES_SchemPort *sp = p;
-	VG_Vector vPos = VG_PointPos(sp->p);
 	int x, y;
-	
-	VG_TextPrintf(sp->lbl, "Port%u", sp->n);
-	VG_GetViewCoords(vv, vPos, &x, &y);
+
+	VG_TextPrintf(sp->lbl, "%s", sp->name);
+	VG_GetViewCoords(vv, VG_Pos(sp->p), &x, &y);
 	AG_DrawCircle(vv, x, y, (int)(sp->r*vv->scale),
 	    VG_MapColorRGB(VGNODE(sp)->color));
 }
@@ -85,7 +82,7 @@ static void
 Extent(void *p, VG_View *vv, VG_Rect *r)
 {
 	ES_SchemPort *sp = p;
-	VG_Vector vPos = VG_PointPos(sp->p);
+	VG_Vector vPos = VG_Pos(sp->p);
 
 	r->x = vPos.x - sp->r;
 	r->y = vPos.y - sp->r;
@@ -94,10 +91,10 @@ Extent(void *p, VG_View *vv, VG_Rect *r)
 }
 
 static float
-PointProximity(void *p, VG_Vector *vPt)
+PointProximity(void *p, VG_View *vv, VG_Vector *vPt)
 {
 	ES_SchemPort *sp = p;
-	VG_Vector pos = VG_PointPos(sp->p);
+	VG_Vector pos = VG_Pos(sp->p);
 	float d;
 
 	d = VG_Distance(pos, *vPt);
@@ -121,7 +118,7 @@ Move(void *p, VG_Vector vCurs, VG_Vector vRel)
 {
 	ES_SchemPort *sp = p;
 
-	sp->r = VG_Distance(VG_PointPos(sp->p), vCurs);
+	sp->r = VG_Distance(VG_Pos(sp->p), vCurs);
 }
 
 const VG_NodeOps esSchemPortOps = {

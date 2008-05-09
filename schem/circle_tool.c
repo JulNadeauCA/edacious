@@ -45,7 +45,7 @@ Init(void *p)
 static __inline__ void
 AdjustRadius(VG_Circle *vc, VG_Vector vPos)
 {
-	vc->r = VG_Distance(vPos, VG_PointPos(vc->p));
+	vc->r = VG_Distance(vPos, VG_Pos(vc->p));
 }
 
 static int

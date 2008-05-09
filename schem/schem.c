@@ -76,6 +76,7 @@ Destroy(void *obj)
 	ES_Schem *scm = obj;
 
 	VG_Destroy(scm->vg);
+	free(scm->vg);
 }
 
 static int

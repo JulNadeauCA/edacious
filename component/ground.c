@@ -101,7 +101,7 @@ ES_ComponentClass esGroundClass = {
 	},
 	N_("Ground"),
 	"Gnd",
-	"Ground.vg",
+	"Ground.eschem",
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

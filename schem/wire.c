@@ -68,8 +68,8 @@ static void
 Draw(void *p, VG_View *vv)
 {
 	ES_SchemWire *sw = p;
-	VG_Vector v1 = VG_PointPos(sw->p1);
-	VG_Vector v2 = VG_PointPos(sw->p2);
+	VG_Vector v1 = VG_Pos(sw->p1);
+	VG_Vector v2 = VG_Pos(sw->p2);
 	int x1, y1, x2, y2;
 	
 	VG_GetViewCoords(vv, v1, &x1, &y1);
@@ -83,8 +83,8 @@ Extent(void *p, VG_View *vv, VG_Rect *r)
 	ES_SchemWire *sw = p;
 	VG_Vector p1, p2;
 
-	p1 = VG_PointPos(sw->p1);
-	p2 = VG_PointPos(sw->p2);
+	p1 = VG_Pos(sw->p1);
+	p2 = VG_Pos(sw->p2);
 	r->x = MIN(p1.x, p2.x);
 	r->y = MIN(p1.y, p2.y);
 	r->w = MAX(p1.x, p2.x) - r->x;
@@ -92,11 +92,11 @@ Extent(void *p, VG_View *vv, VG_Rect *r)
 }
 
 static float
-PointProximity(void *p, VG_Vector *vPt)
+PointProximity(void *p, VG_View *vv, VG_Vector *vPt)
 {
 	ES_SchemWire *sw = p;
-	VG_Vector v1 = VG_PointPos(sw->p1);
-	VG_Vector v2 = VG_PointPos(sw->p2);
+	VG_Vector v1 = VG_Pos(sw->p1);
+	VG_Vector v2 = VG_Pos(sw->p2);
 
 	return VG_PointLineDistance(v1, v2, vPt);
 }
