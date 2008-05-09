@@ -37,50 +37,6 @@ const ES_Port esVSinePorts[] = {
 	{ -1 },
 };
 
-#if 0
-static void
-Draw(void *p, VG *vg)
-{
-	ES_VSine *vs = p;
-	
-	VG_Begin(vg, VG_LINES);
-	{
-		VG_Vertex2(vg, 0.000, 0.000);
-		VG_Vertex2(vg, 0.000, 0.400);
-		VG_Vertex2(vg, 0.000, 1.600);
-		VG_Vertex2(vg, 0.000, 2.000);
-	}
-	VG_End(vg);
-	VG_Begin(vg, VG_CIRCLE);
-	{
-		VG_Vertex2(vg, 0.0, 1.0);
-		VG_CircleRadius(vg, 0.6);
-	}
-	VG_End(vg);
-	VG_Begin(vg, VG_TEXT);
-	{
-		VG_Vertex2(vg, 0.0, 1.0);
-		VG_TextAlignment(vg, VG_ALIGN_MC);
-		VG_TextPrintf(vg, "%s", OBJECT(vs)->name);
-	}
-	VG_End(vg);
-	VG_Begin(vg, VG_TEXT);
-	{
-		VG_Vertex2(vg, 0.0, 0.6);
-		VG_TextAlignment(vg, VG_ALIGN_MC);
-		VG_TextPrintf(vg, "+");
-	}
-	VG_End(vg);
-	VG_Begin(vg, VG_TEXT);
-	{
-		VG_Vertex2(vg, 0.0, 1.4);
-		VG_TextAlignment(vg, VG_ALIGN_MC);
-		VG_TextPrintf(vg, "-");
-	}
-	VG_End(vg);
-}
-#endif
-
 static void
 IntStep(void *p, Uint ticks)
 {

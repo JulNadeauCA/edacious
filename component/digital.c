@@ -31,31 +31,6 @@
 #include <eda.h>
 #include "digital.h"
 
-#if 0
-static void
-Draw(void *p, VG *vg)
-{
-	ES_Digital *dig = p;
-
-	VG_Begin(vg, VG_LINES);
-	VG_HLine(vg, 0.000, 0.15600, 0.000);
-	VG_HLine(vg, 1.250, 1.09375, 0.000);
-	VG_End(vg);
-	VG_Begin(vg, VG_LINE_LOOP);
-	VG_Vertex2(vg, 0.156, -0.240);
-	VG_Vertex2(vg, 0.156,  0.240);
-	VG_Vertex2(vg, 1.09375,  0.240);
-	VG_Vertex2(vg, 1.09375, -0.240);
-	VG_End(vg);
-
-	VG_Begin(vg, VG_TEXT);
-	VG_Vertex2(vg, 0.625, 0.000);
-	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_TextPrintf(vg, "%s", OBJECT(dig)->name);
-	VG_End(vg);
-}
-#endif
-
 static int
 Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {

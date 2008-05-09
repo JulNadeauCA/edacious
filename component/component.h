@@ -134,7 +134,6 @@ typedef struct es_component {
 __BEGIN_DECLS
 extern AG_ObjectClass esComponentClass;
 
-void	 ES_ComponentInsert(AG_Event *);
 void	 ES_ComponentSelect(ES_Component *);
 void	 ES_ComponentUnselect(ES_Component *);
 void	 ES_ComponentUnselectAll(struct es_circuit *);

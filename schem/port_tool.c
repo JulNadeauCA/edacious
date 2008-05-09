@@ -73,7 +73,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Point *vp;
 
-	if ((vp = VG_SchemHighlightNearestPoint(vv, scm, vPos, NULL)) != NULL) {
+	if ((vp = VG_SchemHighlightNearestPoint(vv, vPos, NULL)) != NULL) {
 		VG_Status(vv, _("Create port on Point%u"), VGNODE(vp)->handle);
 	} else {
 		VG_Status(vv, _("Select a Point"));

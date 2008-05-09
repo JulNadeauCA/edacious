@@ -29,19 +29,7 @@
  */
 
 #include <eda.h>
-
-static VG_ToolOps *toolOps[] = {
-	&esSchemSelectTool,
-#ifdef DEBUG
-	&esSchemProximityTool,
-#endif
-	&esSchemPointTool,
-	&esSchemLineTool,
-	&esSchemCircleTool,
-	&esSchemTextTool,
-	&esSchemPortTool,
-	NULL
-};
+#include "tools.h"
 
 ES_Schem *
 ES_SchemNew(void *parent)
@@ -209,12 +197,19 @@ Edit(void *obj)
 		VG_ToolOps **pOps, *ops;
 		VG_Tool *tool;
 		
-		for (pOps = &toolOps[0]; *pOps != NULL; pOps++) {
+		for (pOps = &esSchemTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, scm);
 			AG_MenuTool(mi, tbRight, ops->name,
 			    ops->icon ? ops->icon->s : NULL, 0,0,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, scm);
+		}
+		for (pOps = &esSchemVGTools[0]; *pOps != NULL; pOps++) {
+			ops = *pOps;
+			tool = VG_ViewRegTool(vv, ops, scm->vg);
+			AG_MenuTool(mi, tbRight, ops->name,
+			    ops->icon ? ops->icon->s : NULL, 0,0,
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, scm->vg);
 		}
 	}
 	mi = AG_MenuAddItem(menu, _("View"));

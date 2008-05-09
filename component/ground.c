@@ -62,23 +62,6 @@ Connect(void *p, ES_Port *p1, ES_Port *p2)
 	return (0);
 }
 
-#if 0
-static void
-Draw(void *p, VG *vg)
-{
-	VG_Begin(vg, VG_LINES);
-	VG_Vertex2(vg, 0.000, 0.000);
-	VG_Vertex2(vg, 0.000, 0.250);
-	VG_Vertex2(vg, -0.250, 0.250);
-	VG_Vertex2(vg, +0.250, 0.250);
-	VG_Vertex2(vg, -0.200, 0.375);
-	VG_Vertex2(vg, +0.200, 0.375);
-	VG_Vertex2(vg, -0.150, 0.500);
-	VG_Vertex2(vg, +0.150, 0.500);
-	VG_End(vg);
-}
-#endif
-
 static void
 Init(void *p)
 {

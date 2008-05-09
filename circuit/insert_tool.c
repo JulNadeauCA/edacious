@@ -29,7 +29,7 @@
 
 #include <eda.h>
 
-ES_Component *esInscomCur = NULL;
+ES_Component *esFloatingCom = NULL;
 
 /* Remove the selected components from the circuit. */
 static int
@@ -143,19 +143,19 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	
 	switch (button) {
 	case SDL_BUTTON_LEFT:
-		if (esInscomCur != NULL) {
-			ConnectComponent(t->vgv, ckt, esInscomCur);
+		if (esFloatingCom != NULL) {
+			ConnectComponent(t->vgv, ckt, esFloatingCom);
 			ES_ComponentUnselectAll(ckt);
-			ES_ComponentSelect(esInscomCur);
-			esInscomCur = NULL;
+			ES_ComponentSelect(esFloatingCom);
+			esFloatingCom = NULL;
 			VG_ViewSelectTool(t->vgv, NULL, NULL);
 		}
 		break;
 	case SDL_BUTTON_MIDDLE:
-		if (esInscomCur != NULL) {
+		if (esFloatingCom != NULL) {
 			ES_SchemBlock *blk;
 
-			TAILQ_FOREACH(blk, &esInscomCur->blocks, blocks)
+			TAILQ_FOREACH(blk, &esFloatingCom->blocks, blocks)
 				VG_Rotate(blk, VG_PI/2.0f);
 		}
 		break;
@@ -164,12 +164,12 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	}
 	return (1);
 remove:
-	if (esInscomCur != NULL) {
+	if (esFloatingCom != NULL) {
 		ES_LockCircuit(ckt);
-		AG_ObjectDetach(esInscomCur);
-		AG_ObjectUnlinkDatafiles(esInscomCur);
-		AG_ObjectDestroy(esInscomCur);
-		esInscomCur = NULL;
+		AG_ObjectDetach(esFloatingCom);
+		AG_ObjectUnlinkDatafiles(esFloatingCom);
+		AG_ObjectDestroy(esFloatingCom);
+		esFloatingCom = NULL;
 		VG_ViewSelectTool(t->vgv, NULL, NULL);
 		ES_UnlockCircuit(ckt);
 	}
@@ -184,11 +184,11 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 	ES_Circuit *ckt = t->p;
 	ES_SchemBlock *sb;
 
-	if (esInscomCur != NULL) {
-		TAILQ_FOREACH(sb, &esInscomCur->blocks, blocks) {
+	if (esFloatingCom != NULL) {
+		TAILQ_FOREACH(sb, &esFloatingCom->blocks, blocks) {
 			VG_SetPosition(sb, vPos);
 		}
-		HighlightConnections(t->vgv, ckt, esInscomCur);
+		HighlightConnections(t->vgv, ckt, esFloatingCom);
 		return (1);
 	}
 	return (0);
@@ -199,12 +199,12 @@ Init(void *p)
 {
 	VG_Tool *t = p;
 
-	esInscomCur = NULL;
+	esFloatingCom = NULL;
 	VG_ToolBindKey(t, KMOD_NONE, SDLK_DELETE, RemoveComponent, NULL);
 	VG_ToolBindKey(t, KMOD_NONE, SDLK_d, RemoveComponent, NULL);
 }
 
-VG_ToolOps esInscomOps = {
+VG_ToolOps esInsertTool = {
 	N_("Insert component"),
 	N_("Insert new components into the circuit."),
 	NULL,

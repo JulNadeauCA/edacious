@@ -37,36 +37,6 @@ const ES_Port esResistorPorts[] = {
 	{ -1 },
 };
 
-#if 0
-static void
-Draw(void *p, VG_Node *vn)
-{
-	ES_Resistor *r = p;
-	VG_Point *p1, *p2, *p3, *p4;
-	VG_Point *pTL, *pTR, *pBL, *pBR;
-	VG_Text *vt;
-
-	p1 = VG_PointNew(vn, VGVECTOR(0.00000f, 0.0f));
-	p2 = VG_PointNew(vn, VGVECTOR(0.15600f, 0.0f));
-	p3 = VG_PointNew(vn, VGVECTOR(1.25000f, 0.0f));
-	p4 = VG_PointNew(vn, VGVECTOR(0.09375f, 0.0f));
-	pTL = VG_PointNew(vn, VGVECTOR(0.15600f, -0.240f));
-	pTR = VG_PointNew(vn, VGVECTOR(1.09375f, -0.240f));
-	pBL = VG_PointNew(vn, VGVECTOR(0.15600f, +0.240f));
-	pBR = VG_PointNew(vn, VGVECTOR(1.09375f, +0.240f));
-
-	VG_LineNew(vn, p1,p2);	 VG_LineNew(vn, p3,p4);
-	VG_LineNew(vn, p2,pTL);	 VG_LineNew(vn, p2,pBL);
-	VG_LineNew(vn, p3,pTR);	 VG_LineNew(vn, p3,pBR);
-	VG_LineNew(vn, pTL,pTR); VG_LineNew(vn, pBL,pBR);
-
-	p1 = VG_PointNew(vn, VGVECTOR(0.625f, 0.000f));
-	vt = VG_TextNew(vn, p1);
-	VG_TextAlignment(vt, VG_ALIGN_MC);
-	VG_TextPrintf(vt, "%s", OBJECT(r)->name);
-}
-#endif
-
 static int
 Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {

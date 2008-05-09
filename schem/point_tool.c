@@ -33,13 +33,13 @@ static int
 MouseButtonDown(void *p, VG_Vector v, int b)
 {
 	VG_Tool *t = p;
-	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
+	VG *vg = vv->vg;
 
 	switch (b) {
 	case SDL_BUTTON_LEFT:
 		VG_Status(vv, _("New point at %.2f,%.2f"), v.x, v.y);
-		VG_PointNew(scm->vg->root, v);
+		VG_PointNew(vg->root, v);
 		return (1);
 	default:
 		return (0);

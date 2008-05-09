@@ -40,28 +40,6 @@ const ES_Port esAndPorts[] = {
 	{ -1 },
 };
 
-#if 0
-static void
-Draw(void *p, VG *vg)
-{
-	ES_And *gate = p;
-	ES_Component *com = p;
-	VG_Block *block;
-
-	VG_Rectangle(vg, 0.25, -0.5625, 1.75, 0.5625);
-	VG_Begin(vg, VG_LINES);
-	VG_HLine(vg, 1.75, 2.00, 0.0);
-	VG_HLine(vg, 0.00, 0.25, -0.5);
-	VG_HLine(vg, 0.00, 0.25, +0.5);
-	VG_End(vg);
-	VG_Begin(vg, VG_TEXT);
-	VG_Vertex2(vg, 1.0, 0);
-	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_TextPrintf(vg, "&");
-	VG_End(vg);
-}
-#endif
-
 static void
 Init(void *p)
 {

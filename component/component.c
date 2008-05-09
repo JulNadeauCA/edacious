@@ -490,13 +490,15 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 
 	pm = AG_PopupNew(vgv);
 	{
-		extern VG_ToolOps esSelcomOps;
+		extern VG_ToolOps esCircuitSelectTool;
 		extern VG_ToolOps esWireTool;
 
-		AG_MenuAction(pm->item, _("Select"), NULL,
-		    SelectTool, "%p,%p,%p", vgv, com->ckt, &esSelcomOps);
-		AG_MenuAction(pm->item, _("Wire"), NULL,
-		    SelectTool, "%p,%p,%p", vgv, com->ckt, &esWireTool);
+		AG_MenuAction(pm->item, _("Select tool"), NULL,
+		    SelectTool, "%p,%p,%p", vgv, com->ckt,
+		    &esSelectTool);
+		AG_MenuAction(pm->item, _("Wire tool"), NULL,
+		    SelectTool, "%p,%p,%p", vgv, com->ckt,
+		    &esWireTool);
 		AG_MenuSeparator(pm->item);
 	}
 	AG_MenuSection(pm->item, "[Component: %s]", OBJECT(com)->name);
@@ -528,61 +530,6 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 	}
 
 	AG_PopupShow(pm);
-}
-
-/* Insert a new, floating component into a circuit. */
-void
-ES_ComponentInsert(AG_Event *event)
-{
-	extern ES_Component *esInscomCur;
-	char name[AG_OBJECT_NAME_MAX];
-	VG_View *vgv = AG_PTR(1);
-	AG_Tlist *tl = AG_PTR(2);
-	ES_Circuit *ckt = AG_PTR(3);
-	AG_TlistItem *it;
-	ES_ComponentClass *cls;
-	ES_Component *com;
-	VG_Tool *t;
-	int n = 1;
-
-	if ((it = AG_TlistSelectedItem(tl)) == NULL) {
-		AG_TextMsg(AG_MSG_ERROR, _("No component type is selected."));
-		return;
-	}
-	cls = (ES_ComponentClass *)it->p1;
-tryname:
-	Snprintf(name, sizeof(name), "%s%d", cls->pfx, n++);
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (strcmp(OBJECT(com)->name, name) == 0)
-			break;
-	}
-	if (com != NULL)
-		goto tryname;
-
-	com = Malloc(cls->obj.size);
-	AG_ObjectInit(com, cls);
-	AG_ObjectSetName(com, "%s", name);
-	com->flags |= COMPONENT_FLOATING;
-
-	ES_LockCircuit(ckt);
-
-	AG_ObjectAttach(ckt, com);
-	AG_ObjectUnlinkDatafiles(com);
-	AG_ObjectPageIn(com);
-	AG_PostEvent(ckt, com, "circuit-shown", NULL);
-
-	if ((t = VG_ViewFindTool(vgv, "Insert component")) != NULL) {
-		VG_ViewSelectTool(vgv, t, ckt);
-		esInscomCur = com;
-		esInscomCur->selected = 1;
-	}
-//	AG_WidgetFocus(vgv);
-//	AG_WindowFocus(AG_WidgetParentWindow(vgv));
-	
-//	if (AG_ObjectSave(com) == -1)
-//		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
-	
-	ES_UnlockCircuit(ckt);
 }
 
 void

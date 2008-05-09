@@ -61,14 +61,14 @@ VG_SchemFindPoint(VG_View *vv, VG_Vector vCurs, void *ignore)
 }
 
 void *
-VG_SchemHighlightNearestPoint(VG_View *vv, ES_Schem *scm, VG_Vector vCurs,
-    void *ignore)
+VG_SchemHighlightNearestPoint(VG_View *vv, VG_Vector vCurs, void *ignore)
 {
+	VG *vg = vv->vg;
 	float prox, proxNearest = AG_FLT_MAX;
 	VG_Node *vn, *vnNearest = NULL;
 	VG_Vector v;
 
-	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+	TAILQ_FOREACH(vn, &vg->nodes, list) {
 		vn->flags &= ~(VG_NODE_MOUSEOVER);
 		if (vn->ops->pointProximity == NULL ||
 		    vn == ignore ||
@@ -88,8 +88,9 @@ VG_SchemHighlightNearestPoint(VG_View *vv, ES_Schem *scm, VG_Vector vCurs,
 }
 
 void *
-VG_SchemSelectNearest(VG_View *vv, ES_Schem *scm, VG_Vector vCurs)
+VG_SchemSelectNearest(VG_View *vv, VG_Vector vCurs)
 {
+	VG *vg = vv->vg;
 	float prox, proxNearest;
 	VG_Node *vn, *vnNearest;
 	VG_Vector v;
@@ -98,7 +99,7 @@ VG_SchemSelectNearest(VG_View *vv, ES_Schem *scm, VG_Vector vCurs)
 	/* Always prioritize points at a fixed distance. */
 	proxNearest = AG_FLT_MAX;
 	vnNearest = NULL;
-	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+	TAILQ_FOREACH(vn, &vg->nodes, list) {
 		if (vn->ops->pointProximity == NULL) {
 			continue;
 		}
@@ -125,7 +126,7 @@ VG_SchemSelectNearest(VG_View *vv, ES_Schem *scm, VG_Vector vCurs)
 	/* No point is near, perform a proper query. */
 	proxNearest = AG_FLT_MAX;
 	vnNearest = NULL;
-	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+	TAILQ_FOREACH(vn, &vg->nodes, list) {
 		if (vn->ops->pointProximity == NULL) {
 			continue;
 		}
@@ -146,8 +147,9 @@ VG_SchemSelectNearest(VG_View *vv, ES_Schem *scm, VG_Vector vCurs)
 }
 
 void *
-VG_SchemHighlightNearest(VG_View *vv, ES_Schem *scm, VG_Vector vCurs)
+VG_SchemHighlightNearest(VG_View *vv, VG_Vector vCurs)
 {
+	VG *vg = vv->vg;
 	float prox, proxNearest;
 	VG_Node *vn, *vnNearest;
 	VG_Vector v;
@@ -155,7 +157,7 @@ VG_SchemHighlightNearest(VG_View *vv, ES_Schem *scm, VG_Vector vCurs)
 	/* Always prioritize points at a fixed distance. */
 	proxNearest = AG_FLT_MAX;
 	vnNearest = NULL;
-	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+	TAILQ_FOREACH(vn, &vg->nodes, list) {
 		if (vn->ops->pointProximity == NULL) {
 			continue;
 		}
@@ -180,7 +182,7 @@ VG_SchemHighlightNearest(VG_View *vv, ES_Schem *scm, VG_Vector vCurs)
 	/* No point is near, perform a proper query. */
 	proxNearest = AG_FLT_MAX;
 	vnNearest = NULL;
-	TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+	TAILQ_FOREACH(vn, &vg->nodes, list) {
 		if (vn->ops->pointProximity == NULL) {
 			continue;
 		}
@@ -202,13 +204,12 @@ static int
 MouseButtonDown(void *p, VG_Vector v, int b)
 {
 	ES_SchemSelectTool *t = p;
-	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
 
 	if (b != SDL_BUTTON_LEFT) {
 		return (0);
 	}
-	VG_SchemSelectNearest(vv, scm, v);
+	VG_SchemSelectNearest(vv, v);
 	t->moving = 1;
 	return (1);
 }
@@ -229,8 +230,8 @@ static int
 MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 {
 	ES_SchemSelectTool *t = p;
-	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
+	VG *vg = vv->vg;
 	VG_Node *vn;
 	VG_Vector v;
 
@@ -240,7 +241,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 		if (!(SDL_GetModState() & (KMOD_SHIFT|KMOD_CTRL))) {
 			VG_ApplyConstraints(vv, &v);
 		}
-		TAILQ_FOREACH(vn, &scm->vg->nodes, list) {
+		TAILQ_FOREACH(vn, &vg->nodes, list) {
 			if (!(vn->flags & VG_NODE_SELECTED)) {
 				continue;
 			}
@@ -249,7 +250,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 		}
 		return (1);
 	}
-	VG_SchemHighlightNearest(vv, scm, vPos);
+	VG_SchemHighlightNearest(vv, vPos);
 	return (0);
 }
 
@@ -289,8 +290,8 @@ Init(void *p)
 }
 
 VG_ToolOps esSchemSelectTool = {
-	N_("Select"),
-	N_("Select and move entities in the schematic."),
+	N_("Select schematic entities"),
+	N_("Select and move graphical elements."),
 	&esIconSelectArrow,
 	sizeof(ES_SchemSelectTool),
 	VG_NOSNAP,

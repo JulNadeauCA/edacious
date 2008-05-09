@@ -30,9 +30,11 @@
 #include <eda.h>
 #include "spice.h"
 #include "scope.h"
+#include "tools.h"
 
 #include <sources/vsource.h>
 
+extern ES_Component *esFloatingCom;		/* insert_tool.c */
 static void InitNode(ES_Node *, Uint);
 static void InitGround(ES_Circuit *);
 
@@ -1510,6 +1512,58 @@ Draw(AG_Event *event)
 #endif
 
 static void
+InsertComponent(AG_Event *event)
+{
+	char name[AG_OBJECT_NAME_MAX];
+	VG_View *vgv = AG_PTR(1);
+	AG_Tlist *tl = AG_PTR(2);
+	ES_Circuit *ckt = AG_PTR(3);
+	AG_TlistItem *it;
+	ES_ComponentClass *cls;
+	ES_Component *com;
+	VG_Tool *t;
+	int n = 1;
+
+	if ((it = AG_TlistSelectedItem(tl)) == NULL) {
+		AG_TextMsg(AG_MSG_ERROR, _("No component type is selected."));
+		return;
+	}
+	cls = (ES_ComponentClass *)it->p1;
+tryname:
+	Snprintf(name, sizeof(name), "%s%d", cls->pfx, n++);
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (strcmp(OBJECT(com)->name, name) == 0)
+			break;
+	}
+	if (com != NULL)
+		goto tryname;
+
+	com = Malloc(cls->obj.size);
+	AG_ObjectInit(com, cls);
+	AG_ObjectSetName(com, "%s", name);
+	com->flags |= COMPONENT_FLOATING;
+
+	ES_LockCircuit(ckt);
+
+	AG_ObjectAttach(ckt, com);
+	AG_ObjectUnlinkDatafiles(com);
+	AG_ObjectPageIn(com);
+	AG_PostEvent(ckt, com, "circuit-shown", NULL);
+
+	if ((t = VG_ViewFindTool(vgv, "Insert component")) != NULL) {
+		VG_ViewSelectTool(vgv, t, ckt);
+		esFloatingCom = com;
+		esFloatingCom->selected = 1;
+	}
+//	AG_WidgetFocus(vgv);
+//	AG_WindowFocus(AG_WidgetParentWindow(vgv));
+//	if (AG_ObjectSave(com) == -1)
+//		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
+
+	ES_UnlockCircuit(ckt);
+}
+
+static void
 FindSchemNodes(AG_Tlist *tl, VG_Node *node, int depth)
 {
 	AG_TlistItem *it;
@@ -1641,13 +1695,8 @@ Edit(void *p)
 			AG_TlistSizeHint(tl, _("Independent voltage source"),
 			    20);
 			AGWIDGET(tl)->flags &= ~(AG_WIDGET_FOCUSABLE);
-			AG_SetEvent(tl, "tlist-dblclick", ES_ComponentInsert,
+			AG_SetEvent(tl, "tlist-dblclick", InsertComponent,
 			    "%p,%p,%p", vv, tl, ckt);
-#if 0
-			AG_ButtonAct(ntab, AG_BUTTON_HFILL,
-			    _("Insert component"),
-			    ES_ComponentInsert, "%p,%p,%p", vv, tl, ckt);
-#endif
 			for (cc = &esComponentClasses[0]; *cc != NULL; cc++)
 				AG_TlistAddPtr(tl, NULL,
 				    ((ES_ComponentClass *)*cc)->name,
@@ -1724,26 +1773,19 @@ Edit(void *p)
 	
 	mi = AG_MenuAddItem(menu, _("Components"));
 	{
-		extern VG_ToolOps esInscomOps;
-		extern VG_ToolOps esSelcomOps;
-		extern VG_ToolOps esWireTool;
+		VG_ToolOps **pOps, *ops;
 		VG_Tool *tool;
-			
+
+		for (pOps = &esCircuitTools[0]; *pOps != NULL; pOps++) {
+			ops = *pOps;
+			tool = VG_ViewRegTool(vv, ops, ckt);
+			AG_MenuTool(mi, tbRight, ops->name,
+			    ops->icon ? ops->icon->s : NULL, 0,0,
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
+		}
+		VG_ViewRegTool(vv, &esInsertTool, ckt);
 		VG_ViewButtondownFn(vv, ViewButtonDown, "%p", ckt);
 		VG_ViewKeydownFn(vv, ViewKeyDown, "%p", ckt);
-
-		VG_ViewRegTool(vv, &esInscomOps, ckt);
-
-		tool = VG_ViewRegTool(vv, &esSelcomOps, ckt);
-		AG_MenuTool(mi, tbRight, _("Select components"),
-		    tool->ops->icon ? tool->ops->icon->s : NULL, 0, 0,
-		    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
-		VG_ViewSetDefaultTool(vv, tool);
-		
-		tool = VG_ViewRegTool(vv, &esWireTool, ckt);
-		AG_MenuTool(mi, tbRight, _("Insert wire"),
-		    tool->ops->icon ? tool->ops->icon->s : NULL, 0, 0,
-		    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 	}
 	
 	mi = AG_MenuAddItem(menu, _("Visualization"));

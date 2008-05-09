@@ -52,9 +52,8 @@ static int
 MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
 	ES_SchemCircleTool *t = p;
-	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
-	VG *vg = scm->vg;
+	VG *vg = vv->vg;
 	VG_Point *pCenter;
 
 	switch (button) {
@@ -86,7 +85,6 @@ static int
 MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 {
 	ES_SchemCircleTool *t = p;
-	ES_Schem *scm = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Point *pEx;
 	

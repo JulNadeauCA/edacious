@@ -39,39 +39,6 @@ const ES_Port esInverterPorts[] = {
 	{ -1 },
 };
 
-#if 0
-static void
-Draw(void *p, VG *vg)
-{
-	ES_Inverter *inv = p;
-	ES_Component *com = p;
-	VG_Block *block;
-
-	VG_Begin(vg, VG_LINES);
-	VG_HLine(vg, 0.00, 0.25, 0.0);
-	VG_HLine(vg, 1.75, 2.00, 0.0);
-	VG_End(vg);
-	VG_Begin(vg, VG_LINE_LOOP);
-	VG_Vertex2(vg, 0.25, +0.625);
-	VG_Vertex2(vg, 1.75,  0.000);
-	VG_Vertex2(vg, 0.25, -0.625);
-	VG_End(vg);
-	VG_Begin(vg, VG_LINES);
-	VG_VintVLine2(vg, 1.000, -1.000, 1.75, 0.0, 0.25, -0.625);
-	VG_VintVLine2(vg, 1.000, +1.000, 1.75, 0.0, 0.25, +0.625);
-	VG_End(vg);
-	VG_Begin(vg, VG_CIRCLE);
-	VG_Vertex2(vg, 1.750, 0.0000);
-	VG_CircleRadius(vg, 0.0625);
-	VG_End(vg);
-	VG_Begin(vg, VG_TEXT);
-	VG_Vertex2(vg, 0.750, 0);
-	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_TextPrintf(vg, "%s", OBJECT(com)->name);
-	VG_End(vg);
-}
-#endif
-
 static void
 Init(void *p)
 {
