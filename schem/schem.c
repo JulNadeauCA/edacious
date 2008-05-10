@@ -164,11 +164,12 @@ Edit(void *obj)
 	AG_WindowSetCaption(win, _("Component schematic: %s"),
 	    OBJECT(scm)->name);
 	
-	vv = VG_ViewNew(NULL, vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
+	vv = VG_ViewNew(NULL, vg, VG_VIEW_EXPAND|VG_VIEW_GRID|
+	                          VG_VIEW_CONSTRUCTION);
 	VG_ViewSetSnapMode(vv, VG_GRID);
 	VG_ViewSetScale(vv, 30.0f);
 	VG_ViewSetScaleMin(vv, 10.0f);
-	VG_ViewSetGridInterval(vv, 0.5f);
+	VG_ViewSetGridInterval(vv, 0.25f);
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
@@ -220,6 +221,9 @@ Edit(void *obj)
 		AG_MenuSeparator(mi);
 		AG_MenuUintFlags(mi, _("Show grid"), vgIconSnapGrid.s,
 		    &vv->flags, VG_VIEW_GRID, 0);
+		AG_MenuUintFlags(mi, _("Show construction geometry"),
+		    esIconConstructionGeometry.s,
+		    &vv->flags, VG_VIEW_CONSTRUCTION, 0);
 #ifdef DEBUG
 		AG_MenuUintFlags(mi, _("Show extents"), vgIconBlock.s,
 		    &vv->flags, VG_VIEW_EXTENTS, 0);

@@ -62,6 +62,7 @@
 #include <config/enable_nls.h>
 #include <config/have_getopt.h>
 #include <config/have_agar_dev.h>
+#include <agar/config/have_opengl.h>
 
 void *esComponentClasses[] = {
 	&esVsourceClass,
@@ -618,10 +619,12 @@ main(int argc, char *argv[])
 			break;
 #ifdef HAVE_OPENGL
 		case 'g':
+			fprintf(stderr, "Forcing GL mode\n");
 			videoFlags &= ~(AG_VIDEO_OPENGL_OR_SDL);
 			videoFlags |= AG_VIDEO_OPENGL;
 			break;
 		case 'G':
+			fprintf(stderr, "Forcing SDL mode\n");
 			videoFlags &= ~(AG_VIDEO_OPENGL_OR_SDL);
 			break;
 #endif

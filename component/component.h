@@ -137,11 +137,16 @@ extern AG_ObjectClass esComponentClass;
 void	 ES_ComponentSelect(ES_Component *);
 void	 ES_ComponentUnselect(ES_Component *);
 void	 ES_ComponentUnselectAll(struct es_circuit *);
+
 void	 ES_ComponentLog(void *, const char *, ...);
 void	 ES_ComponentOpenMenu(ES_Component *, VG_View *);
 void	 ES_ComponentCloseMenu(VG_View *);
 void	 ES_ComponentSetPorts(void *, const ES_Port *);
 void	 ES_ComponentFreePorts(ES_Component *);
+
+void           ES_AttachSchem(ES_Component *, ES_SchemBlock *);
+void           ES_DetachSchem(ES_Component *, ES_SchemBlock *);
+ES_SchemBlock *ES_LoadSchemFromFile(ES_Component *, const char *);
 
 void     ES_UnselectAllPorts(struct es_circuit *);
 Uint	 ES_PortNode(ES_Component *, int);

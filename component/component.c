@@ -89,6 +89,73 @@ ES_ComponentUnselectAll(ES_Circuit *ckt)
 }
 
 static void
+AttachSchemPorts(ES_Component *com, VG_Node *vn)
+{
+	VG_Node *vnChld;
+
+	if (VG_NodeIsClass(vn, "SchemPort")) {
+		ES_SchemPort *sp = (ES_SchemPort *)vn;
+		ES_Port *port;
+
+		if ((port = ES_FindPort(com, sp->name)) != NULL) {
+			if (port->schemPort != NULL) {
+				printf("%s%u: \"%s\" was already using %s%u!\n",
+				    vn->ops->name, vn->handle, sp->name,
+				    VGNODE(port->schemPort)->ops->name,
+				    VGNODE(port->schemPort)->handle);
+			}
+			port->schemPort = sp;
+			sp->com = com;
+			sp->port = port;
+		} else {
+			printf("%s%u: No such port: \"%s\"\n",
+			    vn->ops->name, vn->handle, sp->name);
+			VG_NodeDetach(vn);
+			return;
+		}
+	}
+	VG_FOREACH_CHLD(vnChld, vn, vg_node)
+		AttachSchemPorts(com, vnChld);
+}
+
+/*
+ * Attach a schematic block to a component. Also scan the block for ES_SchemPort
+ * entities, and associate them with the component's ES_Ports.
+ */
+void
+ES_AttachSchem(ES_Component *com, ES_SchemBlock *sb)
+{
+	ES_SchemPort *sp;
+
+	TAILQ_INSERT_TAIL(&com->blocks, sb, blocks);
+	sb->com = com;
+	AttachSchemPorts(com, VGNODE(sb));
+}
+
+/* Remove a schematic block associated with a component. */
+void
+ES_DetachSchem(ES_Component *com, ES_SchemBlock *sb)
+{
+	TAILQ_REMOVE(&com->blocks, sb, blocks);
+	VG_NodeDetach(sb);
+}
+
+/* Load a component schematic block from a file. */
+ES_SchemBlock *
+ES_LoadSchemFromFile(ES_Component *com, const char *path)
+{
+	ES_SchemBlock *sb;
+
+	sb = ES_SchemBlockNew(com->ckt->vg->root, OBJECT(com)->name);
+	if (ES_SchemBlockLoad(sb, path) == -1) {
+		VG_NodeDetach(sb);
+		VG_NodeDestroy(sb);
+		return (NULL);
+	}
+	return (sb);
+}
+
+static void
 OnAttach(AG_Event *event)
 {
 	ES_Component *com = AG_SELF();
@@ -103,23 +170,17 @@ OnAttach(AG_Event *event)
 	com->ckt = ckt;
 
 	if (COMOPS(com)->schemFile != NULL) {
-		char path[FILENAME_MAX];
 		ES_SchemBlock *sb;
-
-		sb = ES_SchemBlockNew(ckt->vg->root, OBJECT(com)->name);
+		char path[FILENAME_MAX];
 		
 		Strlcpy(path, "/home/vedge/src/agar-eda/Schematics/",
 		    sizeof(path));
 		Strlcat(path, COMOPS(com)->schemFile, sizeof(path));
-		if (ES_SchemBlockLoad(sb, path) == -1) {
+		if ((sb = ES_LoadSchemFromFile(com, path)) != NULL) {
+			ES_AttachSchem(com, sb);
+		} else {
 			AG_TextMsgFromError();
-			VG_NodeDetach(sb);
-			VG_NodeDestroy(sb);
-			return;
 		}
-
-		TAILQ_INSERT_TAIL(&com->blocks, sb, blocks);
-		sb->com = com;
 	}
 
 	ES_UnlockCircuit(ckt);
@@ -130,6 +191,7 @@ OnDetach(AG_Event *event)
 {
 	ES_Component *com = AG_SELF();
 	ES_Circuit *ckt = AG_SENDER();
+	ES_SchemBlock *sb;
 	ES_Port *port;
 	ES_Pair *pair;
 	u_int i;
@@ -141,6 +203,11 @@ OnDetach(AG_Event *event)
 	Debug(ckt, "Detaching component: %s\n", OBJECT(com)->name);
 	Debug(com, "Detaching from circuit: %s\n", OBJECT(ckt)->name);
 	AG_PostEvent(ckt, com, "circuit-disconnected", NULL);
+
+	while ((sb = TAILQ_FIRST(&com->blocks)) != NULL) {
+		ES_DetachSchem(com, sb);
+		VG_NodeDestroy(sb);
+	}
 
 	for (i = 0; i <= ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];

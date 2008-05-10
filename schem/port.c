@@ -31,6 +31,23 @@
 #include <agar/gui/primitive.h>
 #include <agar/core/limits.h>
 
+ES_SchemPort *
+ES_SchemPortNew(void *pNode, VG_Point *pCenter)
+{
+	ES_SchemPort *sp;
+
+	sp = AG_Malloc(sizeof(ES_SchemPort));
+	VG_NodeInit(sp, &esSchemPortOps);
+	sp->p = pCenter;
+	VG_NodeAttach(pNode, sp);
+	VG_AddRef(sp, pCenter);
+
+	sp->lbl = VG_TextNew(sp,
+	    VG_PointNew(sp, VGVECTOR(-0.5f, 0.5f)),
+	    VG_PointNew(sp, VGVECTOR(+0.5f, 0.5f)));
+	return (sp);
+}
+
 static void
 Init(void *p)
 {
@@ -39,7 +56,9 @@ Init(void *p)
 	sp->p = NULL;
 	sp->lbl = NULL;
 	sp->name[0] = '\0';
-	sp->r = 0.1875f;
+	sp->r = 0.15625f;
+	sp->com = NULL;
+	sp->port = NULL;
 	VG_SetColorRGB(sp, 250, 250, 0);
 }
 

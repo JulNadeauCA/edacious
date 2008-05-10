@@ -1652,6 +1652,9 @@ Edit(void *p)
 		AG_MenuSeparator(mi);
 		AG_MenuUintFlags(mi, _("Show grid"), vgIconSnapGrid.s,
 		    &vv->flags, VG_VIEW_GRID, 0);
+		AG_MenuUintFlags(mi, _("Show construction geometry"),
+		    esIconConstructionGeometry.s,
+		    &vv->flags, VG_VIEW_CONSTRUCTION, 0);
 #ifdef DEBUG
 		AG_MenuUintFlags(mi, _("Show extents"), vgIconBlock.s,
 		    &vv->flags, VG_VIEW_EXTENTS, 0);
