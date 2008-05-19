@@ -277,7 +277,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 			if (vn->ops->moveNode != NULL)
 				vn->ops->moveNode(vn, v, vMove);
 		}
-		t->vOrig.x = v;
+		t->vOrig = v;
 	}
 	return (0);
 }
