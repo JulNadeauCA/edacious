@@ -67,6 +67,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			}
 			p2 = VG_PointNew(vg->root, vPos);
 			t->vtCur = VG_TextNew(vg->root, p1, p2);
+			VG_TextPrintf(t->vtCur, "(text)");
 			AG_TextPromptString(_("Enter text string: "),
 			    SetTextString, "%p", t->vtCur);
 		} else {
@@ -81,7 +82,6 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			t->vtCur = NULL;
 		}
 		return (1);
-	case SDL_BUTTON_MIDDLE:
 	case SDL_BUTTON_RIGHT:
 		if (t->vtCur != NULL) {
 			VG_Delete(t->vtCur);

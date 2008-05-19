@@ -35,14 +35,6 @@ typedef struct es_node {
 	Uint		      nBranches;
 } ES_Node;
 
-typedef struct es_wire {
-	Uint flags;
-#define ES_WIRE_FIXED	0x01		/* Don't allow moving */
-	Uint cat;			/* Category */
-	struct es_port ports[2];	/* Connection points */
-	TAILQ_ENTRY(es_wire) wires;
-} ES_Wire;
-
 /* Closed loop of port pairs with respect to some component in the circuit. */
 typedef struct es_loop {
 	Uint name;
@@ -88,7 +80,6 @@ typedef struct es_circuit {
 	ES_Node **nodes;		/* Nodes (element 0 is ground) */
 	ES_Loop **loops;		/* Closed loops */
 	struct es_vsource **vsrcs;	/* Independent vsources */
-	TAILQ_HEAD(,es_wire) wires;	/* Schematic lines */
 	TAILQ_HEAD(,es_sym) syms;	/* Symbols */
 
 	Uint l;			/* Number of loops */
@@ -108,14 +99,6 @@ typedef struct es_circuit {
 		if ((com)->flags & ES_COMPONENT_SELECTED) {		\
 			continue;					\
 		} else
-
-#define CIRCUIT_FOREACH_WIRE(wire, ckt) \
-	AG_TAILQ_FOREACH(wire, &(ckt)->wires, wires)
-
-#define WIRE_FOREACH_PORT(port, i, wire) \
-	for ((i) = 0; \
-	    ((i) < 2 && ((port) = &(wire)->ports[i])); \
-	     (i)++)
 
 #define NODE_FOREACH_BRANCH(br, node) \
 	AG_TAILQ_FOREACH(br, &(node)->branches, branches)
@@ -138,8 +121,6 @@ void		 ES_CircuitCopyNode(ES_Circuit *, ES_Node *, ES_Node *);
 void		 ES_CircuitFreeNode(ES_Node *);
 ES_Branch	*ES_CircuitAddBranch(ES_Circuit *, int, ES_Port *);
 void		 ES_CircuitDelBranch(ES_Circuit *, int, ES_Branch *);
-ES_Wire		*ES_CircuitAddWire(ES_Circuit *);
-void		 ES_CircuitDelWire(ES_Circuit *, ES_Wire *);
 void	 	 ES_CircuitDrawPort(VG_View *, ES_Circuit *, ES_Port *, float,
                                     float);
 

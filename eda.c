@@ -42,6 +42,7 @@
 #include <sources/vsine.h>
 #include <sources/vsquare.h>
 
+#include <component/wire.h>
 #include <component/and.h>
 #include <component/digital.h>
 #include <component/ground.h>
@@ -89,6 +90,7 @@ const void *esSchematicClasses[] = {
 void *esBaseClasses[] = {
 	&esComponentClass,
 	&esDigitalClass,
+	&esWireClass,
 	&esCircuitClass,
 	&esScopeClass,
 	&esSchemClass,

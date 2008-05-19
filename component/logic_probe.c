@@ -37,21 +37,21 @@ const ES_Port esLogicProbePorts[] = {
 };
 
 static void
-Draw(void *p, VG_Node *vn)
+Draw(void *p, VG *vg)
 {
 	ES_LogicProbe *r = p;
 	VG_Polygon *vp;
 	
-	vp = VG_PolygonNew(vn);
+	vp = VG_PolygonNew(vg->root);
 	if (r->state) {
 		VG_SetColorRGB(vp, 200,0,0);
 	} else {
 		VG_SetColorRGB(vp, 0,0,0);
 	}
-	VG_PolygonVertex(vp, VG_PointNew(vn, VGVECTOR(0.156, -0.125)));
-	VG_PolygonVertex(vp, VG_PointNew(vn, VGVECTOR(0.156,  0.125)));
-	VG_PolygonVertex(vp, VG_PointNew(vn, VGVECTOR(0.500,  0.125)));
-	VG_PolygonVertex(vp, VG_PointNew(vn, VGVECTOR(0.500, -0.125)));
+	VG_PolygonVertex(vp, VG_PointNew(vp, VGVECTOR(0.156, -0.125)));
+	VG_PolygonVertex(vp, VG_PointNew(vp, VGVECTOR(0.156,  0.125)));
+	VG_PolygonVertex(vp, VG_PointNew(vp, VGVECTOR(0.500,  0.125)));
+	VG_PolygonVertex(vp, VG_PointNew(vp, VGVECTOR(0.500, -0.125)));
 }
 
 static int

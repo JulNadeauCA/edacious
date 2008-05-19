@@ -45,8 +45,7 @@ RemoveComponent(VG_Tool *t, SDLKey key, int state, void *arg)
 	ES_LockCircuit(ckt);
 scan:
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (com->flags & COMPONENT_FLOATING ||
-		    !com->selected) {
+		if (COMPONENT_IS_FLOATING(com) || !com->selected) {
 			continue;
 		}
 		ES_CloseEditionWindow(com);
@@ -70,34 +69,43 @@ scan:
 static void
 HighlightConnections(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 {
-	ES_Port *port, *nearestPort;
+	char status[4096], s[128];
+	ES_Port *port;
+	ES_SchemPort *spNear;
 	VG_Vector pos;
 	int i;
 
+	status[0] = '\0';
 	COMPONENT_FOREACH_PORT(port, i, com) {
-		if (port->schemPort == NULL) {
+		if (port->sp == NULL) {
 			continue;
 		}
-		pos = VG_Pos(port->schemPort->p);
-		nearestPort = VG_PointProximityMax(vv, "SchemPort", &pos,
-		    NULL, com, ckt->vg->gridIval);
-		if (nearestPort != NULL) {
+		pos = VG_Pos(port->sp);
+		spNear = VG_PointProximityMax(vv, "SchemPort", &pos, NULL,
+		    port->sp, PORT_RADIUS(vv));
+		if (spNear != NULL) {
 			port->flags |= ES_PORT_SELECTED;
+			snprintf(s, sizeof(s), "%d>[%s:%d] ",
+			    i, OBJECT(spNear->com)->name, spNear->port->n);
 		} else {
 			port->flags &= ~(ES_PORT_SELECTED);
+			snprintf(s, sizeof(s), _("%d->(new) "), i);
 		}
+		Strlcat(status, s, sizeof(status));
 	}
+	VG_Status(vv, "%s", status);
 }
 
 /*
  * Connect a floating component to the circuit. Create branches for overlapping
  * ports, otherwise create new nodes.
  */
-static void
+static int
 ConnectComponent(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 {
 	VG_Vector portPos;
-	ES_Port *port, *nearestPort;
+	ES_Port *port, *portNear;
+	ES_SchemPort *spNear;
 	ES_Branch *br;
 	int i;
 
@@ -105,18 +113,26 @@ ConnectComponent(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 	Debug(ckt, "Connecting component: %s\n", OBJECT(com)->name);
 	Debug(com, "Connecting to circuit: %s\n", OBJECT(ckt)->name);
 	COMPONENT_FOREACH_PORT(port, i, com) {
-		if (port->schemPort == NULL) {
+		fprintf(stderr, "Connecting %s:%i\n", OBJECT(com)->name, i);
+		if (port->sp == NULL) {
 			continue;
 		}
-		portPos = VG_Pos(port->schemPort->p);
-		nearestPort = VG_PointProximityMax(vv, "SchemPort",
-		    &portPos, NULL, com, ckt->vg->gridIval);
+		portPos = VG_Pos(port->sp);
+		spNear = VG_PointProximityMax(vv, "SchemPort", &portPos, NULL,
+		    port->sp, PORT_RADIUS(vv));
+		portNear = (spNear != NULL) ? spNear->port : NULL;
+
 		if (COMOPS(com)->connect == NULL ||
-		    COMOPS(com)->connect(com, port, nearestPort) == -1) {
-			if (nearestPort != NULL) {
-				port->node = nearestPort->node;
+		    COMOPS(com)->connect(com, port, portNear) == -1) {
+			if (portNear != NULL) {
+				if (portNear->node == -1) {
+					AG_SetError(_("Cannot connect "
+					              "component to itself!"));
+					return (-1);
+				}
+				port->node = portNear->node;
 				port->branch = ES_CircuitAddBranch(ckt,
-				    nearestPort->node, port);
+				    portNear->node, port);
 			} else {
 				port->node = ES_CircuitAddNode(ckt, 0);
 				port->branch = ES_CircuitAddBranch(ckt,
@@ -130,8 +146,8 @@ ConnectComponent(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 	AG_PostEvent(ckt, com, "circuit-connected", NULL);
 	ES_CircuitModified(ckt);
 	ES_UnlockCircuit(ckt);
+	return (0);
 }
-
 
 static int
 MouseButtonDown(void *p, VG_Vector vPos, int button)
@@ -144,7 +160,10 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	switch (button) {
 	case SDL_BUTTON_LEFT:
 		if (esFloatingCom != NULL) {
-			ConnectComponent(t->vgv, ckt, esFloatingCom);
+			if (ConnectComponent(t->vgv, ckt, esFloatingCom) == -1){
+				AG_TextMsgFromError();
+				break;
+			}
 			ES_ComponentUnselectAll(ckt);
 			ES_ComponentSelect(esFloatingCom);
 			esFloatingCom = NULL;
@@ -159,19 +178,22 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 				VG_Rotate(blk, VG_PI/2.0f);
 		}
 		break;
+	case SDL_BUTTON_RIGHT:
+		if (esFloatingCom != NULL) {
+			ES_LockCircuit(ckt);
+			AG_ObjectDetach(esFloatingCom);
+			AG_ObjectUnlinkDatafiles(esFloatingCom);
+#if 0
+			AG_ObjectDestroy(esFloatingCom);
+#endif
+			esFloatingCom = NULL;
+			VG_ViewSelectTool(t->vgv, NULL, NULL);
+			ES_UnlockCircuit(ckt);
+			return (1);
+		}
+		break;
 	default:
 		return (0);
-	}
-	return (1);
-remove:
-	if (esFloatingCom != NULL) {
-		ES_LockCircuit(ckt);
-		AG_ObjectDetach(esFloatingCom);
-		AG_ObjectUnlinkDatafiles(esFloatingCom);
-		AG_ObjectDestroy(esFloatingCom);
-		esFloatingCom = NULL;
-		VG_ViewSelectTool(t->vgv, NULL, NULL);
-		ES_UnlockCircuit(ckt);
 	}
 	return (1);
 }

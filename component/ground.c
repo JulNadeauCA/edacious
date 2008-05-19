@@ -49,7 +49,7 @@ Connect(void *p, ES_Port *p1, ES_Port *p2)
 	
 		NODE_FOREACH_BRANCH(br, ckt->nodes[n]) {
 			if (br->port == NULL || br->port->com == NULL ||
-			    br->port->com->flags & COMPONENT_FLOATING) {
+			    COMPONENT_IS_FLOATING(br->port->com)) {
 				continue;
 			}
 			ES_CircuitAddBranch(ckt, 0, br->port);

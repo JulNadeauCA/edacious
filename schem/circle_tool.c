@@ -69,7 +69,6 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			t->vcCur = NULL;
 		}
 		return (1);
-	case SDL_BUTTON_MIDDLE:
 	case SDL_BUTTON_RIGHT:
 		if (t->vcCur != NULL) {
 			VG_Delete(t->vcCur);

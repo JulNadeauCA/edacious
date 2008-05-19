@@ -32,19 +32,18 @@
 #include <agar/core/limits.h>
 
 ES_SchemPort *
-ES_SchemPortNew(void *pNode, VG_Point *pCenter)
+ES_SchemPortNew(void *pNode)
 {
 	ES_SchemPort *sp;
 
 	sp = AG_Malloc(sizeof(ES_SchemPort));
 	VG_NodeInit(sp, &esSchemPortOps);
-	sp->p = pCenter;
 	VG_NodeAttach(pNode, sp);
-	VG_AddRef(sp, pCenter);
-
+#if 0
 	sp->lbl = VG_TextNew(sp,
-	    VG_PointNew(sp, VGVECTOR(-0.5f, 0.5f)),
-	    VG_PointNew(sp, VGVECTOR(+0.5f, 0.5f)));
+	    VG_PointNew(sp, VGVECTOR(-5.0f, 5.0f)),
+	    VG_PointNew(sp, VGVECTOR(+5.0f, 5.0f)));
+#endif
 	return (sp);
 }
 
@@ -53,13 +52,12 @@ Init(void *p)
 {
 	ES_SchemPort *sp = p;
 
-	sp->p = NULL;
 	sp->lbl = NULL;
 	sp->name[0] = '\0';
-	sp->r = 0.15625f;
+	sp->r = 3.0f;
 	sp->com = NULL;
 	sp->port = NULL;
-	VG_SetColorRGB(sp, 250, 250, 0);
+	VG_SetColorRGB(sp, 0, 150, 0);
 }
 
 static int
@@ -67,9 +65,10 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_SchemPort *sp = p;
 
-	if ((sp->p = VG_ReadRef(ds, sp, "Point")) == NULL ||
-	    (sp->lbl = VG_ReadRef(ds, sp, "Text")) == NULL) {
-		return (-1);
+	if (AG_ReadUint8(ds)) {
+		if ((sp->lbl = VG_ReadRef(ds, sp, "Text")) == NULL) {
+			return (-1);
+		}
 	}
 	AG_CopyString(sp->name, ds, sizeof(sp->name));
 	return (0);
@@ -80,8 +79,12 @@ Save(void *p, AG_DataSource *ds)
 {
 	ES_SchemPort *sp = p;
 
-	VG_WriteRef(ds, sp->p);
+#if 0
+	AG_WriteUint8(ds, 1);
 	VG_WriteRef(ds, sp->lbl);
+#else
+	AG_WriteUint8(ds, 0);
+#endif
 	AG_WriteString(ds, sp->name);
 }
 
@@ -90,30 +93,38 @@ Draw(void *p, VG_View *vv)
 {
 	ES_SchemPort *sp = p;
 	int x, y;
+	float r;
 
-	VG_TextPrintf(sp->lbl, "%s", sp->name);
-	VG_GetViewCoords(vv, VG_Pos(sp->p), &x, &y);
-	AG_DrawCircle(vv, x, y, (int)(sp->r*vv->scale),
+	if (sp->port != NULL && (sp->port->flags & ES_PORT_SELECTED)) {
+		r = sp->r+1.0f;
+	} else {
+		r = sp->r;
+	}
+	if (sp->lbl != NULL && sp->port != NULL) {
+		VG_TextPrintf(sp->lbl, "%s", sp->name);
+	}
+	VG_GetViewCoords(vv, VG_Pos(sp), &x, &y);
+	AG_DrawCircle(vv, x, y, (int)(r*vv->scale),
 	    VG_MapColorRGB(VGNODE(sp)->color));
 }
 
 static void
-Extent(void *p, VG_View *vv, VG_Rect *r)
+Extent(void *p, VG_View *vv, VG_Vector *a, VG_Vector *b)
 {
 	ES_SchemPort *sp = p;
-	VG_Vector vPos = VG_Pos(sp->p);
+	VG_Vector vPos = VG_Pos(sp);
 
-	r->x = vPos.x - sp->r;
-	r->y = vPos.y - sp->r;
-	r->w = sp->r*2.0f;
-	r->h = sp->r*2.0f;
+	a->x = vPos.x - sp->r;
+	a->y = vPos.y - sp->r;
+	b->x = vPos.x + sp->r;
+	b->y = vPos.y + sp->r;
 }
 
 static float
 PointProximity(void *p, VG_View *vv, VG_Vector *vPt)
 {
 	ES_SchemPort *sp = p;
-	VG_Vector pos = VG_Pos(sp->p);
+	VG_Vector pos = VG_Pos(sp);
 	float d;
 
 	d = VG_Distance(pos, *vPt);
@@ -126,9 +137,7 @@ Delete(void *p)
 {
 	ES_SchemPort *sp = p;
 
-	if (VG_DelRef(sp, sp->p) == 0)
-		VG_Delete(sp->p);
-	if (VG_DelRef(sp, sp->lbl) == 0)
+	if (sp->lbl != NULL && VG_DelRef(sp, sp->lbl) == 0)
 		VG_Delete(sp->lbl);
 }
 
@@ -137,7 +146,7 @@ Move(void *p, VG_Vector vCurs, VG_Vector vRel)
 {
 	ES_SchemPort *sp = p;
 
-	sp->r = VG_Distance(VG_Pos(sp->p), vCurs);
+	VG_Translate(sp, vRel);
 }
 
 const VG_NodeOps esSchemPortOps = {

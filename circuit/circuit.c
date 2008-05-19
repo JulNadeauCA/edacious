@@ -113,14 +113,14 @@ ES_CircuitModified(ES_Circuit *ckt)
 
 	/* Regenerate loop and pair information. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (com->flags & COMPONENT_FLOATING) {
+		if (COMPONENT_IS_FLOATING(com)) {
 			continue;
 		}
 		for (i = 0; i < com->npairs; i++)
 			com->pairs[i].nloops = 0;
 	}
 	CIRCUIT_FOREACH_VSOURCE(vs, ckt) {
-		if (COM(vs)->flags & COMPONENT_FLOATING ||
+		if (COMPONENT_IS_FLOATING(vs) ||
 		    PORT(vs,1)->node == -1 ||
 		    PORT(vs,2)->node == -1) {
 			continue;
@@ -137,7 +137,7 @@ ES_CircuitModified(ES_Circuit *ckt)
 	}
 	ckt->l = 0;
 	CIRCUIT_FOREACH_VSOURCE(vs, ckt) {
-		if (COM(vs)->flags & COMPONENT_FLOATING) {
+		if (COMPONENT_IS_FLOATING(vs)) {
 			continue;
 		}
 		TAILQ_FOREACH(loop, &vs->loops, loops) {
@@ -203,7 +203,6 @@ Init(void *p)
 	ckt->nodes = Malloc(sizeof(ES_Node *));
 	ckt->n = 0;
 	ckt->console = NULL;
-	TAILQ_INIT(&ckt->wires);
 	TAILQ_INIT(&ckt->syms);
 	InitGround(ckt);
 
@@ -225,7 +224,6 @@ FreeDataset(void *p)
 	ES_Circuit *ckt = p;
 	ES_Component *com;
 	ES_Port *port;
-	ES_Wire *wire, *nwire;
 	ES_Sym *sym, *nsym;
 	Uint i;
 
@@ -239,14 +237,6 @@ FreeDataset(void *p)
 	ckt->vsrcs = NULL;
 	ckt->m = 0;
 
-	for (wire = TAILQ_FIRST(&ckt->wires);
-	     wire != TAILQ_END(&ckt->wires);
-	     wire = nwire) {
-		nwire = TAILQ_NEXT(wire, wires);
-		Free(wire);
-	}
-	TAILQ_INIT(&ckt->wires);
-	
 	for (sym = TAILQ_FIRST(&ckt->syms);
 	     sym != TAILQ_END(&ckt->syms);
 	     sym = nsym) {
@@ -264,7 +254,7 @@ FreeDataset(void *p)
 	InitGround(ckt);
 
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (com->flags & COMPONENT_FLOATING) {
+		if (COMPONENT_IS_FLOATING(com)) {
 			continue;
 		}
 		COMPONENT_FOREACH_PORT(port, i, com) {
@@ -334,21 +324,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	/* Load the schematics. */
 	if (VG_Load(ckt->vg, ds) == -1)
 		return (-1);
-
-	/* Load the schematic wires. */
-	nitems = AG_ReadUint32(ds);
-	for (i = 0; i < nitems; i++) {
-		ES_Wire *wire;
-		
-		wire = ES_CircuitAddWire(ckt);
-		wire->flags = (Uint)AG_ReadUint32(ds);
-		wire->cat = (Uint)AG_ReadUint32(ds);
-		for (i = 0; i < 2; i++) {
-			ES_Port *port = &wire->ports[i];
-
-			port->node = (int)AG_ReadUint32(ds);
-		}
-	}
 
 	/* Load the symbol table. */
 	nitems = AG_ReadUint32(ds);
@@ -428,7 +403,6 @@ Save(void *p, AG_DataSource *ds)
 	ES_Node *node;
 	ES_Branch *br;
 	ES_Component *com;
-	ES_Wire *wire;
 	ES_Sym *sym;
 	off_t count_offs;
 	Uint32 count;
@@ -448,7 +422,7 @@ Save(void *p, AG_DataSource *ds)
 		AG_WriteUint32(ds, 0);
 		NODE_FOREACH_BRANCH(br, node) {
 			if (br->port == NULL || br->port->com == NULL ||
-			    br->port->com->flags & COMPONENT_FLOATING) {
+			    COMPONENT_IS_FLOATING(br->port->com)) {
 				continue;
 			}
 			AG_ObjectCopyName(br->port->com, path, sizeof(path));
@@ -462,25 +436,6 @@ Save(void *p, AG_DataSource *ds)
 	
 	/* Save the schematics. */
 	VG_Save(ckt->vg, ds);
-
-	/* Save the schematic wires. */
-	count_offs = AG_Tell(ds);
-	count = 0;
-	AG_WriteUint32(ds, 0);
-	CIRCUIT_FOREACH_WIRE(wire, ckt) {
-		AG_WriteUint32(ds, (Uint32)wire->flags);
-		AG_WriteUint32(ds, (Uint32)wire->cat);
-		for (i = 0; i < 2; i++) {
-			ES_Port *port = &wire->ports[i];
-
-			AG_WriteUint32(ds, (Uint32)port->node);
-#ifdef DEBUG
-			if (port->node == -1) { Fatal("Illegal wire port"); }
-#endif
-		}
-		count++;
-	}
-	AG_WriteUint32At(ds, count, count_offs);
 
 	/* Save the symbol table. */
 	count_offs = AG_Tell(ds);
@@ -513,7 +468,7 @@ Save(void *p, AG_DataSource *ds)
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		ES_Port *port;
 
-		if (com->flags & COMPONENT_FLOATING) {
+		if (COMPONENT_IS_FLOATING(com)) {
 			continue;
 		}
 		AG_WriteString(ds, OBJECT(com)->name);
@@ -556,30 +511,6 @@ ES_CircuitAddNode(ES_Circuit *ckt, Uint flags)
 	ckt->nodes[n] = Malloc(sizeof(ES_Node));
 	InitNode(ckt->nodes[n], flags);
 	return (n);
-}
-
-ES_Wire *
-ES_CircuitAddWire(ES_Circuit *ckt)
-{
-	ES_Wire *wire;
-	int i;
-
-	wire = Malloc(sizeof(ES_Wire));
-	wire->flags = 0;
-	wire->cat = 0;
-
-	for (i = 0; i < 2; i++) {
-		ES_Port *port = &wire->ports[i];
-
-		port->n = i+1;
-		port->name[0] = '\0';
-		port->com = NULL;
-		port->node = -1;
-		port->branch = NULL;
-		port->flags = 0;
-	}
-	TAILQ_INSERT_TAIL(&ckt->wires, wire, wires);
-	return (wire);
 }
 
 ES_Sym *
@@ -655,13 +586,6 @@ ES_CircuitFindSym(ES_Circuit *ckt, const char *name)
 	return (sym);
 }
 
-void
-ES_CircuitDelWire(ES_Circuit *ckt, ES_Wire *wire)
-{
-	TAILQ_REMOVE(&ckt->wires, wire, wires);
-	Free(wire);
-}
-
 /*
  * Evaluate whether node n is connected to the voltage source m. If that
  * is the case, return the polarity.
@@ -678,7 +602,7 @@ ES_NodeVsource(ES_Circuit *ckt, int n, int m, int *sign)
 		   (vs = VSOURCE(br->port->com)) == NULL) {
 			continue;
 		}
-		if (COM(vs)->flags & COMPONENT_FLOATING ||
+		if (COMPONENT_IS_FLOATING(vs) ||
 		   !AG_ObjectIsClass(vs, "ES_Component:ES_Vsource:*") ||
 		   vs != ckt->vsrcs[m-1]) {
 			continue;
@@ -1042,17 +966,11 @@ PollCircuitNodes(AG_Event *event)
 				it->p1 = br;
 				it->depth = 1;
 			} else {
-				if (br->port->com != NULL) {
-					it = AG_TlistAdd(tl, NULL, "%s:%s(%d)",
-					    OBJECT(br->port->com)->name,
-					    br->port->name, br->port->n);
-					it->p1 = br;
-					it->depth = 1;
-				} else {
-					it = AG_TlistAdd(tl, NULL, _("Wire"));
-					it->p1 = br;
-					it->depth = 1;
-				}
+				it = AG_TlistAdd(tl, NULL, "%s:%s(%d)",
+				    OBJECT(br->port->com)->name,
+				    br->port->name, br->port->n);
+				it->p1 = br;
+				it->depth = 1;
 			}
 		}
 	}
@@ -1126,10 +1044,7 @@ ShowProperties(AG_Event *event)
 	ES_Circuit *ckt = AG_PTR(2);
 	VG_View *vv = AG_PTR(3);
 	AG_Window *win;
-	AG_MFSpinbutton *mfsu;
-	AG_Numerical *num;
 	AG_Textbox *tb;
-	AG_Checkbox *cb;
 	
 	AG_ObjectCopyName(ckt, path, sizeof(path));
 	if ((win = AG_WindowNewNamed(0, "settings-%s", path)) == NULL) {
@@ -1324,9 +1239,6 @@ CreateView(AG_Event *event)
 	AG_WindowSetCaption(win, _("View of %s"), OBJECT(ckt)->name);
 
 	vv = VG_ViewNew(win, ckt->vg, VG_VIEW_EXPAND);
-	VG_ViewSetScale(vv, 16.0f);
-	VG_ViewSetScaleMin(vv, 10.0f);
-
 	AG_WidgetFocus(vv);
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_TR, 60, 50);
 	AG_WindowAttach(pwin, win);
@@ -1427,90 +1339,6 @@ tryname:
 	ES_CreateEditionWindow(scope);
 }
 
-#if 0
-static void
-DrawNodeAnnotations(VG_View *vv, ES_Circuit *ckt, ES_Port *port)
-{
-	VG *vg = ckt->vg;
-	VG_Point *pt;
-	VG_Circle *vc;
-	VG_Text *vt;
-
-	if (ckt->flags & CIRCUIT_SHOW_NODES) {
-		pt = VG_PointNew(vg->root, port->pos);
-		vc = VG_CircleNew(vg->root, pt,
-		    (port->flags & ES_PORT_SELECTED) ? 8.0f*vv->wPixel :
-		                                       4.0f*vv->wPixel);
-		if (port->flags & ES_PORT_SELECTED) {
-			VG_SetColorRGB(vc, 255, 255, 165);
-		} else {
-			VG_SetColorRGB(vc, 0, 150, 150);
-		}
-	}
-	if (port->node >= 0 &&
-	    ckt->flags & (CIRCUIT_SHOW_NODENAMES|CIRCUIT_SHOW_NODESYMS)) {
-		pt = VG_PointNew(vg->root, port->pos);
-		vt = VG_TextNew(vg->root, pt);
-		VG_SetColorRGB(vt, 0, 200, 100);
-		VG_TextAlignment(vt, VG_ALIGN_BR);
-		VG_TextFontSize(vt, 8);
-
-		if ((ckt->flags & CIRCUIT_SHOW_NODESYMS) == 0 &&
-		    (ckt->flags & CIRCUIT_SHOW_NODENAMES)) {
-			VG_TextPrintf(vt, "n%d", port->node);
-		} else {
-			char sym[CIRCUIT_SYM_MAX];
-			ES_CircuitNodeSymbol(ckt, port->node, sym, sizeof(sym));
-			VG_TextPrintf(vt, "%s", sym);
-		}
-	}
-}
-#endif
-
-#if 0
-static void
-Draw(AG_Event *event)
-{
-	VG_View *vv = AG_SELF();
-	VG *vg = vv->vg;
-	ES_Circuit *ckt = AG_PTR(1);
-	ES_Component *com;
-	ES_Port *port;
-	ES_Wire *wire;
-	VG_Point *p1, *p2;
-	VG_Line *vl;
-	int i;
-
-	VG_ReinitNodes(vg);
-
-	ES_LockCircuit(ckt);
-
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (COMOPS(com)->draw != NULL) {
-			COMOPS(com)->draw(com, vg->root);
-		}
-		COMPONENT_FOREACH_PORT(port, i, com) {
-			DrawNodeAnnotations(vv, ckt, port);
-		}
-	}
-	/* Draw the wires and ports. */
-	CIRCUIT_FOREACH_WIRE(wire, ckt) {
-		ES_SchemPort *sp1 = wire->ports[0].schemPort;
-		ES_SchemPort *sp2 = wire->ports[1].schemPort;
-		if (sp1 == NULL || sp2 == NULL) {
-			continue;
-		}
-		p1 = VG_PointNew(vg->root, VG_PointPos(sp1->p));
-		p2 = VG_PointNew(vg->root, VG_PointPos(sp2->p));
-		vl = VG_LineNew(vg->root, p1, p2);
-		for (i = 0; i < 2; i++) {
-			DrawNodeAnnotations(vv, ckt, &wire->ports[i]);
-		}
-	}
-	ES_UnlockCircuit(ckt);
-}
-#endif
-
 static void
 InsertComponent(AG_Event *event)
 {
@@ -1564,7 +1392,7 @@ tryname:
 }
 
 static void
-FindSchemNodes(AG_Tlist *tl, VG_Node *node, int depth)
+FindSchemTree(AG_Tlist *tl, VG_Node *node, int depth)
 {
 	AG_TlistItem *it;
 	VG_Node *cNode;
@@ -1580,18 +1408,35 @@ FindSchemNodes(AG_Tlist *tl, VG_Node *node, int depth)
 	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
 	    AG_TlistVisibleChildren(tl, it)) {
 		TAILQ_FOREACH(cNode, &node->cNodes, tree)
-			FindSchemNodes(tl, cNode, depth+1);
+			FindSchemTree(tl, cNode, depth+1);
 	}
 }
 
 static void
-PollSchemNodes(AG_Event *event)
+PollSchemTree(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
 
 	AG_TlistBegin(tl);
-	FindSchemNodes(tl, (VG_Node *)ckt->vg->root, 0);
+	FindSchemTree(tl, (VG_Node *)ckt->vg->root, 0);
+	AG_TlistEnd(tl);
+}
+
+static void
+PollSchemList(AG_Event *event)
+{
+	AG_Tlist *tl = AG_SELF();
+	ES_Circuit *ckt = AG_PTR(1);
+	AG_TlistItem *it;
+	VG_Node *vn;
+
+	AG_TlistBegin(tl);
+	VG_FOREACH_NODE(vn, ckt->vg, vg_node) {
+		it = AG_TlistAdd(tl, NULL, "%s%u", vn->ops->name, vn->handle);
+		it->selected = (vn->flags & VG_NODE_SELECTED);
+	}
+	it->p1 = vn;
 	AG_TlistEnd(tl);
 }
 
@@ -1612,13 +1457,7 @@ Edit(void *p)
 	tbTop = AG_ToolbarNew(NULL, AG_TOOLBAR_HORIZ, 1, 0);
 	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
 	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
-#if 0
-	VG_ViewDrawFn(vv, Draw, "%p", ckt);
-#endif
 	VG_ViewSetSnapMode(vv, VG_GRID);
-	VG_ViewSetScale(vv, 30.0f);
-	VG_ViewSetScaleMin(vv, 10.0f);
-	VG_ViewSetGridInterval(vv, 0.5f);
 	
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 
@@ -1751,10 +1590,16 @@ Edit(void *p)
 		}
 		
 		ntab = AG_NotebookAddTab(nb, _("Schematics"), AG_BOX_VERT);
+		AG_BoxSetHomogenous(AGBOX(ntab), 1);
 		{
 			tl = AG_TlistNewPolled(ntab,
-			    AG_TLIST_TREE|AG_TLIST_EXPAND|AG_TLIST_NOSELSTATE,
-			    PollSchemNodes, "%p", ckt);
+			    AG_TLIST_TREE|AG_TLIST_HFILL|AG_TLIST_NOSELSTATE,
+			    PollSchemTree, "%p", ckt);
+			AG_TlistSizeHint(tl, "<Point1234>", 4);
+			
+			tl = AG_TlistNewPolled(ntab,
+			    AG_TLIST_HFILL|AG_TLIST_NOSELSTATE,
+			    PollSchemList, "%p", ckt);
 			AG_TlistSizeHint(tl, "<Point1234>", 4);
 		}
 

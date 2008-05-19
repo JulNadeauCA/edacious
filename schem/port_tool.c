@@ -57,10 +57,11 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 		return (0);
 	}
 	if ((vp = VG_SchemFindPoint(vv, vPos, NULL)) != NULL) {
-		sp = ES_SchemPortNew(vp, vp);
+		sp = ES_SchemPortNew(vp);
 		AG_TextPromptString(_("Port name: "), SetPortName, "%p", sp);
 	} else {
-		VG_Status(vv, _("Select a point to create a port"));
+		sp = ES_SchemPortNew(vv->vg->root);
+		VG_Translate(sp, vPos);
 	}
 	return (1);
 }
@@ -76,7 +77,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	if ((vp = VG_SchemHighlightNearestPoint(vv, vPos, NULL)) != NULL) {
 		VG_Status(vv, _("Create port on Point%u"), VGNODE(vp)->handle);
 	} else {
-		VG_Status(vv, _("Select a Point"));
+		VG_Status(vv, _("Create a port at %f,%f"), vPos.x, vPos.y);
 	}
 	return (0);
 }

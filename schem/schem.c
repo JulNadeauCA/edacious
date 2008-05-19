@@ -96,11 +96,8 @@ CreateView(AG_Event *event)
 	AG_WindowSetCaption(win, _("View of %s"), OBJECT(scm)->name);
 
 	vv = VG_ViewNew(win, scm->vg, VG_VIEW_EXPAND);
-	VG_ViewSetScale(vv, 16.0f);
-	VG_ViewSetScaleMin(vv, 10.0f);
-
 	AG_WidgetFocus(vv);
-	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_TR, 60, 50);
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_TR, 40, 30);
 	AG_WindowAttach(pwin, win);
 	AG_WindowShow(win);
 }
@@ -120,7 +117,8 @@ FindSchemNodes(AG_Tlist *tl, VG_Node *node, int depth)
 	AG_TlistItem *it;
 	VG_Node *cNode;
 
-	it = AG_TlistAdd(tl, NULL, "%s%u", node->ops->name, node->handle);
+	it = AG_TlistAdd(tl, NULL, "%s%u",
+	    node->ops->name, node->handle);
 	it->depth = depth;
 	it->p1 = node;
 	it->selected = (node->flags & VG_NODE_SELECTED);
@@ -167,9 +165,10 @@ Edit(void *obj)
 	vv = VG_ViewNew(NULL, vg, VG_VIEW_EXPAND|VG_VIEW_GRID|
 	                          VG_VIEW_CONSTRUCTION);
 	VG_ViewSetSnapMode(vv, VG_GRID);
-	VG_ViewSetScale(vv, 30.0f);
-	VG_ViewSetScaleMin(vv, 10.0f);
-	VG_ViewSetGridInterval(vv, 0.25f);
+	VG_ViewSetScale(vv, 2);
+	VG_ViewSetGrid(vv, 0, VG_GRID_POINTS, 4, VG_GetColorRGB(100,100,100));
+	VG_ViewSetGrid(vv, 1, VG_GRID_POINTS, 16, VG_GetColorRGB(200,200,0));
+	vv->nGrids = 2;
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);

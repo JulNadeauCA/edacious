@@ -58,40 +58,37 @@ Save(void *p, AG_DataSource *ds)
 }
 
 static void
-GetNodeExtent(VG_Node *vn, VG_View *vv, VG_Rect *r)
+GetNodeExtent(VG_Node *vn, VG_View *vv, VG_Vector *aBlk, VG_Vector *bBlk)
 {
+	VG_Vector a, b;
 	VG_Node *vnChld;
-	VG_Rect rChld;
 
 	if (vn->ops->extent != NULL) {
-		vn->ops->extent(vn, vv, &rChld);
+		vn->ops->extent(vn, vv, &a, &b);
 	}
-	if (rChld.x < r->x) { r->x = rChld.x; }
-	if (rChld.y < r->y) { r->y = rChld.y; }
-	if ((rChld.x+rChld.w-r->x) > r->w) {
-		r->w = rChld.x+rChld.w-r->x;
-	}
-	if ((rChld.y+rChld.h-r->y) > r->h) {
-		r->h = rChld.y+rChld.h-r->y;
-	}
+	if (a.x < aBlk->x) { aBlk->x = a.x; }
+	if (a.y < aBlk->y) { aBlk->y = a.y; }
+	if (b.x > bBlk->x) { bBlk->x = b.x; }
+	if (b.y > bBlk->y) { bBlk->y = b.y; }
+
 	VG_FOREACH_CHLD(vnChld, vn, vg_node)
-		GetNodeExtent(vnChld, vv, r);
+		GetNodeExtent(vnChld, vv, aBlk, bBlk);
 }
 
 static void
-Extent(void *p, VG_View *vv, VG_Rect *r)
+Extent(void *p, VG_View *vv, VG_Vector *a, VG_Vector *b)
 {
 	ES_SchemBlock *sb = p;
 	VG_Vector vPos = VG_Pos(sb);
 	VG_Node *vnChld;
 
-	r->x = vPos.x;
-	r->y = vPos.y;
-	r->w = 0.0f;
-	r->h = 0.0f;
+	a->x = vPos.x;
+	a->y = vPos.y;
+	b->x = vPos.x;
+	b->y = vPos.y;
 
 	VG_FOREACH_CHLD(vnChld, sb, vg_node)
-		GetNodeExtent(vnChld, vv, r);
+		GetNodeExtent(vnChld, vv, a, b);
 }
 
 static void
@@ -114,23 +111,21 @@ static float
 PointProximity(void *p, VG_View *vv, VG_Vector *vPt)
 {
 	ES_SchemBlock *sb = p;
-	VG_Rect rExt;
 	float x = vPt->x;
 	float y = vPt->y;
 	VG_Vector a, b, c, d;
 	float len;
 
-	Extent(sb, vv, &rExt);
+	Extent(sb, vv, &a, &c);
 
-	if (x >= rExt.x && x <= rExt.x+rExt.w &&
-	    y >= rExt.y && y <= rExt.y+rExt.h) {
+	if (x >= a.x && x <= c.x &&
+	    y >= a.y && y <= c.y)
 		return (0.0f);
-	}
 	
-	a.x = rExt.x;		a.y = rExt.y;
-	b.x = rExt.x+rExt.w;	b.y = rExt.y;
-	c.x = rExt.x+rExt.w;	c.y = rExt.y+rExt.h;
-	d.x = rExt.x;		d.y = rExt.y+rExt.h;
+	b.x = c.x;
+	b.y = a.y;
+	d.x = a.x;
+	d.y = c.y;
 
 	if (y < a.y) {
 		if (x < a.x) {
@@ -178,7 +173,10 @@ AttachSubnodesToVG(VG *vg, VG_Node *vn)
 	VG_FOREACH_CHLD(vnChld, vn, vg_node) {
 		AttachSubnodesToVG(vg, vnChld);
 	}
+	vn->handle = VG_GenNodeName(vg, vn->ops->name);
+	TAILQ_REMOVE(&vn->vg->nodes, vn, list);
 	vn->vg = vg;
+	TAILQ_INSERT_TAIL(&vg->nodes, vn, list);
 }
 
 int
@@ -202,7 +200,7 @@ ES_SchemBlockLoad(ES_SchemBlock *sb, const char *path)
 	AttachSubnodesToVG(vg, vnRoot);
 	scm->vg->root = NULL;
 
-	AG_ObjectDestroy(scm);
+//	AG_ObjectDestroy(scm);
 	return (0);
 }
 

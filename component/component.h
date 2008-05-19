@@ -33,12 +33,12 @@ enum circuit_format {
 typedef struct es_port {
 	int n;					/* Port number */
 	char name[COMPONENT_PORT_NAME_MAX];	/* Port name */
-	struct es_component *com;		/* Back pointer to component */
+	struct es_component *com;		/* Component object */
 	int node;				/* Node connection (or -1) */
 	struct es_branch *branch;		/* Branch into node */
 	Uint flags;
 #define ES_PORT_SELECTED	0x01		/* Port is selected */
-	ES_SchemPort *schemPort;		/* Schematic port */
+	ES_SchemPort *sp;			/* Schematic port */
 } ES_Port;
 
 /* Ordered pair of ports belonging to the same component. */
@@ -72,7 +72,7 @@ typedef struct es_component_class {
 	const char *pfx;	/* Prefix (e.g., "R") */
 	const char *schemFile;	/* Schematic filename (or NULL if generated) */
 
-	void	 (*draw)(void *, VG_Node *);
+	void	 (*draw)(void *, VG *);
 	void	 (*instance_menu)(void *, struct ag_menu_item *);
 	void	 (*class_menu)(struct es_circuit *, struct ag_menu_item *);
 	int	 (*export_model)(void *, enum circuit_format, FILE *);
@@ -106,6 +106,8 @@ typedef struct es_component {
 	TAILQ_ENTRY(es_component) components;
 } ES_Component;
 
+#define ESCOMPONENT(p) ((ES_Component *)(p))
+
 #define COMOPS(p) ((ES_ComponentClass *)(AGOBJECT(p)->cls))
 #define COMPONENT(p) ((ES_Component *)(p))
 #define COM(p) ((ES_Component *)(p))
@@ -127,9 +129,13 @@ typedef struct es_component {
 	    (i)++)
 
 #define COMPONENT_FOREACH_PAIR(pair, i, com) \
-	for ((i) = 1; \
-	    ((i) <= (com)->npairs) && ((pair) = &(com)->pairs[i]); \
+	for ((i) = 0; \
+	    ((i) < (com)->npairs) && ((pair) = &(com)->pairs[i]); \
 	    (i)++)
+
+#define COMPONENT_IS_FLOATING(com) \
+	(AG_ObjectIsClass((com),"ES_Component:*") && \
+	 COMPONENT(com)->flags & COMPONENT_FLOATING)
 
 __BEGIN_DECLS
 extern AG_ObjectClass esComponentClass;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,105 +24,97 @@
  */
 
 /*
- * LED component model.
+ * Wire component.
  */
 
 #include <eda.h>
-#include "led.h"
+#include "wire.h"
 
-const ES_Port esLedPorts[] = {
+const ES_Port esWirePorts[] = {
 	{ 0, "" },
 	{ 1, "A" },
-	{ 2, "C" },
+	{ 2, "B" },
 	{ -1 },
 };
 
-static void
-Draw(void *p, VG *vg)
+ES_Wire *
+ES_WireNew(ES_Circuit *ckt)
 {
-	ES_Led *r = p;
-	VG_Polygon *vp;
+	char name[AG_OBJECT_NAME_MAX];
+	ES_Component *com;
+	ES_Wire *wire;
+	Uint n = 0;
 
-	vp = VG_PolygonNew(vg->root);
-	if (r->state) {
-		VG_SetColorRGB(vp, 200,0,0);
-	} else {
-		VG_SetColorRGB(vp, 0,0,0);
+tryname:
+	Snprintf(name, sizeof(name), "%s%d", esWireClass.pfx, n++);
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (strcmp(OBJECT(com)->name, name) == 0)
+			break;
 	}
-	VG_PolygonVertex(vp, VG_PointNew(vp, VGVECTOR(0.156, -0.240)));
-	VG_PolygonVertex(vp, VG_PointNew(vp, VGVECTOR(0.156, 0.240)));
-	VG_PolygonVertex(vp, VG_PointNew(vp, VGVECTOR(1.09375, 0.240)));
-	VG_PolygonVertex(vp, VG_PointNew(vp, VGVECTOR(1.09375, -0.240)));
+	if (com != NULL)
+		goto tryname;
+	
+	wire = Malloc(sizeof(ES_Wire));
+	AG_ObjectInit(wire, &esWireClass);
+	AG_ObjectSetName(wire, "%s", name);
+	COMPONENT(wire)->flags |= COMPONENT_FLOATING;
+
+	ES_LockCircuit(ckt);
+	AG_ObjectAttach(ckt, wire);
+	AG_ObjectUnlinkDatafiles(wire);
+	AG_ObjectPageIn(wire);
+	AG_PostEvent(ckt, wire, "circuit-shown", NULL);
+	ES_UnlockCircuit(ckt);
+
+	return (wire);
 }
 
 static int
 Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
-	ES_Led *led = p;
+	ES_Wire *w = p;
 
-	led->Vforw = SC_ReadReal(buf);
-	led->Vrev = SC_ReadReal(buf);
-	led->I = SC_ReadReal(buf);
+	w->flags = (Uint)AG_ReadUint32(buf);
+	w->cat = (Uint)AG_ReadUint32(buf);
 	return (0);
 }
 
 static int
 Save(void *p, AG_DataSource *buf)
 {
-	ES_Led *led = p;
+	ES_Wire *w = p;
 
-	SC_WriteReal(buf, led->Vforw);
-	SC_WriteReal(buf, led->Vrev);
-	SC_WriteReal(buf, led->I);
+	AG_WriteUint32(buf, (Uint32)w->flags);
+	AG_WriteUint32(buf, (Uint32)w->cat);
 	return (0);
-}
-
-void
-ES_LedUpdate(void *p)
-{
-	ES_Led *r = p;
-	SC_Real v1 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,1));
-	SC_Real v2 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,2));
-
-	r->state = ((v1 - v2) >= r->Vrev);
 }
 
 static void
 Init(void *p)
 {
-	ES_Led *r = p;
+	ES_Wire *w = p;
 
-	ES_ComponentSetPorts(r, esLedPorts);
-	r->Vforw = 30e-3;
-	r->Vrev = 5.0;
-	r->I = 2500e-3;
-	r->state = 0;
-	COM(r)->intUpdate = ES_LedUpdate;
+	ES_ComponentSetPorts(w, esWirePorts);
+	w->flags = 0;
+	w->cat = 0;
+	w->schemWire = NULL;
 }
 
 static void *
 Edit(void *p)
 {
-	ES_Led *r = p;
+	ES_Wire *w = p;
 	AG_Window *win;
-	AG_FSpinbutton *fsb;
 
 	win = AG_WindowNew(0);
-	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Forward voltage: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->Vforw);
-	AG_FSpinbuttonSetMin(fsb, 1.0);
-	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Reverse voltage: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->Vrev);
-	AG_FSpinbuttonSetMin(fsb, 1.0);
-	fsb = AG_FSpinbuttonNew(win, 0, "mcd", _("Luminous intensity: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->I);
+	AG_CheckboxNewFlag(win, &w->flags, ES_WIRE_FIXED, _("Fixed"));
 	return (win);
 }
 
-ES_ComponentClass esLedClass = {
+ES_ComponentClass esWireClass = {
 	{
-		"ES_Component:ES_Led",
-		sizeof(ES_Led),
+		"ES_Component:ES_Wire",
+		sizeof(ES_Wire),
 		{ 0,0 },
 		Init,
 		NULL,		/* reinit */
@@ -131,10 +123,10 @@ ES_ComponentClass esLedClass = {
 		Save,
 		Edit
 	},
-	N_("Led"),
-	"LED",
+	N_("Wire"),
+	"W",
 	NULL,			/* schem */
-	Draw,
+	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
 	NULL,			/* export */

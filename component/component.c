@@ -98,13 +98,13 @@ AttachSchemPorts(ES_Component *com, VG_Node *vn)
 		ES_Port *port;
 
 		if ((port = ES_FindPort(com, sp->name)) != NULL) {
-			if (port->schemPort != NULL) {
+			if (port->sp != NULL) {
 				printf("%s%u: \"%s\" was already using %s%u!\n",
 				    vn->ops->name, vn->handle, sp->name,
-				    VGNODE(port->schemPort)->ops->name,
-				    VGNODE(port->schemPort)->handle);
+				    VGNODE(port->sp)->ops->name,
+				    VGNODE(port->sp)->handle);
 			}
-			port->schemPort = sp;
+			port->sp = sp;
 			sp->com = com;
 			sp->port = port;
 		} else {
@@ -182,6 +182,9 @@ OnAttach(AG_Event *event)
 			AG_TextMsgFromError();
 		}
 	}
+	if (COMOPS(com)->draw != NULL) {
+		COMOPS(com)->draw(com, ckt->vg);
+	}
 
 	ES_UnlockCircuit(ckt);
 }
@@ -206,7 +209,10 @@ OnDetach(AG_Event *event)
 
 	while ((sb = TAILQ_FIRST(&com->blocks)) != NULL) {
 		ES_DetachSchem(com, sb);
+#if 0
+		/* XXX leak */
 		VG_NodeDestroy(sb);
+#endif
 	}
 
 	for (i = 0; i <= ckt->n; i++) {
@@ -238,7 +244,7 @@ del_nodes:
 		port->branch = NULL;
 		port->node = -1;
 		port->flags = 0;
-		port->schemPort = NULL;
+		port->sp = NULL;
 	}
 	COMPONENT_FOREACH_PAIR(pair, i, com) {
 		pair->nloops = 0;
@@ -301,7 +307,7 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 		port->node = -1;
 		port->branch = NULL;
 		port->flags = 0;
-		port->schemPort = NULL;
+		port->sp = NULL;
 		com->nports++;
 		Debug(com, "Added port #%d (%s)\n", i, port->name);
 	}
@@ -603,16 +609,11 @@ void
 ES_UnselectAllPorts(ES_Circuit *ckt)
 {
 	ES_Component *com;
-	ES_Wire *wire;
 	ES_Port *port;
 	int i;
 
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		COMPONENT_FOREACH_PORT(port, i, com)
-			port->flags &= ~(ES_PORT_SELECTED);
-	}
-	CIRCUIT_FOREACH_WIRE(wire, ckt) {
-		WIRE_FOREACH_PORT(port, i, wire)
 			port->flags &= ~(ES_PORT_SELECTED);
 	}
 }
@@ -621,8 +622,6 @@ ES_UnselectAllPorts(ES_Circuit *ckt)
 int
 ES_PortIsGrounded(ES_Port *port)
 {
-	ES_Circuit *ckt = port->com->ckt;
-
 	return (port->node == 0);
 }
 

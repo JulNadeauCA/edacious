@@ -54,7 +54,7 @@ PostDraw(void *t, VG_View *vv)
 	VG_Vector v;
 	float prox;
 	float vx, vy;
-	float vRange = 2.0f;
+	float vRange = 100.0f;
 
 	r.w = rSize;
 	r.h = rSize;

@@ -11,6 +11,7 @@ typedef struct es_schem {
 } ES_Schem;
 
 #define SCHEM(p) ((ES_Schem *)(p))
+#define PORT_RADIUS(vv) (((vv)->grid[0].ival/2)*(vv)->wPixel)
 
 #include <schem/port.h>
 #include <schem/wire.h>

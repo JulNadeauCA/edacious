@@ -33,6 +33,7 @@
 typedef struct es_schem_select_tool {
 	VG_Tool _inherit;
 	int moving;
+	VG_Vector vOrig;
 } ES_SchemSelectTool;
 
 void *
@@ -50,7 +51,7 @@ VG_SchemFindPoint(VG_View *vv, VG_Vector vCurs, void *ignore)
 		}
 		v = vCurs;
 		prox = vn->ops->pointProximity(vn, vv, &v);
-		if (prox < vv->gridIval) {
+		if (prox < vv->grid[0].ival) {
 			if (prox < proxNearest) {
 				proxNearest = prox;
 				vnNearest = vn;
@@ -77,7 +78,7 @@ VG_SchemHighlightNearestPoint(VG_View *vv, VG_Vector vCurs, void *ignore)
 		}
 		v = vCurs;
 		prox = vn->ops->pointProximity(vn, vv, &v);
-		if (prox < vv->gridIval) {
+		if (prox < vv->grid[0].ival) {
 			if (prox < proxNearest) {
 				proxNearest = prox;
 				vnNearest = vn;
@@ -94,7 +95,7 @@ VG_SchemSelectNearest(VG_View *vv, VG_Vector vCurs)
 	float prox, proxNearest;
 	VG_Node *vn, *vnNearest;
 	VG_Vector v;
-	int multi = SDL_GetModState() & KMOD_CTRL;
+	int multi = VG_SELECT_MULTI(vv);
 
 	/* Always prioritize points at a fixed distance. */
 	proxNearest = AG_FLT_MAX;
@@ -111,7 +112,7 @@ VG_SchemSelectNearest(VG_View *vv, VG_Vector vCurs)
 		}
 		v = vCurs;
 		prox = vn->ops->pointProximity(vn, vv, &v);
-		if (prox <= 0.25f) {
+		if (prox <= PORT_RADIUS(vv)) {
 			if (prox < proxNearest) {
 				proxNearest = prox;
 				vnNearest = vn;
@@ -167,7 +168,7 @@ VG_SchemHighlightNearest(VG_View *vv, VG_Vector vCurs)
 		}
 		v = vCurs;
 		prox = vn->ops->pointProximity(vn, vv, &v);
-		if (prox <= 0.25f) {
+		if (prox <= PORT_RADIUS(vv)) {
 			if (prox < proxNearest) {
 				proxNearest = prox;
 				vnNearest = vn;
@@ -205,12 +206,16 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 {
 	ES_SchemSelectTool *t = p;
 	VG_View *vv = VGTOOL(t)->vgv;
+	VG_Vector vSnap;
 
 	if (b != SDL_BUTTON_LEFT) {
 		return (0);
 	}
 	VG_SchemSelectNearest(vv, v);
 	t->moving = 1;
+	vSnap = v;
+	VG_ApplyConstraints(vv, &vSnap);
+	t->vOrig = vSnap;
 	return (1);
 }
 
@@ -231,26 +236,49 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 {
 	ES_SchemSelectTool *t = p;
 	VG_View *vv = VGTOOL(t)->vgv;
-	VG *vg = vv->vg;
 	VG_Node *vn;
-	VG_Vector v;
+	VG_Vector v, vDiff, vMove;
+	VG_Grid *grid = &vv->grid[0];
+	float ival2;
 
-	if (t->moving) {
-		v = vPos;
+	if (!t->moving) {
+		VG_SchemHighlightNearest(vv, vPos);
+		return (0);
+	}
 
-		if (!(SDL_GetModState() & (KMOD_SHIFT|KMOD_CTRL))) {
-			VG_ApplyConstraints(vv, &v);
+	v = vPos;
+	vDiff = VG_Sub(v, t->vOrig);
+
+	if (!VG_SKIP_CONSTRAINTS(vv) && vv->snap_mode == VG_GRID) {
+		ival2 = (float)(grid->ival/2);
+		if (vDiff.x > ival2) {
+			vMove.x = (float)grid->ival;
+		} else if (vDiff.x < -ival2) {
+			vMove.x = (float)-grid->ival;
+		} else {
+			vMove.x = 0.0f;
 		}
-		TAILQ_FOREACH(vn, &vg->nodes, list) {
+		if (vDiff.y > ival2) {
+			vMove.y = (float)grid->ival;
+		} else if (vDiff.y < -ival2) {
+			vMove.y = (float)-grid->ival;
+		} else {
+			vMove.y = 0.0f;
+		}
+	} else {
+		vMove.x = vDiff.x;
+		vMove.y = vDiff.y;
+	}
+	if (vMove.x != 0.0f || vMove.y != 0.0f) {
+		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
 			if (!(vn->flags & VG_NODE_SELECTED)) {
 				continue;
 			}
 			if (vn->ops->moveNode != NULL)
-				vn->ops->moveNode(vn, v, vRel);
+				vn->ops->moveNode(vn, v, vMove);
 		}
-		return (1);
+		t->vOrig.x = v;
 	}
-	VG_SchemHighlightNearest(vv, vPos);
 	return (0);
 }
 
@@ -268,7 +296,10 @@ del:
 			if (vn->flags & VG_NODE_SELECTED) {
 				if (VG_Delete(vn) == -1) {
 					vn->flags &= ~(VG_NODE_SELECTED);
-					VG_Status(vv, "%s", AG_GetError());
+					VG_Status(vv, "%s%u: %s",
+					    vn->ops->name, vn->handle,
+					    AG_GetError());
+					return (0);
 				} else {
 					nDel++;
 				}
