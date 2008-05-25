@@ -205,6 +205,16 @@ MouseButtonUp(void *p, VG_Vector vPos, int button)
 	}
 }
 
+static void
+PostDraw(void *p, VG_View *vv)
+{
+	VG_Tool *t = p;
+	int x, y;
+
+	VG_GetViewCoords(vv, VGTOOL(t)->vCursor, &x,&y);
+	AG_DrawCircle(vv, x,y, 3, VG_MapColorRGB(vv->vg->selectionColor));
+}
+
 static int
 MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 {
@@ -222,10 +232,11 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	if (spNear != NULL) {
 		spNear->port->flags |= ES_PORT_SELECTED;
 	}
-	UpdateStatus(vv, spNear);
 	if (esCurWire != NULL) {
-		VG_Translate(COMPONENT(esCurWire)->ports[1].sp, vRel);
+		VG_SetPosition(COMPONENT(esCurWire)->ports[1].sp,
+		    (spNear != NULL) ? VG_Pos(spNear) : vPos);
 	}
+	UpdateStatus(vv, spNear);
 	return (0);
 }
 
@@ -239,7 +250,7 @@ VG_ToolOps esWireTool = {
 	NULL,			/* destroy */
 	NULL,			/* edit */
 	NULL,			/* predraw */
-	NULL,			/* postdraw */
+	PostDraw,
 	MouseMotion,
 	MouseButtonDown,
 	MouseButtonUp,

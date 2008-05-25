@@ -33,11 +33,11 @@
 typedef struct es_schem_select_tool {
 	VG_Tool _inherit;
 	int moving;
-	VG_Vector vOrig;
 } ES_SchemSelectTool;
 
+/* Return the Point nearest to vPos. */
 void *
-VG_SchemFindPoint(VG_View *vv, VG_Vector vCurs, void *ignore)
+ES_SchemNearestPoint(VG_View *vv, VG_Vector vPos, void *ignore)
 {
 	float prox, proxNearest = AG_FLT_MAX;
 	VG_Node *vn, *vnNearest = NULL;
@@ -49,7 +49,7 @@ VG_SchemFindPoint(VG_View *vv, VG_Vector vCurs, void *ignore)
 		    !VG_NodeIsClass(vn, "Point")) {
 			continue;
 		}
-		v = vCurs;
+		v = vPos;
 		prox = vn->ops->pointProximity(vn, vv, &v);
 		if (prox < vv->grid[0].ival) {
 			if (prox < proxNearest) {
@@ -61,8 +61,9 @@ VG_SchemFindPoint(VG_View *vv, VG_Vector vCurs, void *ignore)
 	return (vnNearest);
 }
 
+/* Highlight and return the Point nearest to vPos. */
 void *
-VG_SchemHighlightNearestPoint(VG_View *vv, VG_Vector vCurs, void *ignore)
+ES_SchemHighlightNearestPoint(VG_View *vv, VG_Vector vPos, void *ignore)
 {
 	VG *vg = vv->vg;
 	float prox, proxNearest = AG_FLT_MAX;
@@ -76,7 +77,7 @@ VG_SchemHighlightNearestPoint(VG_View *vv, VG_Vector vCurs, void *ignore)
 		    !VG_NodeIsClass(vn, "Point")) {
 			continue;
 		}
-		v = vCurs;
+		v = vPos;
 		prox = vn->ops->pointProximity(vn, vv, &v);
 		if (prox < vv->grid[0].ival) {
 			if (prox < proxNearest) {
@@ -88,29 +89,34 @@ VG_SchemHighlightNearestPoint(VG_View *vv, VG_Vector vCurs, void *ignore)
 	return (vnNearest);
 }
 
+/* Return the entity nearest to vPos. */
 void *
-VG_SchemSelectNearest(VG_View *vv, VG_Vector vCurs)
+ES_SchemNearest(VG_View *vv, VG_Vector vPos)
 {
 	VG *vg = vv->vg;
 	float prox, proxNearest;
 	VG_Node *vn, *vnNearest;
 	VG_Vector v;
-	int multi = VG_SELECT_MULTI(vv);
 
-	/* Always prioritize points at a fixed distance. */
+	/* First check if we intersect a block. */
 	proxNearest = AG_FLT_MAX;
 	vnNearest = NULL;
 	TAILQ_FOREACH(vn, &vg->nodes, list) {
-		if (vn->ops->pointProximity == NULL) {
+		if (!VG_NodeIsClass(vn, "SchemBlock")) {
 			continue;
 		}
-		if (!multi) {
-			vn->flags &= ~(VG_NODE_SELECTED);
-		}
+		if (vn->ops->pointProximity(vn, vv, &v) == 0.0f)
+			return (vn);
+	}
+
+	/* Then prioritize points at a fixed distance. */
+	proxNearest = AG_FLT_MAX;
+	vnNearest = NULL;
+	TAILQ_FOREACH(vn, &vg->nodes, list) {
 		if (!VG_NodeIsClass(vn, "Point")) {
 			continue;
 		}
-		v = vCurs;
+		v = vPos;
 		prox = vn->ops->pointProximity(vn, vv, &v);
 		if (prox <= PORT_RADIUS(vv)) {
 			if (prox < proxNearest) {
@@ -119,84 +125,22 @@ VG_SchemSelectNearest(VG_View *vv, VG_Vector vCurs)
 			}
 		}
 	}
-	if (vnNearest != NULL) {
-		vnNearest->flags |= VG_NODE_SELECTED;
+	if (vnNearest != NULL)
 		return (vnNearest);
-	}
 
-	/* No point is near, perform a proper query. */
+	/* Finally, fallback to a general query. */
 	proxNearest = AG_FLT_MAX;
 	vnNearest = NULL;
 	TAILQ_FOREACH(vn, &vg->nodes, list) {
 		if (vn->ops->pointProximity == NULL) {
 			continue;
 		}
-		if (!multi) {
-			vn->flags &= ~(VG_NODE_SELECTED);
-		}
-		v = vCurs;
+		v = vPos;
 		prox = vn->ops->pointProximity(vn, vv, &v);
 		if (prox < proxNearest) {
 			proxNearest = prox;
 			vnNearest = vn;
 		}
-	}
-	if (vnNearest != NULL) {
-		vnNearest->flags |= VG_NODE_SELECTED;
-	}
-	return (vnNearest);
-}
-
-void *
-VG_SchemHighlightNearest(VG_View *vv, VG_Vector vCurs)
-{
-	VG *vg = vv->vg;
-	float prox, proxNearest;
-	VG_Node *vn, *vnNearest;
-	VG_Vector v;
-
-	/* Always prioritize points at a fixed distance. */
-	proxNearest = AG_FLT_MAX;
-	vnNearest = NULL;
-	TAILQ_FOREACH(vn, &vg->nodes, list) {
-		if (vn->ops->pointProximity == NULL) {
-			continue;
-		}
-		vn->flags &= ~(VG_NODE_MOUSEOVER);
-		if (!VG_NodeIsClass(vn, "Point")) {
-			continue;
-		}
-		v = vCurs;
-		prox = vn->ops->pointProximity(vn, vv, &v);
-		if (prox <= PORT_RADIUS(vv)) {
-			if (prox < proxNearest) {
-				proxNearest = prox;
-				vnNearest = vn;
-			}
-		}
-	}
-	if (vnNearest != NULL) {
-		vnNearest->flags |= VG_NODE_MOUSEOVER;
-		return (vnNearest);
-	}
-
-	/* No point is near, perform a proper query. */
-	proxNearest = AG_FLT_MAX;
-	vnNearest = NULL;
-	TAILQ_FOREACH(vn, &vg->nodes, list) {
-		if (vn->ops->pointProximity == NULL) {
-			continue;
-		}
-		vn->flags &= ~(VG_NODE_MOUSEOVER);
-		v = vCurs;
-		prox = vn->ops->pointProximity(vn, vv, &v);
-		if (prox < proxNearest) {
-			proxNearest = prox;
-			vnNearest = vn;
-		}
-	}
-	if (vnNearest != NULL) {
-		vnNearest->flags |= VG_NODE_MOUSEOVER;
 	}
 	return (vnNearest);
 }
@@ -207,15 +151,24 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 	ES_SchemSelectTool *t = p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Vector vSnap;
+	VG_Node *vn;
 
 	if (b != SDL_BUTTON_LEFT) {
 		return (0);
 	}
-	VG_SchemSelectNearest(vv, v);
+	if ((vn = ES_SchemNearest(vv, v)) != NULL) {
+		if (SDL_GetModState() & KMOD_CTRL) {
+			if (vn->flags & VG_NODE_SELECTED) {
+				vn->flags &= ~(VG_NODE_SELECTED);
+			} else {
+				vn->flags |= VG_NODE_SELECTED;
+			}
+		} else {
+			VG_UnselectAll(vv->vg);
+			vn->flags |= VG_NODE_SELECTED;
+		}
+	}
 	t->moving = 1;
-	vSnap = v;
-	VG_ApplyConstraints(vv, &vSnap);
-	t->vOrig = vSnap;
 	return (1);
 }
 
@@ -237,47 +190,27 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	ES_SchemSelectTool *t = p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Node *vn;
-	VG_Vector v, vDiff, vMove;
-	VG_Grid *grid = &vv->grid[0];
-	float ival2;
+	VG_Vector v;
 
 	if (!t->moving) {
-		VG_SchemHighlightNearest(vv, vPos);
+		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
+			vn->flags &= ~(VG_NODE_MOUSEOVER);
+		}
+		if ((vn = ES_SchemNearest(vv, vPos)) != NULL) {
+			vn->flags |= VG_NODE_MOUSEOVER;
+		}
 		return (0);
 	}
-
 	v = vPos;
-	vDiff = VG_Sub(v, t->vOrig);
-
-	if (!VG_SKIP_CONSTRAINTS(vv) && vv->snap_mode == VG_GRID) {
-		ival2 = (float)(grid->ival/2);
-		if (vDiff.x > ival2) {
-			vMove.x = (float)grid->ival;
-		} else if (vDiff.x < -ival2) {
-			vMove.x = (float)-grid->ival;
-		} else {
-			vMove.x = 0.0f;
-		}
-		if (vDiff.y > ival2) {
-			vMove.y = (float)grid->ival;
-		} else if (vDiff.y < -ival2) {
-			vMove.y = (float)-grid->ival;
-		} else {
-			vMove.y = 0.0f;
-		}
-	} else {
-		vMove.x = vDiff.x;
-		vMove.y = vDiff.y;
+	if (!VG_SKIP_CONSTRAINTS(vv)) {
+		VG_ApplyConstraints(vv, &v);
 	}
-	if (vMove.x != 0.0f || vMove.y != 0.0f) {
-		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
-			if (!(vn->flags & VG_NODE_SELECTED)) {
-				continue;
-			}
-			if (vn->ops->moveNode != NULL)
-				vn->ops->moveNode(vn, v, vMove);
+	TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
+		if (!(vn->flags & VG_NODE_SELECTED)) {
+			continue;
 		}
-		t->vOrig = v;
+		if (vn->ops->moveNode != NULL)
+			vn->ops->moveNode(vn, v, vRel);
 	}
 	return (0);
 }

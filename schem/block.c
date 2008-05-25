@@ -158,11 +158,11 @@ PointProximity(void *p, VG_View *vv, VG_Vector *vPt)
 }
 
 static void
-Move(void *p, VG_Vector vCurs, VG_Vector vRel)
+Move(void *p, VG_Vector vPos, VG_Vector vRel)
 {
 	ES_SchemBlock *sb = p;
 
-	VG_Translate(sb, vRel);
+	VG_SetPosition(sb, vPos);
 }
 
 static void

@@ -36,9 +36,20 @@ static int
 MouseButtonDown(void *t, VG_Vector v, int button)
 {
 	VG_View *vv = VGTOOL(t)->vgv;
+	VG_Node *vn;
 
 	if (button == SDL_BUTTON_LEFT) {
-		VG_SchemSelectNearest(vv, v);
+		vn = ES_SchemNearest(vv, v);
+		if (SDL_GetModState() & KMOD_CTRL) {
+			if (vn->flags & VG_NODE_SELECTED) {
+				vn->flags &= ~(VG_NODE_SELECTED);
+			} else {
+				vn->flags |= VG_NODE_SELECTED;
+			}
+		} else {
+			VG_UnselectAll(vv->vg);
+			vn->flags |= VG_NODE_SELECTED;
+		}
 		return (1);
 	}
 	return (0);
@@ -47,14 +58,14 @@ MouseButtonDown(void *t, VG_Vector v, int button)
 static void
 PostDraw(void *t, VG_View *vv)
 {
-	const int rSize = 4;
+	const int rSize = 5;
 	AG_Rect r;
 	VG_Color c;
 	VG_Node *vn;
 	VG_Vector v;
 	float prox;
 	float vx, vy;
-	float vRange = 100.0f;
+	float vRange = 80.0f;
 
 	r.w = rSize;
 	r.h = rSize;

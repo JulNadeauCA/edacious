@@ -62,7 +62,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	switch (button) {
 	case SDL_BUTTON_LEFT:
 		if (t->vtCur == NULL) {
-			if (!(p1 = VG_SchemFindPoint(vv, vPos, NULL))) {
+			if (!(p1 = ES_SchemNearestPoint(vv, vPos, NULL))) {
 				p1 = VG_PointNew(vg->root, vPos);
 			}
 			p2 = VG_PointNew(vg->root, vPos);
@@ -71,7 +71,8 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			AG_TextPromptString(_("Enter text string: "),
 			    SetTextString, "%p", t->vtCur);
 		} else {
-			if ((p2 = VG_SchemFindPoint(vv, vPos, t->vtCur->p2))) {
+			if ((p2 = ES_SchemNearestPoint(vv, vPos,
+			    t->vtCur->p2))) {
 				VG_DelRef(t->vtCur, t->vtCur->p2);
 				VG_Delete(t->vtCur->p2);
 				t->vtCur->p2 = p2;
@@ -119,7 +120,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 		                 vPos.x - pos.x);
 		rad = VG_Hypot(vPos.x - pos.x,
 		               vPos.y - pos.y);
-		if ((pEx = VG_SchemFindPoint(vv, vPos, t->vtCur->p2))) {
+		if ((pEx = ES_SchemNearestPoint(vv, vPos, t->vtCur->p2))) {
 			VG_Status(vv, _("End baseline at Point%u"),
 			    VGNODE(pEx)->handle);
 		} else {
@@ -130,7 +131,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 		}
 		VG_SetPosition(t->vtCur->p2, vPos);
 	} else {
-		if ((pEx = VG_SchemFindPoint(vv, vPos, NULL))) {
+		if ((pEx = ES_SchemNearestPoint(vv, vPos, NULL))) {
 			VG_Status(vv, _("Start baseline at Point%u"),
 			    VGNODE(pEx)->handle);
 		} else {

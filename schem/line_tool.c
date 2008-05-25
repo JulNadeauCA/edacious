@@ -53,13 +53,14 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	switch (button) {
 	case SDL_BUTTON_LEFT:
 		if (t->vlCur == NULL) {
-			if (!(p1 = VG_SchemFindPoint(vv, vPos, NULL))) {
+			if (!(p1 = ES_SchemNearestPoint(vv, vPos, NULL))) {
 				p1 = VG_PointNew(vg->root, vPos);
 			}
 			p2 = VG_PointNew(vg->root, vPos);
 			t->vlCur = VG_LineNew(vg->root, p1, p2);
 		} else {
-			if ((p2 = VG_SchemFindPoint(vv, vPos, t->vlCur->p2))) {
+			if ((p2 = ES_SchemNearestPoint(vv, vPos,
+			    t->vlCur->p2))) {
 				VG_DelRef(t->vlCur, t->vlCur->p2);
 				VG_Delete(t->vlCur->p2);
 				t->vlCur->p2 = p2;
@@ -107,7 +108,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 		                 vPos.x - pos.x);
 		rad = VG_Hypot(vPos.x - pos.x,
 		               vPos.y - pos.y);
-		if ((pEx = VG_SchemFindPoint(vv, vPos, t->vlCur->p2))) {
+		if ((pEx = ES_SchemNearestPoint(vv, vPos, t->vlCur->p2))) {
 			VG_Status(vv, _("Use Point%u"), VGNODE(pEx)->handle);
 		} else {
 			VG_Status(vv,
@@ -116,7 +117,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 		}
 		VG_SetPosition(t->vlCur->p2, vPos);
 	} else {
-		if ((pEx = VG_SchemFindPoint(vv, vPos, NULL))) {
+		if ((pEx = ES_SchemNearestPoint(vv, vPos, NULL))) {
 			VG_Status(vv, _("Start Line at Point%u"),
 			    VGNODE(pEx)->handle);
 		} else {

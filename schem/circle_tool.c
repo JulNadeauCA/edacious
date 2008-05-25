@@ -59,7 +59,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	switch (button) {
 	case SDL_BUTTON_LEFT:
 		if (t->vcCur == NULL) {
-			if (!(pCenter = VG_SchemFindPoint(vv, vPos, NULL))) {
+			if (!(pCenter = ES_SchemNearestPoint(vv, vPos, NULL))) {
 				pCenter = VG_PointNew(vg->root, vPos);
 			}
 			t->vcCur = VG_CircleNew(vg->root, pCenter, 1.0f);
@@ -91,7 +91,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 		AdjustRadius(t->vcCur, vPos);
 		VG_Status(vv, _("Set radius: %.2f"), t->vcCur->r);
 	} else {
-		if ((pEx = VG_SchemFindPoint(vv, vPos, NULL))) {
+		if ((pEx = ES_SchemNearestPoint(vv, vPos, NULL))) {
 			VG_Status(vv, _("Use Point%u as center"),
 			    VGNODE(pEx)->handle);
 		} else {
