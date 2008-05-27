@@ -1,7 +1,7 @@
 TOP=	../..
 include ${TOP}/Makefile.config
 
-SHAREDIR=	${PREFIX}/share/agar-eda/Sources
+SHAREDIR=	${PREFIX}/share/agar-eda/Schematics/Sources
 SHARESRC=	Vsine.eschem \
 		Vsource.eschem \
 		Vsquare.eschem
