@@ -108,7 +108,7 @@ ES_ComponentClass esVSineClass = {
 	},
 	N_("Sinusoidal voltage source"),
 	"Vsin",
-	"Vsine.eschem",
+	"Sources/Vsine.eschem",
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

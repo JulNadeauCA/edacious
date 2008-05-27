@@ -4,7 +4,8 @@ include ${TOP}/Makefile.config
 SUBDIR=	component \
 	circuit \
 	sources \
-	schem
+	schem \
+	Schematics
 
 PROG=	eda
 SRCS=	eda.c

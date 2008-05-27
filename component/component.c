@@ -28,6 +28,7 @@
  */
 
 #include <eda.h>
+#include <config/sharedir.h>
 
 void
 ES_ComponentFreePorts(ES_Component *com)
@@ -172,9 +173,9 @@ OnAttach(AG_Event *event)
 	if (COMOPS(com)->schemFile != NULL) {
 		ES_SchemBlock *sb;
 		char path[FILENAME_MAX];
-		
-		Strlcpy(path, "/home/vedge/src/agar-eda/Schematics/",
-		    sizeof(path));
+	
+		Strlcpy(path, SHAREDIR, sizeof(path));
+		Strlcat(path, "/Schematics/", sizeof(path));
 		Strlcat(path, COMOPS(com)->schemFile, sizeof(path));
 		if ((sb = ES_LoadSchemFromFile(com, path)) != NULL) {
 			ES_AttachSchem(com, sb);

@@ -134,7 +134,7 @@ ES_ComponentClass esVSquareClass = {
 	},
 	N_("Square voltage source"),
 	"Vsq",
-	"Vsquare.eschem",
+	"Sources/Vsquare.eschem",
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
