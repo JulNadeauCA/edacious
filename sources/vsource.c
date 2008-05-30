@@ -157,7 +157,7 @@ FindLoops(ES_Vsource *vs, ES_Port *portCur)
 			if ((portNext == portCur) ||
 			    (portNext->com == br->port->com &&
 			     portNext->n == br->port->n) ||
-			    (nodeNext ->flags & CKTNODE_EXAM)) {
+			    (nodeNext->flags & CKTNODE_EXAM)) {
 				continue;
 			}
 			FindLoops(vs, portNext);
