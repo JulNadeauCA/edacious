@@ -1435,8 +1435,8 @@ PollSchemList(AG_Event *event)
 	VG_FOREACH_NODE(vn, ckt->vg, vg_node) {
 		it = AG_TlistAdd(tl, NULL, "%s%u", vn->ops->name, vn->handle);
 		it->selected = (vn->flags & VG_NODE_SELECTED);
+		it->p1 = vn;
 	}
-	it->p1 = vn;
 	AG_TlistEnd(tl);
 }
 
