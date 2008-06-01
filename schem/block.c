@@ -117,16 +117,15 @@ PointProximity(void *p, VG_View *vv, VG_Vector *vPt)
 	float len;
 
 	Extent(sb, vv, &a, &c);
-
-	if (x >= a.x && x <= c.x &&
-	    y >= a.y && y <= c.y)
-		return (0.0f);
-	
 	b.x = c.x;
 	b.y = a.y;
 	d.x = a.x;
 	d.y = c.y;
 
+	if (x >= a.x && x <= c.x &&
+	    y >= a.y && y <= c.y)
+		return (0.0f);
+	
 	if (y < a.y) {
 		if (x < a.x) {
 			len = VG_Distance(a, *vPt);	*vPt = a;

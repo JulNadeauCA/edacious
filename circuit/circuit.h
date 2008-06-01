@@ -115,7 +115,6 @@ void	 ES_CircuitLog(void *, const char *, ...);
 int	 ES_CircuitAddNode(ES_Circuit *, Uint);
 int	 ES_CircuitMergeNodes(ES_Circuit *, int, int);
 void	 ES_CircuitDelNode(ES_Circuit *, int);
-int	 ES_CircuitDelNodeByPtr(ES_Circuit *, ES_Node *);
 
 void		 ES_CircuitCopyNode(ES_Circuit *, ES_Node *, ES_Node *);
 void		 ES_CircuitFreeNode(ES_Node *);

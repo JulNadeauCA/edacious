@@ -113,7 +113,6 @@ ConnectComponent(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 	Debug(ckt, "Connecting component: %s\n", OBJECT(com)->name);
 	Debug(com, "Connecting to circuit: %s\n", OBJECT(ckt)->name);
 	COMPONENT_FOREACH_PORT(port, i, com) {
-		fprintf(stderr, "Connecting %s:%i\n", OBJECT(com)->name, i);
 		if (port->sp == NULL) {
 			continue;
 		}
@@ -172,23 +171,18 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 		break;
 	case SDL_BUTTON_MIDDLE:
 		if (esFloatingCom != NULL) {
-			ES_SchemBlock *blk;
+			VG_Node *vn;
 
-			TAILQ_FOREACH(blk, &esFloatingCom->blocks, blocks)
-				VG_Rotate(blk, VG_PI/2.0f);
+			TAILQ_FOREACH(vn, &esFloatingCom->schemEnts, user)
+				VG_Rotate(vn, VG_PI/2.0f);
 		}
 		break;
 	case SDL_BUTTON_RIGHT:
 		if (esFloatingCom != NULL) {
-			ES_LockCircuit(ckt);
 			AG_ObjectDetach(esFloatingCom);
-			AG_ObjectUnlinkDatafiles(esFloatingCom);
-#if 0
 			AG_ObjectDestroy(esFloatingCom);
-#endif
 			esFloatingCom = NULL;
 			VG_ViewSelectTool(t->vgv, NULL, NULL);
-			ES_UnlockCircuit(ckt);
 			return (1);
 		}
 		break;
@@ -204,11 +198,11 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 {
 	VG_Tool *t = p;
 	ES_Circuit *ckt = t->p;
-	ES_SchemBlock *sb;
+	VG_Node *vn;
 
 	if (esFloatingCom != NULL) {
-		TAILQ_FOREACH(sb, &esFloatingCom->blocks, blocks) {
-			VG_SetPosition(sb, vPos);
+		TAILQ_FOREACH(vn, &esFloatingCom->schemEnts, user) {
+			VG_SetPosition(vn, vPos);
 		}
 		HighlightConnections(t->vgv, ckt, esFloatingCom);
 		return (1);

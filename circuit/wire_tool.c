@@ -66,18 +66,18 @@ ConnectWire(VG_View *vv, ES_Circuit *ckt, ES_Wire *wire, VG_Vector p1,
 	    sp1->port->node : ES_CircuitAddNode(ckt, 0);
 	N2 = (sp2->port != NULL && sp2->port->node != -1) ?
 	    sp2->port->node : ES_CircuitAddNode(ckt, 0);
-	COMPONENT(wire)->ports[0].node = N1;
-	COMPONENT(wire)->ports[1].node = N2;
+	COMPONENT(wire)->ports[1].node = N1;
+	COMPONENT(wire)->ports[2].node = N2;
 
 	if ((N3 = ES_CircuitMergeNodes(ckt, N1, N2)) == -1) {
 		goto fail;
 	}
 	sp1->port->node = N3;
 	sp2->port->node = N3;
-	COMPONENT(wire)->ports[0].node = N3;
 	COMPONENT(wire)->ports[1].node = N3;
-	ES_CircuitAddBranch(ckt, N3, &COMPONENT(wire)->ports[0]);
+	COMPONENT(wire)->ports[2].node = N3;
 	ES_CircuitAddBranch(ckt, N3, &COMPONENT(wire)->ports[1]);
+	ES_CircuitAddBranch(ckt, N3, &COMPONENT(wire)->ports[2]);
 	COMPONENT(wire)->flags &= ~(COMPONENT_FLOATING);
 
 	VG_Status(vv, _("Connected %s:%d and %s:%d as n%d"),
@@ -117,47 +117,36 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	ES_Circuit *ckt = t->p;
 	ES_Component *com;
 	ES_Port *port1, *port2;
-	ES_SchemPort *spOver, *sp;
+	ES_SchemPort *sp;
 	int i;
 	
-	spOver = VG_PointProximity(vv, "SchemPort", &vPos, NULL, esCurWire);
-
 	switch (button) {
 	case SDL_BUTTON_LEFT:
 		if (esCurWire == NULL) {
+			/* Create the Circuit Wire object */
 			esCurWire = ES_WireNew(ckt);
-			port1 = &COMPONENT(esCurWire)->ports[0];
-			port2 = &COMPONENT(esCurWire)->ports[1];
+			port1 = &COMPONENT(esCurWire)->ports[1];
+			port2 = &COMPONENT(esCurWire)->ports[2];
 
-			/*
-			 * Create the two schematic port entities. Create port1
-			 * relative to the overlapping port if there is one.
-			 */
-			if (spOver != NULL) {
-				sp = ES_SchemPortNew(spOver);
-			} else {
-				sp = ES_SchemPortNew(vg->root);
-				VG_Translate(sp, vPos);
-			}
-			port1->sp = ES_SchemPortNew(sp);
+			/* Create the schematic Port entities. */
+			port1->sp = ES_SchemPortNew(vg->root);
 			port2->sp = ES_SchemPortNew(vg->root);
 			port1->sp->com = COMPONENT(esCurWire);
 			port2->sp->com = COMPONENT(esCurWire);
 			port1->sp->port = port1;
 			port2->sp->port = port2;
+			VG_Translate(port1->sp, vPos);
 			VG_Translate(port2->sp, vPos);
 
-			/* Create the schematic wire entity. */
+			/* Create the schematic Wire entity. */
 			esCurWire->schemWire = ES_SchemWireNew(vg->root,
 			    port1->sp, port2->sp);
 			esCurWire->schemWire->wire = esCurWire;
 		} else {
-			port1 = &COMPONENT(esCurWire)->ports[0];
-			port2 = &COMPONENT(esCurWire)->ports[1];
-
+			port1 = &COMPONENT(esCurWire)->ports[1];
+			port2 = &COMPONENT(esCurWire)->ports[2];
 			port1->flags &= ~(ES_PORT_SELECTED);
 			port2->flags &= ~(ES_PORT_SELECTED);
-
 			if (ConnectWire(vv, ckt, esCurWire, VG_Pos(port1->sp),
 			    VG_Pos(port2->sp)) == -1) {
 				AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());

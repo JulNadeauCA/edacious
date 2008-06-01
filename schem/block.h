@@ -6,7 +6,6 @@ typedef struct es_schem_block {
 	struct vg_node _inherit;
 	char name[ES_SCHEM_NAME_MAX];		/* Block name */
 	struct es_component *com;		/* Back pointer to component */
-	AG_TAILQ_ENTRY(es_schem_block) blocks;	/* In component */
 } ES_SchemBlock;
 
 __BEGIN_DECLS

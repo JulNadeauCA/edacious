@@ -83,9 +83,15 @@ PostDraw(void *t, VG_View *vv)
 				break;
 			}
 			if (prox < vRange) {
-				c.r = 0;
-				c.g = 255 - (Uint8)(prox*255.0f/vRange);
-				c.b = 0;
+				if (prox == 0.0f) {
+					c.r = 200;
+					c.g = 200;
+					c.b = 0;
+				} else {
+					c.r = 0;
+					c.g = 255 - (Uint8)(prox*255.0f/vRange);
+					c.b = 0;
+				}
 				AG_DrawRectFilled(vv, r, VG_MapColorRGB(c));
 			}
 		}

@@ -49,17 +49,17 @@ static void
 FreeDataset(void *p)
 {
 	ES_Component *com = p;
-	ES_SchemBlock *sb, *sbNext;
+	VG_Node *vn, *vnNext;
 
-	for (sb = TAILQ_FIRST(&com->blocks);
-	     sb != TAILQ_END(&com->blocks);
-	     sb = sbNext) {
-		sbNext = TAILQ_NEXT(sb, blocks);
-		VG_NodeDetach(sb);
-		VG_NodeDestroy(sb);
+	for (vn = TAILQ_FIRST(&com->schemEnts);
+	     vn != TAILQ_END(&com->schemEnts);
+	     vn = vnNext) {
+		vnNext = TAILQ_NEXT(vn, user);
+		VG_NodeDetach(vn);
+		VG_NodeDestroy(vn);
 	}
-	TAILQ_INIT(&com->blocks);
-	
+	TAILQ_INIT(&com->schemEnts);
+
 	ES_ComponentFreePorts(com);
 }
 
@@ -99,18 +99,10 @@ AttachSchemPorts(ES_Component *com, VG_Node *vn)
 		ES_Port *port;
 
 		if ((port = ES_FindPort(com, sp->name)) != NULL) {
-			if (port->sp != NULL) {
-				printf("%s%u: \"%s\" was already using %s%u!\n",
-				    vn->ops->name, vn->handle, sp->name,
-				    VGNODE(port->sp)->ops->name,
-				    VGNODE(port->sp)->handle);
-			}
 			port->sp = sp;
 			sp->com = com;
 			sp->port = port;
 		} else {
-			printf("%s%u: No such port: \"%s\"\n",
-			    vn->ops->name, vn->handle, sp->name);
 			VG_NodeDetach(vn);
 			return;
 		}
@@ -120,25 +112,23 @@ AttachSchemPorts(ES_Component *com, VG_Node *vn)
 }
 
 /*
- * Attach a schematic block to a component. Also scan the block for ES_SchemPort
- * entities, and associate them with the component's ES_Ports.
+ * Associate a schematic entity with a Component. If the entity is a SchemBlock,
+ * we also scan the block for SchemPorts and link them.
  */
 void
-ES_AttachSchem(ES_Component *com, ES_SchemBlock *sb)
+ES_AttachSchemEntity(ES_Component *com, VG_Node *vn)
 {
-	ES_SchemPort *sp;
-
-	TAILQ_INSERT_TAIL(&com->blocks, sb, blocks);
-	sb->com = com;
-	AttachSchemPorts(com, VGNODE(sb));
+	TAILQ_INSERT_TAIL(&com->schemEnts, vn, user);
+	vn->p = com;
+	AttachSchemPorts(com, vn);
 }
 
 /* Remove a schematic block associated with a component. */
 void
-ES_DetachSchem(ES_Component *com, ES_SchemBlock *sb)
+ES_DetachSchemEntity(ES_Component *com, VG_Node *vn)
 {
-	TAILQ_REMOVE(&com->blocks, sb, blocks);
-	VG_NodeDetach(sb);
+	vn->p = NULL;
+	TAILQ_REMOVE(&com->schemEnts, vn, user);
 }
 
 /* Load a component schematic block from a file. */
@@ -178,7 +168,7 @@ OnAttach(AG_Event *event)
 		Strlcat(path, "/Schematics/", sizeof(path));
 		Strlcat(path, COMOPS(com)->schemFile, sizeof(path));
 		if ((sb = ES_LoadSchemFromFile(com, path)) != NULL) {
-			ES_AttachSchem(com, sb);
+			ES_AttachSchemEntity(com, VGNODE(sb));
 		} else {
 			AG_TextMsgFromError();
 		}
@@ -195,7 +185,7 @@ OnDetach(AG_Event *event)
 {
 	ES_Component *com = AG_SELF();
 	ES_Circuit *ckt = AG_SENDER();
-	ES_SchemBlock *sb;
+	VG_Node *vn;
 	ES_Port *port;
 	ES_Pair *pair;
 	u_int i;
@@ -208,12 +198,9 @@ OnDetach(AG_Event *event)
 	Debug(com, "Detaching from circuit: %s\n", OBJECT(ckt)->name);
 	AG_PostEvent(ckt, com, "circuit-disconnected", NULL);
 
-	while ((sb = TAILQ_FIRST(&com->blocks)) != NULL) {
-		ES_DetachSchem(com, sb);
-#if 0
-		/* XXX leak */
-		VG_NodeDestroy(sb);
-#endif
+	while ((vn = TAILQ_FIRST(&com->schemEnts)) != NULL) {
+		ES_DetachSchemEntity(com, vn);
+		VG_NodeDestroy(vn);
 	}
 
 	for (i = 0; i <= ckt->n; i++) {
@@ -278,7 +265,7 @@ Init(void *obj)
 	com->loadSP = NULL;
 	com->intStep = NULL;
 	com->intUpdate = NULL;
-	TAILQ_INIT(&com->blocks);
+	TAILQ_INIT(&com->schemEnts);
 
 	AG_SetEvent(com, "attached", OnAttach, NULL);
 	AG_SetEvent(com, "detached", OnDetach, NULL);

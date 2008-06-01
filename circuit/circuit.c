@@ -247,7 +247,6 @@ FreeDataset(void *p)
 
 	for (i = 0; i <= ckt->n; i++) {
 		ES_CircuitFreeNode(ckt->nodes[i]);
-		Free(ckt->nodes[i]);
 	}
 	ckt->nodes = Realloc(ckt->nodes, sizeof(ES_Node *));
 	ckt->n = 0;
@@ -290,7 +289,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		if (i == 0) {
 			name = 0;
 			ES_CircuitFreeNode(ckt->nodes[0]);
-			Free(ckt->nodes[0]);
 			InitGround(ckt);
 		} else {
 			name = ES_CircuitAddNode(ckt, flags & ~(CKTNODE_EXAM));
@@ -704,6 +702,7 @@ ES_CircuitFreeNode(ES_Node *node)
 		Free(br);
 	}
 	TAILQ_INIT(&node->branches);
+	Free(node);
 }
 
 /*
@@ -718,11 +717,11 @@ ES_CircuitDelNode(ES_Circuit *ckt, int n)
 	int i;
 
 #ifdef DEBUG
-	if (n == 0 || n > ckt->n) { Fatal("Illegal node"); }
+	if (n == 0 || n > ckt->n)
+		Fatal("Cannot delete n%d (max %d)", n, ckt->n);
 #endif
 	node = ckt->nodes[n];
 	ES_CircuitFreeNode(node);
-	Free(node);
 
 	if (n != ckt->n) {
 		for (i = n; i <= ckt->n; i++) {
@@ -752,21 +751,6 @@ ES_CircuitNodeNameByPtr(ES_Circuit *ckt, ES_Node *np)
 	return (-1);
 }
 
-int
-ES_CircuitDelNodeByPtr(ES_Circuit *ckt, ES_Node *np)
-{
-	int i;
-
-	for (i = 1; i <= ckt->n; i++) {
-		if (ckt->nodes[i] == np) {
-			ES_CircuitDelNode(ckt, i);
-			return (0);
-		}
-	}
-	AG_SetError(_("No such node"));
-	return (-1);
-}
-
 /* Merge the branches of two nodes, creating a new node from them. */
 int
 ES_CircuitMergeNodes(ES_Circuit *ckt, int N1, int N2)
@@ -782,14 +766,14 @@ ES_CircuitMergeNodes(ES_Circuit *ckt, int N1, int N2)
 			br->port->node = 0;
 			ES_CircuitAddBranch(ckt, 0, br->port);
 		}
-		ES_CircuitFreeNode(n2);
+		ES_CircuitDelNode(ckt, N2);
 		N3 = 0;
 	} else if (N2 == 0) {
 		NODE_FOREACH_BRANCH(br, n1) {
 			br->port->node = 0;
 			ES_CircuitAddBranch(ckt, 0, br->port);
 		}
-		ES_CircuitFreeNode(n1);
+		ES_CircuitDelNode(ckt, N1);
 		N3 = 0;
 	} else {
 		N3 = ES_CircuitAddNode(ckt,0);
@@ -801,8 +785,8 @@ ES_CircuitMergeNodes(ES_Circuit *ckt, int N1, int N2)
 			br->port->node = N3;
 			ES_CircuitAddBranch(ckt, N3, br->port);
 		}
-		ES_CircuitFreeNode(n1);
-		ES_CircuitFreeNode(n2);
+		ES_CircuitDelNode(ckt, N1);
+		ES_CircuitDelNode(ckt, N2);
 	}
 
 	ES_CircuitLog(ckt, _("Merged n%d,n%d into n%d"), N1, N2, N3);
@@ -1458,6 +1442,7 @@ Edit(void *p)
 	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
 	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
 	VG_ViewSetSnapMode(vv, VG_GRID);
+	VG_ViewSetScale(vv, 1);
 	
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 

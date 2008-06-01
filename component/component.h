@@ -102,7 +102,7 @@ typedef struct es_component {
 	void (*intStep)(void *, Uint);
 	void (*intUpdate)(void *);
 
-	TAILQ_HEAD(,es_schem_block) blocks;	/* Schematic block(s) */
+	TAILQ_HEAD(,vg_node) schemEnts;		/* Schematic entities */
 	TAILQ_ENTRY(es_component) components;
 } ES_Component;
 
@@ -150,8 +150,8 @@ void	 ES_ComponentCloseMenu(VG_View *);
 void	 ES_ComponentSetPorts(void *, const ES_Port *);
 void	 ES_ComponentFreePorts(ES_Component *);
 
-void           ES_AttachSchem(ES_Component *, ES_SchemBlock *);
-void           ES_DetachSchem(ES_Component *, ES_SchemBlock *);
+void           ES_AttachSchemEntity(ES_Component *, VG_Node *);
+void           ES_DetachSchemEntity(ES_Component *, VG_Node *);
 ES_SchemBlock *ES_LoadSchemFromFile(ES_Component *, const char *);
 
 void     ES_UnselectAllPorts(struct es_circuit *);

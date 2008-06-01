@@ -99,13 +99,13 @@ ES_SchemNearest(VG_View *vv, VG_Vector vPos)
 	VG_Vector v;
 
 	/* First check if we intersect a block. */
-	proxNearest = AG_FLT_MAX;
-	vnNearest = NULL;
 	TAILQ_FOREACH(vn, &vg->nodes, list) {
 		if (!VG_NodeIsClass(vn, "SchemBlock")) {
 			continue;
 		}
-		if (vn->ops->pointProximity(vn, vv, &v) == 0.0f)
+		v = vPos;
+		prox = vn->ops->pointProximity(vn, vv, &v);
+		if (prox == 0.0f)
 			return (vn);
 	}
 
