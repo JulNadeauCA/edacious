@@ -98,15 +98,23 @@ Draw(void *p, VG_View *vv)
 		AG_TextColorVideo32(VG_MapColorRGB(VGNODE(sp)->color));
 		Snprintf(caption, sizeof(caption), "n%d", sp->port->node);
 		su = AG_TextCacheInsLookup(vv->tCache, caption);
-		glPushMatrix();
-		glTranslatef((float)(AGWIDGET(vv)->cx + x + 10.0f),
-		             (float)(AGWIDGET(vv)->cy + y + 10.0f),
-			     0.0f);
-		glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
-		AG_WidgetBlitSurfaceGL(vv, su,
-		    WSURFACE(vv,su)->w,
-		    WSURFACE(vv,su)->h);
-		glPopMatrix();
+	
+#ifdef HAVE_OPENGL
+		if (agView->opengl) {
+			glPushMatrix();
+			glTranslatef((float)(AGWIDGET(vv)->cx + x + 10.0f),
+			             (float)(AGWIDGET(vv)->cy + y + 10.0f),
+				     0.0f);
+			glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
+			AG_WidgetBlitSurfaceGL(vv, su,
+			    WSURFACE(vv,su)->w,
+			    WSURFACE(vv,su)->h);
+			glPopMatrix();
+		} else
+#endif
+		{
+			AG_WidgetBlitSurface(vv, su, x+4, y+4);
+		}
 		AG_PopTextState();
 	}
 }
