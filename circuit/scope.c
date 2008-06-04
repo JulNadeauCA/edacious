@@ -134,7 +134,8 @@ AddPlotFromSrc(AG_Event *event)
 	SC_Plot *pl;
 
 	AG_PropCopyPath(prop_path, sizeof(prop_path), ckt, prop->key);
-	pl = SC_PlotFromProp(ptr, SC_PLOT_LINEAR, prop->key, ckt, prop_path);
+	pl = SC_PlotFromProp(ptr, SC_PLOT_LINEAR, prop->key, &vfsRoot,
+	    prop_path);
 	SC_PlotSetXoffs(pl, ptr->xMax-1);
 	SC_PlotSetScale(pl, 0.0, 15.0);
 }

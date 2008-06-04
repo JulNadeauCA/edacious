@@ -68,6 +68,8 @@
 #define Vsnprintf AG_Vsnprintf
 
 __BEGIN_DECLS
+extern AG_Object vfsRoot;
+
 extern void *esComponentClasses[];
 extern const void *esSchematicClasses[];
 extern void *esBaseClasses[];

@@ -743,10 +743,12 @@ ES_CircuitDelNode(ES_Circuit *ckt, int n)
 					br->port->node = i-1;
 			}
 		}
+		FreeNode(ckt->nodes[n]);
 		memmove(&ckt->nodes[n], &ckt->nodes[n+1],
 		    (ckt->n - n) * sizeof(ES_Node *));
+	} else {
+		FreeNode(ckt->nodes[n]);
 	}
-	FreeNode(ckt->nodes[n]);
 	ckt->n--;
 	ES_CircuitLog(ckt, _("Removed node %d"), n);
 }
