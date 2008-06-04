@@ -52,7 +52,7 @@ Init(void *p)
 {
 	ES_VSine *vs = p;
 
-	ES_ComponentSetPorts(vs, esVSinePorts);
+	ES_InitPorts(vs, esVSinePorts);
 	vs->vPeak = 5.0;
 	vs->f = 60.0;
 	vs->phase = 0.0;

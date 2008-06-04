@@ -32,7 +32,7 @@
 
 /* Free all Port information in the given Component. */
 void
-ES_ComponentFreePorts(ES_Component *com)
+ES_FreePorts(ES_Component *com)
 {
 	int i;
 	
@@ -61,7 +61,7 @@ FreeDataset(void *p)
 	}
 	TAILQ_INIT(&com->schemEnts);
 
-	ES_ComponentFreePorts(com);
+	ES_FreePorts(com);
 }
 
 static void
@@ -226,7 +226,7 @@ OnDetach(AG_Event *event)
 		     br = nbr) {
 			nbr = TAILQ_NEXT(br, branches);
 			if (br->port != NULL && br->port->com == com)
-				ES_CircuitDelBranch(ckt, i, br);
+				ES_DelBranch(ckt, i, br);
 		}
 	}
 
@@ -237,7 +237,7 @@ del_nodes:
 		ES_Branch *br;
 
 		if (node->nBranches == 0) {
-			ES_CircuitDelNode(ckt, i);
+			ES_DelNode(ckt, i);
 			goto del_nodes;
 		}
 	}
@@ -287,7 +287,7 @@ Init(void *obj)
 
 /* Initialize the Ports of a Component instance. */
 void
-ES_ComponentSetPorts(void *p, const ES_Port *ports)
+ES_InitPorts(void *p, const ES_Port *ports)
 {
 	ES_Component *com = p;
 	const ES_Port *modelPort;
@@ -296,7 +296,7 @@ ES_ComponentSetPorts(void *p, const ES_Port *ports)
 	int i, j, k;
 
 	/* Instantiate the port array. */
-	ES_ComponentFreePorts(com);
+	ES_FreePorts(com);
 	com->nports = 0;
 	for (i = 1, modelPort = &ports[1];
 	     i < COMPONENT_MAX_PORTS && modelPort->n >= 0;
@@ -397,17 +397,20 @@ ES_ComponentLog(void *p, const char *fmt, ...)
 	AG_ConsoleLine *ln;
 	va_list args;
 
-	if (com->ckt == NULL || com->ckt->console == NULL)
-		return;
-	
-	Strlcpy(buf, OBJECT(com)->name, sizeof(buf));
-	
 	va_start(args, fmt);
-	ln = AG_ConsoleAppendLine(com->ckt->console, NULL);
-	len = Strlcat(buf, ": ", sizeof(buf));
-	vsnprintf(&buf[len], sizeof(buf)-len, fmt, args);
-	ln->text = strdup(buf);
-	ln->len = strlen(ln->text);
+#ifdef DEBUG
+	fprintf(stderr, "%s: ", OBJECT(com)->name);
+	vfprintf(stderr, fmt, args);
+	fputc('\n', stderr);
+#endif
+	if (com->ckt != NULL && com->ckt->console != NULL) {
+		Strlcpy(buf, OBJECT(com)->name, sizeof(buf));
+		ln = AG_ConsoleAppendLine(com->ckt->console, NULL);
+		len = Strlcat(buf, ": ", sizeof(buf));
+		vsnprintf(&buf[len], sizeof(buf)-len, fmt, args);
+		ln->text = strdup(buf);
+		ln->len = strlen(ln->text);
+	}
 	va_end(args);
 }
 
@@ -477,10 +480,8 @@ RemoveSelections(AG_Event *event)
 	ES_Component *com;
 
 	ES_LockCircuit(ckt);
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (!com->selected) {
-			continue;
-		}
+rescan:
+	CIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt) {
 		AG_ObjectDetach(com);
 		if (!AG_ObjectInUse(com)) {
 			AG_ObjectDestroy(com);
@@ -489,6 +490,7 @@ RemoveSelections(AG_Event *event)
 			    OBJECT(com)->name);
 		}
 		ES_CircuitModified(ckt);
+		goto rescan;
 	}
 	ES_UnlockCircuit(ckt);
 }
@@ -548,7 +550,7 @@ SelectTool(AG_Event *event)
 
 /* Generate a popup menu for the given Component. */
 void
-ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
+ES_ComponentMenu(ES_Component *com, VG_View *vgv)
 {
 	AG_PopupMenu *pm;
 	Uint nsel = 0;
@@ -556,10 +558,7 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 	int common_class = 1;
 	ES_ComponentClass *comCls = NULL;
 
-	CIRCUIT_FOREACH_COMPONENT(com2, com->ckt) {
-		if (!com2->selected) {
-			continue;
-		}
+	CIRCUIT_FOREACH_COMPONENT_SELECTED(com2, com->ckt) {
 		if (comCls != NULL && comCls != COMOPS(com2)) {
 			common_class = 0;
 		}

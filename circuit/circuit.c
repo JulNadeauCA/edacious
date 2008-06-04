@@ -35,7 +35,7 @@
 #include <sources/vsource.h>
 
 extern ES_Component *esFloatingCom;		/* insert_tool.c */
-static void InitNode(ES_Node *, Uint);
+static void InitNode(ES_Node *);
 static void InitGround(ES_Circuit *);
 
 /* Resume suspended real-time simulation. */
@@ -115,15 +115,11 @@ ES_CircuitModified(ES_Circuit *ckt)
 
 	/* Regenerate loop and pair information. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (COMPONENT_IS_FLOATING(com)) {
-			continue;
-		}
 		for (i = 0; i < com->npairs; i++)
 			com->pairs[i].nloops = 0;
 	}
 	CIRCUIT_FOREACH_VSOURCE(vs, ckt) {
-		if (COMPONENT_IS_FLOATING(vs) ||
-		    PORT(vs,1)->node == -1 ||
+		if (PORT(vs,1)->node == -1 ||		/* XXX why? */
 		    PORT(vs,2)->node == -1) {
 			continue;
 		}
@@ -135,9 +131,6 @@ ES_CircuitModified(ES_Circuit *ckt)
 	}
 	ckt->l = 0;
 	CIRCUIT_FOREACH_VSOURCE(vs, ckt) {
-		if (COMPONENT_IS_FLOATING(vs)) {
-			continue;
-		}
 		TAILQ_FOREACH(loop, &vs->loops, loops) {
 			ckt->loops = Realloc(ckt->loops,
 			    (ckt->l+1)*sizeof(ES_Loop *));
@@ -187,6 +180,18 @@ PostSimulationStep(AG_Event *event)
 
 	OBJECT_FOREACH_CHILD(obj, ckt, ag_object)
 		AG_PostEvent(ckt, obj, "circuit-step-end", NULL);
+}
+
+ES_Circuit *
+ES_CircuitNew(void *parent, const char *name)
+{
+	ES_Circuit *ckt;
+
+	ckt = Malloc(sizeof(ES_Circuit));
+	AG_ObjectInit(ckt, &esCircuitClass);
+	AG_ObjectSetName(ckt, "%s", name);
+	AG_ObjectAttach(parent, ckt);
+	return (ckt);
 }
 
 static void
@@ -271,9 +276,6 @@ FreeDataset(void *p)
 	InitGround(ckt);
 
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (COMPONENT_IS_FLOATING(com)) {
-			continue;
-		}
 		COMPONENT_FOREACH_PORT(port, i, com) {
 			port->node = -1;
 			port->branch = NULL;
@@ -309,7 +311,8 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 			FreeNode(ckt->nodes[0]);
 			InitGround(ckt);
 		} else {
-			name = ES_CircuitAddNode(ckt, flags & ~(CKTNODE_EXAM));
+			name = ES_AddNode(ckt);
+			ckt->nodes[name]->flags = flags & ~(CKTNODE_EXAM);
 		}
 
 		for (j = 0; j < nBranches; j++) {
@@ -330,8 +333,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 				    pcom->nports);
 				return (-1);
 			}
-			br = ES_CircuitAddBranch(ckt, name,
-			    &pcom->ports[pport]);
+			br = ES_AddBranch(ckt, name, &pcom->ports[pport]);
 			pcom->ports[pport].node = name;
 			pcom->ports[pport].branch = br;
 		}
@@ -347,7 +349,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		char name[CIRCUIT_SYM_MAX];
 		ES_Sym *sym;
 		
-		sym = ES_CircuitAddSym(ckt);
+		sym = ES_AddSymbol(ckt, NULL);
 		AG_CopyString(sym->name, ds, sizeof(sym->name));
 		AG_CopyString(sym->descr, ds, sizeof(sym->descr));
 		sym->type = (enum es_sym_type)AG_ReadUint32(ds);
@@ -484,9 +486,6 @@ Save(void *p, AG_DataSource *ds)
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		ES_Port *port;
 
-		if (COMPONENT_IS_FLOATING(com)) {
-			continue;
-		}
 		AG_WriteString(ds, OBJECT(com)->name);
 		AG_WriteUint32(ds, (Uint32)com->nports);
 		COMPONENT_FOREACH_PORT(port, i, com) {
@@ -501,9 +500,9 @@ Save(void *p, AG_DataSource *ds)
 }
 
 static void
-InitNode(ES_Node *node, Uint flags)
+InitNode(ES_Node *node)
 {
-	node->flags = flags;
+	node->flags = 0;
 	node->nBranches = 0;
 	TAILQ_INIT(&node->branches);
 }
@@ -512,31 +511,31 @@ static void
 InitGround(ES_Circuit *ckt)
 {
 	ckt->nodes[0] = Malloc(sizeof(ES_Node));
-	InitNode(ckt->nodes[0], CKTNODE_REFERENCE);
-	ES_CircuitAddNodeSym(ckt, "Gnd", 0);
+	InitNode(ckt->nodes[0]);
+	ckt->nodes[0]->flags |= CKTNODE_REFERENCE;
+	ES_AddNodeSymbol(ckt, "Gnd", 0);
 }
 
 /* Create a new node with no branches. */
 int
-ES_CircuitAddNode(ES_Circuit *ckt, Uint flags)
+ES_AddNode(ES_Circuit *ckt)
 {
 	ES_Node *node;
 	int n = ++ckt->n;
 
 	ckt->nodes = Realloc(ckt->nodes, (n+1)*sizeof(ES_Node *));
 	ckt->nodes[n] = Malloc(sizeof(ES_Node));
-	InitNode(ckt->nodes[n], flags);
+	InitNode(ckt->nodes[n]);
 	return (n);
 }
 
 /* Create a new symbol referencing a node. */
 ES_Sym *
-ES_CircuitAddNodeSym(ES_Circuit *ckt, const char *name, int node)
+ES_AddNodeSymbol(ES_Circuit *ckt, const char *name, int node)
 {
 	ES_Sym *sym;
 
-	sym = ES_CircuitAddSym(ckt);
-	Strlcpy(sym->name, name, sizeof(sym->name));
+	sym = ES_AddSymbol(ckt, name);
 	sym->type = ES_SYM_NODE;
 	sym->p.node = node;
 	return (sym);
@@ -544,12 +543,11 @@ ES_CircuitAddNodeSym(ES_Circuit *ckt, const char *name, int node)
 
 /* Create a new symbol referencing a voltage source. */
 ES_Sym *
-ES_CircuitAddVsourceSym(ES_Circuit *ckt, const char *name, int vsource)
+ES_AddVsourceSymbol(ES_Circuit *ckt, const char *name, int vsource)
 {
 	ES_Sym *sym;
 
-	sym = ES_CircuitAddSym(ckt);
-	Strlcpy(sym->name, name, sizeof(sym->name));
+	sym = ES_AddSymbol(ckt, name);
 	sym->type = ES_SYM_VSOURCE;
 	sym->p.vsource = vsource;
 	return (sym);
@@ -557,12 +555,11 @@ ES_CircuitAddVsourceSym(ES_Circuit *ckt, const char *name, int vsource)
 
 /* Create a new symbol referencing a current source. */
 ES_Sym *
-ES_CircuitAddIsourceSym(ES_Circuit *ckt, const char *name, int isource)
+ES_AddIsourceSymbol(ES_Circuit *ckt, const char *name, int isource)
 {
 	ES_Sym *sym;
 
-	sym = ES_CircuitAddSym(ckt);
-	Strlcpy(sym->name, name, sizeof(sym->name));
+	sym = ES_AddSymbol(ckt, name);
 	sym->type = ES_SYM_ISOURCE;
 	sym->p.vsource = isource;
 	return (sym);
@@ -570,12 +567,16 @@ ES_CircuitAddIsourceSym(ES_Circuit *ckt, const char *name, int isource)
 
 /* Create a new symbol. */
 ES_Sym *
-ES_CircuitAddSym(ES_Circuit *ckt)
+ES_AddSymbol(ES_Circuit *ckt, const char *name)
 {
 	ES_Sym *sym;
 
 	sym = Malloc(sizeof(ES_Sym));
-	sym->name[0] = '\0';
+	if (name != NULL) {
+		Strlcpy(sym->name, name, sizeof(sym->name));
+	} else {
+		sym->name[0] = '\0';
+	}
 	sym->descr[0] = '\0';
 	sym->type = 0;
 	sym->p.node = 0;
@@ -585,7 +586,7 @@ ES_CircuitAddSym(ES_Circuit *ckt)
 
 /* Delete a symbol. */
 void
-ES_CircuitDelSym(ES_Circuit *ckt, ES_Sym *sym)
+ES_DelSymbol(ES_Circuit *ckt, ES_Sym *sym)
 {
 	TAILQ_REMOVE(&ckt->syms, sym, syms);
 	Free(sym);
@@ -593,7 +594,7 @@ ES_CircuitDelSym(ES_Circuit *ckt, ES_Sym *sym)
 
 /* Lookup a symbol by name. */
 ES_Sym *
-ES_CircuitFindSym(ES_Circuit *ckt, const char *name)
+ES_LookupSymbol(ES_Circuit *ckt, const char *name)
 {
 	ES_Sym *sym;
 
@@ -663,7 +664,7 @@ ES_BranchCurrent(ES_Circuit *ckt, int k)
 
 /* Lookup an existing node by number or die. */
 ES_Node *
-ES_CircuitGetNode(ES_Circuit *ckt, int n)
+ES_GetNode(ES_Circuit *ckt, int n)
 {
 	if (n < 0 || n > ckt->n) {
 		Fatal("%s:%d: Bad node (Circuit=%d)", OBJECT(ckt)->name, n,
@@ -675,7 +676,7 @@ ES_CircuitGetNode(ES_Circuit *ckt, int n)
 /* Return the matching symbol (or "nX") for a given node. */
 /* XXX multiple symbols are possible */
 void
-ES_CircuitNodeSymbol(ES_Circuit *ckt, int n, char *dst, size_t dst_len)
+ES_CopyNodeSymbol(ES_Circuit *ckt, int n, char *dst, size_t dst_len)
 {
 	ES_Sym *sym;
 
@@ -697,7 +698,7 @@ ES_CircuitNodeSymbol(ES_Circuit *ckt, int n, char *dst, size_t dst_len)
 /* Search for a node matching the given name (symbol or "nX") */
 /* XXX multiple symbols are possible */
 ES_Node *
-ES_CircuitFindNode(ES_Circuit *ckt, const char *name)
+ES_GetNodeBySymbol(ES_Circuit *ckt, const char *name)
 {
 	ES_Sym *sym;
 
@@ -723,24 +724,28 @@ ES_CircuitFindNode(ES_Circuit *ckt, const char *name)
  * node array and update all port references accordingly.
  */
 void
-ES_CircuitDelNode(ES_Circuit *ckt, int n)
+ES_DelNode(ES_Circuit *ckt, int n)
 {
 	ES_Branch *br;
 	int i;
 
-	printf("Deleting n%d\n", n);
+	ES_CircuitLog(ckt, _("Deleting n%d"), n);
 #ifdef DEBUG
 	if (n == 0 || n > ckt->n)
 		Fatal("Cannot delete n%d (max %d)", n, ckt->n);
 #endif
 	if (n != ckt->n) {
-		ES_Node *node = ckt->nodes[n];
-
 		/* Update the Branch port pointers. */
 		for (i = n; i <= ckt->n; i++) {
-			NODE_FOREACH_BRANCH(br, node) {
-				if (br->port != NULL && br->port->com != NULL)
+			NODE_FOREACH_BRANCH(br, ckt->nodes[i]) {
+				if (br->port != NULL && br->port->com != NULL) {
+					ES_ComponentLog(br->port->com,
+					    _("Updating branch: %s: "
+					      "n%d -> n%d"),
+					    br->port->name,
+					    br->port->node, i-1);
 					br->port->node = i-1;
+				}
 			}
 		}
 		FreeNode(ckt->nodes[n]);
@@ -750,51 +755,42 @@ ES_CircuitDelNode(ES_Circuit *ckt, int n)
 		FreeNode(ckt->nodes[n]);
 	}
 	ckt->n--;
-	ES_CircuitLog(ckt, _("Removed node %d"), n);
 }
 
-/* Merge the branches of two nodes, creating a new node from them. */
+/*
+ * Merge the branches of two nodes, creating a new node from them. The
+ * new node will always use whichever of the two node names is the lowest
+ * numbered. The reference node (0) is never deleted.
+ */
 int
-ES_CircuitMergeNodes(ES_Circuit *ckt, int N1, int N2)
+ES_MergeNodes(ES_Circuit *ckt, int N1, int N2)
 {
 	ES_Branch *br;
-	ES_Node *n1 = ckt->nodes[N1];
-	ES_Node *n2 = ckt->nodes[N2];
-	ES_Node *n3;
-	int N3;
+	int Nnew, Nold;
 
-	printf("Merging n%d and n%d\n", N1, N2);
-	if (N1 == 0) {
-		NODE_FOREACH_BRANCH(br, n2) {
-			br->port->node = 0;
-			ES_CircuitAddBranch(ckt, 0, br->port);
-		}
-		ES_CircuitDelNode(ckt, N2);
-		N3 = 0;
-	} else if (N2 == 0) {
-		NODE_FOREACH_BRANCH(br, n1) {
-			br->port->node = 0;
-			ES_CircuitAddBranch(ckt, 0, br->port);
-		}
-		ES_CircuitDelNode(ckt, N1);
-		N3 = 0;
+	if (N1 < N2) {
+		Nnew = N1;
+		Nold = N2;
 	} else {
-		N3 = N1;
-		printf("Merging n%d and n%d (as n%d)\n", N1, N2, N3);
-		NODE_FOREACH_BRANCH(br, n2) {
-			br->port->node = N3;
-			ES_CircuitAddBranch(ckt, N3, br->port);
-		}
-		ES_CircuitDelNode(ckt, N2);
+		Nnew = N2;
+		Nold = N1;
 	}
-
-	ES_CircuitLog(ckt, _("Merged n%d,n%d into n%d"), N1, N2, N3);
-	return (N3);
+	ES_CircuitLog(ckt, _("Merging: n%d,n%d -> n%d"), N1, N2, Nnew);
+rescan:
+	NODE_FOREACH_BRANCH(br, ckt->nodes[Nold]) {
+		ES_Port *brPort = br->port;
+		brPort->node = Nnew;
+		ES_AddBranch(ckt, Nnew, brPort);
+		ES_DelBranch(ckt, Nold, br);
+		goto rescan;
+	}
+	ES_DelNode(ckt, Nold);
+	return (Nnew);
 }
 
 /* Create a new branch, connecting a Circuit Node to a Component Port. */
 ES_Branch *
-ES_CircuitAddBranch(ES_Circuit *ckt, int n, ES_Port *port)
+ES_AddBranch(ES_Circuit *ckt, int n, ES_Port *port)
 {
 	ES_Node *node = ckt->nodes[n];
 	ES_Branch *br;
@@ -808,7 +804,7 @@ ES_CircuitAddBranch(ES_Circuit *ckt, int n, ES_Port *port)
 
 /* Lookup the branch connecting the given Node to the given Port. */
 ES_Branch *
-ES_CircuitGetBranch(ES_Circuit *ckt, int n, ES_Port *port)
+ES_LookupBranch(ES_Circuit *ckt, int n, ES_Port *port)
 {
 	ES_Node *node = ckt->nodes[n];
 	ES_Branch *br;
@@ -822,7 +818,7 @@ ES_CircuitGetBranch(ES_Circuit *ckt, int n, ES_Port *port)
 
 /* Remove the specified branch. */
 void
-ES_CircuitDelBranch(ES_Circuit *ckt, int n, ES_Branch *br)
+ES_DelBranch(ES_Circuit *ckt, int n, ES_Branch *br)
 {
 	ES_Node *node = ckt->nodes[n];
 
@@ -887,14 +883,18 @@ ES_CircuitLog(void *p, const char *fmt, ...)
 	AG_ConsoleLine *ln;
 	va_list args;
 
-	if (ckt->console == NULL)
-		return;
-
-	ln = AG_ConsoleAppendLine(ckt->console, NULL);
 	va_start(args, fmt);
-	AG_Vasprintf(&ln->text, fmt, args);
+#ifdef DEBUG
+	fprintf(stderr, "%s: ", OBJECT(ckt)->name);
+	vfprintf(stderr, fmt, args);
+	fputc('\n', stderr);
+#endif
+	if (ckt->console != NULL) {
+		ln = AG_ConsoleAppendLine(ckt->console, NULL);
+		AG_Vasprintf(&ln->text, fmt, args);
+		ln->len = strlen(ln->text);
+	}
 	va_end(args);
-	ln->len = strlen(ln->text);
 }
 
 static void
@@ -991,6 +991,9 @@ ShowTopology(AG_Event *event)
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
 	ntab = AG_NotebookAddTab(nb, _("Nodes"), AG_BOX_VERT);
 	{
+		AG_LabelNewPolledMT(ntab, 0, &OBJECT(ckt)->lock,
+		    _("%u+1 nodes, %u vsources, %u loops"),
+		    &ckt->n, &ckt->m, &ckt->l);
 		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE|
 		                       AG_TLIST_EXPAND);
 		AG_SetEvent(tl, "tlist-poll", PollCircuitNodes, "%p", ckt);
@@ -1084,7 +1087,7 @@ ViewButtonDown(AG_Event *event)
 		    com->block != block) {
 			continue;
 		}
-		ES_ComponentOpenMenu(com, vv);
+		ES_ComponentMenu(com, vv);
 		break;
 	}
 #endif
@@ -1336,7 +1339,7 @@ InsertComponent(AG_Event *event)
 	cls = (ES_ComponentClass *)it->p1;
 tryname:
 	Snprintf(name, sizeof(name), "%s%d", cls->pfx, n++);
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+	CIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) {
 		if (strcmp(OBJECT(com)->name, name) == 0)
 			break;
 	}

@@ -63,21 +63,21 @@ ConnectWire(VG_View *vv, ES_Circuit *ckt, ES_Wire *wire, VG_Vector p1,
 	}
 
 	N1 = (sp1->port != NULL && sp1->port->node != -1) ?
-	    sp1->port->node : ES_CircuitAddNode(ckt, 0);
+	    sp1->port->node : ES_AddNode(ckt);
 	N2 = (sp2->port != NULL && sp2->port->node != -1) ?
-	    sp2->port->node : ES_CircuitAddNode(ckt, 0);
+	    sp2->port->node : ES_AddNode(ckt);
 	COMPONENT(wire)->ports[1].node = N1;
 	COMPONENT(wire)->ports[2].node = N2;
 
-	if ((N3 = ES_CircuitMergeNodes(ckt, N1, N2)) == -1) {
+	if ((N3 = ES_MergeNodes(ckt, N1, N2)) == -1) {
 		goto fail;
 	}
 	sp1->port->node = N3;
 	sp2->port->node = N3;
 	COMPONENT(wire)->ports[1].node = N3;
 	COMPONENT(wire)->ports[2].node = N3;
-	ES_CircuitAddBranch(ckt, N3, &COMPONENT(wire)->ports[1]);
-	ES_CircuitAddBranch(ckt, N3, &COMPONENT(wire)->ports[2]);
+	ES_AddBranch(ckt, N3, &COMPONENT(wire)->ports[1]);
+	ES_AddBranch(ckt, N3, &COMPONENT(wire)->ports[2]);
 	COMPONENT(wire)->flags &= ~(COMPONENT_FLOATING);
 
 	VG_Status(vv, _("Connected %s:%d and %s:%d as n%d"),

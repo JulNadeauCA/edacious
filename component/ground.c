@@ -45,20 +45,29 @@ Connect(void *p, ES_Port *p1, ES_Port *p2)
 	ES_Branch *br;
 
 	if (p2 != NULL && p2->node > 0) {
-		u_int n = p2->node;
-	
-		NODE_FOREACH_BRANCH(br, ckt->nodes[n]) {
-			if (br->port == NULL || br->port->com == NULL ||
-			    COMPONENT_IS_FLOATING(br->port->com)) {
+		u_int nOld = p2->node;
+		ES_Node *node = ckt->nodes[nOld];
+rescan:
+		NODE_FOREACH_BRANCH(br, node) {
+			ES_Port *brPort = br->port;
+			
+			if (brPort == NULL || brPort->com == NULL ||
+			    COMPONENT_IS_FLOATING(brPort->com)) {
 				continue;
 			}
-			ES_CircuitAddBranch(ckt, 0, br->port);
-			br->port->node = 0;
+			ES_CircuitLog(ckt,
+			    _("Grounding %s(%s) (previously on n%d)"),
+			    OBJECT(brPort->com)->name, brPort->name,
+			    brPort->node);
+			brPort->node = 0;
+			ES_AddBranch(ckt, 0, brPort);
+			ES_DelBranch(ckt, nOld, br);
+			goto rescan;
 		}
-		ES_CircuitDelNode(ckt, n);
+		ES_DelNode(ckt, nOld);
 	}
 	p1->node = 0;
-	p1->branch = ES_CircuitAddBranch(ckt, 0, p1);
+	p1->branch = ES_AddBranch(ckt, 0, p1);
 	return (0);
 }
 
@@ -67,7 +76,7 @@ Init(void *p)
 {
 	ES_Ground *gnd = p;
 
-	ES_ComponentSetPorts(gnd, esGroundPorts);
+	ES_InitPorts(gnd, esGroundPorts);
 }
 
 ES_ComponentClass esGroundClass = {

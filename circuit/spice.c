@@ -58,7 +58,7 @@ ES_CircuitExportSPICE3(ES_Circuit *ckt, const char *path)
 	    "<http://hypertriton.com/agar-eda/>\n\n",
 	    VERSION);
 
-	OBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (COMOPS(com)->export_model != NULL) {
 			fprintf(f, "* %s:%s\n", OBJECT(com)->cls->name,
 			    OBJECT(com)->name);

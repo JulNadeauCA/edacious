@@ -70,7 +70,7 @@ Save(void *p, AG_DataSource *ds)
 {
 	ES_SchemPort *sp = p;
 
-	AG_WriteUint32(ds, (Uint8)sp->flags);
+	AG_WriteUint8(ds, (Uint8)sp->flags);
 	AG_WriteString(ds, sp->name);
 }
 

@@ -44,6 +44,7 @@ typedef struct es_loop {
 	TAILQ_ENTRY(es_loop) loops;
 } ES_Loop;
 
+/* Entry in Circuit symbol table. */
 typedef struct es_sym {
 	char name[CIRCUIT_SYM_MAX];
 	char descr[CIRCUIT_SYM_DESCR_MAX];
@@ -63,6 +64,7 @@ typedef struct es_sym {
 struct es_vsource;
 struct ag_console;
 
+/* The basic Circuit model object. */
 typedef struct es_circuit {
 	struct ag_object obj;
 	char descr[CIRCUIT_DESCR_MAX];		/* Description */
@@ -90,16 +92,33 @@ typedef struct es_circuit {
 #define CIRCUIT(p) ((ES_Circuit *)(p))
 #define VNODE(com,n) ES_NodeVoltage(COM(com)->ckt,(n))
 
-#define CIRCUIT_FOREACH_COMPONENT(com, ckt) \
+/* Iterate over all Components of the Circuit, floating or not. */
+#define CIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) \
 	AGOBJECT_FOREACH_CLASS((com),(ckt),es_component,"ES_Component:*")
+
+/* Iterate over all non-floating voltage sources in the Circuit. */
 #define CIRCUIT_FOREACH_VSOURCE(vs, ckt) \
-	AGOBJECT_FOREACH_CLASS((vs),(ckt),es_vsource,"ES_Component:ES_Vsource:*")
-#define CIRCUIT_FOREACH_SELECTED_COMPONENT(com, ckt)			\
-	CIRCUIT_FOREACH_COMPONENT((com),ckt)				\
-		if ((com)->flags & ES_COMPONENT_SELECTED) {		\
+	AGOBJECT_FOREACH_CLASS((vs),(ckt),es_vsource, \
+	"ES_Component:ES_Vsource:*") \
+		if (ESCOMPONENT(vs)->flags & COMPONENT_FLOATING) {	\
 			continue;					\
 		} else
 
+/* Iterate over all non-floating Components in the Circuit. */
+#define CIRCUIT_FOREACH_COMPONENT(com, ckt)			\
+	CIRCUIT_FOREACH_COMPONENT_ALL((com),ckt)		\
+		if ((com)->flags & COMPONENT_FLOATING) {	\
+			continue;				\
+		} else
+
+/* Iterate over all selected, non-floating Components in the Circuit. */
+#define CIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt)		\
+	CIRCUIT_FOREACH_COMPONENT((com),ckt)			\
+		if (!(com)->selected) {				\
+			continue;				\
+		} else
+
+/* Iterate over all Branches of a Node. */
 #define NODE_FOREACH_BRANCH(br, node) \
 	AG_TAILQ_FOREACH(br, &(node)->branches, branches)
 
@@ -109,42 +128,38 @@ extern VG_ToolOps esSelectTool;
 extern VG_ToolOps esInsertTool;
 extern VG_ToolOps esWireTool;
 
-void	 ES_CircuitLog(void *, const char *, ...);
+ES_Circuit *ES_CircuitNew(void *, const char *);
+void	    ES_CircuitLog(void *, const char *, ...);
 
-int	 ES_CircuitAddNode(ES_Circuit *, Uint);
-int	 ES_CircuitMergeNodes(ES_Circuit *, int, int);
-void	 ES_CircuitDelNode(ES_Circuit *, int);
+int         ES_AddNode(ES_Circuit *);
+void        ES_DelNode(ES_Circuit *, int);
+int         ES_MergeNodes(ES_Circuit *, int, int);
+ES_Branch  *ES_AddBranch(ES_Circuit *, int, ES_Port *);
+void        ES_DelBranch(ES_Circuit *, int, ES_Branch *);
 
-void		 ES_CircuitCopyNode(ES_Circuit *, ES_Node *, ES_Node *);
-ES_Branch	*ES_CircuitAddBranch(ES_Circuit *, int, ES_Port *);
-void		 ES_CircuitDelBranch(ES_Circuit *, int, ES_Branch *);
-void	 	 ES_CircuitDrawPort(VG_View *, ES_Circuit *, ES_Port *, float,
-                                    float);
+ES_Node	   *ES_GetNode(ES_Circuit *, int);
+void        ES_CopyNodeSymbol(ES_Circuit *, int, char *, size_t);
+ES_Node	   *ES_GetNodeBySymbol(ES_Circuit *, const char *);
+ES_Branch  *ES_LookupBranch(ES_Circuit *, int, ES_Port *);
 
-ES_Node		*ES_CircuitGetNode(ES_Circuit *, int);
-void		 ES_CircuitNodeSymbol(ES_Circuit *, int, char *,
-			                      size_t);
-ES_Node		*ES_CircuitFindNode(ES_Circuit *, const char *);
-ES_Branch	*ES_CircuitGetBranch(ES_Circuit *, int, ES_Port *);
+int         ES_NodeVsource(ES_Circuit *, int, int, int *);
+SC_Real     ES_NodeVoltage(ES_Circuit *, int);
+SC_Real	    ES_BranchCurrent(ES_Circuit *, int);
 
-int		 ES_NodeVsource(ES_Circuit *, int, int, int *);
-SC_Real		 ES_NodeVoltage(ES_Circuit *, int);
-SC_Real		 ES_BranchCurrent(ES_Circuit *, int);
+void        ES_ResumeSimulation(ES_Circuit *);
+void        ES_SuspendSimulation(ES_Circuit *);
+ES_Sim     *ES_SetSimulationMode(ES_Circuit *, const ES_SimOps *);
+void        ES_CircuitModified(ES_Circuit *);
+void        ES_DestroySimulation(ES_Circuit *);
 
-void	 	 ES_ResumeSimulation(ES_Circuit *);
-void	 	 ES_SuspendSimulation(ES_Circuit *);
-ES_Sim		*ES_SetSimulationMode(ES_Circuit *, const ES_SimOps *);
-void		 ES_CircuitModified(ES_Circuit *);
-void		 ES_DestroySimulation(ES_Circuit *);
+ES_Sym     *ES_AddSymbol(ES_Circuit *, const char *);
+ES_Sym     *ES_AddNodeSymbol(ES_Circuit *, const char *, int);
+ES_Sym     *ES_AddVsourceSymbol(ES_Circuit *, const char *, int);
+ES_Sym     *ES_AddIsourceSymbol(ES_Circuit *, const char *, int);
+void        ES_DelSymbol(ES_Circuit *, ES_Sym *);
+ES_Sym     *ES_LookupSymbol(ES_Circuit *, const char *);
 
-ES_Sym		*ES_CircuitAddSym(ES_Circuit *);
-ES_Sym		*ES_CircuitAddNodeSym(ES_Circuit *, const char *, int);
-ES_Sym		*ES_CircuitAddVsourceSym(ES_Circuit *, const char *, int);
-ES_Sym		*ES_CircuitAddIsourceSym(ES_Circuit *, const char *, int);
-void		 ES_CircuitDelSym(ES_Circuit *, ES_Sym *);
-ES_Sym 		*ES_CircuitFindSym(ES_Circuit *, const char *);
-
-/* Lock the circuit and suspend any continuous simulation in progress. */
+/* Lock the circuit and suspend any real-time simulation in progress. */
 static __inline__ void
 ES_LockCircuit(ES_Circuit *ckt)
 {

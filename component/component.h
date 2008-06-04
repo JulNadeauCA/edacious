@@ -145,10 +145,9 @@ void	 ES_ComponentUnselect(ES_Component *);
 void	 ES_ComponentUnselectAll(struct es_circuit *);
 
 void	 ES_ComponentLog(void *, const char *, ...);
-void	 ES_ComponentOpenMenu(ES_Component *, VG_View *);
-void	 ES_ComponentCloseMenu(VG_View *);
-void	 ES_ComponentSetPorts(void *, const ES_Port *);
-void	 ES_ComponentFreePorts(ES_Component *);
+void	 ES_ComponentMenu(ES_Component *, VG_View *);
+void	 ES_InitPorts(void *, const ES_Port *);
+void	 ES_FreePorts(ES_Component *);
 
 void           ES_AttachSchemEntity(ES_Component *, VG_Node *);
 void           ES_DetachSchemEntity(ES_Component *, VG_Node *);

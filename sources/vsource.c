@@ -267,7 +267,7 @@ Init(void *p)
 {
 	ES_Vsource *vs = p;
 
-	ES_ComponentSetPorts(vs, esVsourcePorts);
+	ES_InitPorts(vs, esVsourcePorts);
 	vs->voltage = 5;
 	vs->lstack = NULL;
 	vs->nlstack = 0;

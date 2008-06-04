@@ -44,7 +44,7 @@ Init(void *p)
 {
 	ES_Inverter *inv = p;
 
-	ES_ComponentSetPorts(inv, esInverterPorts);
+	ES_InitPorts(inv, esInverterPorts);
 	COM(inv)->intUpdate = ES_InverterUpdate;
 #if 0
 	ES_SetSpec(inv, "Tp", _("Propagation delay from A to A-bar"),

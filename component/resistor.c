@@ -164,7 +164,7 @@ Init(void *p)
 {
 	ES_Resistor *r = p;
 
-	ES_ComponentSetPorts(r, esResistorPorts);
+	ES_InitPorts(r, esResistorPorts);
 	r->resistance = 1;
 	r->power_rating = HUGE_VAL;
 	r->tolerance = 0;

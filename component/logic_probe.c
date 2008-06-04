@@ -87,7 +87,7 @@ Init(void *p)
 {
 	ES_LogicProbe *r = p;
 
-	ES_ComponentSetPorts(r, esLogicProbePorts);
+	ES_InitPorts(r, esLogicProbePorts);
 	r->Vhigh = 5.0;
 	r->state = 0;
 	COM(r)->intUpdate = ES_LogicProbeUpdate;

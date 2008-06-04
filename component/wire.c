@@ -47,7 +47,7 @@ ES_WireNew(ES_Circuit *ckt)
 
 tryname:
 	Snprintf(name, sizeof(name), "%s%d", esWireClass.pfx, n++);
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+	CIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) {
 		if (strcmp(OBJECT(com)->name, name) == 0)
 			break;
 	}
@@ -94,7 +94,7 @@ Init(void *p)
 {
 	ES_Wire *w = p;
 
-	ES_ComponentSetPorts(w, esWirePorts);
+	ES_InitPorts(w, esWirePorts);
 	w->flags = 0;
 	w->cat = 0;
 	w->schemWire = NULL;

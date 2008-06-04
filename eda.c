@@ -684,4 +684,3 @@ main(int argc, char *argv[])
 	AG_Destroy();
 	return (0);
 }
-

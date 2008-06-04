@@ -93,7 +93,7 @@ Init(void *p)
 {
 	ES_Spdt *sw = p;
 
-	ES_ComponentSetPorts(sw, esSpdtPorts);
+	ES_InitPorts(sw, esSpdtPorts);
 	sw->on_resistance = 1.0;
 	sw->off_resistance = HUGE_VAL;
 	sw->state = 1;

@@ -42,7 +42,7 @@ Init(void *p)
 {
 	ES_VSquare *vs = p;
 
-	ES_ComponentSetPorts(vs, esVSquarePorts);
+	ES_InitPorts(vs, esVSquarePorts);
 	vs->vH = 5.0;
 	vs->vL = 0.0;
 	vs->t = 0;

@@ -45,7 +45,7 @@ Init(void *p)
 {
 	ES_And *gate = p;
 
-	ES_ComponentSetPorts(gate, esAndPorts);
+	ES_InitPorts(gate, esAndPorts);
 	COM(gate)->intUpdate = ES_AndUpdate;
 	ES_LogicOutput(gate, "A&B", ES_HI_Z);
 }

@@ -48,9 +48,8 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	if (!multi) {
 		ES_ComponentUnselectAll(ckt);
 	}
-	OBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
-		if (COMPONENT_IS_FLOATING(com) ||
-		    com->block != blkClosest) {
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (com->block != blkClosest) {
 			continue;
 		}
 		if (multi) {
@@ -90,9 +89,8 @@ LeftButton(VG_Tool *t, int button, int state, float x, float y, void *arg)
 	if (!multi) {
 		ES_ComponentUnselectAll(ckt);
 	}
-	OBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
-		if (COMPONENT_IS_FLOATING(com) ||
-		    com->block != blkClosest) {
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (com->block != blkClosest) {
 			continue;
 		}
 		if (multi) {
@@ -123,10 +121,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	
 	blkClosest = VG_BlockClosest(vg, x, y);
 	
-	OBJECT_FOREACH_CLASS(com, ckt, es_component, "ES_Component:*") {
-		if (COMPONENT_IS_FLOATING(com)) {
-			continue;
-		}
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		com->highlighted = (com->block == blkClosest);
 	}
 #endif

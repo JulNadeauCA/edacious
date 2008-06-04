@@ -44,10 +44,7 @@ RemoveComponent(VG_Tool *t, SDLKey key, int state, void *arg)
 	AG_LockVFS(ckt);
 	ES_LockCircuit(ckt);
 scan:
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (COMPONENT_IS_FLOATING(com) || !com->selected) {
-			continue;
-		}
+	CIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt) {
 		ES_CloseEditionWindow(com);
 		if (AG_ObjectInUse(com)) {
 			AG_TextMsg(AG_MSG_ERROR, "%s: %s", OBJECT(com)->name,
@@ -97,8 +94,9 @@ HighlightConnections(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 }
 
 /*
- * Connect a floating component to the circuit. Create branches for overlapping
- * ports, otherwise create new nodes.
+ * Connect a floating component to the circuit. When new SchemPort entities
+ * overlap existing ones, create a new Branch in the existing node. Where
+ * there is no overlap, create new nodes.
  */
 static int
 ConnectComponent(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
@@ -130,12 +128,12 @@ ConnectComponent(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 					return (-1);
 				}
 				port->node = portNear->node;
-				port->branch = ES_CircuitAddBranch(ckt,
-				    portNear->node, port);
+				port->branch = ES_AddBranch(ckt, portNear->node,
+				    port);
 			} else {
-				port->node = ES_CircuitAddNode(ckt, 0);
-				port->branch = ES_CircuitAddBranch(ckt,
-				    port->node, port);
+				port->node = ES_AddNode(ckt);
+				port->branch = ES_AddBranch(ckt, port->node,
+				    port);
 			}
 		}
 		port->flags &= ~(ES_PORT_SELECTED);

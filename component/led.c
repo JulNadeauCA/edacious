@@ -92,7 +92,7 @@ Init(void *p)
 {
 	ES_Led *r = p;
 
-	ES_ComponentSetPorts(r, esLedPorts);
+	ES_InitPorts(r, esLedPorts);
 	r->Vforw = 30e-3;
 	r->Vrev = 5.0;
 	r->I = 2500e-3;

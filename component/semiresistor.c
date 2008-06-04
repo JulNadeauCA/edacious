@@ -42,7 +42,7 @@ Init(void *p)
 {
 	ES_SemiResistor *r = p;
 
-	ES_ComponentSetPorts(r, esSemiResistorPorts);
+	ES_InitPorts(r, esSemiResistorPorts);
 	r->l = 2e-6;
 	r->w = 1e-6;
 	r->rsh = 1000;
