@@ -5,7 +5,7 @@ struct es_port;
 /* Connection point in schematic block */
 typedef struct es_schem_port {
 	struct vg_node _inherit;
-	VG_Text *lbl;			/* Text label */
+	Uint flags;
 	char name[ES_SCHEM_NAME_MAX];	/* Symbol name */
 	float r;			/* Circle radius */
 	struct es_component *com;	/* Component object */

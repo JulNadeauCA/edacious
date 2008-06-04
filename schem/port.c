@@ -29,6 +29,7 @@
 
 #include <eda.h>
 #include <agar/gui/primitive.h>
+#include <agar/gui/opengl.h>
 #include <agar/core/limits.h>
 
 ES_SchemPort *
@@ -39,11 +40,6 @@ ES_SchemPortNew(void *pNode)
 	sp = AG_Malloc(sizeof(ES_SchemPort));
 	VG_NodeInit(sp, &esSchemPortOps);
 	VG_NodeAttach(pNode, sp);
-#if 0
-	sp->lbl = VG_TextNew(sp,
-	    VG_PointNew(sp, VGVECTOR(-5.0f, 5.0f)),
-	    VG_PointNew(sp, VGVECTOR(+5.0f, 5.0f)));
-#endif
 	return (sp);
 }
 
@@ -52,7 +48,6 @@ Init(void *p)
 {
 	ES_SchemPort *sp = p;
 
-	sp->lbl = NULL;
 	sp->name[0] = '\0';
 	sp->r = 3.0f;
 	sp->com = NULL;
@@ -65,11 +60,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_SchemPort *sp = p;
 
-	if (AG_ReadUint8(ds)) {
-		if ((sp->lbl = VG_ReadRef(ds, sp, "Text")) == NULL) {
-			return (-1);
-		}
-	}
+	sp->flags = (Uint)AG_ReadUint8(ds);
 	AG_CopyString(sp->name, ds, sizeof(sp->name));
 	return (0);
 }
@@ -79,12 +70,7 @@ Save(void *p, AG_DataSource *ds)
 {
 	ES_SchemPort *sp = p;
 
-#if 0
-	AG_WriteUint8(ds, 1);
-	VG_WriteRef(ds, sp->lbl);
-#else
-	AG_WriteUint8(ds, 0);
-#endif
+	AG_WriteUint32(ds, (Uint8)sp->flags);
 	AG_WriteString(ds, sp->name);
 }
 
@@ -100,12 +86,29 @@ Draw(void *p, VG_View *vv)
 	} else {
 		r = sp->r;
 	}
-	if (sp->lbl != NULL && sp->port != NULL) {
-		VG_TextPrintf(sp->lbl, "%s", sp->name);
-	}
 	VG_GetViewCoords(vv, VG_Pos(sp), &x, &y);
 	AG_DrawCircle(vv, x, y, (int)(r*vv->scale),
 	    VG_MapColorRGB(VGNODE(sp)->color));
+
+	if (sp->port != NULL && sp->port->node != -1) {
+		char caption[16];
+		int su;
+	
+		AG_PushTextState();
+		AG_TextColorVideo32(VG_MapColorRGB(VGNODE(sp)->color));
+		Snprintf(caption, sizeof(caption), "n%d", sp->port->node);
+		su = AG_TextCacheInsLookup(vv->tCache, caption);
+		glPushMatrix();
+		glTranslatef((float)(AGWIDGET(vv)->cx + x + 10.0f),
+		             (float)(AGWIDGET(vv)->cy + y + 10.0f),
+			     0.0f);
+		glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
+		AG_WidgetBlitSurfaceGL(vv, su,
+		    WSURFACE(vv,su)->w,
+		    WSURFACE(vv,su)->h);
+		glPopMatrix();
+		AG_PopTextState();
+	}
 }
 
 static void
@@ -133,15 +136,6 @@ PointProximity(void *p, VG_View *vv, VG_Vector *vPt)
 }
 
 static void
-Delete(void *p)
-{
-	ES_SchemPort *sp = p;
-
-	if (sp->lbl != NULL && VG_DelRef(sp, sp->lbl) == 0)
-		VG_Delete(sp->lbl);
-}
-
-static void
 Move(void *p, VG_Vector vCurs, VG_Vector vRel)
 {
 	ES_SchemPort *sp = p;
@@ -161,6 +155,6 @@ const VG_NodeOps esSchemPortOps = {
 	Extent,
 	PointProximity,
 	NULL,			/* lineProximity */
-	Delete,
+	NULL,			/* delete */
 	Move
 };
