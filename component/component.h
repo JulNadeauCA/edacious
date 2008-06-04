@@ -156,7 +156,6 @@ ES_SchemBlock *ES_LoadSchemFromFile(ES_Component *, const char *);
 
 void     ES_UnselectAllPorts(struct es_circuit *);
 Uint	 ES_PortNode(ES_Component *, int);
-int	 ES_PortIsGrounded(ES_Port *);
 int	 ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
 ES_Port	*ES_FindPort(void *, const char *);
 __END_DECLS

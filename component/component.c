@@ -30,6 +30,7 @@
 #include <eda.h>
 #include <config/sharedir.h>
 
+/* Free all Port information in the given Component. */
 void
 ES_ComponentFreePorts(ES_Component *com)
 {
@@ -68,18 +69,21 @@ Destroy(void *p)
 {
 }
 
+/* Select the specified component. */
 void
 ES_ComponentSelect(ES_Component *com)
 {
 	com->selected = 1;
 }
 
+/* Deselect the specified component. */
 void
 ES_ComponentUnselect(ES_Component *com)
 {
 	com->selected = 0;
 }
-		
+
+/* Unselect all components in the Circuit. */
 void
 ES_ComponentUnselectAll(ES_Circuit *ckt)
 {
@@ -146,6 +150,11 @@ ES_LoadSchemFromFile(ES_Component *com, const char *path)
 	return (sb);
 }
 
+/*
+ * Circuit<-Component attach callback. If a schematic file is specified in
+ * the Component's class information, merge its contents into the Circuit's
+ * schematic. If a draw() operation exists, invoke it as well.
+ */
 static void
 OnAttach(AG_Event *event)
 {
@@ -180,6 +189,11 @@ OnAttach(AG_Event *event)
 	ES_UnlockCircuit(ckt);
 }
 
+/*
+ * Circuit<-Component detach callback. We update the Circuit structures and
+ * remove all schematic entities related to the Component. The Component's
+ * structures are reinitialized to a consistent state so that it may be reused.
+ */
 static void
 OnDetach(AG_Event *event)
 {
@@ -271,7 +285,7 @@ Init(void *obj)
 	AG_SetEvent(com, "detached", OnDetach, NULL);
 }
 
-/* Initialize the ports of a component instance from a given model. */
+/* Initialize the Ports of a Component instance. */
 void
 ES_ComponentSetPorts(void *p, const ES_Port *ports)
 {
@@ -373,6 +387,7 @@ ES_PairIsInLoop(ES_Pair *pair, ES_Loop *loop, int *sign)
 	return (0);
 }
 
+/* Log a message to the Component's log console. */
 void
 ES_ComponentLog(void *p, const char *fmt, ...)
 {
@@ -396,6 +411,7 @@ ES_ComponentLog(void *p, const char *fmt, ...)
 	va_end(args);
 }
 
+/* Lookup the Circuit Node connected to the given Port by number, or die. */
 Uint
 ES_PortNode(ES_Component *com, int port)
 {
@@ -404,11 +420,12 @@ ES_PortNode(ES_Component *com, int port)
 		    com->nports);
 	}
 	if (com->ports[port].node < 0 || com->ports[port].node > com->ckt->n) {
-		Fatal("%s:%d: Bad node", OBJECT(com)->name, port);
+		Fatal("%s:%d: Bad node (Component)", OBJECT(com)->name, port);
 	}
 	return (com->ports[port].node);
 }
 
+/* Lookup a Component Port by name. */
 ES_Port *
 ES_FindPort(void *p, const char *portname)
 {
@@ -529,6 +546,7 @@ SelectTool(AG_Event *event)
 	}
 }
 
+/* Generate a popup menu for the given Component. */
 void
 ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 {
@@ -593,6 +611,7 @@ ES_ComponentOpenMenu(ES_Component *com, VG_View *vgv)
 	AG_PopupShow(pm);
 }
 
+/* Deselect all Ports of all Components in the Circuit. */
 void
 ES_UnselectAllPorts(ES_Circuit *ckt)
 {
@@ -604,13 +623,6 @@ ES_UnselectAllPorts(ES_Circuit *ckt)
 		COMPONENT_FOREACH_PORT(port, i, com)
 			port->flags &= ~(ES_PORT_SELECTED);
 	}
-}
-
-/* Evaluate whether the given port is connected to the reference point. */
-int
-ES_PortIsGrounded(ES_Port *port)
-{
-	return (port->node == 0);
 }
 
 AG_ObjectClass esComponentClass = {

@@ -109,7 +109,6 @@ extern VG_ToolOps esSelectTool;
 extern VG_ToolOps esInsertTool;
 extern VG_ToolOps esWireTool;
 
-void	 ES_CircuitFreeComponents(ES_Circuit *);
 void	 ES_CircuitLog(void *, const char *, ...);
 
 int	 ES_CircuitAddNode(ES_Circuit *, Uint);
@@ -117,7 +116,6 @@ int	 ES_CircuitMergeNodes(ES_Circuit *, int, int);
 void	 ES_CircuitDelNode(ES_Circuit *, int);
 
 void		 ES_CircuitCopyNode(ES_Circuit *, ES_Node *, ES_Node *);
-void		 ES_CircuitFreeNode(ES_Node *);
 ES_Branch	*ES_CircuitAddBranch(ES_Circuit *, int, ES_Port *);
 void		 ES_CircuitDelBranch(ES_Circuit *, int, ES_Branch *);
 void	 	 ES_CircuitDrawPort(VG_View *, ES_Circuit *, ES_Port *, float,
@@ -128,7 +126,6 @@ void		 ES_CircuitNodeSymbol(ES_Circuit *, int, char *,
 			                      size_t);
 ES_Node		*ES_CircuitFindNode(ES_Circuit *, const char *);
 ES_Branch	*ES_CircuitGetBranch(ES_Circuit *, int, ES_Port *);
-int		 ES_CircuitNodeNameByPtr(ES_Circuit *, ES_Node *);
 
 int		 ES_NodeVsource(ES_Circuit *, int, int, int *);
 SC_Real		 ES_NodeVoltage(ES_Circuit *, int);
