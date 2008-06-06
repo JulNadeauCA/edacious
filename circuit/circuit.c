@@ -681,7 +681,7 @@ ES_CopyNodeSymbol(ES_Circuit *ckt, int n, char *dst, size_t dst_len)
 	ES_Sym *sym;
 
 	if (n < 0) {
-		Strlcpy(dst, "(null)", sizeof(dst));
+		Strlcpy(dst, "(null)", dst_len);
 		return;
 	}
 	TAILQ_FOREACH(sym, &ckt->syms, syms) {
