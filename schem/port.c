@@ -90,7 +90,8 @@ Draw(void *p, VG_View *vv)
 	AG_DrawCircle(vv, x, y, (int)(r*vv->scale),
 	    VG_MapColorRGB(VGNODE(sp)->color));
 
-	if (sp->port != NULL && sp->port->node != -1) {
+	if (sp->port != NULL && sp->port->node != -1 &&
+	    sp->port->com->ckt->flags & CIRCUIT_SHOW_NODENAMES) {
 		char caption[16];
 		int su;
 	
