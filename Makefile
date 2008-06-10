@@ -4,14 +4,12 @@ include ${TOP}/Makefile.config
 PROJECT=	"agar-eda"
 PROJINCLUDES=	configure.lua
 
-SUBDIR=	schem \
-	Schematics
+SUBDIR=		Schematics
 
 PROG=		eda
 PROG_TYPE=	"GUI"
 PROG_GUID=	"2dc24ff4-7e71-4a98-84db-0abc0af29030"
-PROG_LINKS=	es_schem \
-		ag_core ag_gui ag_sc ag_dev \
+PROG_LINKS=	ag_core ag_gui ag_sc ag_dev \
 		pthreads SDL SDLmain opengl freetype
 
 SRCS=	and.c \
@@ -27,6 +25,18 @@ SRCS=	and.c \
 	main.c \
 	or.c \
 	resistor.c \
+	schem.c \
+	schem_block.c \
+	schem_circle_tool.c \
+	schem_line_tool.c \
+	schem_point_tool.c \
+	schem_port.c \
+	schem_port_tool.c \
+	schem_proximity_tool.c \
+	schem_select_tool.c \
+	schem_text_tool.c \
+	schem_wire.c \
+	schem_wire_tool.c \
 	scope.c \
 	select_tool.c \
 	semiresistor.c \
@@ -37,10 +47,7 @@ SRCS=	and.c \
 	vsine.c \
 	vsource.c \
 	vsquare.c \
-	wire.c \
-	wire_tool.c
-
-LIBS+=	schem/.libs/libes_schem.a
+	wire.c
 
 LIBS+=	${AGAR_SC_LIBS} ${AGAR_DEV_LIBS} ${AGAR_VG_LIBS} ${AGAR_LIBS}
 CFLAGS+=${AGAR_SC_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}

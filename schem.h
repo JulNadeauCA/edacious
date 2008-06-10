@@ -13,9 +13,9 @@ typedef struct es_schem {
 #define SCHEM(p) ((ES_Schem *)(p))
 #define PORT_RADIUS(vv) (((vv)->grid[0].ival/2)*(vv)->wPixel)
 
-#include <schem/port.h>
-#include <schem/wire.h>
-#include <schem/block.h>
+#include "schem_port.h"
+#include "schem_wire.h"
+#include "schem_block.h"
 
 __BEGIN_DECLS
 extern AG_ObjectClass esSchemClass;

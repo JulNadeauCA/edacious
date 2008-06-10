@@ -35,7 +35,7 @@
 #define Ulong unsigned long
 #endif
 
-#include "schem/schem.h"
+#include "schem.h"
 #include "component.h"
 #include "circuit.h"
 #include "icons.h"
