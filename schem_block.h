@@ -15,7 +15,6 @@ static __inline__ ES_SchemBlock *
 ES_SchemBlockNew(void *pNode, const char *name)
 {
 	ES_SchemBlock *sb;
-	VG_Point *p1, *p2;
 
 	sb = AG_Malloc(sizeof(ES_SchemBlock));
 	VG_NodeInit(sb, &esSchemBlockOps);

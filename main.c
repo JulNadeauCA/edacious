@@ -58,7 +58,6 @@
 #include "icons_data.h"
 
 #include <stdlib.h>
-#include <unistd.h>
 
 #include <config/enable_nls.h>
 #include <config/have_getopt.h>

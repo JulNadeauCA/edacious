@@ -39,7 +39,7 @@ static int
 FactorizeMNA(ES_SimDC *sim, ES_Circuit *ckt)
 {
 	ES_Component *com;
-	u_int i, n, m;
+	Uint i, n, m;
 	SC_Real d;
 
 	SC_MatrixSetZero(sim->G);

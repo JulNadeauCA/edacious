@@ -45,7 +45,7 @@ Connect(void *p, ES_Port *p1, ES_Port *p2)
 	ES_Branch *br;
 
 	if (p2 != NULL && p2->node > 0) {
-		u_int nOld = p2->node;
+		Uint nOld = p2->node;
 		ES_Node *node = ckt->nodes[nOld];
 rescan:
 		NODE_FOREACH_BRANCH(br, node) {

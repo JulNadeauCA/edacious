@@ -172,9 +172,13 @@ OnAttach(AG_Event *event)
 	if (COMOPS(com)->schemFile != NULL) {
 		ES_SchemBlock *sb;
 		char path[FILENAME_MAX];
-	
+
+#ifdef _WIN32
+		Strlcpy(path, "C:\\Agar-EDA\\Schematics\\", sizeof(path));
+#else
 		Strlcpy(path, SHAREDIR, sizeof(path));
 		Strlcat(path, "/Schematics/", sizeof(path));
+#endif
 		Strlcat(path, COMOPS(com)->schemFile, sizeof(path));
 		if ((sb = ES_LoadSchemFromFile(com, path)) != NULL) {
 			ES_AttachSchemEntity(com, VGNODE(sb));
@@ -202,7 +206,7 @@ OnDetach(AG_Event *event)
 	VG_Node *vn;
 	ES_Port *port;
 	ES_Pair *pair;
-	u_int i;
+	Uint i;
 
 	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*"))
 		return;
@@ -354,7 +358,7 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 	ES_Component *com = p;
 	float Tspec;
 
-	com->flags = (u_int)AG_ReadUint32(buf);
+	com->flags = (Uint)AG_ReadUint32(buf);
 	com->Tspec = AG_ReadFloat(buf);
 	return (0);
 }

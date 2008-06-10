@@ -107,8 +107,8 @@ LoadDC_G(void *p, SC_Matrix *G)
 {
 	ES_Resistor *r = p;
 	ES_Node *n;
-	u_int k = PNODE(r,1);
-	u_int j = PNODE(r,2);
+	Uint k = PNODE(r,1);
+	Uint j = PNODE(r,2);
 	SC_Real g;
 
 	if (r->resistance == 0.0 || k == -1 || j == -1 || (k == 0 && j == 0)) {
@@ -133,8 +133,8 @@ static int
 LoadSP(void *p, SC_Matrix *S, SC_Matrix *N)
 {
 	ES_Resistor *res = p;
-	u_int k = PNODE(res,1);
-	u_int j = PNODE(res,2);
+	Uint k = PNODE(res,1);
+	Uint j = PNODE(res,2);
 	SC_Real r, z, f;
 	
 	if (res->resistance == 0.0 ||

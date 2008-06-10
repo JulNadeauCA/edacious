@@ -3,6 +3,7 @@
 REGISTER("--enable-static",	"Produce a static binary [default: no]")
 REGISTER("--enable-warnings",	"Enable compiler warnings [default: no]")
 REGISTER("--enable-edition",	"Enable graphical editor [default: yes]")
+REGISTER("--enable-threads",	"Thread safety [default: check]")
 
 HDEFINE(VERSION, "04052008")
 HDEFINE(RELEASE, "")
@@ -35,6 +36,55 @@ C_NO_SECURE_WARNINGS();
 #C_EXTRA_WARNINGS();
 #C_FATAL_WARNINGS();
 
+# Enable threads support if POSIX threads are available.
+# XXX TODO: Check for threads support in installed Agar!
+if [ "${enable_threads}" != "no" ]; then
+	CHECK(pthreads)
+	if [ "${HAVE_PTHREADS}" = "yes" ];
+	then
+		if [ "${HAVE_PTHREADS_XOPEN}" = "no" ]; then
+		if [ "${HAVE_PTHREAD_MUTEX_RECURSIVE}" = "no" ]; then
+		if [ "${HAVE_PTHREAD_MUTEX_RECURSIVE_NP}" = "no" ]; then
+			if [ "${enable_threads}" = "yes" ]; then
+				echo "*"
+				echo "* --enable-threads was given, but your"
+				echo "* pthreads library lacks support for"
+				echo "* recursive mutexes. Try running the"
+				echo "* configure script again without this"
+				echo "* option."
+				echo "*"
+				exit 1
+			fi
+		fi
+		fi
+		fi
+		HDEFINE(THREADS, 1)
+	else
+		if [ "${enable_threads}" = "yes" ]; then
+			echo "*"
+			echo "* --enable-threads was given, but no pthreads"
+			echo "* library was found on your system. Try running"
+			echo "* the configure script again without this option."
+			echo "*"
+			exit 1
+		fi
+	fi
+else
+	HUNDEF(THREADS)
+	HUNDEF(HAVE_PTHREADS)
+	HUNDEF(HAVE_PTHREADS_XOPEN)
+	MDEFINE(PTHREADS_CFLAGS, "")
+	MDEFINE(PTHREADS_LIBS, "")
+	MDEFINE(PTHREADS_XOPEN_CFLAGS, "")
+	MDEFINE(PTHREADS_XOPEN_LIBS, "")
+	#
+	# Lock macros expand to no-ops when compiled !THREADS, which may
+	# result in unused variables in some places.
+	#
+	if [ "${enable_warnings}" = "yes" ]; then
+		C_OPTION(-Wno-unused)
+	fi
+fi
 
 if [ "${HAVE_AGAR}" != "yes" ]; then
 	echo "This application requires Agar"

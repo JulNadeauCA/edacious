@@ -94,8 +94,8 @@ LoadDC_G(void *p, SC_Matrix *G)
 {
 	ES_Diode *d = p;
 
-	u_int k = PNODE(d,1);
-	u_int j = PNODE(d,2);
+	Uint k = PNODE(d,1);
+	Uint j = PNODE(d,2);
 
 	SC_Real I = DiodeLargeSignalModel(d, 25*Vt)	/* guess bias current */
 	SC_Real g = DiodeSmallSignalModel(d, I);	/* small-signal conductance */
@@ -118,8 +118,8 @@ LoadDC_RHS(void *p, SC_Vector *i, SC_Vector *e)
 {
         ES_Diode *d = p;
 
-	u_int k = PNODE(d,1);
-	u_int j = PNODE(d,2);
+	Uint k = PNODE(d,1);
+	Uint j = PNODE(d,2);
 
 	SC_Real I = DiodeLargeSignalModel(d, DiodeVoltageBiasGuess);
 
@@ -141,8 +141,8 @@ ES_DiodeUpdate(void *p)
 	// G = ??
 	// i = ??
 
-	u_int k = PNODE(d,1);
-	u_int j = PNODE(d,2);
+	Uint k = PNODE(d,1);
+	Uint j = PNODE(d,2);
 
 	SC_Real V = DiodeVoltage(d);
 	SC_Real I = DiodeLargeSignalModel(d, V);

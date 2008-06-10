@@ -85,8 +85,8 @@ LoadDC_G(void *p, SC_Matrix *G)
 
 	for (i = 0; i < COM(dig)->npairs; i++) {
 		ES_Pair *pair = PAIR(dig,i);
-		u_int k = pair->p1->node;
-		u_int j = pair->p2->node;
+		Uint k = pair->p1->node;
+		Uint j = pair->p2->node;
 		SC_Real g = vEnt(dig->G, i+1);
 
 		if (g == 0.0) {

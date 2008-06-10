@@ -82,11 +82,11 @@ HighlightConnections(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 		    port->sp, PORT_RADIUS(vv));
 		if (spNear != NULL) {
 			port->flags |= ES_PORT_SELECTED;
-			snprintf(s, sizeof(s), "%d>[%s:%d] ",
+			Snprintf(s, sizeof(s), "%d>[%s:%d] ",
 			    i, OBJECT(spNear->com)->name, spNear->port->n);
 		} else {
 			port->flags &= ~(ES_PORT_SELECTED);
-			snprintf(s, sizeof(s), _("%d->(new) "), i);
+			Snprintf(s, sizeof(s), _("%d->(new) "), i);
 		}
 		Strlcat(status, s, sizeof(status));
 	}

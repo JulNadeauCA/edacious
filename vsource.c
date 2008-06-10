@@ -198,8 +198,8 @@ static int
 LoadDC_BCD(void *p, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D)
 {
 	ES_Vsource *vs = p;
-	u_int k = PNODE(vs,1);
-	u_int j = PNODE(vs,2);
+	Uint k = PNODE(vs,1);
+	Uint j = PNODE(vs,2);
 	int v;
 
 	if ((v = ES_VsourceName(vs)) == -1) {
@@ -248,7 +248,7 @@ Disconnected(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_SENDER();
 	ES_Vsource *vs = AG_SELF();
-	u_int i, j;
+	Uint i, j;
 	
 	for (i = 0; i < ckt->m; i++) {
 		if (ckt->vsrcs[i] == vs) {

@@ -88,11 +88,11 @@ typedef struct es_component {
 	int highlighted;			/* Selected for selection? */
 	float Tspec;				/* Instance temp (k) */
 	ES_Port ports[COMPONENT_MAX_PORTS];	/* Interface elements */
-	int    nports;
+	Uint   nports;
 	ES_Pair *pairs;				/* Port pairs */
-	int     npairs;
+	Uint    npairs;
 	ES_Spec	*specs;				/* Model specifications */
-	int	nspecs;
+	Uint	nspecs;
 	
 	int (*loadDC_G)(void *, SC_Matrix *G);
 	int (*loadDC_BCD)(void *, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D);

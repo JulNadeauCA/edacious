@@ -9,7 +9,7 @@ SUBDIR=		Schematics
 PROG=		eda
 PROG_TYPE=	"GUI"
 PROG_GUID=	"2dc24ff4-7e71-4a98-84db-0abc0af29030"
-PROG_LINKS=	ag_core ag_gui ag_sc ag_dev \
+PROG_LINKS=	ag_core ag_gui ag_sc ag_dev ag_vg \
 		pthreads SDL SDLmain opengl freetype
 
 SRCS=	and.c \

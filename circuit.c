@@ -301,11 +301,11 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	/* Load the circuit nodes. */
 	nnodes = (Uint)AG_ReadUint32(ds);
 	for (i = 0; i <= nnodes; i++) {
-		int nBranches, flags;
+		Uint nBranches, flags;
 		int name;
 
-		flags = (int)AG_ReadUint32(ds);
-		nBranches = (int)AG_ReadUint32(ds);
+		flags = (Uint)AG_ReadUint32(ds);
+		nBranches = (Uint)AG_ReadUint32(ds);
 		if (i == 0) {
 			name = 0;
 			FreeNode(ckt->nodes[0]);
@@ -319,23 +319,23 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 			char ppath[AG_OBJECT_PATH_MAX];
 			ES_Component *pcom;
 			ES_Branch *br;
-			int pport;
+			Uint pPort;
 
 			AG_CopyString(ppath, ds, sizeof(ppath));
 			AG_ReadUint32(ds);			/* Pad */
-			pport = (int)AG_ReadUint32(ds);
+			pPort = (int)AG_ReadUint32(ds);
 			if ((pcom = AG_ObjectFind(ckt, ppath)) == NULL) {
 				AG_SetError("%s", AG_GetError());
 				return (-1);
 			}
-			if (pport > pcom->nports) {
-				AG_SetError("%s: port #%d > %d", ppath, pport,
+			if (pPort > pcom->nports) {
+				AG_SetError("%s: port #%d > %d", ppath, pPort,
 				    pcom->nports);
 				return (-1);
 			}
-			br = ES_AddBranch(ckt, name, &pcom->ports[pport]);
-			pcom->ports[pport].node = name;
-			pcom->ports[pport].branch = br;
+			br = ES_AddBranch(ckt, name, &pcom->ports[pPort]);
+			pcom->ports[pPort].node = name;
+			pcom->ports[pPort].branch = br;
 		}
 	}
 
@@ -346,7 +346,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	/* Load the symbol table. */
 	nitems = AG_ReadUint32(ds);
 	for (i = 0; i < nitems; i++) {
-		char name[CIRCUIT_SYM_MAX];
 		ES_Sym *sym;
 		
 		sym = ES_AddSymbol(ckt, NULL);
@@ -371,7 +370,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	nitems = AG_ReadUint32(ds);
 	for (i = 0; i < nitems; i++) {
 		char name[AG_OBJECT_NAME_MAX];
-		int j;
+		Uint j;
 		ES_Component *com;
 		ES_Port *port;
 
@@ -418,7 +417,6 @@ Save(void *p, AG_DataSource *ds)
 {
 	char path[AG_OBJECT_PATH_MAX];
 	ES_Circuit *ckt = p;
-	ES_Node *node;
 	ES_Branch *br;
 	ES_Component *com;
 	ES_Sym *sym;
@@ -520,7 +518,6 @@ InitGround(ES_Circuit *ckt)
 int
 ES_AddNode(ES_Circuit *ckt)
 {
-	ES_Node *node;
 	int n = ++ckt->n;
 
 	ckt->nodes = Realloc(ckt->nodes, (n+1)*sizeof(ES_Node *));
@@ -666,7 +663,7 @@ ES_BranchCurrent(ES_Circuit *ckt, int k)
 ES_Node *
 ES_GetNode(ES_Circuit *ckt, int n)
 {
-	if (n < 0 || n > ckt->n) {
+	if (n < 0 || n > (int)ckt->n) {
 		Fatal("%s:%d: Bad node (Circuit=%d)", OBJECT(ckt)->name, n,
 		    ckt->n);
 	}
@@ -705,13 +702,13 @@ ES_GetNodeBySymbol(ES_Circuit *ckt, const char *name)
 	TAILQ_FOREACH(sym, &ckt->syms, syms) {
 		if (sym->type == ES_SYM_NODE &&
 		    strcmp(sym->name, name) == 0 &&
-		    sym->p.node >= 0 && sym->p.node <= ckt->n)
+		    sym->p.node >= 0 && sym->p.node <= (int)ckt->n)
 			return (ckt->nodes[sym->p.node]);
 	}
 	if (name[0] == 'n' && name[1] != '\0') {
 		int n = atoi(&name[1]);
 
-		if (n >= 0 && n <= ckt->n) {
+		if (n >= 0 && n <= (int)ckt->n) {
 			return (ckt->nodes[n]);
 		}
 	}
@@ -731,12 +728,12 @@ ES_DelNode(ES_Circuit *ckt, int n)
 
 	ES_CircuitLog(ckt, _("Deleting n%d"), n);
 #ifdef DEBUG
-	if (n == 0 || n > ckt->n)
-		Fatal("Cannot delete n%d (max %d)", n, ckt->n);
+	if (n == 0 || n > (int)ckt->n)
+		Fatal("Cannot delete n%d (max %u)", n, ckt->n);
 #endif
-	if (n != ckt->n) {
+	if (n != (int)ckt->n) {
 		/* Update the Branch port pointers. */
-		for (i = n; i <= ckt->n; i++) {
+		for (i = n; i <= (int)ckt->n; i++) {
 			NODE_FOREACH_BRANCH(br, ckt->nodes[i]) {
 				if (br->port != NULL && br->port->com != NULL) {
 					ES_ComponentLog(br->port->com,
