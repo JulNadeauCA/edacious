@@ -1,3 +1,4 @@
+/* Circuit edition tools */
 static VG_ToolOps *esCircuitTools[] = {
 	&esSelectTool,
 	&esWireTool,
@@ -10,5 +11,22 @@ static VG_ToolOps *esCircuitTools[] = {
 	&esSchemLineTool,
 	&esSchemCircleTool,
 	&esSchemTextTool,
+	NULL
+};
+
+/* Component schematic edition tools */
+static VG_ToolOps *esSchemTools[] = {
+	&esSchemSelectTool,
+	&esSchemPortTool,
+	NULL
+};
+static VG_ToolOps *esSchemVGTools[] = {
+	&esSchemPointTool,
+	&esSchemLineTool,
+	&esSchemCircleTool,
+	&esSchemTextTool,
+#ifdef DEBUG
+	&esSchemProximityTool,
+#endif
 	NULL
 };
