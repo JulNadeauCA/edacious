@@ -3,7 +3,7 @@
 #ifndef _SOURCES_VSQUARE_H_
 #define _SOURCES_VSQUARE_H_
 
-#include <sources/vsource.h>
+#include "vsource.h"
 
 #include "begin_code.h"
 

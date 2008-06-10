@@ -3,7 +3,7 @@
 #ifndef _SOURCES_VSINE_H_
 #define _SOURCES_VSINE_H_
 
-#include <sources/vsource.h>
+#include "vsource.h"
 
 #include "begin_code.h"
 

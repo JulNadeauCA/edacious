@@ -32,7 +32,7 @@
 #include "scope.h"
 #include "tools.h"
 
-#include <sources/vsource.h>
+#include "vsource.h"
 
 extern ES_Component *esFloatingCom;		/* insert_tool.c */
 static void InitNode(ES_Node *);

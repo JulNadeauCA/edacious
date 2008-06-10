@@ -35,11 +35,10 @@
 #define Ulong unsigned long
 #endif
 
-#include <schem/schem.h>
-#include <component/component.h>
-#include <circuit/circuit.h>
-
-#include <icons.h>
+#include "schem/schem.h"
+#include "component.h"
+#include "circuit.h"
+#include "icons.h"
 
 #include <math.h>
 #include <string.h>

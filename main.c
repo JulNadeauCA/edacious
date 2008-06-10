@@ -35,27 +35,27 @@
 
 #include "eda.h"
 
-#include <circuit/spice.h>
-#include <circuit/scope.h>
+#include "spice.h"
+#include "scope.h"
 
-#include <sources/vsource.h>
-#include <sources/vsine.h>
-#include <sources/vsquare.h>
+#include "vsource.h"
+#include "vsine.h"
+#include "vsquare.h"
 
-#include <component/wire.h>
-#include <component/and.h>
-#include <component/digital.h>
-#include <component/ground.h>
-#include <component/inverter.h>
-#include <component/led.h>
-#include <component/logic_probe.h>
-#include <component/or.h>
-#include <component/resistor.h>
-#include <component/semiresistor.h>
-#include <component/spst.h>
-#include <component/spdt.h>
+#include "wire.h"
+#include "and.h"
+#include "digital.h"
+#include "ground.h"
+#include "inverter.h"
+#include "led.h"
+#include "logic_probe.h"
+#include "or.h"
+#include "resistor.h"
+#include "semiresistor.h"
+#include "spst.h"
+#include "spdt.h"
 
-#include <icons_data.h>
+#include "icons_data.h"
 
 #include <stdlib.h>
 #include <unistd.h>

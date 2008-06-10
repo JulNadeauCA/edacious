@@ -29,7 +29,7 @@
  */
 
 #include <eda.h>
-#include <component/wire.h>
+#include "wire.h"
 
 static ES_Wire *esCurWire;
 

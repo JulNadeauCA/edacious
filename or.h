@@ -3,8 +3,8 @@
 #ifndef _COMPONENT_OR_H_
 #define _COMPONENT_OR_H_
 
-#include <component/component.h>
-#include <component/digital.h>
+#include "component.h"
+#include "digital.h"
 
 #include "begin_code.h"
 

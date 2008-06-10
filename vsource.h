@@ -3,7 +3,7 @@
 #ifndef _COMPONENT_VSOURCE_H_
 #define _COMPONENT_VSOURCE_H_
 
-#include <component/component.h>
+#include "component.h"
 
 #include "begin_code.h"
 

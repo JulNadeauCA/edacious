@@ -5,8 +5,8 @@
 
 #include "begin_code.h"
 
-#include <circuit/sim.h>
-#include <circuit/dc.h>
+#include "sim.h"
+#include "dc.h"
 
 #define CIRCUIT_DESCR_MAX	512
 #define CIRCUIT_AUTHORS_MAX	128
