@@ -48,16 +48,18 @@ while norm(dv,2)>e
     
     i = [I ; 0];
     
-    % stamp in bias currents
+    % stamp in diode bias currents
     
-    i = i + [-v(1)*gr ; 0]; % resistor
-    i = i + [-id1; id1];    % diode 1
-    i = i + [0; -id2];      % diode 2
+    j1 = id1-(v(1)-v(2))*gd1;
+    j2 = id2-v(2)*gd2;
+
+    i = i + [-j1; j1];    % diode 1
+    i = i + [0; -j2];      % diode 2
     
-    % solve G*dv=i
+    % solve G*v=i
     
-    dv = (G^-1)*i;
-    
+    dv = (G^-1)*i - v;
+
     if (abs(dv(1)) > dv_max)
         dv(1) = sign(dv(1))*dv_max;
     end
