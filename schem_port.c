@@ -93,13 +93,18 @@ Draw(void *p, VG_View *vv)
 	if (sp->port != NULL && sp->port->node != -1 &&
 	    sp->port->com->ckt->flags & CIRCUIT_SHOW_NODENAMES) {
 		char caption[16];
+		SDL_Surface *suTmp;
 		int su;
 	
 		AG_PushTextState();
 		AG_TextColorVideo32(VG_MapColorRGB(VGNODE(sp)->color));
 		Snprintf(caption, sizeof(caption), "n%d", sp->port->node);
-		su = AG_TextCacheInsLookup(vv->tCache, caption);
-	
+
+		if (agTextCache) {
+			su = AG_TextCacheInsLookup(vv->tCache, caption);
+		} else {
+			suTmp = AG_TextRender(caption);
+		}
 #ifdef HAVE_OPENGL
 		if (agView->opengl) {
 			glPushMatrix();
@@ -107,14 +112,26 @@ Draw(void *p, VG_View *vv)
 			             (float)(AGWIDGET(vv)->cy + y + 10.0f),
 				     0.0f);
 			glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
-			AG_WidgetBlitSurfaceGL(vv, su,
-			    WSURFACE(vv,su)->w,
-			    WSURFACE(vv,su)->h);
+			if (agTextCache) {
+				AG_WidgetBlitSurfaceGL(vv, su,
+				    WSURFACE(vv,su)->w,
+				    WSURFACE(vv,su)->h);
+			} else {
+				AG_WidgetBlitGL(vv, suTmp,
+				    suTmp->w,
+				    suTmp->h);
+				AG_SurfaceFree(suTmp);
+			}
 			glPopMatrix();
 		} else
 #endif
 		{
-			AG_WidgetBlitSurface(vv, su, x+4, y+4);
+			if (agTextCache) {
+				AG_WidgetBlitSurface(vv, su, x+4, y+4);
+			} else {
+				AG_WidgetBlit(vv, suTmp, x+4, y+4);
+				AG_SurfaceFree(suTmp);
+			}
 		}
 		AG_PopTextState();
 	}
