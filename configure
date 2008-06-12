@@ -176,6 +176,7 @@ echo "    --with-libtool            Specify path to libtool [bundled]"
 echo "    --with-cygwin             Add cygwin dependencies under cygwin [no]"
 echo "    --with-manpages           Manual pages (-mdoc) [yes]"
 echo "    --with-manlinks           Manual pages links for functions [no]"
+echo "    --with-ctags              Automatically generate tag files [no]"
 echo "    --with-docs               Printable docs (-me/tbl/eqn/pic/refer) [no]"
 echo "    --enable-debug            Include debugging code [no]"
 echo "    --enable-static           Produce a static binary [default: no]"
@@ -274,17 +275,19 @@ echo "ENABLE_NLS=${ENABLE_NLS}" >> Makefile.config
 echo "HAVE_GETTEXT=${HAVE_GETTEXT}" >> Makefile.config
 
 CTAGS=""
-for path in `echo $PATH | sed 's/:/ /g'`; do
-	if [ -x "${path}/ectags" ]; then
-		CTAGS="${path}/ectags"
-	fi
-done
-if [ "${CTAGS}" = "" ]; then
+if [ "${with_ctags}" = "yes" ]; then
 	for path in `echo $PATH | sed 's/:/ /g'`; do
-		if [ -x "${path}/ctags" ]; then
-			CTAGS="${path}/ctags"
+		if [ -x "${path}/ectags" ]; then
+			CTAGS="${path}/ectags"
 		fi
 	done
+	if [ "${CTAGS}" = "" ]; then
+		for path in `echo $PATH | sed 's/:/ /g'`; do
+			if [ -x "${path}/ctags" ]; then
+				CTAGS="${path}/ctags"
+			fi
+		done
+	fi
 fi
 echo "CTAGS=${CTAGS}" >> Makefile.config
 
