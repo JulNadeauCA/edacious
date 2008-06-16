@@ -53,6 +53,7 @@
 #include "semiresistor.h"
 #include "spst.h"
 #include "spdt.h"
+#include "diode.h"
 
 #include "icons_data.h"
 

@@ -113,6 +113,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (com->intStep != NULL)
 			com->intStep(com, sim->Telapsed);
+		if (com->dcStep != NULL)
+			com->dcUpdate(com, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e, sim->v, sim->j);
 	}
 solve:
 	/* Find the initial DC operating point. */
@@ -129,6 +131,9 @@ solve:
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (com->intUpdate != NULL)
 			com->intUpdate(com);
+		if (com->dcUpdate != NULL)
+			com->dcUpdate(com, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e, sim->v, sim->j);
+
 	}
 	if (FactorizeMNA(sim, ckt) == -1 ||
 	    SolveMNA(sim, ckt) == -1) {

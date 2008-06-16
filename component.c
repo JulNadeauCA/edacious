@@ -283,6 +283,10 @@ Init(void *obj)
 	com->loadSP = NULL;
 	com->intStep = NULL;
 	com->intUpdate = NULL;
+	
+	com->dcStep = NULL;
+	com->dcUpdate = NULL;
+
 	TAILQ_INIT(&com->schemEnts);
 
 	AG_SetEvent(com, "attached", OnAttach, NULL);

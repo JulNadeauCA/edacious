@@ -102,6 +102,9 @@ typedef struct es_component {
 	void (*intStep)(void *, Uint);
 	void (*intUpdate)(void *);
 
+	void (*dcStep)(void *, Uint Telapsed, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e, const M_Vector *v, const M_Vector *j);
+	void (*dcUpdate)(void *, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e, const M_Vector *v, const M_Vector *j);
+
 	TAILQ_HEAD(,vg_node) schemEnts;		/* Schematic entities */
 	TAILQ_ENTRY(es_component) components;
 } ES_Component;

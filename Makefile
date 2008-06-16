@@ -18,6 +18,7 @@ SRCS=	and.c \
 	component.c \
 	dc.c \
 	digital.c \
+	diode.c \
 	ground.c \
 	insert_tool.c \
 	inverter.c \
@@ -45,6 +46,7 @@ SRCS=	and.c \
 	spdt.c \
 	spice.c \
 	spst.c \
+	stamp.c \
 	vsine.c \
 	vsource.c \
 	vsquare.c \

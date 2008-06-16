@@ -52,6 +52,7 @@
 #include "component.h"
 #include "circuit.h"
 #include "icons.h"
+#include "stamp.h"
 
 #include <math.h>
 #include <string.h>
