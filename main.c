@@ -30,7 +30,6 @@
 #include <agar/core.h>
 #include <agar/gui.h>
 #include <agar/dev.h>
-#include <agar/sc.h>
 #include <agar/vg.h>
 
 #include "eda.h"
@@ -646,7 +645,7 @@ main(int argc, char *argv[])
 		return (-1);
 	}
 	VG_InitSubsystem();
-	SC_InitSubsystem();
+	M_InitSubsystem();
 	AG_SetRefreshRate(fps);
 	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, AG_Quit);
 	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);

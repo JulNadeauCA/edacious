@@ -5,9 +5,11 @@
 
 #include "begin_code.h"
 
+struct m_plotter;
+
 typedef struct ag_scope {
 	struct ag_object obj;
-	SC_Plotter *plotter;
+	struct m_plotter *plotter;
 	ES_Circuit *ckt;
 } ES_Scope;
 

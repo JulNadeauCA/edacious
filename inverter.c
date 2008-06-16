@@ -114,11 +114,11 @@ Edit(void *p)
 		    &inv->Tplh, &inv->Tphl);
 
 		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Thold: ");
-		AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &inv->Thold);
+		AG_WidgetBind(fsb, "value", M_WIDGET_QTIME, &inv->Thold);
 		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Tphl: ");
-		AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &inv->Tphl);
+		AG_WidgetBind(fsb, "value", M_WIDGET_QTIME, &inv->Tphl);
 		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Tplh: ");
-		AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &inv->Tplh);
+		AG_WidgetBind(fsb, "value", M_WIDGET_QTIME, &inv->Tplh);
 	}
 #endif
 	return (win);

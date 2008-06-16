@@ -82,11 +82,11 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 }
 
 #if 0
-static SC_Real
+static M_Real
 Resistance(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_Resistor *r = p;
-	SC_Real deltaT = COM_T0 - COM(r)->Tspec;
+	M_Real deltaT = COM_T0 - COM(r)->Tspec;
 
 	return (r->resistance * (1.0 + r->Tc1*deltaT + r->Tc2*deltaT*deltaT));
 }
@@ -103,39 +103,36 @@ Resistance(void *p, ES_Port *p1, ES_Port *p2)
  *   |------------|-----
  */
 static int
-LoadDC_G(void *p, SC_Matrix *G)
+LoadDC_G(void *p, M_Matrix *G)
 {
 	ES_Resistor *r = p;
 	ES_Node *n;
 	Uint k = PNODE(r,1);
 	Uint j = PNODE(r,2);
-	SC_Real g;
+	M_Real g;
 
 	if (r->resistance == 0.0 || k == -1 || j == -1 || (k == 0 && j == 0)) {
 		AG_SetError("null resistance");
 		return (-1);
 	}
+	fprintf(stderr, "%s: Stamping between %d and %d\n", 
+	    AGOBJECT(r)->name, k, j);
 	g = 1.0/r->resistance;
-	if (k != 0) {
-		G->mat[k][k] += g;
-	}
-	if (j != 0) {
-		G->mat[j][j] += g;
-	}
-	if (k != 0 && j != 0) {
-		G->mat[k][j] -= g;
-		G->mat[j][k] -= g;
-	}
+
+	G->v[k][k] += g;
+	G->v[j][j] += g;
+	G->v[k][j] -= g;
+	G->v[j][k] -= g;
 	return (0);
 }
 
 static int
-LoadSP(void *p, SC_Matrix *S, SC_Matrix *N)
+LoadSP(void *p, M_Matrix *S, M_Matrix *N)
 {
 	ES_Resistor *res = p;
 	Uint k = PNODE(res,1);
 	Uint j = PNODE(res,2);
-	SC_Real r, z, f;
+	M_Real r, z, f;
 	
 	if (res->resistance == 0.0 ||
 	    k == -1 || j == -1 || (k == 0 && j == 0)) {
@@ -145,17 +142,17 @@ LoadSP(void *p, SC_Matrix *S, SC_Matrix *N)
 
 	r = res->resistance;
 	z = r/COM_Z0;
-	S->mat[k][k] += z/(z+2);
-	S->mat[j][j] += z/(z+2);
-	S->mat[k][j] -= z/(z+2);
-	S->mat[j][k] -= z/(z+2);
+	S->v[k][k] += z/(z+2);
+	S->v[j][j] += z/(z+2);
+	S->v[k][j] -= z/(z+2);
+	S->v[j][k] -= z/(z+2);
 
 	f = COM(res)->Tspec*4.0*r*COM_Z0 /
 	    ((2.0*COM_Z0+r)*(2.0*COM_Z0+r)) / COM_T0;
-	N->mat[k][k] += f;
-	N->mat[j][j] += f;
-	N->mat[k][j] -= f;
-	N->mat[j][k] -= f;
+	N->v[k][k] += f;
+	N->v[j][j] += f;
+	N->v[k][j] -= f;
+	N->v[j][k] -= f;
 	return (0);
 }
 
@@ -179,15 +176,15 @@ Edit(void *p)
 	AG_Window *win;
 
 	win = AG_WindowNew(0);
-	AG_NumericalNewDblR(win, 0, "ohm", _("Resistance: "), &r->resistance,
+	M_NumericalNewRealR(win, 0, "ohm", _("Resistance: "), &r->resistance,
 	    1.0, HUGE_VAL);
 	AG_NumericalNewIntR(win, 0, _("Tolerance: "), "%", &r->tolerance,
 	    1, 100);
-	AG_NumericalNewDblR(win, 0, "W", _("Power rating: "), &r->power_rating,
+	M_NumericalNewRealR(win, 0, "W", _("Power rating: "), &r->power_rating,
 	    0.0, HUGE_VAL);
 
-	AG_NumericalNewFlt(win, 0, "mohm/degC", _("Temp. coeff.: "), &r->Tc1);
-	AG_NumericalNewFlt(win, 0, "mohm/degC^2", _("Temp. coeff.: "), &r->Tc2);
+	M_NumericalNewReal(win, 0, "mohm/degC", _("Temp. coeff.: "), &r->Tc1);
+	M_NumericalNewReal(win, 0, "mohm/degC^2", _("Temp. coeff.: "), &r->Tc2);
 	return (win);
 }
 

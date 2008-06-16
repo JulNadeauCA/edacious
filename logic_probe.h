@@ -9,7 +9,7 @@
 
 typedef struct es_logic_probe {
 	struct es_component com;
-	SC_Real Vhigh;		/* Minimum HIGH voltage */
+	M_Real Vhigh;		/* Minimum HIGH voltage */
 	int state;		/* Last state */
 } ES_LogicProbe;
 

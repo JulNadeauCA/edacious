@@ -42,9 +42,9 @@ IntStep(void *p, Uint ticks)
 {
 	ES_VSine *vs = p;
 
-	VSOURCE(vs)->voltage = vs->vPeak*SC_Sin(vs->phase);
+	VSOURCE(vs)->voltage = vs->vPeak*M_Sin(vs->phase);
 	vs->phase += 1e-3*vs->f;
-	if (vs->phase > SC_PI*2) { vs->phase -= SC_PI*2; }
+	if (vs->phase > M_PI*2) { vs->phase -= M_PI*2; }
 }
 
 static void
@@ -64,8 +64,8 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_VSine *vs = p;
 
-	vs->vPeak = SC_ReadReal(buf);
-	vs->f = SC_ReadReal(buf);
+	vs->vPeak = M_ReadReal(buf);
+	vs->f = M_ReadReal(buf);
 	return (0);
 }
 
@@ -74,8 +74,8 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_VSine *vs = p;
 
-	SC_WriteReal(buf, vs->vPeak);
-	SC_WriteReal(buf, vs->f);
+	M_WriteReal(buf, vs->vPeak);
+	M_WriteReal(buf, vs->f);
 	return (0);
 }
 
@@ -88,9 +88,9 @@ Edit(void *p)
 
 	win = AG_WindowNew(0);
 	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Voltage (peak): "));
-	AG_WidgetBind(fsb, "value", SC_WIDGET_REAL, &vs->vPeak);
+	AG_WidgetBind(fsb, "value", M_WIDGET_REAL, &vs->vPeak);
 	fsb = AG_FSpinbuttonNew(win, 0, "Hz", _("Frequency: "));
-	AG_WidgetBind(fsb, "value", SC_WIDGET_REAL, &vs->f);
+	AG_WidgetBind(fsb, "value", M_WIDGET_REAL, &vs->f);
 	return (win);
 }
 

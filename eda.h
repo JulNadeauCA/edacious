@@ -26,7 +26,8 @@
 #include <agar/core.h>
 #include <agar/gui.h>
 #include <agar/vg.h>
-#include <agar/sc.h>
+#include <freesg/m/m.h>
+#include <freesg/m/m_gui.h>
 
 #include <agar/config/_mk_have_unsigned_typedefs.h>
 #ifndef _MK_HAVE_UNSIGNED_TYPEDEFS

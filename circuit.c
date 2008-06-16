@@ -90,13 +90,13 @@ EditClose(AG_Event *event)
 	}
 }
 
-static SC_Real
+static M_Real
 ReadNodeVoltage(void *p, AG_Prop *pr)
 {
 	return (ES_NodeVoltage(p, atoi(&pr->key[1])));
 }
 
-static SC_Real
+static M_Real
 ReadBranchCurrent(void *p, AG_Prop *pr)
 {
 	return (ES_BranchCurrent(p, atoi(&pr->key[1])));
@@ -146,15 +146,15 @@ ES_CircuitModified(ES_Circuit *ckt)
 
 	/* Update the voltage/current entries in the property table. */
 	AG_ObjectFreeProps(OBJECT(ckt));
-	for (i = 1; i <= ckt->n; i++) {
+	for (i = 0; i < ckt->n; i++) {
 		Snprintf(key, sizeof(key), "v%u", i);
-		pr = SC_SetReal(ckt, key, 0.0);
-		SC_SetRealRdFn(pr, ReadNodeVoltage);
+		pr = M_SetReal(ckt, key, 0.0);
+		M_SetRealRdFn(pr, ReadNodeVoltage);
 	}
-	for (i = 1; i <= ckt->m; i++) {
+	for (i = 0; i < ckt->m; i++) {
 		Snprintf(key, sizeof(key), "I%u", i);
-		pr = SC_SetReal(ckt, key, 0.0);
-		SC_SetRealRdFn(pr, ReadBranchCurrent);
+		pr = M_SetReal(ckt, key, 0.0);
+		M_SetRealRdFn(pr, ReadBranchCurrent);
 	}
 	
 	/* Notify the component models of the change. */
@@ -206,10 +206,11 @@ Init(void *p)
 	ckt->keywords[0] = '\0';
 	ckt->sim = NULL;
 	ckt->loops = NULL;
+	ckt->l = 0;
 	ckt->vsrcs = NULL;
 	ckt->m = 0;
 	ckt->nodes = Malloc(sizeof(ES_Node *));
-	ckt->n = 0;
+	ckt->n = 1;
 	ckt->console = NULL;
 	TAILQ_INIT(&ckt->syms);
 	InitGround(ckt);
@@ -268,11 +269,11 @@ FreeDataset(void *p)
 	}
 	TAILQ_INIT(&ckt->syms);
 
-	for (i = 0; i <= ckt->n; i++) {
+	for (i = 0; i < ckt->n; i++) {
 		FreeNode(ckt->nodes[i]);
 	}
 	ckt->nodes = Realloc(ckt->nodes, sizeof(ES_Node *));
-	ckt->n = 0;
+	ckt->n = 1;
 	InitGround(ckt);
 
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
@@ -300,7 +301,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 
 	/* Load the circuit nodes. */
 	nnodes = (Uint)AG_ReadUint32(ds);
-	for (i = 0; i <= nnodes; i++) {
+	for (i = 0; i < nnodes; i++) {
 		Uint nBranches, flags;
 		int name;
 
@@ -429,7 +430,7 @@ Save(void *p, AG_DataSource *ds)
 	AG_WriteString(ds, ckt->keywords);
 	AG_WriteUint32(ds, ckt->flags);
 	AG_WriteUint32(ds, ckt->n);
-	for (i = 0; i <= ckt->n; i++) {
+	for (i = 0; i < ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
 
 		AG_WriteUint32(ds, (Uint32)node->flags);
@@ -518,12 +519,10 @@ InitGround(ES_Circuit *ckt)
 int
 ES_AddNode(ES_Circuit *ckt)
 {
-	int n = ++ckt->n;
-
-	ckt->nodes = Realloc(ckt->nodes, (n+1)*sizeof(ES_Node *));
-	ckt->nodes[n] = Malloc(sizeof(ES_Node));
-	InitNode(ckt->nodes[n]);
-	return (n);
+	ckt->nodes = Realloc(ckt->nodes, (ckt->n+1)*sizeof(ES_Node *));
+	ckt->nodes[ckt->n] = Malloc(sizeof(ES_Node));
+	InitNode(ckt->nodes[ckt->n]);
+	return (ckt->n++);
 }
 
 /* Create a new symbol referencing a node. */
@@ -638,7 +637,7 @@ ES_NodeVsource(ES_Circuit *ckt, int n, int m, int *sign)
 }
 
 /* Return the DC voltage for the node j from the last simulation step. */
-SC_Real
+M_Real
 ES_NodeVoltage(ES_Circuit *ckt, int j)
 {
 	if (ckt->sim == NULL || ckt->sim->ops->node_voltage == NULL) {
@@ -649,7 +648,7 @@ ES_NodeVoltage(ES_Circuit *ckt, int j)
 }
 
 /* Return the branch current for the voltage source k from the last step. */
-SC_Real
+M_Real
 ES_BranchCurrent(ES_Circuit *ckt, int k)
 {
 	if (ckt->sim == NULL || ckt->sim->ops->branch_current == NULL) {
@@ -663,7 +662,7 @@ ES_BranchCurrent(ES_Circuit *ckt, int k)
 ES_Node *
 ES_GetNode(ES_Circuit *ckt, int n)
 {
-	if (n < 0 || n > (int)ckt->n) {
+	if (n < 0 || n >= ckt->n) {
 		Fatal("%s:%d: Bad node (Circuit=%d)", OBJECT(ckt)->name, n,
 		    ckt->n);
 	}
@@ -702,13 +701,13 @@ ES_GetNodeBySymbol(ES_Circuit *ckt, const char *name)
 	TAILQ_FOREACH(sym, &ckt->syms, syms) {
 		if (sym->type == ES_SYM_NODE &&
 		    strcmp(sym->name, name) == 0 &&
-		    sym->p.node >= 0 && sym->p.node <= (int)ckt->n)
+		    sym->p.node >= 0 && sym->p.node < ckt->n)
 			return (ckt->nodes[sym->p.node]);
 	}
 	if (name[0] == 'n' && name[1] != '\0') {
 		int n = atoi(&name[1]);
 
-		if (n >= 0 && n <= (int)ckt->n) {
+		if (n >= 0 && n < ckt->n) {
 			return (ckt->nodes[n]);
 		}
 	}
@@ -728,12 +727,12 @@ ES_DelNode(ES_Circuit *ckt, int n)
 
 	ES_CircuitLog(ckt, _("Deleting n%d"), n);
 #ifdef DEBUG
-	if (n == 0 || n > (int)ckt->n)
+	if (n == 0 || n >= ckt->n)
 		Fatal("Cannot delete n%d (max %u)", n, ckt->n);
 #endif
-	if (n != (int)ckt->n) {
+	if (n != ckt->n-1) {
 		/* Update the Branch port pointers. */
-		for (i = n; i <= (int)ckt->n; i++) {
+		for (i = n; i < ckt->n; i++) {
 			NODE_FOREACH_BRANCH(br, ckt->nodes[i]) {
 				if (br->port != NULL && br->port->com != NULL) {
 					ES_ComponentLog(br->port->com,
@@ -925,7 +924,7 @@ PollCircuitNodes(AG_Event *event)
 	Uint i;
 
 	AG_TlistClear(tl);
-	for (i = 0; i <= ckt->n; i++) {
+	for (i = 0; i < ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
 		ES_Branch *br;
 		AG_TlistItem *it, *it2;
@@ -989,7 +988,7 @@ ShowTopology(AG_Event *event)
 	ntab = AG_NotebookAddTab(nb, _("Nodes"), AG_BOX_VERT);
 	{
 		AG_LabelNewPolledMT(ntab, 0, &OBJECT(ckt)->lock,
-		    _("%u+1 nodes, %u vsources, %u loops"),
+		    _("%u nodes, %u vsources, %u loops"),
 		    &ckt->n, &ckt->m, &ckt->l);
 		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE|
 		                       AG_TLIST_EXPAND);
@@ -1243,8 +1242,7 @@ PollComponentPorts(AG_Event *event)
 
 	AG_ObjectLock(com);
 	COMPONENT_FOREACH_PORT(port, i, com) {
-		Snprintf(text, sizeof(text),
-		    "%d (%s) -> n%d [%.03fV]",
+		Snprintf(text, sizeof(text), "%d (%s) -> n%d [%.03fV]",
 		    port->n, port->name, port->node,
 		    ES_NodeVoltage(ckt, port->node));
 		AG_TlistAddPtr(tl, NULL, text, port);

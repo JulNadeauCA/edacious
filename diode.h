@@ -9,8 +9,8 @@
 
 typedef struct es_diode {
 	struct es_component com;
-	SC_Real Is;		/* Resistance at Tnom */
-	SC_Real Vt;		/* Thermal voltage */
+	M_Real Is;		/* Resistance at Tnom */
+	M_Real Vt;		/* Thermal voltage */
 } ES_Diode;
 
 __BEGIN_DECLS

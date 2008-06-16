@@ -60,9 +60,9 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Led *led = p;
 
-	led->Vforw = SC_ReadReal(buf);
-	led->Vrev = SC_ReadReal(buf);
-	led->I = SC_ReadReal(buf);
+	led->Vforw = M_ReadReal(buf);
+	led->Vrev = M_ReadReal(buf);
+	led->I = M_ReadReal(buf);
 	return (0);
 }
 
@@ -71,9 +71,9 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Led *led = p;
 
-	SC_WriteReal(buf, led->Vforw);
-	SC_WriteReal(buf, led->Vrev);
-	SC_WriteReal(buf, led->I);
+	M_WriteReal(buf, led->Vforw);
+	M_WriteReal(buf, led->Vrev);
+	M_WriteReal(buf, led->I);
 	return (0);
 }
 
@@ -81,8 +81,8 @@ void
 ES_LedUpdate(void *p)
 {
 	ES_Led *r = p;
-	SC_Real v1 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,1));
-	SC_Real v2 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,2));
+	M_Real v1 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,1));
+	M_Real v2 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,2));
 
 	r->state = ((v1 - v2) >= r->Vrev);
 }

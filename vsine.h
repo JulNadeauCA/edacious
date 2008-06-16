@@ -9,9 +9,9 @@
 
 typedef struct es_vsine {
 	struct es_vsource vs;		/* Derived from independent vsource */
-	SC_Real vPeak;			/* Peak voltage */
-	SC_Real f;			/* Frequency (Hz) */
-	SC_Real phase;
+	M_Real vPeak;			/* Peak voltage */
+	M_Real f;			/* Frequency (Hz) */
+	M_Real phase;
 } ES_VSine;
 
 #define ES_VSINE(com) ((struct es_vsine *)(com))

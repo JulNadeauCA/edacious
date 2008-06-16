@@ -59,7 +59,7 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_LogicProbe *lp = p;
 
-	lp->Vhigh = SC_ReadReal(buf);
+	lp->Vhigh = M_ReadReal(buf);
 	return (0);
 }
 
@@ -68,7 +68,7 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_LogicProbe *lp = p;
 
-	SC_WriteReal(buf, lp->Vhigh);
+	M_WriteReal(buf, lp->Vhigh);
 	return (0);
 }
 
@@ -76,8 +76,8 @@ void
 ES_LogicProbeUpdate(void *p)
 {
 	ES_LogicProbe *r = p;
-	SC_Real v1 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,1));
-	SC_Real v2 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,2));
+	M_Real v1 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,1));
+	M_Real v2 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,2));
 
 	r->state = ((v1 - v2) >= r->Vhigh);
 }

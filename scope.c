@@ -24,12 +24,13 @@
  */
 
 /*
- * Oscilloscope tool. This is simply an interface to bind an SC_Plotter(3)
+ * Oscilloscope tool. This is simply an interface to bind an M_Plotter(3)
  * to the user-specified Circuit values.
  */
 
 #include <eda.h>
 #include "scope.h"
+#include <freesg/m/m_plotter.h>
 
 ES_Scope *
 ES_ScopeNew(void *parent, const char *name)
@@ -61,7 +62,7 @@ PostSimStep(AG_Event *event)
 	ES_Scope *scope = AG_SELF();
 
 	if (scope->plotter != NULL)
-		SC_PlotterUpdate(scope->plotter);
+		M_PlotterUpdate(scope->plotter);
 }
 
 static void
@@ -111,8 +112,8 @@ PollPlots(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
-	SC_Plotter *ptr = AG_PTR(2);
-	SC_Plot *pl;
+	M_Plotter *ptr = AG_PTR(2);
+	M_Plot *pl;
 	AG_TlistItem *it;
 
 	AG_TlistClear(tl);
@@ -129,15 +130,15 @@ AddPlotFromSrc(AG_Event *event)
 {
 	char prop_path[AG_PROP_PATH_MAX];
 	ES_Circuit *ckt = AG_PTR(1);
-	SC_Plotter *ptr = AG_PTR(2);
+	M_Plotter *ptr = AG_PTR(2);
 	AG_Prop *prop = AG_PTR(3);
-	SC_Plot *pl;
+	M_Plot *pl;
 
 	AG_PropCopyPath(prop_path, sizeof(prop_path), ckt, prop->key);
-	pl = SC_PlotFromProp(ptr, SC_PLOT_LINEAR, prop->key, &vfsRoot,
+	pl = M_PlotFromProp(ptr, M_PLOT_LINEAR, prop->key, &vfsRoot,
 	    prop_path);
-	SC_PlotSetXoffs(pl, ptr->xMax-1);
-	SC_PlotSetScale(pl, 0.0, 15.0);
+	M_PlotSetXoffs(pl, ptr->xMax-1);
+	M_PlotSetScale(pl, 0.0, 15.0);
 }
 
 static void
@@ -146,22 +147,22 @@ AddPlotFromDerivative(AG_Event *event)
 	char prop_path[AG_PROP_PATH_MAX];
 	AG_Tlist *tl = AG_PTR(1);
 	ES_Circuit *ckt = AG_PTR(2);
-	SC_Plotter *ptr = AG_PTR(3);
+	M_Plotter *ptr = AG_PTR(3);
 	AG_TlistItem *it = AG_TlistSelectedItem(tl);
-	SC_Plot *pl;
+	M_Plot *pl;
 
-	pl = SC_PlotFromDerivative(ptr, SC_PLOT_LINEAR, (SC_Plot *)it->p1);
-	SC_PlotSetXoffs(pl, ptr->xMax-1);
-	SC_PlotSetScale(pl, 0.0, 15.0);
+	pl = M_PlotFromDerivative(ptr, M_PLOT_LINEAR, (M_Plot *)it->p1);
+	M_PlotSetXoffs(pl, ptr->xMax-1);
+	M_PlotSetScale(pl, 0.0, 15.0);
 }
 
 static void
 ShowPlotSettings(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
-	SC_Plot *pl = AG_TLIST_ITEM(2);
+	M_Plot *pl = AG_TLIST_ITEM(2);
 
-	SC_PlotSettings(pl);
+	M_PlotSettings(pl);
 }
 
 static void *
@@ -170,7 +171,7 @@ Edit(void *obj)
 	ES_Scope *scope = obj;
 	ES_Circuit *ckt = scope->ckt;
 	AG_Window *win;
-	SC_Plotter *ptr;
+	M_Plotter *ptr;
 	AG_Tlist *tlSrcs, *tlPlots;
 	AG_Pane *hPane;
 	AG_Pane *vPane;
@@ -181,7 +182,7 @@ Edit(void *obj)
 
 	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
 	{
-		ptr = SC_PlotterNew(hPane->div[1], SC_PLOTTER_EXPAND);
+		ptr = M_PlotterNew(hPane->div[1], M_PLOTTER_EXPAND);
 		scope->plotter = ptr;
 
 		vPane = AG_PaneNewVert(hPane->div[0],

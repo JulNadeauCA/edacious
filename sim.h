@@ -12,8 +12,8 @@ typedef struct es_sim_ops {
 	void (*start)(void *);
 	void (*stop)(void *);
 	void (*cktmod)(void *, struct es_circuit *);
-	SC_Real (*node_voltage)(void *, int);
-	SC_Real (*branch_current)(void *, int);
+	M_Real (*node_voltage)(void *, int);
+	M_Real (*branch_current)(void *, int);
 	AG_Window *(*edit)(void *, struct es_circuit *);
 } ES_SimOps;
 

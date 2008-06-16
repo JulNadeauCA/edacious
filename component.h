@@ -53,7 +53,7 @@ typedef struct es_pair {
 
 typedef struct es_spec_condition {
 	char name[16];		/* Name of required specification */
-	SC_Real min, max;	/* Range of values */
+	M_Real min, max;	/* Range of values */
 	SLIST_ENTRY(es_spec_condition) conds;
 } ES_SpecCondition;
 
@@ -61,7 +61,7 @@ typedef struct es_spec_condition {
 typedef struct es_spec {
 	char name[16];				/* Symbol */
 	char descr[64];				/* Description */
-	SC_Real min, typ, max;			/* Specification values */
+	M_Real min, typ, max;			/* Specification values */
 	SLIST_HEAD(,es_spec_condition) conds;	/* Test conditions */
 } ES_Spec;
 
@@ -94,11 +94,11 @@ typedef struct es_component {
 	ES_Spec	*specs;				/* Model specifications */
 	Uint	nspecs;
 	
-	int (*loadDC_G)(void *, SC_Matrix *G);
-	int (*loadDC_BCD)(void *, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D);
-	int (*loadDC_RHS)(void *, SC_Vector *i, SC_Vector *e);
-	int (*loadAC)(void *, SC_Matrix *Y);
-	int (*loadSP)(void *, SC_Matrix *S, SC_Matrix *N);
+	int (*loadDC_G)(void *, M_Matrix *G);
+	int (*loadDC_BCD)(void *, M_Matrix *B, M_Matrix *C, M_Matrix *D);
+	int (*loadDC_RHS)(void *, M_Vector *i, M_Vector *e);
+	int (*loadAC)(void *, M_Matrix *Y);
+	int (*loadSP)(void *, M_Matrix *S, M_Matrix *N);
 	void (*intStep)(void *, Uint);
 	void (*intUpdate)(void *);
 

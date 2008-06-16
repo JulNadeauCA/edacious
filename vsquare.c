@@ -56,10 +56,10 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_VSquare *vs = p;
 
-	vs->vH = SC_ReadReal(buf);
-	vs->vL = SC_ReadReal(buf);
-	vs->tH = SC_ReadQTime(buf);
-	vs->tL = SC_ReadQTime(buf);
+	vs->vH = M_ReadReal(buf);
+	vs->vL = M_ReadReal(buf);
+	vs->tH = M_ReadQTime(buf);
+	vs->tL = M_ReadQTime(buf);
 	return (0);
 }
 
@@ -68,10 +68,10 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_VSquare *vs = p;
 
-	SC_WriteReal(buf, vs->vH);
-	SC_WriteReal(buf, vs->vL);
-	SC_WriteQTime(buf, vs->tH);
-	SC_WriteQTime(buf, vs->tL);
+	M_WriteReal(buf, vs->vH);
+	M_WriteReal(buf, vs->vL);
+	M_WriteQTime(buf, vs->tH);
+	M_WriteQTime(buf, vs->tL);
 	return (0);
 }
 
@@ -110,13 +110,13 @@ Edit(void *p)
 
 	win = AG_WindowNew(0);
 	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Voltage (high): "));
-	AG_WidgetBind(fsb, "value", SC_WIDGET_REAL, &vs->vH);
+	AG_WidgetBind(fsb, "value", M_WIDGET_REAL, &vs->vH);
 	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Voltage (low): "));
-	AG_WidgetBind(fsb, "value", SC_WIDGET_REAL, &vs->vL);
+	AG_WidgetBind(fsb, "value", M_WIDGET_REAL, &vs->vL);
 	fsb = AG_FSpinbuttonNew(win, 0, "ns", _("Time (high): "));
-	AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &vs->tH);
+	AG_WidgetBind(fsb, "value", M_WIDGET_QTIME, &vs->tH);
 	fsb = AG_FSpinbuttonNew(win, 0, "ns", _("Time (low): "));
-	AG_WidgetBind(fsb, "value", SC_WIDGET_QTIME, &vs->tL);
+	AG_WidgetBind(fsb, "value", M_WIDGET_QTIME, &vs->tL);
 	return (win);
 }
 

@@ -36,20 +36,20 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Digital *dig = p;
 
-	dig->Vcc = SC_ReadRange(buf);
-	dig->Tamb = SC_ReadRange(buf);
-	dig->Idd = SC_ReadRange(buf);
-	dig->Vol = SC_ReadRange(buf);
-	dig->Voh = SC_ReadRange(buf);
-	dig->Vil = SC_ReadRange(buf);
-	dig->Vih = SC_ReadRange(buf);
-	dig->Iol = SC_ReadRange(buf);
-	dig->Ioh = SC_ReadRange(buf);
-	dig->Iin = SC_ReadRange(buf);
-	dig->Iozh = SC_ReadRange(buf);
-	dig->Iozl = SC_ReadRange(buf);
-	dig->Tthl = SC_ReadQTimeRange(buf);
-	dig->Ttlh = SC_ReadQTimeRange(buf);
+	dig->Vcc = M_ReadRange(buf);
+	dig->Tamb = M_ReadRange(buf);
+	dig->Idd = M_ReadRange(buf);
+	dig->Vol = M_ReadRange(buf);
+	dig->Voh = M_ReadRange(buf);
+	dig->Vil = M_ReadRange(buf);
+	dig->Vih = M_ReadRange(buf);
+	dig->Iol = M_ReadRange(buf);
+	dig->Ioh = M_ReadRange(buf);
+	dig->Iin = M_ReadRange(buf);
+	dig->Iozh = M_ReadRange(buf);
+	dig->Iozl = M_ReadRange(buf);
+	dig->Tthl = M_ReadQTimeRange(buf);
+	dig->Ttlh = M_ReadQTimeRange(buf);
 	return (0);
 }
 
@@ -58,26 +58,26 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Digital *dig = p;
 
-	SC_WriteRange(buf, dig->Vcc);
-	SC_WriteRange(buf, dig->Tamb);
-	SC_WriteRange(buf, dig->Idd);
-	SC_WriteRange(buf, dig->Vol);
-	SC_WriteRange(buf, dig->Voh);
-	SC_WriteRange(buf, dig->Vil);
-	SC_WriteRange(buf, dig->Vih);
-	SC_WriteRange(buf, dig->Iol);
-	SC_WriteRange(buf, dig->Ioh);
-	SC_WriteRange(buf, dig->Iin);
-	SC_WriteRange(buf, dig->Iozh);
-	SC_WriteRange(buf, dig->Iozl);
-	SC_WriteQTimeRange(buf, dig->Tthl);
-	SC_WriteQTimeRange(buf, dig->Ttlh);
+	M_WriteRange(buf, dig->Vcc);
+	M_WriteRange(buf, dig->Tamb);
+	M_WriteRange(buf, dig->Idd);
+	M_WriteRange(buf, dig->Vol);
+	M_WriteRange(buf, dig->Voh);
+	M_WriteRange(buf, dig->Vil);
+	M_WriteRange(buf, dig->Vih);
+	M_WriteRange(buf, dig->Iol);
+	M_WriteRange(buf, dig->Ioh);
+	M_WriteRange(buf, dig->Iin);
+	M_WriteRange(buf, dig->Iozh);
+	M_WriteRange(buf, dig->Iozl);
+	M_WriteQTimeRange(buf, dig->Tthl);
+	M_WriteQTimeRange(buf, dig->Ttlh);
 	return (0);
 }
 
 /* Stamp the model conductances. */
 static int
-LoadDC_G(void *p, SC_Matrix *G)
+LoadDC_G(void *p, M_Matrix *G)
 {
 	ES_Digital *dig = p;
 	ES_Node *n;
@@ -87,7 +87,7 @@ LoadDC_G(void *p, SC_Matrix *G)
 		ES_Pair *pair = PAIR(dig,i);
 		Uint k = pair->p1->node;
 		Uint j = pair->p2->node;
-		SC_Real g = vEnt(dig->G, i+1);
+		M_Real g = dig->G->v[i][0];
 
 		if (g == 0.0) {
 			continue;
@@ -100,14 +100,14 @@ LoadDC_G(void *p, SC_Matrix *G)
 		    pair->p1->name, pair->p2->name, k, j, g, i);
 
 		if (k != 0) {
-			mAdd(G, k, k, g);
+			G->v[k][k] += g;
 		}
 		if (j != 0) {
-			mAdd(G, j, j, g);
+			G->v[j][j] += g;
 		}
 		if (k != 0 && j != 0) {
-			mSub(G, k, j, g);
-			mSub(G, j, k, g);
+			G->v[k][j] -= g;
+			G->v[j][k] -= g;
 		}
 	}
 	return (0);
@@ -141,12 +141,12 @@ ES_LogicOutput(void *p, const char *portname, ES_LogicState nState)
 
 		if ((pair->p1 == port && pair->p2->n == dig->VccPort) ||
 		    (pair->p2 == port && pair->p1->n == dig->VccPort)) {
-			dig->G->mat[i+1][1] = (nState == ES_LOW) ?
+			dig->G->v[i][0] = (nState == ES_LOW) ?
 			    1e-9 : 1.0 - 1e-9;
 		}
 		if ((pair->p1 == port && pair->p2->n == dig->GndPort) ||
 		    (pair->p2 == port && pair->p1->n == dig->GndPort)) {
-			dig->G->mat[i+1][1] = (nState == ES_HIGH) ?
+			dig->G->v[i][0] = (nState == ES_HIGH) ?
 			    1e-9 : 1.0 - 1e-9;
 		}
 	}
@@ -161,7 +161,7 @@ ES_LogicInput(void *p, const char *portname)
 {
 	ES_Digital *dig = p;
 	ES_Port *port;
-	SC_Real v;
+	M_Real v;
 	
 	if ((port = ES_FindPort(dig, portname)) == NULL) {
 		AG_FatalError(AG_GetError());
@@ -185,9 +185,7 @@ Init(void *obj)
 
 	dig->VccPort = 1;
 	dig->GndPort = 2;
-	dig->G = SC_VectorNew(COM(dig)->npairs);
-	SC_VectorSetZero(dig->G);
-
+	dig->G = M_NewZero(COM(dig)->npairs,1);
 	COM(dig)->loadDC_G = LoadDC_G;
 
 	dig->Vcc.min = 3.0;	dig->Vcc.typ = 5.0;	dig->Vcc.max = 15.0;
@@ -212,7 +210,7 @@ PollPairs(AG_Event *event)
 		ES_Pair *pair = &COM(dig)->pairs[i];
 
 		AG_TableAddRow(t, "%d:%s:%s:%f", i+1, pair->p1->name,
-		    pair->p2->name, vEnt(dig->G, i+1));
+		    pair->p2->name, dig->G->v[i]);
 	}
 	AG_TableEnd(t);
 }

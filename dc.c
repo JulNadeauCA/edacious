@@ -33,6 +33,7 @@
  */
 
 #include <eda.h>
+#include <freesg/m/m_matview.h>
 
 /* Formulate the KCL/branch equations and compute A=LU. */
 static int
@@ -40,14 +41,14 @@ FactorizeMNA(ES_SimDC *sim, ES_Circuit *ckt)
 {
 	ES_Component *com;
 	Uint i, n, m;
-	SC_Real d;
+	M_Real d;
 
-	SC_MatrixSetZero(sim->G);
-	SC_MatrixSetZero(sim->B);
-	SC_MatrixSetZero(sim->C);
-	SC_MatrixSetZero(sim->D);
-	SC_MatrixSetZero(sim->i);
-	SC_MatrixSetZero(sim->e);
+	M_SetZero(sim->G);
+	M_SetZero(sim->B);
+	M_SetZero(sim->C);
+	M_SetZero(sim->D);
+	M_SetZero(sim->i);
+	M_SetZero(sim->e);
 
 	/* Formulate the general equations. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
@@ -66,19 +67,23 @@ FactorizeMNA(ES_SimDC *sim, ES_Circuit *ckt)
 	}
 
 	/* Compose the right-hand side vector (i, e). */
-	SC_MatrixCompose21(sim->z, sim->i, sim->e);
+	M_Compose21(sim->z, sim->i, sim->e);
 
 	/* Compose the coefficient matrix A from [G,B;C,D] and compute LU. */
-	SC_MatrixCompose22(sim->A, sim->G, sim->B, sim->C, sim->D);
-	return (((SC_FactorizeLU(sim->A, sim->LU, sim->piv, &d)) != NULL) ?
-	        0 : -1);
+	M_Compose22(sim->A, sim->G, sim->B, sim->C, sim->D);
+
+	fprintf(stderr, "Solving:\n");
+	M_MatrixPrint(sim->A);
+
+	return ((M_FactorizeLU(sim->A, sim->LU, sim->piv, &d)) != NULL) ?
+	        0 : -1;
 }
 
 static int
 SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 {
-	SC_VectorCopy(sim->z, sim->x);
-	SC_BacksubstLU(sim->LU, sim->piv, sim->x);
+	M_Copy(sim->x, sim->z);
+	M_BacksubstLU(sim->LU, sim->piv, sim->x);
 	return (0);
 }
 
@@ -89,7 +94,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	ES_SimDC *sim = arg;
 	ES_Component *com;
 	static Uint32 t1 = 0;
-	SC_Matrix Aprev;
+	M_Matrix *Aprev;
+	M_Real diff;
 	Uint i = 1;
 
 	if (ckt->m == 0) {
@@ -119,8 +125,7 @@ solve:
 	 * functions. The intUpdate function can modify either A or the
 	 * RHS in response to calculated node voltages.
 	 */
-	SC_MatrixAlloc(&Aprev, sim->A->m, sim->A->n);
-	SC_MatrixCopy(sim->A, &Aprev);
+	Aprev = M_Dup(sim->A);
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (com->intUpdate != NULL)
 			com->intUpdate(com);
@@ -130,8 +135,8 @@ solve:
 		goto halt;
 	}
 	/* Loop until stability is reached. */
-	/* TODO examine pattern changes to detect unstability. */
-	if (SC_MatrixCompare(sim->A, &Aprev) != 0) {
+	M_Compare(sim->A, Aprev, &diff);
+	if (diff > M_MACHEP) {
 		if (++i > sim->max_iters) {
 			AG_SetError(_("Could not find stable solution in "
 			              "%u iterations"), i);
@@ -141,8 +146,6 @@ solve:
 	}
 	if (i > sim->iters_hiwat) { sim->iters_hiwat = i; }
 	else if (i < sim->iters_lowat) { sim->iters_lowat = i; }
-
-	/* TODO loop until stable */
 
 	sim->TavgReal = SDL_GetTicks() - t1;
 	t1 = SDL_GetTicks();
@@ -164,27 +167,27 @@ Init(void *p)
 	sim->Telapsed = 0;
 	sim->TavgReal = 0;
 	sim->speed = 500;
-	sim->max_iters = 100000;
+	sim->max_iters = 10000;
 	sim->iters_hiwat = 1;
 	sim->iters_lowat = 1;
 	AG_SetTimeout(&sim->update_to, StepMNA, sim, AG_CANCEL_ONDETACH);
 
-	sim->A = SC_MatrixNew(0, 0);
-	sim->G = SC_MatrixNew(0, 0);
-	sim->B = SC_MatrixNew(0, 0);
-	sim->C = SC_MatrixNew(0, 0);
-	sim->D = SC_MatrixNew(0, 0);
-	sim->LU = SC_MatrixNew(0, 0);
+	sim->A = M_New(0,0);
+	sim->G = M_New(0,0);
+	sim->B = M_New(0,0);
+	sim->C = M_New(0,0);
+	sim->D = M_New(0,0);
+	sim->LU = M_New(0,0);
 
-	sim->z = SC_VectorNew(0);
-	sim->i = SC_VectorNew(0);
-	sim->e = SC_VectorNew(0);
+	sim->z = M_New(0,0);
+	sim->i = M_New(0,0);
+	sim->e = M_New(0,0);
 	
-	sim->x = SC_VectorNew(0);
-	sim->v = SC_VectorNew(0);
-	sim->j = SC_VectorNew(0);
+	sim->x = M_New(0,0);
+	sim->v = M_New(0,0);
+	sim->j = M_New(0,0);
 
-	sim->piv = SC_IvectorNew(0);
+	sim->piv = M_IntVectorNew(0);
 }
 
 static void
@@ -194,33 +197,35 @@ Resize(void *p, ES_Circuit *ckt)
 	Uint n = ckt->n;
 	Uint m = ckt->m;
 
-	SC_MatrixResize(sim->A, n+m, n+m);
-	SC_MatrixResize(sim->G, n, n);
-	SC_MatrixResize(sim->B, n, m);
-	SC_MatrixResize(sim->C, m, n);
-	SC_MatrixResize(sim->D, m, m);
-	SC_MatrixResize(sim->LU, n+m, n+m);
-	SC_IvectorResize(sim->piv, n+m);
-	SC_MatrixResize(sim->z, n+m, 1);
-	SC_MatrixResize(sim->i, n, 1);
-	SC_MatrixResize(sim->e, m, 1);
-	SC_MatrixResize(sim->x, n+m, 1);
-	SC_MatrixResize(sim->v, n, 1);
-	SC_MatrixResize(sim->j, m, 1);
+	M_Resize(sim->A, n+m, n+m);
+	M_Resize(sim->G, n, n);
+	M_Resize(sim->B, n, m);
+	M_Resize(sim->C, m, n);
+	M_Resize(sim->D, m, m);
+	M_Resize(sim->LU, n+m, n+m);
+	
+	M_IntVectorResize(sim->piv, n+m);
+	M_Resize(sim->z, n+m, 1);
+	M_Resize(sim->i, n, 1);
+	M_Resize(sim->e, m, 1);
+	M_Resize(sim->x, n+m, 1);
+	M_Resize(sim->v, n, 1);
+	M_Resize(sim->j, m, 1);
 
-	SC_MatrixSetZero(sim->A);
-	SC_MatrixSetZero(sim->G);
-	SC_MatrixSetZero(sim->B);
-	SC_MatrixSetZero(sim->C);
-	SC_MatrixSetZero(sim->D);
-	SC_MatrixSetZero(sim->LU);
-	SC_IvectorSetZero(sim->piv);
-	SC_VectorSetZero(sim->z);
-	SC_VectorSetZero(sim->i);
-	SC_VectorSetZero(sim->e);
-	SC_VectorSetZero(sim->x);
-	SC_VectorSetZero(sim->v);
-	SC_VectorSetZero(sim->j);
+	M_SetZero(sim->A);
+	M_SetZero(sim->G);
+	M_SetZero(sim->B);
+	M_SetZero(sim->C);
+	M_SetZero(sim->D);
+	M_SetZero(sim->LU);
+	
+	M_IntVectorSet(sim->piv, 0);
+	M_SetZero(sim->z);
+	M_SetZero(sim->i);
+	M_SetZero(sim->e);
+	M_SetZero(sim->x);
+	M_SetZero(sim->v);
+	M_SetZero(sim->j);
 }
 
 static void
@@ -264,19 +269,19 @@ Destroy(void *p)
 	
 	Stop(sim);
 
-	SC_MatrixFree(sim->A);
-	SC_MatrixFree(sim->G);
-	SC_MatrixFree(sim->B);
-	SC_MatrixFree(sim->C);
-	SC_MatrixFree(sim->D);
-	SC_MatrixFree(sim->LU);
-	SC_IvectorFree(sim->piv);
-	SC_VectorFree(sim->z);
-	SC_VectorFree(sim->i);
-	SC_VectorFree(sim->e);
-	SC_VectorFree(sim->x);
-	SC_VectorFree(sim->v);
-	SC_VectorFree(sim->j);
+	M_Free(sim->A);
+	M_Free(sim->G);
+	M_Free(sim->B);
+	M_Free(sim->C);
+	M_Free(sim->D);
+	M_Free(sim->LU);
+	M_IntVectorFree(sim->piv);
+	M_Free(sim->z);
+	M_Free(sim->i);
+	M_Free(sim->e);
+	M_Free(sim->x);
+	M_Free(sim->v);
+	M_Free(sim->j);
 }
 
 static void
@@ -305,7 +310,7 @@ Edit(void *p, ES_Circuit *ckt)
 	AG_Tlist *tl;
 	AG_Notebook *nb;
 	AG_NotebookTab *ntab;
-	SC_Matview *mv;
+	M_Matview *mv;
 
 	win = AG_WindowNew(AG_WINDOW_NOCLOSE);
 
@@ -339,64 +344,65 @@ Edit(void *p, ES_Circuit *ckt)
 	}
 	
 	ntab = AG_NotebookAddTab(nb, "[A]", AG_BOX_VERT);
-	mv = SC_MatviewNew(ntab, sim->A, 0);
-	SC_MatviewSizeHint(mv, "-0.000", 4, 4);
-	SC_MatviewSetNumericalFmt(mv, "%.02f");
+	mv = M_MatviewNew(ntab, sim->A, 0);
+	M_MatviewSizeHint(mv, "-0.000", 4, 4);
+	M_MatviewSetNumericalFmt(mv, "%.02f");
 	
 	ntab = AG_NotebookAddTab(nb, "[LU]", AG_BOX_VERT);
-	mv = SC_MatviewNew(ntab, sim->LU, 0);
-	SC_MatviewSizeHint(mv, "-0.000", 10, 5);
-	SC_MatviewSetNumericalFmt(mv, "%.02f");
+	mv = M_MatviewNew(ntab, sim->LU, 0);
+	M_MatviewSizeHint(mv, "-0.000", 10, 5);
+	M_MatviewSetNumericalFmt(mv, "%.02f");
 #if 0
 	ntab = AG_NotebookAddTab(nb, "[G]", AG_BOX_VERT);
-	mv = SC_MatviewNew(ntab, sim->G, 0);
-	SC_MatviewSizeHint(mv, "-0.000", 10, 5);
-	SC_MatviewSetNumericalFmt(mv, "%.02f");
+	mv = M_MatviewNew(ntab, sim->G, 0);
+	M_MatviewSizeHint(mv, "-0.000", 10, 5);
+	M_MatviewSetNumericalFmt(mv, "%.02f");
 	
 	ntab = AG_NotebookAddTab(nb, "[B]", AG_BOX_VERT);
-	mv = SC_MatviewNew(ntab, sim->B, 0);
-	SC_MatviewSizeHint(mv, "-0.000", 10, 5);
-	SC_MatviewSetNumericalFmt(mv, "%.03f");
+	mv = M_MatviewNew(ntab, sim->B, 0);
+	M_MatviewSizeHint(mv, "-0.000", 10, 5);
+	M_MatviewSetNumericalFmt(mv, "%.03f");
 	
 	ntab = AG_NotebookAddTab(nb, "[C]", AG_BOX_VERT);
-	mv = SC_MatviewNew(ntab, sim->C, 0);
-	SC_MatviewSizeHint(mv, "-0.000", 10, 5);
-	SC_MatviewSetNumericalFmt(mv, "%.03f");
+	mv = M_MatviewNew(ntab, sim->C, 0);
+	M_MatviewSizeHint(mv, "-0.000", 10, 5);
+	M_MatviewSetNumericalFmt(mv, "%.03f");
 	
 	ntab = AG_NotebookAddTab(nb, "[D]", AG_BOX_VERT);
-	mv = SC_MatviewNew(ntab, sim->D, 0);
-	SC_MatviewSizeHint(mv, "-0.000", 10, 5);
-	SC_MatviewSetNumericalFmt(mv, "%.03f");
+	mv = M_MatviewNew(ntab, sim->D, 0);
+	M_MatviewSizeHint(mv, "-0.000", 10, 5);
+	M_MatviewSetNumericalFmt(mv, "%.03f");
 #endif
+
 	ntab = AG_NotebookAddTab(nb, "[z]", AG_BOX_VERT);
-	mv = SC_MatviewNew(ntab, sim->z, 0);
-	SC_MatviewSizeHint(mv, "-0000.0000", 10, 5);
-	SC_MatviewSetNumericalFmt(mv, "%.04f");
+	mv = M_MatviewNew(ntab, sim->z, 0);
+	M_MatviewSizeHint(mv, "-0000.0000", 10, 5);
+	M_MatviewSetNumericalFmt(mv, "%.04f");
 	
 	ntab = AG_NotebookAddTab(nb, "[x]", AG_BOX_VERT);
-	mv = SC_MatviewNew(ntab, sim->x, 0);
-	SC_MatviewSizeHint(mv, "-0000.0000", 10, 5);
-	SC_MatviewSetNumericalFmt(mv, "%.04f");
-	
+	mv = M_MatviewNew(ntab, sim->x, 0);
+	M_MatviewSizeHint(mv, "-0000.0000", 10, 5);
+	M_MatviewSetNumericalFmt(mv, "%.04f");
+
 	return (win);
 }
 
-static SC_Real
+static M_Real
 NodeVoltage(void *p, int j)
 {
 	ES_SimDC *sim = p;
 
-	return (vExists(sim->x,j) ? vEnt(sim->x,j) : 0.0);
+	return M_VEC_ENTRY_EXISTS(sim->x,j) ? sim->x->v[j][0] : 0.0;
 }
 
-static SC_Real
+static M_Real
 BranchCurrent(void *p, int k)
 {
 	ES_SimDC *sim = p;
 	ES_Circuit *ckt = SIM(sim)->ckt;
 	int i = ckt->n + k;
 
-	return (vExists(sim->x,i) ? vEnt(sim->x,i) : 0.0);
+	return M_VEC_ENTRY_EXISTS(sim->x,i) ? sim->x->v[i][0] : 0.0;
 }
 
 const ES_SimOps esSimDcOps = {

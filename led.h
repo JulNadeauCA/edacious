@@ -9,9 +9,9 @@
 
 typedef struct es_led {
 	struct es_component com;
-	SC_Real Vforw;		/* Forward voltage */
-	SC_Real Vrev;		/* Reverse voltage */
-	SC_Real I;		/* Luminous intensity (mcd) */
+	M_Real Vforw;		/* Forward voltage */
+	M_Real Vrev;		/* Reverse voltage */
+	M_Real I;		/* Luminous intensity (mcd) */
 	int state;
 } ES_Led;
 

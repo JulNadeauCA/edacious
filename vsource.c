@@ -195,7 +195,7 @@ ES_VsourceFindLoops(ES_Vsource *vs)
  *    |--------------|-----
  */
 static int
-LoadDC_BCD(void *p, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D)
+LoadDC_BCD(void *p, M_Matrix *B, M_Matrix *C, M_Matrix *D)
 {
 	ES_Vsource *vs = p;
 	Uint k = PNODE(vs,1);
@@ -207,17 +207,17 @@ LoadDC_BCD(void *p, SC_Matrix *B, SC_Matrix *C, SC_Matrix *D)
 		return (-1);
 	}
 	if (k != 0) {
-		mSet(B,k,v, 1.0);
-		mSet(C,v,k, 1.0);
+		B->v[k][v] = 1.0;
+		C->v[v][k] = 1.0;
 	}
 	if (j != 0) {
-		mSet(B,j,v, -1.0);
-		mSet(C,v,j, -1.0);
+		B->v[j][v] = -1.0;
+		C->v[v][j] = -1.0;
 	}
 	return (0);
 }
 static int
-LoadDC_RHS(void *p, SC_Vector *i, SC_Vector *e)
+LoadDC_RHS(void *p, M_Vector *i, M_Vector *e)
 {
 	ES_Vsource *vs = p;
 	int v;
@@ -226,7 +226,7 @@ LoadDC_RHS(void *p, SC_Vector *i, SC_Vector *e)
 		AG_SetError("no such vsource");
 		return (-1);
 	}
-	vSet(e,v, vs->voltage);
+	e->v[v][0] = vs->voltage;
 	return (0);
 }
 
@@ -238,9 +238,8 @@ Connected(AG_Event *event)
 
 	ckt->vsrcs = Realloc(ckt->vsrcs, (ckt->m+1)*sizeof(ES_Vsource *));
 	ckt->vsrcs[ckt->m] = vs;
+	Debug(ckt, "Added voltage source #%d\n", ckt->m);
 	ckt->m++;
-
-	Debug(ckt, "Added voltage source #%d\n", ckt->m-1);
 }
 
 static void
@@ -358,8 +357,8 @@ ES_VsourceName(ES_Vsource *vs)
 	ES_Circuit *ckt = COM(vs)->ckt;
 	int i;
 
-	for (i = 1; i <= ckt->m; i++) {
-		if (VSOURCE(ckt->vsrcs[i-1]) == vs)
+	for (i = 0; i < ckt->m; i++) {
+		if (VSOURCE(ckt->vsrcs[i]) == vs)
 			return (i);
 	}
 	return (-1);

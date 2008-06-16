@@ -26,19 +26,19 @@ typedef struct es_digital {
 	struct es_component com;
 	int VccPort;		/* DC supply port */
 	int GndPort;		/* Ground port */
-	SC_Vector *G;		/* Current conductive state */
-	SC_Range Vcc;		/* DC supply voltage (operating) */
-	SC_Range Tamb;		/* Operating ambient temperature */
-	SC_Range Idd;		/* Quiescent current */
-	SC_Range Vol, Voh;	/* Output voltage LOW/HIGH (buffered) */
-	SC_Range Vil, Vih;	/* Input voltage LOW/HIGH (buffered) */
-	SC_Range Iol;		/* Output (sink current); LOW */
-	SC_Range Ioh;		/* Output (source current); HIGH */
-	SC_Range Iin;		/* Input leakage current (+-) */
-	SC_Range Iozh;		/* 3-state output leakage current; HIGH */
-	SC_Range Iozl;		/* 3-state output leakage current; LOW */
-	SC_QTimeRange Tthl;	/* Output transition time; HIGH->LOW */
-	SC_QTimeRange Ttlh;	/* Output transition time; LOW->HIGH */
+	M_Vector *G;		/* Current conductive state */
+	M_Range Vcc;		/* DC supply voltage (operating) */
+	M_Range Tamb;		/* Operating ambient temperature */
+	M_Range Idd;		/* Quiescent current */
+	M_Range Vol, Voh;	/* Output voltage LOW/HIGH (buffered) */
+	M_Range Vil, Vih;	/* Input voltage LOW/HIGH (buffered) */
+	M_Range Iol;		/* Output (sink current); LOW */
+	M_Range Ioh;		/* Output (source current); HIGH */
+	M_Range Iin;		/* Input leakage current (+-) */
+	M_Range Iozh;		/* 3-state output leakage current; HIGH */
+	M_Range Iozl;		/* 3-state output leakage current; LOW */
+	M_QTimeRange Tthl;	/* Output transition time; HIGH->LOW */
+	M_QTimeRange Ttlh;	/* Output transition time; LOW->HIGH */
 } ES_Digital;
 
 #define DIGITAL(p) ((ES_Digital *)(p))

@@ -9,8 +9,8 @@
 
 typedef struct es_resistor {
 	struct es_component com;
-	SC_Real resistance;	/* Resistance at Tnom */
-	SC_Real power_rating;	/* Power rating in watts */
+	M_Real resistance;	/* Resistance at Tnom */
+	M_Real power_rating;	/* Power rating in watts */
 	int tolerance;		/* Tolerance in % */
 	float Tc1, Tc2;		/* Resistance/temperature coefficients */
 } ES_Resistor;

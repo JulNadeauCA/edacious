@@ -221,7 +221,7 @@ OnDetach(AG_Event *event)
 		VG_NodeDestroy(vn);
 	}
 
-	for (i = 0; i <= ckt->n; i++) {
+	for (i = 0; i < ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
 		ES_Branch *br, *nbr;
 
@@ -236,7 +236,7 @@ OnDetach(AG_Event *event)
 
 del_nodes:
 	/* XXX hack */
-	for (i = 1; i <= ckt->n; i++) {
+	for (i = 1; i < ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
 		ES_Branch *br;
 
@@ -426,7 +426,7 @@ ES_PortNode(ES_Component *com, int port)
 		Fatal("%s: Bad port %d/%u", OBJECT(com)->name, port,
 		    com->nports);
 	}
-	if (com->ports[port].node < 0 || com->ports[port].node > com->ckt->n) {
+	if (com->ports[port].node < 0 || com->ports[port].node >= com->ckt->n) {
 		Fatal("%s:%d: Bad node (Component)", OBJECT(com)->name, port);
 	}
 	return (com->ports[port].node);
