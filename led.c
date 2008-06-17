@@ -104,19 +104,15 @@ static void *
 Edit(void *p)
 {
 	ES_Led *r = p;
-	AG_Window *win;
-	AG_FSpinbutton *fsb;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	win = AG_WindowNew(0);
-	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Forward voltage: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->Vforw);
-	AG_FSpinbuttonSetMin(fsb, 1.0);
-	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Reverse voltage: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->Vrev);
-	AG_FSpinbuttonSetMin(fsb, 1.0);
-	fsb = AG_FSpinbuttonNew(win, 0, "mcd", _("Luminous intensity: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->I);
-	return (win);
+	M_NumericalNewRealR(box, 0, "V", _("Forward voltage: "),
+	    &r->Vforw, 1.0, HUGE_VAL);
+	M_NumericalNewRealR(box, 0, "V", _("Reverse voltage: "),
+	    &r->Vrev, 1.0, HUGE_VAL);
+	M_NumericalNewReal(box, 0, "mcd", _("Luminous intensity: "),
+	    &r->I);
+	return (box);
 }
 
 ES_ComponentClass esLedClass = {
@@ -134,6 +130,8 @@ ES_ComponentClass esLedClass = {
 	N_("Led"),
 	"LED",
 	NULL,			/* schem */
+	"Generic|Nonlinear|Optical",
+	&esIconLED,
 	Draw,
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

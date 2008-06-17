@@ -11,9 +11,9 @@ typedef struct es_vsquare {
 	struct es_vsource vs;		/* Derived from independent vsource */
 	M_Real vH;			/* Voltage of high signal */
 	M_Real vL;			/* Voltage of low signal */
-	M_QTime tH;			/* High pulse duration */
-	M_QTime tL;			/* Low pulse duration */
-	M_QTime t;			/* Current pulse duration */
+	M_Time tH;			/* High pulse duration */
+	M_Time tL;			/* Low pulse duration */
+	M_Time t;			/* Current pulse duration */
 } ES_VSquare;
 
 #define ES_VSQUARE(com) ((struct es_vsquare *)(com))

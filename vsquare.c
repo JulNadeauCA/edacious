@@ -58,8 +58,8 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 
 	vs->vH = M_ReadReal(buf);
 	vs->vL = M_ReadReal(buf);
-	vs->tH = M_ReadQTime(buf);
-	vs->tL = M_ReadQTime(buf);
+	vs->tH = M_ReadTime(buf);
+	vs->tL = M_ReadTime(buf);
 	return (0);
 }
 
@@ -70,8 +70,8 @@ Save(void *p, AG_DataSource *buf)
 
 	M_WriteReal(buf, vs->vH);
 	M_WriteReal(buf, vs->vL);
-	M_WriteQTime(buf, vs->tH);
-	M_WriteQTime(buf, vs->tL);
+	M_WriteTime(buf, vs->tH);
+	M_WriteTime(buf, vs->tL);
 	return (0);
 }
 
@@ -105,19 +105,13 @@ static void *
 Edit(void *p)
 {
 	ES_VSquare *vs = p;
-	AG_Window *win;
-	AG_FSpinbutton *fsb;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	win = AG_WindowNew(0);
-	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Voltage (high): "));
-	AG_WidgetBind(fsb, "value", M_WIDGET_REAL, &vs->vH);
-	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Voltage (low): "));
-	AG_WidgetBind(fsb, "value", M_WIDGET_REAL, &vs->vL);
-	fsb = AG_FSpinbuttonNew(win, 0, "ns", _("Time (high): "));
-	AG_WidgetBind(fsb, "value", M_WIDGET_QTIME, &vs->tH);
-	fsb = AG_FSpinbuttonNew(win, 0, "ns", _("Time (low): "));
-	AG_WidgetBind(fsb, "value", M_WIDGET_QTIME, &vs->tL);
-	return (win);
+	M_NumericalNewReal(box, 0, "V", _("HIGH voltage: "), &vs->vH);
+	M_NumericalNewReal(box, 0, "V", _("LOW voltage: "), &vs->vL);
+	M_NumericalNewTime(box, 0, "ns", _("HIGH duration: "), &vs->tH);
+	M_NumericalNewTime(box, 0, "ns", _("LOW duration: "), &vs->tL);
+	return (box);
 }
 
 ES_ComponentClass esVSquareClass = {
@@ -132,9 +126,11 @@ ES_ComponentClass esVSquareClass = {
 		Save,
 		Edit
 	},
-	N_("Square voltage source"),
+	N_("Voltage source (square)"),
 	"Vsq",
 	"Sources/Vsquare.eschem",
+	"Generic|Sources",
+	&esIconVsquare,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

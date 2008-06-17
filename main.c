@@ -65,19 +65,20 @@
 #include <agar/config/have_opengl.h>
 
 void *esComponentClasses[] = {
-	&esVsourceClass,
 	&esGroundClass,
+	&esVsourceClass,
+	&esVSquareClass,
+	&esVSineClass,
 	&esResistorClass,
 	&esSemiResistorClass,
 	&esSpstClass,
 	&esSpdtClass,
-	&esLedClass,
 	&esLogicProbeClass,
 	&esInverterClass,
 	&esAndClass,
 	&esOrClass,
-	&esVSquareClass,
-	&esVSineClass,
+	&esDiodeClass,
+	&esLedClass,
 	NULL
 };
 

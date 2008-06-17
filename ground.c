@@ -94,6 +94,8 @@ ES_ComponentClass esGroundClass = {
 	N_("Ground"),
 	"Gnd",
 	"Ground.eschem",
+	"Generic|Sources",
+	&esIconGround,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

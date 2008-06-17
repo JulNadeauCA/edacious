@@ -312,7 +312,7 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Vsource *vs = p;
 
-	vs->voltage = AG_ReadDouble(buf);
+	vs->voltage = M_ReadReal(buf);
 	return (0);
 }
 
@@ -321,7 +321,7 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Vsource *vs = p;
 
-	AG_WriteDouble(buf, vs->voltage);
+	M_WriteReal(buf, vs->voltage);
 	return (0);
 }
 
@@ -405,17 +405,13 @@ static void *
 Edit(void *p)
 {
 	ES_Vsource *vs = p;
-	AG_Window *win;
-	AG_FSpinbutton *fsb;
-	AG_Tlist *tl;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	win = AG_WindowNew(0);
-	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Voltage: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &vs->voltage);
-	AG_LabelNewStatic(win, 0, _("Loops:"));
-	tl = AG_TlistNewPolled(win, AG_TLIST_TREE|AG_TLIST_EXPAND,
+	M_NumericalNewReal(box, 0, "V", _("Voltage: "), &vs->voltage);
+	AG_LabelNew(box, 0, _("Loops:"));
+	AG_TlistNewPolled(box, AG_TLIST_TREE|AG_TLIST_EXPAND,
 	    PollLoops, "%p", vs);
-	return (win);
+	return (box);
 }
 
 ES_ComponentClass esVsourceClass = {
@@ -430,9 +426,11 @@ ES_ComponentClass esVsourceClass = {
 		Save,
 		Edit
 	},
-	N_("Independent voltage source"),
+	N_("Voltage source"),
 	"V",
 	"Sources/Vsource.eschem",
+	"Generic|Sources",
+	&esIconVsource,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

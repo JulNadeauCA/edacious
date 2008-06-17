@@ -119,8 +119,8 @@ ConnectComponent(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 		    port->sp, PORT_RADIUS(vv));
 		portNear = (spNear != NULL) ? spNear->port : NULL;
 
-		if (COMOPS(com)->connect == NULL ||
-		    COMOPS(com)->connect(com, port, portNear) == -1) {
+		if (COMCLASS(com)->connect == NULL ||
+		    COMCLASS(com)->connect(com, port, portNear) == -1) {
 			if (portNear != NULL) {
 				if (portNear->node == -1) {
 					AG_SetError(_("Cannot connect "

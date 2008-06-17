@@ -83,15 +83,11 @@ static void *
 Edit(void *p)
 {
 	ES_VSine *vs = p;
-	AG_Window *win;
-	AG_FSpinbutton *fsb;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	win = AG_WindowNew(0);
-	fsb = AG_FSpinbuttonNew(win, 0, "V", _("Voltage (peak): "));
-	AG_WidgetBind(fsb, "value", M_WIDGET_REAL, &vs->vPeak);
-	fsb = AG_FSpinbuttonNew(win, 0, "Hz", _("Frequency: "));
-	AG_WidgetBind(fsb, "value", M_WIDGET_REAL, &vs->f);
-	return (win);
+	M_NumericalNewReal(box, 0, "V", _("Peak voltage: "), &vs->vPeak);
+	M_NumericalNewReal(box, 0, "Hz", _("Frequency: "), &vs->f);
+	return (box);
 }
 
 ES_ComponentClass esVSineClass = {
@@ -106,9 +102,11 @@ ES_ComponentClass esVSineClass = {
 		Save,
 		Edit
 	},
-	N_("Sinusoidal voltage source"),
+	N_("Voltage source (sine)"),
 	"Vsin",
 	"Sources/Vsine.eschem",
+	"Generic|Sources",
+	&esIconVsine,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

@@ -48,8 +48,8 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 	dig->Iin = M_ReadRange(buf);
 	dig->Iozh = M_ReadRange(buf);
 	dig->Iozl = M_ReadRange(buf);
-	dig->Tthl = M_ReadQTimeRange(buf);
-	dig->Ttlh = M_ReadQTimeRange(buf);
+	dig->Tthl = M_ReadTimeRange(buf);
+	dig->Ttlh = M_ReadTimeRange(buf);
 	return (0);
 }
 
@@ -70,8 +70,8 @@ Save(void *p, AG_DataSource *buf)
 	M_WriteRange(buf, dig->Iin);
 	M_WriteRange(buf, dig->Iozh);
 	M_WriteRange(buf, dig->Iozl);
-	M_WriteQTimeRange(buf, dig->Tthl);
-	M_WriteQTimeRange(buf, dig->Ttlh);
+	M_WriteTimeRange(buf, dig->Tthl);
+	M_WriteTimeRange(buf, dig->Ttlh);
 	return (0);
 }
 
@@ -219,17 +219,17 @@ static void *
 Edit(void *p)
 {
 	ES_Digital *dig = p;
-	AG_Window *win;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 	AG_Table *tbl;
 	
-	win = AG_WindowNew(0);
-	tbl = AG_TableNewPolled(win, AG_TABLE_EXPAND, PollPairs, "%p", dig);
+	AG_LabelNew(box, 0, _("Pairs:"));
+	tbl = AG_TableNewPolled(box, AG_TABLE_EXPAND, PollPairs, "%p", dig);
 	AG_TableAddCol(tbl, "n", "<88>", NULL);
 	AG_TableAddCol(tbl, "p1", "<88>", NULL);
 	AG_TableAddCol(tbl, "p2", "<88>", NULL);
 	AG_TableAddCol(tbl, "G", NULL, NULL);
 
-	return (win);
+	return (box);
 }
 
 ES_ComponentClass esDigitalClass = {
@@ -247,6 +247,8 @@ ES_ComponentClass esDigitalClass = {
 	N_("Digital component"),
 	"Digital",
 	"Digital.eschem",
+	"Generic|Digital",
+	&esIconANDGate,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

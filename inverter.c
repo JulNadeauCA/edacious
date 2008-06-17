@@ -93,37 +93,6 @@ ES_InverterUpdate(void *p)
 	}
 }
 
-static void *
-Edit(void *p)
-{
-	ES_Inverter *inv = p;
-	AG_Window *win, *wDig;
-	AG_FSpinbutton *fsb;
-	AG_Notebook *nb;
-	AG_NotebookTab *ntab;
-	AG_Box *box;
-
-	win = AG_WindowNew(0);
-	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
-#if 0
-	ntab = AG_NotebookAddTab(nb, _("Timings"), AG_BOX_VERT);
-	{
-		AG_LabelNew(ntab, AG_LABEL_POLLED, "Telh: %uns, Tehl: %uns",
-		    &inv->Telh, &inv->Tehl);
-		AG_LabelNew(ntab, AG_LABEL_POLLED, "Tplh: %uns, Tphl: %uns",
-		    &inv->Tplh, &inv->Tphl);
-
-		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Thold: ");
-		AG_WidgetBind(fsb, "value", M_WIDGET_QTIME, &inv->Thold);
-		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Tphl: ");
-		AG_WidgetBind(fsb, "value", M_WIDGET_QTIME, &inv->Tphl);
-		fsb = AG_FSpinbuttonNew(ntab, 0, "ns", "Tplh: ");
-		AG_WidgetBind(fsb, "value", M_WIDGET_QTIME, &inv->Tplh);
-	}
-#endif
-	return (win);
-}
-
 ES_ComponentClass esInverterClass = {
 	{
 		"ES_Component:ES_Digital:ES_Inverter",
@@ -134,11 +103,13 @@ ES_ComponentClass esInverterClass = {
 		NULL,		/* destroy */
 		NULL,		/* load */
 		NULL,		/* save */
-		Edit
+		NULL		/* edit */
 	},
 	N_("Inverter"),
 	"Inv",
 	"Digital/Inverter.eschem",
+	"Generic|Digital|Digital/Gates",
+	&esIconInverter,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

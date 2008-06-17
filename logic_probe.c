@@ -97,14 +97,11 @@ static void *
 Edit(void *p)
 {
 	ES_LogicProbe *r = p;
-	AG_Window *win;
-	AG_FSpinbutton *fsb;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	win = AG_WindowNew(0);
-	fsb = AG_FSpinbuttonNew(win, 0, "V", _("HIGH voltage: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->Vhigh);
-	AG_FSpinbuttonSetMin(fsb, 1.0);
-	return (win);
+	M_NumericalNewRealR(box, 0, "V", _("HIGH voltage: "),
+	    &r->Vhigh, 1.0, HUGE_VAL);
+	return (box);
 }
 
 ES_ComponentClass esLogicProbeClass = {
@@ -119,9 +116,11 @@ ES_ComponentClass esLogicProbeClass = {
 		Save,
 		Edit
 	},
-	N_("LogicProbe"),
+	N_("Logic Probe"),
 	"LPROBE",
 	NULL,			/* schem */
+	"Generic|Digital|Probes",
+	&esIconLogicProbe,
 	Draw,
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

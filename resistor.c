@@ -42,11 +42,11 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Resistor *r = p;
 
-	r->resistance = AG_ReadDouble(buf);
+	r->resistance = M_ReadReal(buf);
 	r->tolerance = (int)AG_ReadUint32(buf);
-	r->power_rating = AG_ReadDouble(buf);
-	r->Tc1 = AG_ReadFloat(buf);
-	r->Tc2 = AG_ReadFloat(buf);
+	r->power_rating = M_ReadReal(buf);
+	r->Tc1 = M_ReadReal(buf);
+	r->Tc2 = M_ReadReal(buf);
 	return (0);
 }
 
@@ -55,11 +55,11 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Resistor *r = p;
 
-	AG_WriteDouble(buf, r->resistance);
+	M_WriteReal(buf, r->resistance);
 	AG_WriteUint32(buf, (Uint32)r->tolerance);
-	AG_WriteDouble(buf, r->power_rating);
-	AG_WriteFloat(buf, r->Tc1);
-	AG_WriteFloat(buf, r->Tc2);
+	M_WriteReal(buf, r->power_rating);
+	M_WriteReal(buf, r->Tc1);
+	M_WriteReal(buf, r->Tc2);
 	return (0);
 }
 
@@ -173,19 +173,18 @@ static void *
 Edit(void *p)
 {
 	ES_Resistor *r = p;
-	AG_Window *win;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	win = AG_WindowNew(0);
-	M_NumericalNewRealR(win, 0, "ohm", _("Resistance: "), &r->resistance,
+	M_NumericalNewRealR(box, 0, "ohm", _("Resistance: "), &r->resistance,
 	    1.0, HUGE_VAL);
-	AG_NumericalNewIntR(win, 0, _("Tolerance: "), "%", &r->tolerance,
+	AG_NumericalNewIntR(box, 0, _("Tolerance: "), "%", &r->tolerance,
 	    1, 100);
-	M_NumericalNewRealR(win, 0, "W", _("Power rating: "), &r->power_rating,
+	M_NumericalNewRealR(box, 0, "W", _("Power rating: "), &r->power_rating,
 	    0.0, HUGE_VAL);
+	M_NumericalNewReal(box, 0, "mohm/degC", _("Temp. coeff.: "), &r->Tc1);
+	M_NumericalNewReal(box, 0, "mohm/degC^2", _("Temp. coeff.: "), &r->Tc2);
 
-	M_NumericalNewReal(win, 0, "mohm/degC", _("Temp. coeff.: "), &r->Tc1);
-	M_NumericalNewReal(win, 0, "mohm/degC^2", _("Temp. coeff.: "), &r->Tc2);
-	return (win);
+	return (box);
 }
 
 ES_ComponentClass esResistorClass = {
@@ -203,6 +202,8 @@ ES_ComponentClass esResistorClass = {
 	N_("Resistor"),
 	"R",
 	"Resistor.eschem",
+	"Generic|Resistances",
+	&esIconResistor,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

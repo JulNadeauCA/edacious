@@ -94,8 +94,8 @@ Init(void *p)
 	ES_Spdt *sw = p;
 
 	ES_InitPorts(sw, esSpdtPorts);
-	sw->on_resistance = 1.0;
-	sw->off_resistance = HUGE_VAL;
+	sw->rOn = 1.0;
+	sw->rOff = HUGE_VAL;
 	sw->state = 1;
 }
 
@@ -104,8 +104,8 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Spdt *sw = p;
 
-	sw->on_resistance = AG_ReadDouble(buf);
-	sw->off_resistance = AG_ReadDouble(buf);
+	sw->rOn = M_ReadReal(buf);
+	sw->rOff = M_ReadReal(buf);
 	sw->state = (int)AG_ReadUint8(buf);
 	return (0);
 }
@@ -115,8 +115,8 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Spdt *sw = p;
 
-	AG_WriteDouble(buf, sw->on_resistance);
-	AG_WriteDouble(buf, sw->off_resistance);
+	M_WriteReal(buf, sw->rOn);
+	M_WriteReal(buf, sw->rOff);
 	AG_WriteUint8(buf, (Uint8)sw->state);
 	return (0);
 }
@@ -127,21 +127,19 @@ Resistance(void *p, ES_Port *p1, ES_Port *p2)
 	ES_Spdt *sw = p;
 
 	if (p1->n == 2 && p2->n == 3)
-		return (sw->off_resistance);
+		return (sw->rOff);
 
 	switch (p1->n) {
 	case 1:
 		switch (p2->n) {
 		case 2:
-			return (sw->state == 1 ? sw->on_resistance :
-			                         sw->off_resistance);
+			return (sw->state == 1 ? sw->rOn : sw->rOff);
 		case 3:
-			return (sw->state == 2 ? sw->on_resistance :
-			                         sw->off_resistance);
+			return (sw->state == 2 ? sw->rOn : sw->rOff);
 		}
 		break;
 	case 2:
-		return (sw->off_resistance);
+		return (sw->rOff);
 	}
 	return (-1);
 }
@@ -188,19 +186,15 @@ static void *
 Edit(void *p)
 {
 	ES_Spdt *sw = p;
-	AG_Window *win;
-	AG_FSpinbutton *fsb;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	win = AG_WindowNew(0);
-	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("ON resistance: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->on_resistance);
-	AG_FSpinbuttonSetMin(fsb, 1.0);
-	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("OFF resistance: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->off_resistance);
-	AG_FSpinbuttonSetMin(fsb, 1.0);
-	AG_ButtonAct(win, AG_BUTTON_EXPAND, _("Toggle state"),
+	M_NumericalNewRealR(box, 0, "ohm", _("ON resistance: "),
+	    &sw->rOn, M_TINYVAL, HUGE_VAL);
+	M_NumericalNewRealR(box, 0, "ohm", _("OFF resistance: "),
+	    &sw->rOff, M_TINYVAL, HUGE_VAL);
+	AG_ButtonAct(box, AG_BUTTON_EXPAND, _("Toggle state"),
 	    ToggleState, "%p", sw);
-	return (win);
+	return (box);
 }
 
 ES_ComponentClass esSpdtClass = {
@@ -215,9 +209,11 @@ ES_ComponentClass esSpdtClass = {
 		Save,
 		Edit
 	},
-	N_("SPDT switch"),
+	N_("Switch (SPDT)"),
 	"Sw",
 	NULL,			/* schem */
+	"Generic|Switches|User Interface",
+	&esIconSPDT,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

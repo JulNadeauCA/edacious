@@ -57,13 +57,13 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_SemiResistor *r = p;
 
-	r->l = AG_ReadDouble(buf);
-	r->w = AG_ReadDouble(buf);
-	r->rsh = AG_ReadDouble(buf);
-	r->defw = AG_ReadDouble(buf);
-	r->narrow = AG_ReadDouble(buf);
-	r->Tc1 = AG_ReadFloat(buf);
-	r->Tc2 = AG_ReadFloat(buf);
+	r->l = M_ReadReal(buf);
+	r->w = M_ReadReal(buf);
+	r->rsh = M_ReadReal(buf);
+	r->defw = M_ReadReal(buf);
+	r->narrow = M_ReadReal(buf);
+	r->Tc1 = M_ReadReal(buf);
+	r->Tc2 = M_ReadReal(buf);
 	return (0);
 }
 
@@ -72,13 +72,13 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_SemiResistor *r = p;
 
-	AG_WriteDouble(buf, r->l);
-	AG_WriteDouble(buf, r->w);
-	AG_WriteDouble(buf, r->rsh);
-	AG_WriteDouble(buf, r->defw);
-	AG_WriteDouble(buf, r->narrow);
-	AG_WriteFloat(buf, r->Tc1);
-	AG_WriteFloat(buf, r->Tc2);
+	M_WriteReal(buf, r->l);
+	M_WriteReal(buf, r->w);
+	M_WriteReal(buf, r->rsh);
+	M_WriteReal(buf, r->defw);
+	M_WriteReal(buf, r->narrow);
+	M_WriteReal(buf, r->Tc1);
+	M_WriteReal(buf, r->Tc2);
 	return (0);
 }
 
@@ -125,32 +125,26 @@ static void *
 Edit(void *p)
 {
 	ES_SemiResistor *r = p;
-	AG_Window *win, *subwin;
-	AG_Spinbutton *sb;
-	AG_FSpinbutton *fsb;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 	AG_MFSpinbutton *mfsb;
 
-	win = AG_WindowNew(0);
+	mfsb = AG_MFSpinbuttonNew(box, 0, "um", "x", _("Geometry (LxW): "));
+	M_WidgetBindReal(mfsb, "xvalue", &r->l);
+	M_WidgetBindReal(mfsb, "yvalue", &r->w);
+	AG_MFSpinbuttonSetMin(mfsb, M_TINYVAL);
+	
+	M_NumericalNewRealR(box, 0, "kohm", _("Sheet resistance/sq: "),
+	    &r->rsh, M_TINYVAL, HUGE_VAL);
+	M_NumericalNewReal(box, 0, "um", _("Default width: "),
+	    &r->defw);
+	M_NumericalNewReal(box, 0, "um", _("Narrowing due to side etching: "),
+	    &r->narrow);
+	M_NumericalNewReal(box, 0, "mohm/degC", _("1st order temp. coeff: "),
+	    &r->Tc1);
+	M_NumericalNewReal(box, 0, "mohm/degC^2", _("2nd order temp. coeff: "),
+	    &r->Tc2);
 
-	mfsb = AG_MFSpinbuttonNew(win, 0, "um", "x", _("Geometry (LxW): "));
-	AG_WidgetBind(mfsb, "xvalue", AG_WIDGET_DOUBLE, &r->l);
-	AG_WidgetBind(mfsb, "yvalue", AG_WIDGET_DOUBLE, &r->w);
-	AG_MFSpinbuttonSetMin(mfsb, 1e-6);
-	
-	fsb = AG_FSpinbuttonNew(win, 0, "kohm", _("Sheet resistance/sq: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->rsh);
-	AG_FSpinbuttonSetMin(fsb, 0);
-	
-	fsb = AG_FSpinbuttonNew(win, 0, "um",
-	    _("Narrowing due to side etching: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &r->narrow);
-	AG_FSpinbuttonSetMin(fsb, 0);
-	
-	fsb = AG_FSpinbuttonNew(win, 0, "mohm/degC", _("Temp. coefficient: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc1);
-	fsb = AG_FSpinbuttonNew(win, 0, "mohm/degC^2", _("Temp. coefficient"));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_FLOAT, &r->Tc2);
-	return (win);
+	return (box);
 }
 
 ES_ComponentClass esSemiResistorClass = {
@@ -165,9 +159,11 @@ ES_ComponentClass esSemiResistorClass = {
 		Save,
 		Edit
 	},
-	N_("Semiconductor resistor"),
+	N_("Resistor (semiconductor)"),
 	"R",
 	"Resistor.eschem",
+	"Generic|Resistances|Semiconductor",
+	&esIconResistor,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

@@ -104,11 +104,10 @@ static void *
 Edit(void *p)
 {
 	ES_Wire *w = p;
-	AG_Window *win;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	win = AG_WindowNew(0);
-	AG_CheckboxNewFlag(win, &w->flags, ES_WIRE_FIXED, _("Fixed"));
-	return (win);
+	AG_CheckboxNewFlag(box, &w->flags, ES_WIRE_FIXED, _("Fixed"));
+	return (box);
 }
 
 ES_ComponentClass esWireClass = {
@@ -126,6 +125,8 @@ ES_ComponentClass esWireClass = {
 	N_("Wire"),
 	"W",
 	NULL,			/* schem */
+	"Generic",
+	&esIconInsertWire,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

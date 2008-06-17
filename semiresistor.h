@@ -9,11 +9,11 @@
 
 typedef struct es_semiresistor {
 	struct es_component com;
-	double l, w;		/* Semiconductor length and width */
-	double rsh;		/* Resistance (ohms/sq) */
-	double defw;		/* Default width */
-	double narrow;		/* Narrowing due to side etching */
-	float Tc1, Tc2;		/* Resistance/temperature coefficients */
+	M_Real l, w;		/* Semiconductor length and width (m) */
+	M_Real rsh;		/* Resistance (ohms/sq) */
+	M_Real defw;		/* Default width */
+	M_Real narrow;		/* Narrowing due to side etching */
+	M_Real Tc1, Tc2;	/* Resistance/temperature coefficients */
 } ES_SemiResistor;
 
 __BEGIN_DECLS

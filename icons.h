@@ -25,5 +25,19 @@ extern AG_StaticIcon esIconConsole;
 extern AG_StaticIcon esIconPortEditor;
 extern AG_StaticIcon esIconProximity;
 extern AG_StaticIcon esIconConstructionGeometry;
+extern AG_StaticIcon esIconDiode;
+extern AG_StaticIcon esIconResistor;
+extern AG_StaticIcon esIconSPST;
+extern AG_StaticIcon esIconSPDT;
+extern AG_StaticIcon esIconLED;
+extern AG_StaticIcon esIconLogicProbe;
+extern AG_StaticIcon esIconInverter;
+extern AG_StaticIcon esIconANDGate;
+extern AG_StaticIcon esIconVsource;
+extern AG_StaticIcon esIconVsquare;
+extern AG_StaticIcon esIconVsine;
+extern AG_StaticIcon esIconORGate;
+extern AG_StaticIcon esIconXORGate;
+extern AG_StaticIcon esIconGround;
 __END_DECLS
 #include "close_code.h"

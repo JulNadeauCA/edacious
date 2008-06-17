@@ -9,7 +9,7 @@
 
 typedef struct es_vsource {
 	struct es_component com;
-	double voltage;
+	M_Real voltage;
 	TAILQ_HEAD(,es_loop) loops;	/* Forward loops */
 	Uint nloops;
 	ES_Port	**lstack;		/* Temporary loop stack */

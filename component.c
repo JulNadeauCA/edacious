@@ -69,30 +69,6 @@ Destroy(void *p)
 {
 }
 
-/* Select the specified component. */
-void
-ES_ComponentSelect(ES_Component *com)
-{
-	com->selected = 1;
-}
-
-/* Deselect the specified component. */
-void
-ES_ComponentUnselect(ES_Component *com)
-{
-	com->selected = 0;
-}
-
-/* Unselect all components in the Circuit. */
-void
-ES_ComponentUnselectAll(ES_Circuit *ckt)
-{
-	ES_Component *com;
-
-	CIRCUIT_FOREACH_COMPONENT(com, ckt)
-		ES_ComponentUnselect(com);
-}
-
 static void
 AttachSchemPorts(ES_Component *com, VG_Node *vn)
 {
@@ -169,7 +145,7 @@ OnAttach(AG_Event *event)
 	Debug(com, "Attaching to circuit: %s\n", OBJECT(ckt)->name);
 	com->ckt = ckt;
 
-	if (COMOPS(com)->schemFile != NULL) {
+	if (COMCLASS(com)->schemFile != NULL) {
 		ES_SchemBlock *sb;
 		char path[FILENAME_MAX];
 
@@ -179,15 +155,15 @@ OnAttach(AG_Event *event)
 		Strlcpy(path, SHAREDIR, sizeof(path));
 		Strlcat(path, "/Schematics/", sizeof(path));
 #endif
-		Strlcat(path, COMOPS(com)->schemFile, sizeof(path));
+		Strlcat(path, COMCLASS(com)->schemFile, sizeof(path));
 		if ((sb = ES_LoadSchemFromFile(com, path)) != NULL) {
 			ES_AttachSchemEntity(com, VGNODE(sb));
 		} else {
 			AG_TextMsgFromError();
 		}
 	}
-	if (COMOPS(com)->draw != NULL) {
-		COMOPS(com)->draw(com, ckt->vg);
+	if (COMCLASS(com)->draw != NULL) {
+		COMCLASS(com)->draw(com, ckt->vg);
 	}
 
 	ES_UnlockCircuit(ckt);
@@ -266,16 +242,13 @@ Init(void *obj)
 	ES_Component *com = obj;
 
 	com->ckt = NULL;
-	com->Tspec = 27+273.15;
+	com->Tspec = 27.0+273.15;
 	com->nports = 0;
 	com->pairs = NULL;
 	com->npairs = 0;
 	com->specs = NULL;
 	com->nspecs = 0;
 
-	com->selected = 0;
-	com->highlighted = 0;
-	
 	com->loadDC_G = NULL;
 	com->loadDC_BCD = NULL;
 	com->loadDC_RHS = NULL;
@@ -360,10 +333,9 @@ static int
 Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Component *com = p;
-	float Tspec;
 
 	com->flags = (Uint)AG_ReadUint32(buf);
-	com->Tspec = AG_ReadFloat(buf);
+	com->Tspec = M_ReadReal(buf);
 	return (0);
 }
 
@@ -373,7 +345,7 @@ Save(void *p, AG_DataSource *buf)
 	ES_Component *com = p;
 
 	AG_WriteUint32(buf, com->flags);
-	AG_WriteFloat(buf, com->Tspec);
+	M_WriteReal(buf, com->Tspec);
 	return (0);
 }
 
@@ -527,7 +499,7 @@ SaveComponentTo(AG_Event *event)
 	ES_Component *com = AG_PTR(1);
 
 	/* XXX */
-//	DEV_BrowserSaveTo(com, _(COMOPS(com)->name));
+//	DEV_BrowserSaveTo(com, _(COMCLASS(com)->name));
 }
 
 static void
@@ -536,7 +508,7 @@ LoadComponentFrom(AG_Event *event)
 	ES_Component *com = AG_PTR(1);
 
 	/* XXX */
-//	DEV_BrowserLoadFrom(com, _(COMOPS(com)->name));
+//	DEV_BrowserLoadFrom(com, _(COMCLASS(com)->name));
 }
 
 static void
@@ -567,10 +539,10 @@ ES_ComponentMenu(ES_Component *com, VG_View *vgv)
 	ES_ComponentClass *comCls = NULL;
 
 	CIRCUIT_FOREACH_COMPONENT_SELECTED(com2, com->ckt) {
-		if (comCls != NULL && comCls != COMOPS(com2)) {
+		if (comCls != NULL && comCls != COMCLASS(com2)) {
 			common_class = 0;
 		}
-		comCls = COMOPS(com2);
+		comCls = COMCLASS(com2);
 		nsel++;
 	}
 
@@ -596,17 +568,17 @@ ES_ComponentMenu(ES_Component *com, VG_View *vgv)
 	    SaveComponentTo, "%p", com);
 	AG_MenuAction(pm->item, _("    Import model..."), agIconDocImport.s,
 	    LoadComponentFrom, "%p", com);
-	if (COMOPS(com)->instance_menu != NULL) {
+	if (COMCLASS(com)->instance_menu != NULL) {
 		AG_MenuSeparator(pm->item);
-		COMOPS(com)->instance_menu(com, pm->item);
+		COMCLASS(com)->instance_menu(com, pm->item);
 	}
 
 	if (nsel > 1) {
-		if (common_class && COMOPS(com)->class_menu != NULL) {
+		if (common_class && COMCLASS(com)->class_menu != NULL) {
 			AG_MenuSeparator(pm->item);
 			AG_MenuSection(pm->item, _("[Class: %s]"),
 			    comCls->name);
-			COMOPS(com)->class_menu(com->ckt, pm->item);
+			COMCLASS(com)->class_menu(com->ckt, pm->item);
 		}
 		AG_MenuSeparator(pm->item);
 		AG_MenuSection(pm->item, _("[All selections]"));
@@ -632,6 +604,117 @@ ES_UnselectAllPorts(ES_Circuit *ckt)
 	}
 }
 
+static void
+PollComponentPorts(AG_Event *event)
+{
+	char text[AG_TLIST_LABEL_MAX];
+	AG_Tlist *tl = AG_SELF();
+	ES_Circuit *ckt = AG_PTR(1);
+	ES_Component *com;
+	ES_Port *port;
+	int i;
+	
+	AG_TlistClear(tl);
+	
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (com->flags & ES_COMPONENT_SELECTED)
+			break;
+	}
+	if (com == NULL)
+		goto out;
+
+	AG_ObjectLock(com);
+	COMPONENT_FOREACH_PORT(port, i, com) {
+		Snprintf(text, sizeof(text), "%d (%s) -> n%d [%.03fV]",
+		    port->n, port->name, port->node,
+		    ES_NodeVoltage(ckt, port->node));
+		AG_TlistAddPtr(tl, NULL, text, port);
+	}
+	AG_ObjectUnlock(com);
+out:
+	AG_TlistRestore(tl);
+}
+
+static void
+PollComponentPairs(AG_Event *event)
+{
+	AG_Tlist *tl = AG_SELF();
+	ES_Circuit *ckt = AG_PTR(1);
+	ES_Component *com;
+	int i, j;
+	
+	AG_TlistClear(tl);
+	
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (com->flags & ES_COMPONENT_SELECTED)
+			break;
+	}
+	if (com == NULL)
+		goto out;
+
+	AG_ObjectLock(com);
+	for (i = 0; i < com->npairs; i++) {
+		char text[AG_TLIST_LABEL_MAX];
+		ES_Pair *pair = &com->pairs[i];
+		AG_TlistItem *it;
+
+		Snprintf(text, sizeof(text), "%s:(%s,%s)",
+		    OBJECT(com)->name, pair->p1->name, pair->p2->name);
+		it = AG_TlistAddPtr(tl, NULL, text, pair);
+		it->depth = 0;
+
+		for (j = 0; j < pair->nloops; j++) {
+			ES_Loop *dloop = pair->loops[j];
+			int dpol = pair->lpols[j];
+
+			Snprintf(text, sizeof(text), "%s:L%u (%s)",
+			    OBJECT(dloop->origin)->name,
+			    dloop->name,
+			    dpol == 1 ? "+" : "-");
+			it = AG_TlistAddPtr(tl, NULL, text, &pair->loops[j]);
+			it->depth = 1;
+		}
+	}
+	AG_ObjectUnlock(com);
+out:
+	AG_TlistRestore(tl);
+}
+
+static void *
+Edit(void *obj)
+{
+	ES_Component *com = obj;
+	AG_Notebook *nb;
+	AG_NotebookTab *ntab;
+	AG_Widget *w;
+	AG_Tlist *tl;
+
+	if (com->ckt == NULL)
+		return (NULL);
+
+	nb = AG_NotebookNew(NULL, AG_NOTEBOOK_EXPAND);
+	if (OBJECT_CLASS(com)->edit != NULL &&
+	    (w = OBJECT_CLASS(com)->edit(com)) != NULL) {
+		ntab = AG_NotebookAddTab(nb, _("Parameters"), AG_BOX_VERT);
+		AG_ObjectAttach(ntab, w);
+	}
+	ntab = AG_NotebookAddTab(nb, _("Ports"), AG_BOX_VERT);
+	{
+		AG_Pane *vp = AG_PaneNewVert(ntab, AG_PANE_EXPAND);
+		
+		AG_LabelNewStatic(vp->div[0], 0, _("Ports:"));
+		tl = AG_TlistNew(vp->div[0], AG_TLIST_POLL|AG_TLIST_EXPAND);
+		AG_SetEvent(tl, "tlist-poll", PollComponentPorts, "%p",
+		    com->ckt);
+				
+		AG_LabelNewStatic(vp->div[0], 0, _("Pairs:"));
+		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_HFILL);
+		AG_SetEvent(tl, "tlist-poll", PollComponentPairs, "%p",
+		    com->ckt);
+	}
+	return (nb);
+}
+
 AG_ObjectClass esComponentClass = {
 	"ES_Component",
 	sizeof(ES_Component),
@@ -641,5 +724,5 @@ AG_ObjectClass esComponentClass = {
 	Destroy,
 	Load,
 	Save,
-	NULL,			/* edit */
+	Edit
 };

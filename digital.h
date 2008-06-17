@@ -37,8 +37,8 @@ typedef struct es_digital {
 	M_Range Iin;		/* Input leakage current (+-) */
 	M_Range Iozh;		/* 3-state output leakage current; HIGH */
 	M_Range Iozl;		/* 3-state output leakage current; LOW */
-	M_QTimeRange Tthl;	/* Output transition time; HIGH->LOW */
-	M_QTimeRange Ttlh;	/* Output transition time; LOW->HIGH */
+	M_TimeRange Tthl;	/* Output transition time; HIGH->LOW */
+	M_TimeRange Ttlh;	/* Output transition time; LOW->HIGH */
 } ES_Digital;
 
 #define DIGITAL(p) ((ES_Digital *)(p))

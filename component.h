@@ -71,6 +71,8 @@ typedef struct es_component_class {
 	const char *name;	/* Name (e.g., "Resistor") */
 	const char *pfx;	/* Prefix (e.g., "R") */
 	const char *schemFile;	/* Schematic filename (or NULL if generated) */
+	const char *categories;	/* Classes */
+	struct ag_static_icon *icon;
 
 	void	 (*draw)(void *, VG *);
 	void	 (*instance_menu)(void *, struct ag_menu_item *);
@@ -83,10 +85,10 @@ typedef struct es_component {
 	struct ag_object obj;
 	struct es_circuit *ckt;			/* Back pointer to circuit */
 	Uint flags;
-#define COMPONENT_FLOATING	0x01		/* Not yet connected */
-	int selected;				/* Selected for edition? */
-	int highlighted;			/* Selected for selection? */
-	float Tspec;				/* Instance temp (k) */
+#define ES_COMPONENT_FLOATING	 0x01		/* Not yet connected */
+#define ES_COMPONENT_SELECTED	 0x02		/* Selected for edition */
+#define ES_COMPONENT_HIGHLIGHTED 0x04		/* Highlighted for selection */
+	M_Real Tspec;				/* Instance temp (k) */
 	ES_Port ports[COMPONENT_MAX_PORTS];	/* Interface elements */
 	Uint   nports;
 	ES_Pair *pairs;				/* Port pairs */
@@ -111,9 +113,9 @@ typedef struct es_component {
 
 #define ESCOMPONENT(p) ((ES_Component *)(p))
 
-#define COMOPS(p) ((ES_ComponentClass *)(AGOBJECT(p)->cls))
 #define COMPONENT(p) ((ES_Component *)(p))
 #define COM(p) ((ES_Component *)(p))
+#define COMCLASS(p) ((ES_ComponentClass *)(AGOBJECT(p)->cls))
 #define PORT(p,n) (&COM(p)->ports[n])
 #define PAIR(p,n) (&COM(p)->pairs[n])
 #define COM_Z0 50.0				/* Normalizing impedance */
@@ -142,10 +144,6 @@ typedef struct es_component {
 
 __BEGIN_DECLS
 extern AG_ObjectClass esComponentClass;
-
-void	 ES_ComponentSelect(ES_Component *);
-void	 ES_ComponentUnselect(ES_Component *);
-void	 ES_ComponentUnselectAll(struct es_circuit *);
 
 void	 ES_ComponentLog(void *, const char *, ...);
 void	 ES_ComponentMenu(ES_Component *, VG_View *);

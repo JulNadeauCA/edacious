@@ -199,7 +199,8 @@ Init(void *p)
 {
 	ES_Circuit *ckt = p;
 
-	ckt->flags = CIRCUIT_SHOW_NODES|CIRCUIT_SHOW_NODESYMS;
+	ckt->flags = CIRCUIT_SHOW_NODES|CIRCUIT_SHOW_NODESYMS|
+	             CIRCUIT_SHOW_NODENAMES;
 	ckt->simlock = 0;
 	ckt->descr[0] = '\0';
 	ckt->authors[0] = '\0';
@@ -1222,82 +1223,6 @@ CreateView(AG_Event *event)
 }
 
 static void
-PollComponentPorts(AG_Event *event)
-{
-	char text[AG_TLIST_LABEL_MAX];
-	AG_Tlist *tl = AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
-	ES_Component *com;
-	ES_Port *port;
-	int i;
-	
-	AG_TlistClear(tl);
-	
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (com->selected)
-			break;
-	}
-	if (com == NULL)
-		goto out;
-
-	AG_ObjectLock(com);
-	COMPONENT_FOREACH_PORT(port, i, com) {
-		Snprintf(text, sizeof(text), "%d (%s) -> n%d [%.03fV]",
-		    port->n, port->name, port->node,
-		    ES_NodeVoltage(ckt, port->node));
-		AG_TlistAddPtr(tl, NULL, text, port);
-	}
-	AG_ObjectUnlock(com);
-out:
-	AG_TlistRestore(tl);
-}
-
-static void
-PollComponentPairs(AG_Event *event)
-{
-	AG_Tlist *tl = AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
-	ES_Component *com;
-	int i, j;
-	
-	AG_TlistClear(tl);
-	
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (com->selected)
-			break;
-	}
-	if (com == NULL)
-		goto out;
-
-	AG_ObjectLock(com);
-	for (i = 0; i < com->npairs; i++) {
-		char text[AG_TLIST_LABEL_MAX];
-		ES_Pair *pair = &com->pairs[i];
-		AG_TlistItem *it;
-
-		Snprintf(text, sizeof(text), "%s:(%s,%s)",
-		    OBJECT(com)->name, pair->p1->name, pair->p2->name);
-		it = AG_TlistAddPtr(tl, NULL, text, pair);
-		it->depth = 0;
-
-		for (j = 0; j < pair->nloops; j++) {
-			ES_Loop *dloop = pair->loops[j];
-			int dpol = pair->lpols[j];
-
-			Snprintf(text, sizeof(text), "%s:L%u (%s)",
-			    OBJECT(dloop->origin)->name,
-			    dloop->name,
-			    dpol == 1 ? "+" : "-");
-			it = AG_TlistAddPtr(tl, NULL, text, &pair->loops[j]);
-			it->depth = 1;
-		}
-	}
-	AG_ObjectUnlock(com);
-out:
-	AG_TlistRestore(tl);
-}
-
-static void
 NewScope(AG_Event *event)
 {
 	char name[AG_OBJECT_NAME_MAX];
@@ -1356,7 +1281,7 @@ tryname:
 	if ((t = VG_ViewFindTool(vgv, "Insert component")) != NULL) {
 		VG_ViewSelectTool(vgv, t, ckt);
 		esFloatingCom = com;
-		esFloatingCom->selected = 1;
+		esFloatingCom->flags |= ES_COMPONENT_SELECTED;
 	}
 //	AG_WidgetFocus(vgv);
 //	AG_WindowFocus(AG_WidgetParentWindow(vgv));
@@ -1366,55 +1291,6 @@ tryname:
 	ES_UnlockCircuit(ckt);
 }
 
-static void
-FindSchemTree(AG_Tlist *tl, VG_Node *node, int depth)
-{
-	AG_TlistItem *it;
-	VG_Node *cNode;
-
-	it = AG_TlistAdd(tl, NULL, "%s%u", node->ops->name, node->handle);
-	it->depth = depth;
-	it->p1 = node;
-	it->selected = (node->flags & VG_NODE_SELECTED);
-
-	if (!TAILQ_EMPTY(&node->cNodes)) {
-		it->flags |= AG_TLIST_HAS_CHILDREN;
-	}
-	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
-	    AG_TlistVisibleChildren(tl, it)) {
-		TAILQ_FOREACH(cNode, &node->cNodes, tree)
-			FindSchemTree(tl, cNode, depth+1);
-	}
-}
-
-static void
-PollSchemTree(AG_Event *event)
-{
-	AG_Tlist *tl = AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
-
-	AG_TlistBegin(tl);
-	FindSchemTree(tl, (VG_Node *)ckt->vg->root, 0);
-	AG_TlistEnd(tl);
-}
-
-static void
-PollSchemList(AG_Event *event)
-{
-	AG_Tlist *tl = AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
-	AG_TlistItem *it;
-	VG_Node *vn;
-
-	AG_TlistBegin(tl);
-	VG_FOREACH_NODE(vn, ckt->vg, vg_node) {
-		it = AG_TlistAdd(tl, NULL, "%s%u", vn->ops->name, vn->handle);
-		it->selected = (vn->flags & VG_NODE_SELECTED);
-		it->p1 = vn;
-	}
-	AG_TlistEnd(tl);
-}
-
 static void *
 Edit(void *p)
 {
@@ -1422,7 +1298,7 @@ Edit(void *p)
 	AG_Window *win;
 	AG_Toolbar *tbTop, *tbRight;
 	AG_Menu *menu;
-	AG_MenuItem *mi, *miSub;
+	AG_MenuItem *mi, *mi2;
 	AG_Pane *pane;
 	VG_View *vv;
 
@@ -1439,8 +1315,7 @@ Edit(void *p)
 
 	mi = AG_MenuAddItem(menu, _("File"));
 	{
-		AG_MenuTool(mi, tbTop, _("Properties..."), agIconGear.s,
-		    0, 0,
+		AG_MenuAction(mi, _("Properties..."), agIconGear.s,
 		    ShowProperties, "%p,%p,%p", win, ckt, vv);
 		AG_MenuActionKb(mi, _("Close document"), agIconClose.s,
 		    SDLK_w, KMOD_CTRL,
@@ -1449,37 +1324,40 @@ Edit(void *p)
 
 	mi = AG_MenuAddItem(menu, _("Edit"));
 	{
-		miSub = AG_MenuNode(mi, _("Snapping mode"), NULL);
-		VG_SnapMenu(menu, miSub, vv);
+		mi2 = AG_MenuNode(mi, _("Snapping mode"), NULL);
+		VG_SnapMenu(menu, mi2, vv);
 	}
 	mi = AG_MenuAddItem(menu, _("View"));
 	{
 		AG_MenuActionKb(mi, _("New view..."), esIconCircuit.s,
 		    SDLK_v, KMOD_CTRL,
 		    CreateView, "%p,%p", win, ckt);
-		AG_MenuSeparator(mi);
-		AG_MenuUintFlags(mi, _("Show circuit nodes"), esIconNode.s,
-		    &ckt->flags, CIRCUIT_SHOW_NODES, 0);
-		AG_MenuUintFlags(mi, _("Show node names"), esIconNode.s,
-		    &ckt->flags, CIRCUIT_SHOW_NODENAMES, 0);
-		AG_MenuUintFlags(mi, _("Show node symbols"), esIconNode.s,
-		    &ckt->flags, CIRCUIT_SHOW_NODESYMS, 0);
-		AG_MenuSeparator(mi);
-		AG_MenuUintFlags(mi, _("Show grid"), vgIconSnapGrid.s,
-		    &vv->flags, VG_VIEW_GRID, 0);
-		AG_MenuUintFlags(mi, _("Show construction geometry"),
-		    esIconConstructionGeometry.s,
-		    &vv->flags, VG_VIEW_CONSTRUCTION, 0);
-#ifdef DEBUG
-		AG_MenuUintFlags(mi, _("Show extents"), vgIconBlock.s,
-		    &vv->flags, VG_VIEW_EXTENTS, 0);
-#endif
-		AG_MenuSeparator(mi);
 		AG_MenuAction(mi, _("Circuit topology..."), esIconMesh.s,
 		    ShowTopology, "%p,%p", win, ckt);
-		AG_MenuTool(mi, tbTop, _("Log console..."), esIconConsole.s,
-		    0, 0,
+		AG_MenuAction(mi, _("Log console..."), esIconConsole.s,
 		    ShowConsole, "%p,%p", win, ckt);
+
+		AG_MenuSeparator(mi);
+
+		mi2 = AG_MenuNode(mi, _("Schematic"), esIconCircuit.s);
+		{
+			AG_MenuUintFlags(mi2, _("Nodes"), esIconNode.s,
+			    &ckt->flags, CIRCUIT_SHOW_NODES, 0);
+			AG_MenuUintFlags(mi2, _("Node names"), esIconNode.s,
+			    &ckt->flags, CIRCUIT_SHOW_NODENAMES, 0);
+			AG_MenuUintFlags(mi2, _("Node symbols"), esIconNode.s,
+			    &ckt->flags, CIRCUIT_SHOW_NODESYMS, 0);
+			AG_MenuSeparator(mi2);
+			AG_MenuUintFlags(mi2, _("Grid"), vgIconSnapGrid.s,
+			    &vv->flags, VG_VIEW_GRID, 0);
+			AG_MenuUintFlags(mi2, _("Construction geometry"),
+			    esIconConstructionGeometry.s,
+			    &vv->flags, VG_VIEW_CONSTRUCTION, 0);
+#ifdef DEBUG
+			AG_MenuUintFlags(mi2, _("Extents"), vgIconBlock.s,
+			    &vv->flags, VG_VIEW_EXTENTS, 0);
+#endif
+		}
 	}
 	
 	mi = AG_MenuAddItem(menu, _("Simulation"));
@@ -1510,15 +1388,17 @@ Edit(void *p)
 			int i;
 
 			tl = AG_TlistNew(ntab, AG_TLIST_EXPAND);
-			AG_TlistSizeHint(tl, _("Independent voltage source"),
-			    20);
-			AGWIDGET(tl)->flags &= ~(AG_WIDGET_FOCUSABLE);
+			AG_TlistSizeHint(tl, _("Voltage source (square)"), 20);
+			AG_WidgetSetFocusable(tl, 0);
 			AG_SetEvent(tl, "tlist-dblclick", InsertComponent,
 			    "%p,%p,%p", vv, tl, ckt);
-			for (cc = &esComponentClasses[0]; *cc != NULL; cc++)
-				AG_TlistAddPtr(tl, NULL,
-				    ((ES_ComponentClass *)*cc)->name,
-				    (void *)*cc);
+
+			for (cc = &esComponentClasses[0]; *cc != NULL; cc++) {
+				ES_ComponentClass *ccls = *cc;
+				AG_TlistAddPtr(tl,
+				    ccls->icon != NULL ? ccls->icon->s : NULL,
+				    ccls->name, ccls);
+			}
 		}
 
 		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
@@ -1527,56 +1407,7 @@ Edit(void *p)
 			                       AG_TLIST_EXPAND);
 			AG_SetEvent(tl, "tlist-poll", PollCircuitObjs,
 			    "%p", ckt);
-			AGWIDGET(tl)->flags &= ~(AG_WIDGET_FOCUSABLE);
-		}
-
-		ntab = AG_NotebookAddTab(nb, _("Component"), AG_BOX_VERT);
-		{
-#if 0
-			AG_FSpinbutton *fsb;
-
-			label_static(ntab, _("Temperature:"));
-
-			fsb = AG_FSpinbuttonNew(win, 0, "degC",
-			    _("Reference: "));
-			AG_WidgetBindFloat(fsb, "value", &com->Tnom);
-			AG_FSpinbuttonSetMin(fsb, 0.0);
-	
-			fsb = AG_FSpinbuttonNew(win, 0, "degC",
-			    _("Instance: "));
-			AG_WidgetBindFloat(fsb, "value", &com->Tspec);
-			AG_FSpinbuttonSetMin(fsb, 0.0);
-
-			AG_SeparatorNew(ntab, SEPARATOR_HORIZ);
-#endif
-			AG_LabelNewStatic(ntab, 0, _("Pinout:"));
-			{
-				tl = AG_TlistNew(ntab, AG_TLIST_POLL|
-						       AG_TLIST_EXPAND);
-				AG_SetEvent(tl, "tlist-poll",
-				    PollComponentPorts, "%p", ckt);
-			}
-			AG_LabelNewStatic(ntab, 0, _("Port pairs:"));
-			{
-				tl = AG_TlistNew(ntab, AG_TLIST_POLL|
-				                       AG_TLIST_HFILL);
-				AG_SetEvent(tl, "tlist-poll",
-				    PollComponentPairs, "%p", ckt);
-			}
-		}
-		
-		ntab = AG_NotebookAddTab(nb, _("Schematics"), AG_BOX_VERT);
-		AG_BoxSetHomogenous(AGBOX(ntab), 1);
-		{
-			tl = AG_TlistNewPolled(ntab,
-			    AG_TLIST_TREE|AG_TLIST_HFILL|AG_TLIST_NOSELSTATE,
-			    PollSchemTree, "%p", ckt);
-			AG_TlistSizeHint(tl, "<Point1234>", 4);
-			
-			tl = AG_TlistNewPolled(ntab,
-			    AG_TLIST_HFILL|AG_TLIST_NOSELSTATE,
-			    PollSchemList, "%p", ckt);
-			AG_TlistSizeHint(tl, "<Point1234>", 4);
+			AG_WidgetSetFocusable(tl, 0);
 		}
 
 		box = AG_BoxNewVert(pane->div[1], AG_BOX_EXPAND);
@@ -1594,7 +1425,7 @@ Edit(void *p)
 			}
 		}
 	}
-	
+
 	mi = AG_MenuAddItem(menu, _("Components"));
 	{
 		VG_ToolOps **pOps, *ops;

@@ -9,8 +9,8 @@
 
 typedef struct es_spst {
 	ES_Component com;
-	double on_resistance;
-	double off_resistance;
+	M_Real rOn;
+	M_Real rOff;
 	int state;
 } ES_Spst;
 

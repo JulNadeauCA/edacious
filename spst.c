@@ -84,8 +84,8 @@ Init(void *p)
 	ES_Spst *sw = p;
 
 	ES_InitPorts(sw, esSpstPorts);
-	sw->on_resistance = 1.0;
-	sw->off_resistance = HUGE_VAL;
+	sw->rOn = 1.0;
+	sw->rOff = HUGE_VAL;
 	sw->state = 0;
 }
 
@@ -94,8 +94,8 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Spst *sw = p;
 
-	sw->on_resistance = AG_ReadDouble(buf);
-	sw->off_resistance = AG_ReadDouble(buf);
+	sw->rOn = M_ReadReal(buf);
+	sw->rOff = M_ReadReal(buf);
 	sw->state = (int)AG_ReadUint8(buf);
 	return (0);
 }
@@ -105,8 +105,8 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Spst *sw = p;
 
-	AG_WriteDouble(buf, sw->on_resistance);
-	AG_WriteDouble(buf, sw->off_resistance);
+	M_WriteReal(buf, sw->rOn);
+	M_WriteReal(buf, sw->rOff);
 	AG_WriteUint8(buf, (Uint8)sw->state);
 	return (0);
 }
@@ -116,7 +116,7 @@ Resistance(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_Spst *sw = p;
 
-	return (sw->state ? sw->on_resistance : sw->off_resistance);
+	return (sw->state ? sw->rOn : sw->rOff);
 }
 
 static int
@@ -151,6 +151,14 @@ SwitchAll(AG_Event *event)
 }
 
 static void
+ToggleState(AG_Event *event)
+{
+	ES_Spst *sw = AG_PTR(1);
+
+	sw->state = (sw->state == 1) ? 2 : 1;
+}
+
+static void
 ClassMenu(ES_Circuit *ckt, AG_MenuItem *m)
 {
 	AG_MenuAction(m, _("Switch on all"), NULL,
@@ -173,21 +181,15 @@ static void *
 Edit(void *p)
 {
 	ES_Spst *sw = p;
-	AG_Window *win, *subwin;
-	AG_FSpinbutton *fsb;
-	AG_Button *sb;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	win = AG_WindowNew(0);
-	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("ON resistance: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->on_resistance);
-	AG_FSpinbuttonSetMin(fsb, 1.0);
-	fsb = AG_FSpinbuttonNew(win, 0, "ohm", _("OFF resistance: "));
-	AG_WidgetBind(fsb, "value", AG_WIDGET_DOUBLE, &sw->off_resistance);
-	AG_FSpinbuttonSetMin(fsb, 1.0);
-	sb = AG_ButtonNew(win, AG_WIDGET_EXPAND, _("Toggle state"));
-	AG_ButtonSetSticky(sb, 1);
-	AG_WidgetBind(sb, "state", AG_WIDGET_BOOL, &sw->state);
-	return (win);
+	M_NumericalNewRealR(box, 0, "ohm", _("ON resistance: "),
+	    &sw->rOn, M_TINYVAL, HUGE_VAL);
+	M_NumericalNewRealR(box, 0, "ohm", _("OFF resistance: "),
+	    &sw->rOff, M_TINYVAL, HUGE_VAL);
+	AG_ButtonAct(box, AG_BUTTON_EXPAND, _("Toggle state"),
+	    ToggleState, "%p", sw);
+	return (box);
 }
 
 ES_ComponentClass esSpstClass = {
@@ -202,9 +204,11 @@ ES_ComponentClass esSpstClass = {
 		Save,
 		Edit
 	},
-	N_("SPST switch"),
+	N_("Switch (SPST)"),
 	"Sw",
 	NULL,			/* schem */
+	"Generic|Switches|User Interface",
+	&esIconSPST,
 	NULL,			/* draw */
 	InstanceMenu,
 	ClassMenu,

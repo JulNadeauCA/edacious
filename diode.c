@@ -30,10 +30,14 @@
 #include <eda.h>
 #include "diode.h"
 
+enum {
+	PORT_P = 1,
+	PORT_N = 2
+};
 const ES_Port esDiodePorts[] = {
 	{ 0, "" },
-	{ 1, "A" },	/* P-side (+) */
-	{ 2, "B" },	/* N-side (-) */
+	{ 1, "P" },	/* P-side (+) */
+	{ 2, "N" },	/* N-side (-) */
 	{ -1 },
 };
 
@@ -62,20 +66,8 @@ DiodeSmallSignalModel(ES_Diode *d, M_Real I)
 static M_Real
 DiodeVoltage(ES_Diode *d)
 {
-        ES_Port *A, *B;
-
-        if ((A = ES_FindPort(d, "A")) == NULL) {
-                AG_FatalError(AG_GetError());
-                return (-1);
-        }
-
-        if ((B = ES_FindPort(d, "B")) == NULL) {
-                AG_FatalError(AG_GetError());
-                return (-1);
-        }
-
-	M_Real vA = ES_NodeVoltage(COM(d)->ckt, A->node);
-	M_Real vB = ES_NodeVoltage(COM(d)->ckt, B->node);
+	M_Real vA = VPORT(d,PORT_P);
+	M_Real vB = VPORT(d,PORT_N);
 	
 	return vA-vB;
 }
@@ -96,8 +88,8 @@ LoadDC_G(void *p, M_Matrix *G)
 {
 	ES_Diode *d = p;
 
-	Uint k = PNODE(d,1);
-	Uint l = PNODE(d,2);
+	Uint k = PNODE(d,PORT_P);
+	Uint l = PNODE(d,PORT_N);
 
 	M_Real I = DiodeLargeSignalModel(d, DiodeVoltageBiasGuess);	/* guess bias current */
 	M_Real g = DiodeSmallSignalModel(d, I);			/* small-signal conductance */
@@ -112,8 +104,8 @@ LoadDC_RHS(void *p, M_Vector *i, M_Vector *e)
 {
         ES_Diode *d = p;
 
-	Uint k = PNODE(d,1);
-	Uint l = PNODE(d,2);
+	Uint k = PNODE(d,PORT_P);
+	Uint l = PNODE(d,PORT_N);
 
 	M_Real I   = DiodeLargeSignalModel(d, DiodeVoltageBiasGuess);		/* bias current for voltage guess */
 	M_Real Ieq = I-DiodeSmallSignalModel(d, I)*DiodeVoltageBiasGuess; 	/* norton equivalent current source */
@@ -128,8 +120,8 @@ ES_DiodeUpdate(void *p, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Ve
 {
 	ES_Diode *d = p;
 
-	Uint k = PNODE(d,1);
-	Uint l = PNODE(d,2);
+	Uint k = PNODE(d,PORT_P);
+	Uint l = PNODE(d,PORT_N);
 
 	M_Real V   = DiodeVoltage(d);
 	M_Real I   = DiodeLargeSignalModel(d, V);
@@ -143,7 +135,7 @@ ES_DiodeUpdate(void *p, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Ve
 static void
 Init(void *p)
 {
-	ES_Diode *d = d;
+	ES_Diode *d = p;
 
 	ES_InitPorts(d, esDiodePorts);
 	d->Is = 1e-10;
@@ -162,16 +154,18 @@ ES_ComponentClass esDiodeClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		NULL,
-		NULL,
-		NULL
+		NULL,		/* load */
+		NULL,		/* save */
+		NULL		/* edit */
 	},
 	N_("Diode"),
 	"D",
-	"Diode.eschem",		/* temporarily using resistor graphic */
+	"Diode.eschem",
+	"Generic|Nonlinear",
+	&esIconDiode,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
-	NULL,
+	NULL,			/* export */
 	NULL			/* connect */
 };

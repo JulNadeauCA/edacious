@@ -59,10 +59,10 @@ ES_CircuitExportSPICE3(ES_Circuit *ckt, const char *path)
 	    VERSION);
 
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (COMOPS(com)->export_model != NULL) {
+		if (COMCLASS(com)->export_model != NULL) {
 			fprintf(f, "* %s:%s\n", OBJECT(com)->cls->name,
 			    OBJECT(com)->name);
-			if (COMOPS(com)->export_model(com, CIRCUIT_SPICE3, f)
+			if (COMCLASS(com)->export_model(com, CIRCUIT_SPICE3, f)
 			    == -1) {
 				goto fail;
 			}
