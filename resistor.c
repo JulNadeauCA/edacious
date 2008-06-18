@@ -81,17 +81,6 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 	return (0);
 }
 
-#if 0
-static M_Real
-Resistance(void *p, ES_Port *p1, ES_Port *p2)
-{
-	ES_Resistor *r = p;
-	M_Real deltaT = COMCIRCUIT(r)->T0 - COMPONENT(r)->Tspec;
-
-	return (r->resistance * (1.0 + r->Tc1*deltaT + r->Tc2*deltaT*deltaT));
-}
-#endif
-
 /*
  * Load the element into the conductance matrix. All conductances between
  * (k,j) are added to (k,k) and (j,j), and subtracted from (k,j) and (j,k).
@@ -109,13 +98,15 @@ LoadDC_G(void *p, M_Matrix *G)
 	ES_Node *n;
 	Uint k = PNODE(r,1);
 	Uint j = PNODE(r,2);
+	M_Real dT = COMCIRCUIT(r)->T0 - COMPONENT(r)->Tspec;
 	M_Real g;
 
 	if (r->resistance == 0.0 || k == -1 || j == -1 || (k == 0 && j == 0)) {
 		AG_SetError("Null resistance");
 		return (-1);
 	}
-	StampConductance(1.0/r->resistance, k, j, G);
+	g = 1.0/(r->resistance * (1.0 + r->Tc1*dT + r->Tc2*dT*dT));
+	StampConductance(g, k, j, G);
 	return (0);
 }
 
@@ -171,9 +162,10 @@ Edit(void *p)
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
 	M_NumericalNewRealR(box, 0, "ohm", _("Resistance: "), &r->resistance,
-	    1.0, HUGE_VAL);
-	AG_NumericalNewIntR(box, 0, _("Tolerance: "), "%", &r->tolerance,
-	    1, 100);
+	    M_TINYVAL, HUGE_VAL);
+	AG_SeparatorNewHoriz(box);
+	AG_NumericalNewIntR(box, 0, "%", _("Tolerance: "), &r->tolerance,
+	    0, 100);
 	M_NumericalNewRealR(box, 0, "W", _("Power rating: "), &r->power_rating,
 	    0.0, HUGE_VAL);
 	M_NumericalNewReal(box, 0, "mohm/degC", _("Temp. coeff.: "), &r->Tc1);
