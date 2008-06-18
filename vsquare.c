@@ -48,7 +48,7 @@ Init(void *p)
 	vs->t = 0;
 	vs->tH = 100;
 	vs->tL = 100;
-	COM(vs)->intStep = ES_VSquareStep;
+	COMPONENT(vs)->intStep = ES_VSquareStep;
 }
 
 static int

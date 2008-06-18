@@ -78,7 +78,7 @@ ConnectWire(VG_View *vv, ES_Circuit *ckt, ES_Wire *wire, VG_Vector p1,
 	COMPONENT(wire)->ports[2].node = N3;
 	ES_AddBranch(ckt, N3, &COMPONENT(wire)->ports[1]);
 	ES_AddBranch(ckt, N3, &COMPONENT(wire)->ports[2]);
-	COMPONENT(wire)->flags &= ~(COMPONENT_FLOATING);
+	COMPONENT(wire)->flags &= ~(ES_COMPONENT_FLOATING);
 
 	VG_Status(vv, _("Connected %s:%d and %s:%d as n%d"),
 	    OBJECT(sp1->port->com)->name, sp1->port->n,
@@ -145,8 +145,8 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 		} else {
 			port1 = &COMPONENT(esCurWire)->ports[1];
 			port2 = &COMPONENT(esCurWire)->ports[2];
-			port1->flags &= ~(ES_PORT_SELECTED);
-			port2->flags &= ~(ES_PORT_SELECTED);
+			ES_UnselectPort(port1);
+			ES_UnselectPort(port2);
 			if (ConnectWire(vv, ckt, esCurWire, VG_Pos(port1->sp),
 			    VG_Pos(port2->sp)) == -1) {
 				AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
@@ -185,7 +185,7 @@ MouseButtonUp(void *p, VG_Vector vPos, int button)
 		spNear = VG_PointProximityMax(vv, "SchemPort", &vPos, NULL,
 		    esCurWire, PORT_RADIUS(vv));
 		if (spNear != NULL) {
-			spNear->port->flags |= ES_PORT_SELECTED;
+			ES_SelectPort(spNear->port);
 		}
 		UpdateStatus(vv, spNear);
 		return (0);
@@ -219,7 +219,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	    (esCurWire != NULL) ? COMPONENT(esCurWire)->ports[1].sp : NULL,
 	    PORT_RADIUS(vv));
 	if (spNear != NULL) {
-		spNear->port->flags |= ES_PORT_SELECTED;
+		ES_SelectPort(spNear->port);
 	}
 	if (esCurWire != NULL) {
 		VG_SetPosition(COMPONENT(esCurWire)->ports[1].sp,

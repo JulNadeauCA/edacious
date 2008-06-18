@@ -83,7 +83,7 @@ LoadDC_G(void *p, M_Matrix *G)
 	ES_Node *n;
 	int i;
 
-	for (i = 0; i < COM(dig)->npairs; i++) {
+	for (i = 0; i < COMPONENT(dig)->npairs; i++) {
 		ES_Pair *pair = PAIR(dig,i);
 		Uint k = pair->p1->node;
 		Uint j = pair->p2->node;
@@ -136,8 +136,8 @@ ES_LogicOutput(void *p, const char *portname, ES_LogicState nState)
 		AG_FatalError(AG_GetError());
 		return (-1);
 	}
-	for (i = 0; i < COM(dig)->npairs; i++) {
-		ES_Pair *pair = &COM(dig)->pairs[i];
+	for (i = 0; i < COMPONENT(dig)->npairs; i++) {
+		ES_Pair *pair = &COMPONENT(dig)->pairs[i];
 
 		if ((pair->p1 == port && pair->p2->n == dig->VccPort) ||
 		    (pair->p2 == port && pair->p1->n == dig->VccPort)) {
@@ -167,7 +167,7 @@ ES_LogicInput(void *p, const char *portname)
 		AG_FatalError(AG_GetError());
 		return (-1);
 	}
-	v = ES_NodeVoltage(COM(dig)->ckt, port->node);
+	v = ES_NodeVoltage(COMPONENT(dig)->ckt, port->node);
 	if (v >= dig->Vih.min) {
 		return (ES_HIGH);
 	} else if (v <= dig->Vil.max) {
@@ -185,8 +185,8 @@ Init(void *obj)
 
 	dig->VccPort = 1;
 	dig->GndPort = 2;
-	dig->G = M_NewZero(COM(dig)->npairs,1);
-	COM(dig)->loadDC_G = LoadDC_G;
+	dig->G = M_NewZero(COMPONENT(dig)->npairs,1);
+	COMPONENT(dig)->loadDC_G = LoadDC_G;
 
 	dig->Vcc.min = 3.0;	dig->Vcc.typ = 5.0;	dig->Vcc.max = 15.0;
 	dig->Vol.min = 0.0;	dig->Vol.typ = 0.0;	dig->Vol.max = 0.05;
@@ -206,8 +206,8 @@ PollPairs(AG_Event *event)
 	int i;
 
 	AG_TableBegin(t);
-	for (i = 0; i < COM(dig)->npairs; i++) {
-		ES_Pair *pair = &COM(dig)->pairs[i];
+	for (i = 0; i < COMPONENT(dig)->npairs; i++) {
+		ES_Pair *pair = &COMPONENT(dig)->pairs[i];
 
 		AG_TableAddRow(t, "%d:%s:%s:%f", i+1, pair->p1->name,
 		    pair->p2->name, dig->G->v[i]);

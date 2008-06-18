@@ -81,11 +81,11 @@ HighlightConnections(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 		spNear = VG_PointProximityMax(vv, "SchemPort", &pos, NULL,
 		    port->sp, PORT_RADIUS(vv));
 		if (spNear != NULL) {
-			port->flags |= ES_PORT_SELECTED;
+			ES_SelectPort(port);
 			Snprintf(s, sizeof(s), "%d>[%s:%d] ",
 			    i, OBJECT(spNear->com)->name, spNear->port->n);
 		} else {
-			port->flags &= ~(ES_PORT_SELECTED);
+			ES_UnselectPort(port);
 			Snprintf(s, sizeof(s), _("%d->(new) "), i);
 		}
 		Strlcat(status, s, sizeof(status));
@@ -136,9 +136,9 @@ ConnectComponent(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 				    port);
 			}
 		}
-		port->flags &= ~(ES_PORT_SELECTED);
+		ES_UnselectPort(port);
 	}
-	com->flags &= ~(COMPONENT_FLOATING);
+	com->flags &= ~(ES_COMPONENT_FLOATING);
 
 	AG_PostEvent(ckt, com, "circuit-connected", NULL);
 	ES_CircuitModified(ckt);
@@ -161,8 +161,8 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 				AG_TextMsgFromError();
 				break;
 			}
-			ES_ComponentUnselectAll(ckt);
-			ES_ComponentSelect(esFloatingCom);
+			ES_UnselectAllComponents(ckt, t->vgv);
+			ES_SelectComponent(esFloatingCom, t->vgv);
 			esFloatingCom = NULL;
 			VG_ViewSelectTool(t->vgv, NULL, NULL);
 		}

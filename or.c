@@ -46,7 +46,7 @@ Init(void *p)
 	ES_Or *gate = p;
 
 	ES_InitPorts(gate, esOrPorts);
-	COM(gate)->intUpdate = ES_OrUpdate;
+	COMPONENT(gate)->intUpdate = ES_OrUpdate;
 	ES_LogicOutput(gate, "A|B", ES_HI_Z);
 }
 

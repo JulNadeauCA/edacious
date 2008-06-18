@@ -41,7 +41,7 @@ static int
 Connect(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_Ground *gnd = p;
-	ES_Circuit *ckt = COM(gnd)->ckt;
+	ES_Circuit *ckt = COMCIRCUIT(gnd);
 	ES_Branch *br;
 
 	if (p2 != NULL && p2->node > 0) {

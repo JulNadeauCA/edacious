@@ -1,16 +1,14 @@
 /* Circuit edition tools */
 static VG_ToolOps *esCircuitTools[] = {
-	&esSelectTool,
-	&esWireTool,
-
 	&esSchemSelectTool,
-#ifdef DEBUG
-	&esSchemProximityTool,
-#endif
+	&esWireTool,
 	&esSchemPointTool,
 	&esSchemLineTool,
 	&esSchemCircleTool,
 	&esSchemTextTool,
+#ifdef DEBUG
+	&esSchemProximityTool,
+#endif
 	NULL
 };
 

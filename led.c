@@ -81,8 +81,8 @@ void
 ES_LedUpdate(void *p)
 {
 	ES_Led *r = p;
-	M_Real v1 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,1));
-	M_Real v2 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,2));
+	M_Real v1 = ES_NodeVoltage(COMPONENT(r)->ckt,PNODE(r,1));
+	M_Real v2 = ES_NodeVoltage(COMPONENT(r)->ckt,PNODE(r,2));
 
 	r->state = ((v1 - v2) >= r->Vrev);
 }
@@ -97,7 +97,7 @@ Init(void *p)
 	r->Vrev = 5.0;
 	r->I = 2500e-3;
 	r->state = 0;
-	COM(r)->intUpdate = ES_LedUpdate;
+	COMPONENT(r)->intUpdate = ES_LedUpdate;
 }
 
 static void *

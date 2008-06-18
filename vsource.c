@@ -124,7 +124,7 @@ InsertVoltageLoop(ES_Vsource *vs)
 static void
 FindLoops(ES_Vsource *vs, ES_Port *portCur)
 {
-	ES_Circuit *ckt = COM(vs)->ckt;
+	ES_Circuit *ckt = COMPONENT(vs)->ckt;
 	ES_Node *nodeCur = ckt->nodes[portCur->node], *nodeNext;
 	ES_Port *portNext;
 	ES_Branch *br;
@@ -139,12 +139,12 @@ FindLoops(ES_Vsource *vs, ES_Port *portCur)
 		if (br->port == portCur) {
 			continue;
 		}
-		if (br->port->com == COM(vs) &&
+		if (br->port->com == COMPONENT(vs) &&
 		    br->port->n == 2 &&
 		    vs->nlstack > 2) {
 			vs->lstack = Realloc(vs->lstack,
 			    (vs->nlstack+1)*sizeof(ES_Port *));
-			vs->lstack[vs->nlstack++] = &COM(vs)->ports[2];
+			vs->lstack[vs->nlstack++] = &COMPONENT(vs)->ports[2];
 			InsertVoltageLoop(vs);
 			vs->nlstack--;
 			continue;
@@ -273,8 +273,8 @@ Init(void *p)
 	vs->nloops = 0;
 	TAILQ_INIT(&vs->loops);
 
-	COM(vs)->loadDC_BCD = LoadDC_BCD;
-	COM(vs)->loadDC_RHS = LoadDC_RHS;
+	COMPONENT(vs)->loadDC_BCD = LoadDC_BCD;
+	COMPONENT(vs)->loadDC_RHS = LoadDC_RHS;
 	AG_SetEvent(vs, "circuit-connected", Connected, NULL);
 	AG_SetEvent(vs, "circuit-disconnected", Disconnected, NULL);
 }
@@ -354,7 +354,7 @@ ES_VsourceVoltage(void *p, int p1, int p2)
 int
 ES_VsourceName(ES_Vsource *vs)
 {
-	ES_Circuit *ckt = COM(vs)->ckt;
+	ES_Circuit *ckt = COMPONENT(vs)->ckt;
 	int i;
 
 	for (i = 0; i < ckt->m; i++) {
@@ -379,7 +379,7 @@ PollLoops(AG_Event *event)
 
 	k = ES_VsourceName(vs);
 	it = AG_TlistAdd(tl, NULL, "I(%d)=%.04fA", k,
-	    ES_BranchCurrent(COM(vs)->ckt, k));
+	    ES_BranchCurrent(COMPONENT(vs)->ckt, k));
 	it->depth = 0;
 
 	TAILQ_FOREACH(l, &vs->loops, loops) {

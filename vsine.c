@@ -56,7 +56,7 @@ Init(void *p)
 	vs->vPeak = 5.0;
 	vs->f = 60.0;
 	vs->phase = 0.0;
-	COM(vs)->intStep = IntStep;
+	COMPONENT(vs)->intStep = IntStep;
 }
 
 static int

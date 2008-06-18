@@ -57,7 +57,7 @@ tryname:
 	wire = Malloc(sizeof(ES_Wire));
 	AG_ObjectInit(wire, &esWireClass);
 	AG_ObjectSetName(wire, "%s", name);
-	COMPONENT(wire)->flags |= COMPONENT_FLOATING;
+	COMPONENT(wire)->flags |= ES_COMPONENT_FLOATING;
 
 	ES_LockCircuit(ckt);
 	AG_ObjectAttach(ckt, wire);

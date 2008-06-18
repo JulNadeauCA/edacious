@@ -152,18 +152,29 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Vector vSnap;
 	VG_Node *vn;
+	int multiSelect = (SDL_GetModState() & KMOD_CTRL);
 
 	if (b != SDL_BUTTON_LEFT) {
 		return (0);
 	}
 	if ((vn = ES_SchemNearest(vv, v)) != NULL) {
-		if (SDL_GetModState() & KMOD_CTRL) {
+		if (multiSelect) {
+			if (VG_NodeIsClass(vn, "SchemBlock")) {
+				ES_SchemBlock *blk = (ES_SchemBlock *)vn;
+				ES_SelectComponent(blk->com, vv);
+			}
 			if (vn->flags & VG_NODE_SELECTED) {
 				vn->flags &= ~(VG_NODE_SELECTED);
 			} else {
 				vn->flags |= VG_NODE_SELECTED;
 			}
 		} else {
+			if (VG_NodeIsClass(vn, "SchemBlock")) {
+				ES_SchemBlock *blk = (ES_SchemBlock *)vn;
+				ES_UnselectAllComponents(COMCIRCUIT(blk->com),
+				    vv);
+				ES_SelectComponent(blk->com, vv);
+			}
 			VG_UnselectAll(vv->vg);
 			vn->flags |= VG_NODE_SELECTED;
 		}
@@ -197,6 +208,10 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 			vn->flags &= ~(VG_NODE_MOUSEOVER);
 		}
 		if ((vn = ES_SchemNearest(vv, vPos)) != NULL) {
+			if (VG_NodeIsClass(vn, "SchemBlock")) {
+				ES_SchemBlock *blk = (ES_SchemBlock *)vn;
+				ES_HighlightComponent(blk->com);
+			}
 			vn->flags |= VG_NODE_MOUSEOVER;
 		}
 		return (0);

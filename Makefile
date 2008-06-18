@@ -40,7 +40,6 @@ SRCS=	and.c \
 	schem_wire.c \
 	schem_wire_tool.c \
 	scope.c \
-	select_tool.c \
 	semiresistor.c \
 	sim.c \
 	spdt.c \

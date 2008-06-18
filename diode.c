@@ -141,9 +141,9 @@ Init(void *p)
 	d->Is = 1e-10;
 	d->Vt = 0.025;
 
-	COM(d)->loadDC_G = LoadDC_G;
-	COM(d)->loadDC_RHS = LoadDC_RHS;
-	COM(d)->dcUpdate = ES_DiodeUpdate;
+	COMPONENT(d)->loadDC_G = LoadDC_G;
+	COMPONENT(d)->loadDC_RHS = LoadDC_RHS;
+	COMPONENT(d)->dcUpdate = ES_DiodeUpdate;
 }
 
 ES_ComponentClass esDiodeClass = {

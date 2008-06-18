@@ -76,8 +76,8 @@ void
 ES_LogicProbeUpdate(void *p)
 {
 	ES_LogicProbe *r = p;
-	M_Real v1 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,1));
-	M_Real v2 = ES_NodeVoltage(COM(r)->ckt,PNODE(r,2));
+	M_Real v1 = ES_NodeVoltage(COMPONENT(r)->ckt,PNODE(r,1));
+	M_Real v2 = ES_NodeVoltage(COMPONENT(r)->ckt,PNODE(r,2));
 
 	r->state = ((v1 - v2) >= r->Vhigh);
 }
@@ -90,7 +90,7 @@ Init(void *p)
 	ES_InitPorts(r, esLogicProbePorts);
 	r->Vhigh = 5.0;
 	r->state = 0;
-	COM(r)->intUpdate = ES_LogicProbeUpdate;
+	COMPONENT(r)->intUpdate = ES_LogicProbeUpdate;
 }
 
 static void *

@@ -86,7 +86,7 @@ static M_Real
 Resistance(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_Resistor *r = p;
-	M_Real deltaT = COM_T0 - COM(r)->Tspec;
+	M_Real deltaT = COMCIRCUIT(r)->T0 - COMPONENT(r)->Tspec;
 
 	return (r->resistance * (1.0 + r->Tc1*deltaT + r->Tc2*deltaT*deltaT));
 }
@@ -132,6 +132,9 @@ LoadSP(void *p, M_Matrix *S, M_Matrix *N)
 	ES_Resistor *res = p;
 	Uint k = PNODE(res,1);
 	Uint j = PNODE(res,2);
+	M_Real T0 = COMCIRCUIT(res)->T0;
+	M_Real Z0 = COMCIRCUIT(res)->Z0;
+	M_Real Tspec = COMPONENT(res)->Tspec;
 	M_Real r, z, f;
 	
 	if (res->resistance == 0.0 ||
@@ -141,14 +144,13 @@ LoadSP(void *p, M_Matrix *S, M_Matrix *N)
 	}
 
 	r = res->resistance;
-	z = r/COM_Z0;
+	z = r/Z0;
 	S->v[k][k] += z/(z+2);
 	S->v[j][j] += z/(z+2);
 	S->v[k][j] -= z/(z+2);
 	S->v[j][k] -= z/(z+2);
 
-	f = COM(res)->Tspec*4.0*r*COM_Z0 /
-	    ((2.0*COM_Z0+r)*(2.0*COM_Z0+r)) / COM_T0;
+	f = Tspec*4.0*r*Z0 / ((2.0*Z0 + r)*(2.0*Z0 + r)) / T0;
 	N->v[k][k] += f;
 	N->v[j][j] += f;
 	N->v[k][j] -= f;
@@ -165,8 +167,8 @@ Init(void *p)
 	r->resistance = 1;
 	r->power_rating = HUGE_VAL;
 	r->tolerance = 0;
-	COM(r)->loadDC_G = LoadDC_G;
-	COM(r)->loadSP = LoadSP;
+	COMPONENT(r)->loadDC_G = LoadDC_G;
+	COMPONENT(r)->loadSP = LoadSP;
 }
 
 static void *

@@ -100,6 +100,9 @@ ES_AttachSchemEntity(ES_Component *com, VG_Node *vn)
 {
 	TAILQ_INSERT_TAIL(&com->schemEnts, vn, user);
 	vn->p = com;
+	if (VG_NodeIsClass(vn, "SchemBlock")) {
+		((ES_SchemBlock *)vn)->com = com;
+	}
 	AttachSchemPorts(com, vn);
 }
 
@@ -425,52 +428,49 @@ ES_FindPort(void *p, const char *portname)
 }
 
 static void
-EditParameters(AG_Event *event)
+DeleteComponent(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
-
-	/* XXX */
-//	DEV_BrowserOpenData(com);
-}
-
-static void
-RemoveComponent(AG_Event *event)
-{
-	ES_Component *com = AG_PTR(1);
+	VG_View *vv = AG_PTR(2);
 	ES_Circuit *ckt = com->ckt;
 
 	ES_LockCircuit(ckt);
-	AG_ObjectDetach(com);
 	if (!AG_ObjectInUse(com)) {
-		AG_TextTmsg(AG_MSG_INFO, 250, _("Removed component %s."),
-		    OBJECT(com)->name);
+		VG_Status(vv, _("Removed component %s."), OBJECT(com)->name);
+		AG_ObjectDetach(com);
 		AG_ObjectDestroy(com);
+		ES_CircuitModified(ckt);
 	} else {
-		AG_TextMsg(AG_MSG_ERROR, _("%s: Component is in use."),
+		VG_Status(vv, _("Cannot delete %s: Component is in use!"),
 		    OBJECT(com)->name);
 	}
-	ES_CircuitModified(ckt);
 	ES_UnlockCircuit(ckt);
 }
 
 static void
-RemoveSelections(AG_Event *event)
+DeleteSelections(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
+	VG_View *vv = AG_PTR(2);
 	ES_Component *com;
+	int changed = 0;
 
 	ES_LockCircuit(ckt);
 rescan:
 	CIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt) {
-		AG_ObjectDetach(com);
 		if (!AG_ObjectInUse(com)) {
+			AG_ObjectDetach(com);
 			AG_ObjectDestroy(com);
+			changed++;
 		} else {
-			AG_TextMsg(AG_MSG_ERROR, _("%s: Component is in use."),
+			VG_Status(vv,
+			    _("Cannot delete %s: Component is in use!"),
 			    OBJECT(com)->name);
 		}
-		ES_CircuitModified(ckt);
 		goto rescan;
+	}
+	if (changed) {
+		ES_CircuitModified(ckt);
 	}
 	ES_UnlockCircuit(ckt);
 }
@@ -494,24 +494,6 @@ SaveComponent(AG_Event *event)
 }
 
 static void
-SaveComponentTo(AG_Event *event)
-{
-	ES_Component *com = AG_PTR(1);
-
-	/* XXX */
-//	DEV_BrowserSaveTo(com, _(COMCLASS(com)->name));
-}
-
-static void
-LoadComponentFrom(AG_Event *event)
-{
-	ES_Component *com = AG_PTR(1);
-
-	/* XXX */
-//	DEV_BrowserLoadFrom(com, _(COMCLASS(com)->name));
-}
-
-static void
 SelectTool(AG_Event *event)
 {
 	VG_View *vgv = AG_PTR(1);
@@ -521,8 +503,6 @@ SelectTool(AG_Event *event)
 
 	if ((t = VG_ViewFindToolByOps(vgv, ops)) != NULL) {
 		VG_ViewSelectTool(vgv, t, ckt);
-//		AG_WidgetFocus(vgv);
-//		AG_WindowFocus(AG_WidgetParentWindow(vgv));
 	} else {
 		AG_TextMsg(AG_MSG_ERROR, _("No such tool: %s"), ops->name);
 	}
@@ -553,26 +533,20 @@ ES_ComponentMenu(ES_Component *com, VG_View *vgv)
 
 		AG_MenuAction(pm->item, _("Select tool"), NULL,
 		    SelectTool, "%p,%p,%p", vgv, com->ckt,
-		    &esSelectTool);
+		    &esSchemSelectTool);
 		AG_MenuAction(pm->item, _("Wire tool"), NULL,
 		    SelectTool, "%p,%p,%p", vgv, com->ckt,
 		    &esWireTool);
 		AG_MenuSeparator(pm->item);
 	}
 	AG_MenuSection(pm->item, "[Component: %s]", OBJECT(com)->name);
-	AG_MenuAction(pm->item, _("    Edit parameters"), agIconDoc.s,
-	    EditParameters, "%p", com);
-	AG_MenuAction(pm->item, _("    Destroy instance"), agIconTrash.s,
-	    RemoveComponent, "%p", com);
-	AG_MenuAction(pm->item, _("    Export model..."), agIconSave.s,
-	    SaveComponentTo, "%p", com);
-	AG_MenuAction(pm->item, _("    Import model..."), agIconDocImport.s,
-	    LoadComponentFrom, "%p", com);
+	AG_MenuAction(pm->item, _("    Delete"), agIconTrash.s,
+	    DeleteComponent, "%p,%p", com, vgv);
+	    
 	if (COMCLASS(com)->instance_menu != NULL) {
 		AG_MenuSeparator(pm->item);
 		COMCLASS(com)->instance_menu(com, pm->item);
 	}
-
 	if (nsel > 1) {
 		if (common_class && COMCLASS(com)->class_menu != NULL) {
 			AG_MenuSeparator(pm->item);
@@ -582,26 +556,12 @@ ES_ComponentMenu(ES_Component *com, VG_View *vgv)
 		}
 		AG_MenuSeparator(pm->item);
 		AG_MenuSection(pm->item, _("[All selections]"));
-		AG_MenuAction(pm->item, _("    Destroy selections"),
+		AG_MenuAction(pm->item, _("    Delete selected"),
 		    agIconTrash.s,
-		    RemoveSelections, "%p", com->ckt);
+		    DeleteSelections, "%p, %p", com->ckt, vgv);
 	}
 
 	AG_PopupShow(pm);
-}
-
-/* Deselect all Ports of all Components in the Circuit. */
-void
-ES_UnselectAllPorts(ES_Circuit *ckt)
-{
-	ES_Component *com;
-	ES_Port *port;
-	int i;
-
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		COMPONENT_FOREACH_PORT(port, i, com)
-			port->flags &= ~(ES_PORT_SELECTED);
-	}
 }
 
 static void
@@ -700,15 +660,13 @@ Edit(void *obj)
 	}
 	ntab = AG_NotebookAddTab(nb, _("Ports"), AG_BOX_VERT);
 	{
-		AG_Pane *vp = AG_PaneNewVert(ntab, AG_PANE_EXPAND);
-		
-		AG_LabelNewStatic(vp->div[0], 0, _("Ports:"));
-		tl = AG_TlistNew(vp->div[0], AG_TLIST_POLL|AG_TLIST_EXPAND);
+		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_EXPAND);
 		AG_SetEvent(tl, "tlist-poll", PollComponentPorts, "%p",
 		    com->ckt);
-				
-		AG_LabelNewStatic(vp->div[0], 0, _("Pairs:"));
-		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_HFILL);
+	}
+	ntab = AG_NotebookAddTab(nb, _("Pairs"), AG_BOX_VERT);
+	{
+		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_EXPAND);
 		AG_SetEvent(tl, "tlist-poll", PollComponentPairs, "%p",
 		    com->ckt);
 	}

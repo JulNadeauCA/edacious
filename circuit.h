@@ -72,7 +72,7 @@ typedef struct es_circuit {
 	char keywords[CIRCUIT_KEYWORDS_MAX];	/* Keywords */
 	VG *vg;					/* Schematics */
 	struct ag_console *console;		/* Log console */
-	ES_Sim *sim;			/* Current simulation mode */
+	ES_Sim *sim;				/* Current simulation mode */
 	Uint flags;
 #define CIRCUIT_SHOW_NODES	0x01
 #define CIRCUIT_SHOW_NODENAMES	0x02
@@ -84,13 +84,16 @@ typedef struct es_circuit {
 	struct es_vsource **vsrcs;	/* Independent vsources */
 	TAILQ_HEAD(,es_sym) syms;	/* Symbols */
 
-	Uint l;			/* Number of loops */
-	Uint m;			/* Number of independent vsources */
-	Uint n;			/* Number of nodes (except ground) */
+	Uint l;				/* Loops */
+	Uint m;				/* Independent voltage sources */
+	Uint n;				/* Nodes (except ground) */
+
+	M_Real Z0;			/* Normalizing impedance */
+	M_Real T0;			/* Reference temperature */
 } ES_Circuit;
 
 #define CIRCUIT(p) ((ES_Circuit *)(p))
-#define VNODE(com,n) ES_NodeVoltage(COM(com)->ckt,(n))
+#define VNODE(com,n) ES_NodeVoltage(COMPONENT(com)->ckt,(n))
 
 /* Iterate over all Components of the Circuit, floating or not. */
 #define CIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) \
@@ -100,21 +103,21 @@ typedef struct es_circuit {
 #define CIRCUIT_FOREACH_VSOURCE(vs, ckt) \
 	AGOBJECT_FOREACH_CLASS((vs),(ckt),es_vsource, \
 	"ES_Component:ES_Vsource:*") \
-		if (ESCOMPONENT(vs)->flags & COMPONENT_FLOATING) {	\
+		if (ESCOMPONENT(vs)->flags & ES_COMPONENT_FLOATING) {	\
 			continue;					\
 		} else
 
 /* Iterate over all non-floating Components in the Circuit. */
 #define CIRCUIT_FOREACH_COMPONENT(com, ckt)			\
 	CIRCUIT_FOREACH_COMPONENT_ALL((com),ckt)		\
-		if ((com)->flags & COMPONENT_FLOATING) {	\
+		if ((com)->flags & ES_COMPONENT_FLOATING) {	\
 			continue;				\
 		} else
 
 /* Iterate over all selected, non-floating Components in the Circuit. */
 #define CIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt)		\
 	CIRCUIT_FOREACH_COMPONENT((com),ckt)			\
-		if (!(com)->selected) {				\
+		if (!(com)->flags & ES_COMPONENT_SELECTED) {	\
 			continue;				\
 		} else
 
@@ -179,6 +182,82 @@ ES_UnlockCircuit(ES_Circuit *ckt)
 			ES_ResumeSimulation(ckt);
 	}
 	AG_ObjectUnlock(ckt);
+}
+
+/* Select/unselect components. */
+static __inline__ void
+ES_SelectComponent(ES_Component *com, VG_View *vv)
+{
+	com->flags |= ES_COMPONENT_SELECTED;
+
+	if (vv->nEditAreas > 0) {
+		AG_ObjectFreeChildren(vv->editAreas[0]);
+		AG_ObjectAttach(vv->editAreas[0], esComponentClass.edit(com));
+		AG_WindowUpdate(AG_ParentWindow(vv->editAreas[0]));
+		AG_WidgetShownRecursive(vv->editAreas[0]);
+	}
+}
+static __inline__ void
+ES_UnselectComponent(ES_Component *com, VG_View *vv)
+{
+	com->flags &= ~(ES_COMPONENT_SELECTED);
+}
+static __inline__ void
+ES_SelectAllComponents(ES_Circuit *ckt, VG_View *vv)
+{
+	ES_Component *com;
+	CIRCUIT_FOREACH_COMPONENT(com, ckt)
+		com->flags |= ES_COMPONENT_SELECTED;
+}
+static __inline__ void
+ES_UnselectAllComponents(ES_Circuit *ckt, VG_View *vv)
+{
+	ES_Component *com;
+
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		com->flags &= ~(ES_COMPONENT_SELECTED);
+	}
+	if (vv->nEditAreas > 0) {
+		AG_ObjectFreeChildren(vv->editAreas[0]);
+		AG_WindowUpdate(AG_ParentWindow(vv->editAreas[0]));
+		AG_WidgetHiddenRecursive(vv->editAreas[0]);
+	}
+}
+
+/* Highlight component for selection. */
+static __inline__ void
+ES_HighlightComponent(ES_Component *hCom)
+{
+	ES_Circuit *ckt = COMCIRCUIT(hCom);
+	ES_Component *com;
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		com->flags &= ~(ES_COMPONENT_HIGHLIGHTED);
+	}
+	hCom->flags |= ES_COMPONENT_HIGHLIGHTED;
+}
+
+/* Select/unselect component ports. */
+static __inline__ void
+ES_SelectPort(ES_Port *port)
+{
+	port->flags |= ES_PORT_SELECTED;
+}
+static __inline__ void
+ES_UnselectPort(ES_Port *port)
+{
+	port->flags &= ~(ES_PORT_SELECTED);
+}
+static __inline__ void
+ES_UnselectAllPorts(struct es_circuit *ckt)
+{
+	ES_Component *com;
+	ES_Port *port;
+	int i;
+
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		COMPONENT_FOREACH_PORT(port, i, com)
+			ES_UnselectPort(port);
+	}
 }
 __END_DECLS
 

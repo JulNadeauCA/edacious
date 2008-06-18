@@ -70,10 +70,8 @@ EditOpen(AG_Event *event)
 	ES_Circuit *ckt = AG_SELF();
 	ES_Component *com;
 
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+	CIRCUIT_FOREACH_COMPONENT(com, ckt)
 		AG_PostEvent(ckt, com, "circuit-shown", NULL);
-		AG_ObjectPageIn(com);
-	}
 }
 
 static void
@@ -83,11 +81,8 @@ EditClose(AG_Event *event)
 	ES_Component *com;
 
 	ES_DestroySimulation(ckt);
-
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+	CIRCUIT_FOREACH_COMPONENT(com, ckt)
 		AG_PostEvent(ckt, com, "circuit-hidden", NULL);
-		AG_ObjectPageOut(com);
-	}
 }
 
 static M_Real
@@ -215,6 +210,9 @@ Init(void *p)
 	ckt->console = NULL;
 	TAILQ_INIT(&ckt->syms);
 	InitGround(ckt);
+
+	ckt->Z0 = 50.0;
+	ckt->T0 = 290.0;
 
 	ckt->vg = VG_New(0);
 	Strlcpy(ckt->vg->layers[0].name, _("Schematic"),
@@ -642,7 +640,6 @@ M_Real
 ES_NodeVoltage(ES_Circuit *ckt, int j)
 {
 	if (ckt->sim == NULL || ckt->sim->ops->node_voltage == NULL) {
-		ES_CircuitLog(ckt, _("Cannot get node %d voltage"), j);
 		return (0.0);
 	}
 	return (ckt->sim->ops->node_voltage(ckt->sim, j));
@@ -653,7 +650,6 @@ M_Real
 ES_BranchCurrent(ES_Circuit *ckt, int k)
 {
 	if (ckt->sim == NULL || ckt->sim->ops->branch_current == NULL) {
-		ES_CircuitLog(ckt, _("Cannot get branch %d current"), k);
 		return (0.0);
 	}
 	return (ckt->sim->ops->branch_current(ckt->sim, k));
@@ -1147,13 +1143,12 @@ CircuitSelectSim(AG_Event *event)
 }
 
 static void
-FindCircuitObjs(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
+FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 {
 	AG_Object *cob;
 	AG_TlistItem *it;
 
-	it = AG_TlistAdd(tl, NULL, "%s%s", pob->name,
-	    (pob->flags & AG_OBJECT_RESIDENT) ? " (resident)" : "");
+	it = AG_TlistAdd(tl, NULL, "%s", pob->name);
 	it->depth = depth;
 	it->cat = "object";
 	it->p1 = pob;
@@ -1163,15 +1158,19 @@ FindCircuitObjs(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 		if (pob == OBJECT(ckt))
 			it->flags |= AG_TLIST_VISIBLE_CHILDREN;
 	}
+	if (AG_ObjectIsClass(pob, "ES_Component:*")) {
+		if (ESCOMPONENT(pob)->flags & ES_COMPONENT_SELECTED)
+			it->selected = 1;
+	}
 	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
 	    AG_TlistVisibleChildren(tl, it)) {
 		TAILQ_FOREACH(cob, &pob->children, cobjs)
-			FindCircuitObjs(tl, cob, depth+1, ckt);
+			FindObjects(tl, cob, depth+1, ckt);
 	}
 }
 
 static void
-PollCircuitObjs(AG_Event *event)
+PollObjects(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	AG_Object *ckt = AG_PTR(1);
@@ -1179,9 +1178,27 @@ PollCircuitObjs(AG_Event *event)
 
 	AG_TlistClear(tl);
 	AG_LockVFS(ckt);
-	FindCircuitObjs(tl, ckt, 0, ckt);
+	FindObjects(tl, ckt, 0, ckt);
 	AG_UnlockVFS(ckt);
 	AG_TlistRestore(tl);
+}
+
+static void
+SelectedObject(AG_Event *event)
+{
+	AG_Tlist *tl = AG_SELF();
+	VG_View *vv = AG_PTR(1);
+	AG_TlistItem *it = AG_PTR(2);
+	int state = AG_INT(3);
+	AG_Object *obj = it->p1;
+
+	if (AG_ObjectIsClass(obj, "ES_Component:*")) {
+		if (state) {
+			ES_SelectComponent(COMPONENT(obj), vv);
+		} else {
+			ES_UnselectComponent(COMPONENT(obj), vv);
+		}
+	}
 }
 
 static void
@@ -1243,7 +1260,7 @@ static void
 InsertComponent(AG_Event *event)
 {
 	char name[AG_OBJECT_NAME_MAX];
-	VG_View *vgv = AG_PTR(1);
+	VG_View *vv = AG_PTR(1);
 	AG_Tlist *tl = AG_PTR(2);
 	ES_Circuit *ckt = AG_PTR(3);
 	AG_TlistItem *it;
@@ -1269,25 +1286,19 @@ tryname:
 	com = Malloc(cls->obj.size);
 	AG_ObjectInit(com, cls);
 	AG_ObjectSetName(com, "%s", name);
-	com->flags |= COMPONENT_FLOATING;
+	OBJECT(com)->flags |= AG_OBJECT_RESIDENT;
+	com->flags |= ES_COMPONENT_FLOATING;
 
 	ES_LockCircuit(ckt);
 
 	AG_ObjectAttach(ckt, com);
-	AG_ObjectUnlinkDatafiles(com);
-	AG_ObjectPageIn(com);
 	AG_PostEvent(ckt, com, "circuit-shown", NULL);
 
-	if ((t = VG_ViewFindTool(vgv, "Insert component")) != NULL) {
-		VG_ViewSelectTool(vgv, t, ckt);
+	if ((t = VG_ViewFindTool(vv, "Insert component")) != NULL) {
+		VG_ViewSelectTool(vv, t, ckt);
 		esFloatingCom = com;
-		esFloatingCom->flags |= ES_COMPONENT_SELECTED;
+		ES_SelectComponent(esFloatingCom, vv);
 	}
-//	AG_WidgetFocus(vgv);
-//	AG_WindowFocus(AG_WidgetParentWindow(vgv));
-//	if (AG_ObjectSave(com) == -1)
-//		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
-
 	ES_UnlockCircuit(ckt);
 }
 
@@ -1299,7 +1310,7 @@ Edit(void *p)
 	AG_Toolbar *tbTop, *tbRight;
 	AG_Menu *menu;
 	AG_MenuItem *mi, *mi2;
-	AG_Pane *pane;
+	AG_Pane *hPane, *vPane;
 	VG_View *vv;
 
 	win = AG_WindowNew(0);
@@ -1373,14 +1384,15 @@ Edit(void *p)
 		}
 	}
 	
-	pane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
+	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
 	{
 		AG_Notebook *nb;
 		AG_NotebookTab *ntab;
 		AG_Tlist *tl;
 		AG_Box *box, *box2;
 
-		nb = AG_NotebookNew(pane->div[0], AG_NOTEBOOK_EXPAND);
+		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
+		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
 		ntab = AG_NotebookAddTab(nb, _("Models"), AG_BOX_VERT);
 		{
 			char tname[AG_OBJECT_TYPE_MAX];
@@ -1400,17 +1412,19 @@ Edit(void *p)
 				    ccls->name, ccls);
 			}
 		}
-
 		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
 		{
 			tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE|
-			                       AG_TLIST_EXPAND);
-			AG_SetEvent(tl, "tlist-poll", PollCircuitObjs,
-			    "%p", ckt);
+			                       AG_TLIST_EXPAND|
+					       AG_TLIST_NOSELSTATE);
+			AG_SetEvent(tl, "tlist-poll", PollObjects, "%p", ckt);
+			AG_SetEvent(tl, "tlist-changed", SelectedObject,
+			    "%p", vv);
 			AG_WidgetSetFocusable(tl, 0);
 		}
+		VG_ViewAddEditArea(vv, vPane->div[1]);
 
-		box = AG_BoxNewVert(pane->div[1], AG_BOX_EXPAND);
+		box = AG_BoxNewVert(hPane->div[1], AG_BOX_EXPAND);
 		AG_BoxSetSpacing(box, 0);
 		AG_BoxSetPadding(box, 0);
 		{
@@ -1451,6 +1465,7 @@ Edit(void *p)
 	}
 
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);
+	AG_PaneMoveDivider(vPane, HEIGHT(win)/2);
 	return (win);
 }
 

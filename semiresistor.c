@@ -98,10 +98,10 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 		           "(tc1=%g tc2=%g rsh=%g defw=%g narrow=%g "
 			   "tnom=%g)\n",
 		    nRmod, r->Tc1, r->Tc2, r->rsh, r->defw, r->narrow,
-		    COM_T0);
+		    COMCIRCUIT(r)->T0);
 		fprintf(f, "%s %d %d Rmod%u L=%g W=%g TEMP=%g\n",
 		    OBJECT(r)->name, PNODE(r,1), PNODE(r,2),
-		    nRmod, r->l, r->w, COM(r)->Tspec);
+		    nRmod, r->l, r->w, COMPONENT(r)->Tspec);
 		nRmod++;
 		break;
 	}
@@ -113,7 +113,7 @@ static double
 Resistance(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_SemiResistor *r = p;
-	double deltaT = COM_T0 - COM(r)->Tspec;
+	double deltaT = COMCIRCUIT(r)->T0 - COMPONENT(r)->Tspec;
 	double R;
 
 	R = r->rsh*(r->l - r->narrow)/(r->w - r->narrow);

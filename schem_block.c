@@ -94,17 +94,28 @@ Extent(void *p, VG_View *vv, VG_Vector *a, VG_Vector *b)
 static void
 Draw(void *p, VG_View *vv)
 {
-#if 0
 	ES_SchemBlock *sb = p;
-	VG_Rect rExt;
 	AG_Rect rDraw;
+	VG_Vector a, b;
+	Uint8 c[4] = { 0, 255, 0, 64 };
 
-	Extent(sb, vv, &rExt);
-	VG_GetViewCoords(vv, VGVECTOR(rExt.x,rExt.y), &rDraw.x, &rDraw.y);
-	rDraw.w = rExt.w*vv->scale;
-	rDraw.h = rExt.h*vv->scale;
-	AG_DrawRectOutline(vv, rDraw, VG_MapColorRGB(VGNODE(sb)->color));
-#endif
+	if (sb->com->flags & (ES_COMPONENT_SELECTED|ES_COMPONENT_HIGHLIGHTED)) {
+		Extent(sb, vv, &a, &b);
+		a.x -= vv->wPixel*4;
+		a.y -= vv->wPixel*4;
+		b.x += vv->wPixel*4;
+		b.y += vv->wPixel*4;
+		VG_GetViewCoords(vv, a, &rDraw.x, &rDraw.y);
+		rDraw.w = (b.x - a.x)*vv->scale;
+		rDraw.h = (b.y - a.y)*vv->scale;
+		if (sb->com->flags & ES_COMPONENT_SELECTED) {
+			AG_DrawRectBlended(vv, rDraw, c, AG_ALPHA_SRC);
+		}
+		if (sb->com->flags & ES_COMPONENT_HIGHLIGHTED) {
+			AG_DrawRectOutline(vv, rDraw,
+			    VG_MapColorRGB(VGNODE(sb)->color));
+		}
+	}
 }
 
 static float
@@ -117,6 +128,10 @@ PointProximity(void *p, VG_View *vv, VG_Vector *vPt)
 	float len;
 
 	Extent(sb, vv, &a, &c);
+	a.x -= vv->wPixel*4;
+	a.y -= vv->wPixel*4;
+	c.x += vv->wPixel*4;
+	c.y += vv->wPixel*4;
 	b.x = c.x;
 	b.y = a.y;
 	d.x = a.x;
