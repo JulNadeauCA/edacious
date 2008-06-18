@@ -112,17 +112,10 @@ LoadDC_G(void *p, M_Matrix *G)
 	M_Real g;
 
 	if (r->resistance == 0.0 || k == -1 || j == -1 || (k == 0 && j == 0)) {
-		AG_SetError("null resistance");
+		AG_SetError("Null resistance");
 		return (-1);
 	}
-	fprintf(stderr, "%s: Stamping between %d and %d\n", 
-	    AGOBJECT(r)->name, k, j);
-	g = 1.0/r->resistance;
-
-	G->v[k][k] += g;
-	G->v[j][j] += g;
-	G->v[k][j] -= g;
-	G->v[j][k] -= g;
+	StampConductance(1.0/r->resistance, k, j, G);
 	return (0);
 }
 

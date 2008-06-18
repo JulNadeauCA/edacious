@@ -50,6 +50,8 @@ FactorizeMNA(ES_SimDC *sim, ES_Circuit *ckt)
 	M_SetZero(sim->i);
 	M_SetZero(sim->e);
 
+	sim->G->v[0][0] = 1.0;
+
 	/* Formulate the general equations. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (com->loadDC_G != NULL)

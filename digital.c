@@ -96,19 +96,7 @@ LoadDC_G(void *p, M_Matrix *G)
 		    k == -1 || j == -1 || (k == 0 && j == 0)) {
 			continue;
 		}
-		ES_ComponentLog(dig, "pair=(%s,%s) kj=%d,%d, g=%f (idx %d)",
-		    pair->p1->name, pair->p2->name, k, j, g, i);
-
-		if (k != 0) {
-			G->v[k][k] += g;
-		}
-		if (j != 0) {
-			G->v[j][j] += g;
-		}
-		if (k != 0 && j != 0) {
-			G->v[k][j] -= g;
-			G->v[j][k] -= g;
-		}
+		StampConductance(g, k,j, G);
 	}
 	return (0);
 }
