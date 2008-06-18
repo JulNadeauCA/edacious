@@ -35,13 +35,22 @@
 #include <eda.h>
 #include <freesg/m/m_matview.h>
 
+/* assemble G,B,C,D,i,e into A and z */
+static void
+CompileMatrices(ES_SimDC *sim)
+{
+	/* Compose the right-hand side vector (i, e). */
+	M_Compose21(sim->z, sim->i, sim->e);
+
+	/* Compose the coefficient matrix A from [G,B;C,D] and compute LU. */
+	M_Compose22(sim->A, sim->G, sim->B, sim->C, sim->D);
+}
+
 /* Formulate the KCL/branch equations and compute A=LU. */
 static int
-FactorizeMNA(ES_SimDC *sim, ES_Circuit *ckt)
+LoadMatrices(ES_SimDC *sim, ES_Circuit *ckt)
 {
 	ES_Component *com;
-	Uint i, n, m;
-	M_Real d;
 
 	M_SetZero(sim->G);
 	M_SetZero(sim->B);
@@ -50,10 +59,13 @@ FactorizeMNA(ES_SimDC *sim, ES_Circuit *ckt)
 	M_SetZero(sim->i);
 	M_SetZero(sim->e);
 
+	/* Load datum node equation */
+
 	sim->G->v[0][0] = 1.0;
 
 	/* Formulate the general equations. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+
 		if (com->loadDC_G != NULL)
 			com->loadDC_G(com, sim->G);
 		if (com->loadDC_BCD != NULL)
@@ -68,22 +80,17 @@ FactorizeMNA(ES_SimDC *sim, ES_Circuit *ckt)
 #endif
 	}
 
-	/* Compose the right-hand side vector (i, e). */
-	M_Compose21(sim->z, sim->i, sim->e);
+	CompileMatrices(sim);
 
-	/* Compose the coefficient matrix A from [G,B;C,D] and compute LU. */
-	M_Compose22(sim->A, sim->G, sim->B, sim->C, sim->D);
-
-	fprintf(stderr, "Solving:\n");
-	M_MatrixPrint(sim->A);
-
-	return ((M_FactorizeLU(sim->A, sim->LU, sim->piv, &d)) != NULL) ?
-	        0 : -1;
+	return 0;
 }
 
 static int
 SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 {
+	M_Real d;
+	M_FactorizeLU(sim->A, sim->LU, sim->piv, &d);
+
 	M_Copy(sim->x, sim->z);
 	M_BacksubstLU(sim->LU, sim->piv, sim->x);
 	return (0);
@@ -96,9 +103,9 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	ES_SimDC *sim = arg;
 	ES_Component *com;
 	static Uint32 t1 = 0;
-	M_Matrix *Aprev;
+	M_Vector *xprev;
 	M_Real diff;
-	Uint i = 1;
+	Uint i = 1, j;
 
 	if (ckt->m == 0) {
 		AG_SetError(_("Circuit has no voltage sources"));
@@ -118,39 +125,52 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		if (com->dcStep != NULL)
 			com->dcUpdate(com, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e, sim->v, sim->j);
 	}
-solve:
-	/* Find the initial DC operating point. */
-	if (FactorizeMNA(sim, ckt) == -1 ||
-	    SolveMNA(sim, ckt) == -1) {
-		goto halt;
-	}
-	/*
-	 * Save the A matrix and execute per-component procedural update
-	 * functions. The intUpdate function can modify either A or the
-	 * RHS in response to calculated node voltages.
-	 */
-	Aprev = M_Dup(sim->A);
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (com->intUpdate != NULL)
-			com->intUpdate(com);
-		if (com->dcUpdate != NULL)
-			com->dcUpdate(com, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e, sim->v, sim->j);
+	CompileMatrices(sim);
 
-	}
-	if (FactorizeMNA(sim, ckt) == -1 ||
-	    SolveMNA(sim, ckt) == -1) {
+	if (SolveMNA(sim, ckt) == -1)
+	{
 		goto halt;
 	}
-	/* Loop until stability is reached. */
-	M_Compare(sim->A, Aprev, &diff);
-	if (diff > M_MACHEP) {
+
+	do
+	{
 		if (++i > sim->max_iters) {
 			AG_SetError(_("Could not find stable solution in "
 			              "%u iterations"), i);
 			goto halt;
 		}
-		goto solve;
-	}
+
+		/*
+		 * Save the A matrix and execute per-component procedural update
+		 * functions. The intUpdate function can modify either A or the
+		 * RHS in response to calculated node voltages.
+		 */
+		xprev = M_Dup(sim->x);
+		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+			if (com->intUpdate != NULL)
+				com->intUpdate(com);
+			if (com->dcUpdate != NULL)
+				com->dcUpdate(com, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e, sim->v, sim->j);
+
+		}
+		CompileMatrices(sim);
+
+		if (SolveMNA(sim, ckt) == -1)
+		{
+			goto halt;
+		}
+
+		/* compute error */
+
+		diff = 0;
+		for (j=0; j < sim->x->m; j++)
+		{
+			diff += (sim->x->v[j][0] - xprev->v[j][0])*(sim->x->v[j][0] - xprev->v[j][0]);
+		}
+		diff = sqrt(diff);
+
+	} while (diff > 0.001);
+
 	if (i > sim->iters_hiwat) { sim->iters_hiwat = i; }
 	else if (i < sim->iters_lowat) { sim->iters_lowat = i; }
 
@@ -252,6 +272,8 @@ Start(void *p)
 	AG_UnlockTimeouts(ckt);
 	sim->Telapsed = 0;
 	
+	LoadMatrices(sim, ckt);
+
 	ES_SimLog(sim, _("Simulation started (m=%u, n=%u)"), ckt->m, ckt->n);
 }
 

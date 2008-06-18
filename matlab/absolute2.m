@@ -15,7 +15,7 @@ gr=1/100;   % conductance of resistor
 v = [0; 0];      % initial voltage guess
 e = 1e-6;   % error tolerance
 
-dv_max = 0.2;       % maximum change in voltage per iteration
+dv_max = 10;       % maximum change in voltage per iteration
 dv = [dv_max; dv_max];
 
 count = 0;
@@ -58,6 +58,10 @@ while norm(dv,2)>e
     
     % solve G*v=i
     
+    G
+    i
+    (G^-1)*i
+
     dv = (G^-1)*i - v;
 
     if (abs(dv(1)) > dv_max)

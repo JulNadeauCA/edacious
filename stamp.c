@@ -5,7 +5,7 @@
 #include <eda.h>
 
 void
-StampConductance(M_Real g, uint k, uint l, M_Matrix *G)
+StampConductance(M_Real g, Uint k, Uint l, M_Matrix *G)
 {
         if (k != 0) {
                 G->v[k][k] += g;
@@ -20,18 +20,18 @@ StampConductance(M_Real g, uint k, uint l, M_Matrix *G)
 }
 
 void
-StampCurrentSource(M_Real I, uint k, uint l, M_Vector *i)
+StampCurrentSource(M_Real I, Uint k, Uint l, M_Vector *i)
 {
 	if (k != 0){
-		i->v[k][0] = I;
+		i->v[k][0] += I;
 	}
 	if (l != 0){
-		i->v[l][0] = -I;
+		i->v[l][0] -= I;
 	}
 }
 
 void
-StampVCCS(M_Real g, uint k, uint l, uint p, uint q, M_Matrix *G)
+StampVCCS(M_Real g, Uint k, Uint l, Uint p, Uint q, M_Matrix *G)
 {
 	if (p != 0){
 		if (k != 0){

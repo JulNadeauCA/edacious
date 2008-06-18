@@ -36,29 +36,10 @@ enum {
 };
 const ES_Port esDiodePorts[] = {
 	{ 0, "" },
-	{ 1, "P" },	/* P-side (+) */
-	{ 2, "N" },	/* N-side (-) */
+	{ PORT_P, "P" },	/* P-side (+) */
+	{ PORT_N, "N" },	/* N-side (-) */
 	{ -1 },
 };
-
-const M_Real DiodeVoltageBiasGuess = 0;
-
-/* Returns the current through the diode for a given voltage bias */
-
-static M_Real
-DiodeLargeSignalModel(ES_Diode *d, M_Real vAB)
-{
-	return d->Is*(M_Exp(vAB/(d->Vt))-1);
-}
-
-/* Returns the small-signal conductance of the diode for a given 
- * bias current. */
-
-static M_Real
-DiodeSmallSignalModel(ES_Diode *d, M_Real I)
-{
-	return I/(d->Vt);
-}
 
 /* Returns the voltage across the diode calculated
  * in the last Newton-Raphson iteration */
@@ -66,22 +47,31 @@ DiodeSmallSignalModel(ES_Diode *d, M_Real I)
 static M_Real
 DiodeVoltage(ES_Diode *d)
 {
-	M_Real vA = VPORT(d,PORT_P);
-	M_Real vB = VPORT(d,PORT_N);
-	
-	return vA-vB;
+	return VPORT(d,PORT_P)-VPORT(d,PORT_N);
 }
 
-/*
- * Load the element into the conductance matrix. All conductances between
- * (k,j) are added to (k,k) and (j,j), and subtracted from (k,j) and (j,k).
- *
- *   |  Vk    Vj  | RHS
- *   |------------|-----
- * k |  g    -g   |  I
- * j | -g     g   | -I
- *   |------------|-----
- */
+/* Updates the small- and large-signal models, saving the 
+ * previous values */
+
+static void
+UpdateDiodeModel(ES_Diode *d, M_Real v)
+{
+	M_Real v_diff = v - d->v_prev;
+
+	if (M_Fabs(v_diff) > d->Vt)
+	{
+		v = d->v_prev + v_diff/M_Fabs(v_diff)*d->Vt;
+	}
+
+	d->g_prev = d->g;
+	d->Ieq_prev = d->Ieq;
+	d->v_prev = v;
+
+	M_Real I =  d->Is*(M_Exp(v/(d->Vt))-1);
+
+	d->g = I/(d->Vt);
+	d->Ieq = I-(d->g)*v;
+}
 
 static int
 LoadDC_G(void *p, M_Matrix *G)
@@ -91,10 +81,7 @@ LoadDC_G(void *p, M_Matrix *G)
 	Uint k = PNODE(d,PORT_P);
 	Uint l = PNODE(d,PORT_N);
 
-	M_Real I = DiodeLargeSignalModel(d, DiodeVoltageBiasGuess);	/* guess bias current */
-	M_Real g = DiodeSmallSignalModel(d, I);			/* small-signal conductance */
-
-	StampConductance(g,k,l,G);
+	StampConductance(d->g,k,l,G);
 
 	return (0);
 }
@@ -106,11 +93,8 @@ LoadDC_RHS(void *p, M_Vector *i, M_Vector *e)
 
 	Uint k = PNODE(d,PORT_P);
 	Uint l = PNODE(d,PORT_N);
-
-	M_Real I   = DiodeLargeSignalModel(d, DiodeVoltageBiasGuess);		/* bias current for voltage guess */
-	M_Real Ieq = I-DiodeSmallSignalModel(d, I)*DiodeVoltageBiasGuess; 	/* norton equivalent current source */
-
-	StampCurrentSource(Ieq,k,l,i);
+	
+	StampCurrentSource(d->Ieq,l,k,i);
 
         return (0);
 }
@@ -123,13 +107,10 @@ ES_DiodeUpdate(void *p, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Ve
 	Uint k = PNODE(d,PORT_P);
 	Uint l = PNODE(d,PORT_N);
 
-	M_Real V   = DiodeVoltage(d);
-	M_Real I   = DiodeLargeSignalModel(d, V);
-	M_Real g   = DiodeSmallSignalModel(d, I);	/* small-signal conductance */
-	M_Real Ieq = I-g*V;				/* norton equivalent current source */
+	UpdateDiodeModel(d, DiodeVoltage(d));
 
-	StampConductance(g,k,l,G);
-	StampCurrentSource(Ieq,k,l,i);
+	StampConductance(d->g-d->g_prev,k,l,G);
+	StampCurrentSource(d->Ieq-d->Ieq_prev,l,k,i); // note that the current source points the opposite direction
 }
 
 static void
@@ -138,8 +119,13 @@ Init(void *p)
 	ES_Diode *d = p;
 
 	ES_InitPorts(d, esDiodePorts);
-	d->Is = 1e-10;
+	d->Is = 1e-14;
 	d->Vt = 0.025;
+
+	M_Real v_Guess = 0.7;
+
+	UpdateDiodeModel(d, v_Guess);
+	d->v_prev = v_Guess;
 
 	COMPONENT(d)->loadDC_G = LoadDC_G;
 	COMPONENT(d)->loadDC_RHS = LoadDC_RHS;
