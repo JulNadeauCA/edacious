@@ -151,6 +151,8 @@ Init(void *p)
 	r->resistance = 1;
 	r->power_rating = HUGE_VAL;
 	r->tolerance = 0;
+	r->Tc1 = 0.0;
+	r->Tc2 = 0.0;
 	COMPONENT(r)->loadDC_G = LoadDC_G;
 	COMPONENT(r)->loadSP = LoadSP;
 }
