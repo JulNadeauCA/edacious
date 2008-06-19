@@ -131,7 +131,7 @@ Init(void *p)
 	d->Vt = 0.025;
 
 	COMPONENT(d)->dcInit = ES_DiodeInit;
-	COMPONENT(d)->dcStep = ES_DiodeStep;
+	COMPONENT(d)->transientStep = ES_DiodeStep;
 	COMPONENT(d)->dcUpdate = ES_DiodeUpdate;
 }
 

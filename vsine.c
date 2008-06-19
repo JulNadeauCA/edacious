@@ -62,7 +62,7 @@ Init(void *p)
 	vs->phase = 0.0;
 	VSOURCE(vs)->voltage=0;
 
-	COMPONENT(vs)->dcStep = ES_VSineStep;
+	COMPONENT(vs)->transientStep = ES_VSineStep;
 }
 
 static int

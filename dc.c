@@ -35,6 +35,10 @@
 #include <eda.h>
 #include <freesg/m/m_matview.h>
 
+/* N-R iterations stop when the difference between previous
+ * and current vector is no more than MAX_DIFF */
+#define MAX_DIFF 0.001
+
 /* assemble G,B,C,D,i,e into A and z */
 static void
 CompileMatrices(ES_SimDC *sim)
@@ -123,8 +127,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (com->intStep != NULL)
 			com->intStep(com, sim->Telapsed);
-		if (com->dcStep != NULL)
-			com->dcStep(com, sim->Telapsed, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e, sim->v, sim->j);
+		if (com->transientStep != NULL)
+			com->transientStep(com, sim->Telapsed, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e, sim->v, sim->j);
 	}
 
 	CompileMatrices(sim);
@@ -164,16 +168,16 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 			goto halt;
 		}
 
-		/* compute error */
-
+		/* Compute difference between previous and current iteration, to
+		 * decide whether or not to continue*/
 		diff = 0;
 		for (j=0; j < sim->x->m; j++)
 		{
-			diff += (sim->x->v[j][0] - xprev->v[j][0])*(sim->x->v[j][0] - xprev->v[j][0]);
+			M_Real cur_absdiff = M_Fabs(sim->x->v[j][0] - xprev->v[j][0]);
+			if(cur_absdiff > diff)
+				diff = cur_absdiff;
 		}
-		diff = sqrt(diff);
-
-	} while (diff > 0.001);
+	} while (diff > MAX_DIFF);
 
 	if (i > sim->iters_hiwat) { sim->iters_hiwat = i; }
 	else if (i < sim->iters_lowat) { sim->iters_lowat = i; }

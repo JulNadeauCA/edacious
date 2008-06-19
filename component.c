@@ -261,7 +261,7 @@ Init(void *obj)
 	com->intUpdate = NULL;
 	
 	com->dcInit = NULL;
-	com->dcStep = NULL;
+	com->transientStep = NULL;
 	com->dcUpdate = NULL;
 
 	TAILQ_INIT(&com->schemEnts);
