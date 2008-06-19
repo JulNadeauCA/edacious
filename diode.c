@@ -132,6 +132,29 @@ Init(void *p)
 	COMPONENT(d)->dcUpdate = ES_DiodeUpdate;
 }
 
+static void *
+Edit(void *p)
+{
+	ES_Diode *d = p;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+	AG_Numerical *num;
+
+	num = M_NumericalNewRealR(box, 0, "uohm", _("Resistance at Tnom: "),
+	    &d->Is, M_TINYVAL, HUGE_VAL);
+	AG_NumericalSetPrecision(num, "f", 8);
+
+	M_NumericalNewRealR(box, 0, "mV", _("Thermal voltage: "),
+	    &d->Vt, M_TINYVAL, HUGE_VAL);
+
+	AG_LabelNewPolledMT(box, AG_LABEL_HFILL, &OBJECT(d)->lock,
+	    "Ieq=%f, g=%f", &d->Ieq, &d->g);
+	AG_LabelNewPolledMT(box, AG_LABEL_HFILL, &OBJECT(d)->lock,
+	    "Prev: v=%f, Ieq=%f, g=%f",
+	    &d->v_prev, &d->Ieq_prev, &d->g_prev);
+
+	return (box);
+}
+
 ES_ComponentClass esDiodeClass = {
 	{
 		"ES_Component:ES_Diode",
@@ -142,7 +165,7 @@ ES_ComponentClass esDiodeClass = {
 		NULL,		/* destroy */
 		NULL,		/* load */
 		NULL,		/* save */
-		NULL		/* edit */
+		Edit
 	},
 	N_("Diode"),
 	"D",
