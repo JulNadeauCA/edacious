@@ -91,8 +91,8 @@ Export(void *p, enum circuit_format fmt, FILE *f)
  * j | -Gkj   Gkj |
  *   |------------|-----
  */
-static int
-LoadDC_G(void *p, M_Matrix *G)
+static void
+ES_ResistorInit(void *p, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e)
 {
 	ES_Resistor *r = p;
 	ES_Node *n;
@@ -103,11 +103,9 @@ LoadDC_G(void *p, M_Matrix *G)
 
 	if (r->resistance == 0.0 || k == -1 || j == -1 || (k == 0 && j == 0)) {
 		AG_SetError("Null resistance");
-		return (-1);
 	}
 	g = 1.0/(r->resistance * (1.0 + r->Tc1*dT + r->Tc2*dT*dT));
 	StampConductance(g, k, j, G);
-	return (0);
 }
 
 static int
@@ -153,7 +151,7 @@ Init(void *p)
 	r->tolerance = 0;
 	r->Tc1 = 0.0;
 	r->Tc2 = 0.0;
-	COMPONENT(r)->loadDC_G = LoadDC_G;
+	COMPONENT(r)->dcInit = ES_ResistorInit;
 	COMPONENT(r)->loadSP = LoadSP;
 }
 

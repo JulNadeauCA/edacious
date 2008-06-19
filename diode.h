@@ -15,9 +15,9 @@ typedef struct es_diode {
 	M_Real Ieq;
 	M_Real g;
 
-	M_Real v_prev;
-	M_Real Ieq_prev;	
-	M_Real g_prev;
+	M_Real vPrev;
+	M_Real IeqPrev;	
+	M_Real gPrev;
 } ES_Diode;
 
 __BEGIN_DECLS

@@ -4,8 +4,9 @@
 
 __BEGIN_DECLS
 
-void StampConductance(M_Real g, uint k, uint l, M_Matrix *G);
-void StampCurrentSource(M_Real I, uint k, uint l, M_Vector *i);
-void StampVCCS(M_Real g, uint k, uint l, uint p, uint q, M_Matrix *G);
+void StampConductance(M_Real g, Uint k, Uint l, M_Matrix *G);
+void StampCurrentSource(M_Real I, Uint k, Uint l, M_Vector *i);
+void StampVCCS(M_Real g, Uint k, Uint l, Uint p, Uint q, M_Matrix *G);
+void StampVoltageSource(M_Real voltage, Uint k, Uint j, Uint v, M_Matrix *B, M_Matrix *C, M_Vector *e);
 
 __END_DECLS

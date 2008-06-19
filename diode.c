@@ -56,16 +56,16 @@ DiodeVoltage(ES_Diode *d)
 static void
 UpdateDiodeModel(ES_Diode *d, M_Real v)
 {
-	M_Real v_diff = v - d->v_prev;
+	M_Real vDiff = v - d->vPrev;
 
-	if (M_Fabs(v_diff) > d->Vt)
+	if (M_Fabs(vDiff) > d->Vt)
 	{
-		v = d->v_prev + v_diff/M_Fabs(v_diff)*d->Vt;
+		v = d->vPrev + vDiff/M_Fabs(vDiff)*d->Vt;
 	}
 
-	d->g_prev = d->g;
-	d->Ieq_prev = d->Ieq;
-	d->v_prev = v;
+	d->gPrev = d->g;
+	d->IeqPrev = d->Ieq;
+	d->vPrev = v;
 
 	M_Real I =  d->Is*(M_Exp(v/(d->Vt))-1);
 
@@ -73,30 +73,38 @@ UpdateDiodeModel(ES_Diode *d, M_Real v)
 	d->Ieq = I-(d->g)*v;
 }
 
-static int
-LoadDC_G(void *p, M_Matrix *G)
-{
-	ES_Diode *d = p;
-
-	Uint k = PNODE(d,PORT_P);
-	Uint l = PNODE(d,PORT_N);
-
-	StampConductance(d->g,k,l,G);
-
-	return (0);
-}
-
-static int
-LoadDC_RHS(void *p, M_Vector *i, M_Vector *e)
+static void
+ES_DiodeInit(void *p, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e)
 {
         ES_Diode *d = p;
 
 	Uint k = PNODE(d,PORT_P);
 	Uint l = PNODE(d,PORT_N);
-	
-	StampCurrentSource(d->Ieq,l,k,i);
 
-        return (0);
+	M_Real vGuess = 0.7;
+	d->vPrev = vGuess;
+
+	UpdateDiodeModel(d, vGuess);
+
+	StampConductance(d->g,k,l,G);
+	StampCurrentSource(d->Ieq,l,k,i);
+}
+
+static void
+ES_DiodeStep(void *p, Uint Telapsed, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e, const M_Vector *v, const M_Vector *j)
+{
+        ES_Diode *d = p;
+
+	Uint k = PNODE(d,PORT_P);
+	Uint l = PNODE(d,PORT_N);
+
+	M_Real vGuess = 0.7;
+	d->vPrev = vGuess;
+
+	UpdateDiodeModel(d, vGuess);
+
+	StampConductance(d->g-d->gPrev,k,l,G);
+	StampCurrentSource(d->Ieq-d->IeqPrev,l,k,i);
 }
 
 static void
@@ -109,8 +117,8 @@ ES_DiodeUpdate(void *p, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Ve
 
 	UpdateDiodeModel(d, DiodeVoltage(d));
 
-	StampConductance(d->g-d->g_prev,k,l,G);
-	StampCurrentSource(d->Ieq-d->Ieq_prev,l,k,i); // note that the current source points the opposite direction
+	StampConductance(d->g-d->gPrev,k,l,G);
+	StampCurrentSource(d->Ieq-d->IeqPrev,l,k,i); // note that the current source points the opposite direction
 }
 
 static void
@@ -122,13 +130,8 @@ Init(void *p)
 	d->Is = 1e-14;
 	d->Vt = 0.025;
 
-	M_Real v_Guess = 0.7;
-
-	UpdateDiodeModel(d, v_Guess);
-	d->v_prev = v_Guess;
-
-	COMPONENT(d)->loadDC_G = LoadDC_G;
-	COMPONENT(d)->loadDC_RHS = LoadDC_RHS;
+	COMPONENT(d)->dcInit = ES_DiodeInit;
+	COMPONENT(d)->dcStep = ES_DiodeStep;
 	COMPONENT(d)->dcUpdate = ES_DiodeUpdate;
 }
 
@@ -139,9 +142,9 @@ Edit(void *p)
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 	AG_Numerical *num;
 
-	num = M_NumericalNewRealR(box, 0, "uohm", _("Resistance at Tnom: "),
+	num = M_NumericalNewRealR(box, 0, "pA", _("Reverse saturation current: "),
 	    &d->Is, M_TINYVAL, HUGE_VAL);
-	AG_NumericalSetPrecision(num, "f", 8);
+//	AG_NumericalSetPrecision(num, "f", 8);
 
 	M_NumericalNewRealR(box, 0, "mV", _("Thermal voltage: "),
 	    &d->Vt, M_TINYVAL, HUGE_VAL);
@@ -150,7 +153,7 @@ Edit(void *p)
 	    "Ieq=%f, g=%f", &d->Ieq, &d->g);
 	AG_LabelNewPolledMT(box, AG_LABEL_HFILL, &OBJECT(d)->lock,
 	    "Prev: v=%f, Ieq=%f, g=%f",
-	    &d->v_prev, &d->Ieq_prev, &d->g_prev);
+	    &d->vPrev, &d->IeqPrev, &d->gPrev);
 
 	return (box);
 }

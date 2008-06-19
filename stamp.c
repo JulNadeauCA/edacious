@@ -50,3 +50,18 @@ StampVCCS(M_Real g, Uint k, Uint l, Uint p, Uint q, M_Matrix *G)
 		}
 	}
 }
+
+void 
+StampVoltageSource(M_Real voltage, Uint k, Uint j, Uint v, M_Matrix *B, M_Matrix *C, M_Vector *e)
+{
+	if (k != 0) {
+		B->v[k][v] = 1.0;
+		C->v[v][k] = 1.0;
+	}
+	if (j != 0) {
+		B->v[j][v] = -1.0;
+		C->v[v][j] = -1.0;
+	}
+
+	e->v[v][0] = voltage;
+}

@@ -260,6 +260,7 @@ Init(void *obj)
 	com->intStep = NULL;
 	com->intUpdate = NULL;
 	
+	com->dcInit = NULL;
 	com->dcStep = NULL;
 	com->dcUpdate = NULL;
 

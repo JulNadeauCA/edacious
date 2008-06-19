@@ -28,6 +28,7 @@
  */
 
 #include <eda.h>
+#include "vsource.h"
 #include "vsine.h"
 
 const ES_Port esVSinePorts[] = {
@@ -38,13 +39,15 @@ const ES_Port esVSinePorts[] = {
 };
 
 static void
-IntStep(void *p, Uint ticks)
+ES_VSineStep(void *p, Uint Telapsed, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e, const M_Vector *v, const M_Vector *j)
 {
 	ES_VSine *vs = p;
 
 	VSOURCE(vs)->voltage = vs->vPeak*M_Sin(vs->phase);
 	vs->phase += 1e-3*vs->f;
 	if (vs->phase > M_PI*2) { vs->phase -= M_PI*2; }
+
+	ES_VsourceInit(VSOURCE(vs), G, B, C, D, i, e);
 }
 
 static void
@@ -53,10 +56,13 @@ Init(void *p)
 	ES_VSine *vs = p;
 
 	ES_InitPorts(vs, esVSinePorts);
+
 	vs->vPeak = 5.0;
 	vs->f = 60.0;
 	vs->phase = 0.0;
-	COMPONENT(vs)->intStep = IntStep;
+	VSOURCE(vs)->voltage=0;
+
+	COMPONENT(vs)->dcStep = ES_VSineStep;
 }
 
 static int

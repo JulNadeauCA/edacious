@@ -12,6 +12,8 @@ typedef struct es_vsine {
 	M_Real vPeak;			/* Peak voltage */
 	M_Real f;			/* Frequency (Hz) */
 	M_Real phase;
+
+	M_Real vPrev;
 } ES_VSine;
 
 #define ES_VSINE(com) ((struct es_vsine *)(com))

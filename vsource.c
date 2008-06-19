@@ -194,8 +194,9 @@ ES_VsourceFindLoops(ES_Vsource *vs)
  * br | 1   -1       | Ekj
  *    |--------------|-----
  */
-static int
-LoadDC_BCD(void *p, M_Matrix *B, M_Matrix *C, M_Matrix *D)
+
+void
+ES_VsourceInit(void *p, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e)
 {
 	ES_Vsource *vs = p;
 	Uint k = PNODE(vs,1);
@@ -204,30 +205,10 @@ LoadDC_BCD(void *p, M_Matrix *B, M_Matrix *C, M_Matrix *D)
 
 	if ((v = ES_VsourceName(vs)) == -1) {
 		AG_SetError("no such vsource");
-		return (-1);
+		return;
 	}
-	if (k != 0) {
-		B->v[k][v] = 1.0;
-		C->v[v][k] = 1.0;
-	}
-	if (j != 0) {
-		B->v[j][v] = -1.0;
-		C->v[v][j] = -1.0;
-	}
-	return (0);
-}
-static int
-LoadDC_RHS(void *p, M_Vector *i, M_Vector *e)
-{
-	ES_Vsource *vs = p;
-	int v;
 
-	if ((v = ES_VsourceName(vs)) == -1 ) {
-		AG_SetError("no such vsource");
-		return (-1);
-	}
-	e->v[v][0] = vs->voltage;
-	return (0);
+	StampVoltageSource(vs->voltage, k, j, v, B, C, e);
 }
 
 static void
@@ -273,8 +254,7 @@ Init(void *p)
 	vs->nloops = 0;
 	TAILQ_INIT(&vs->loops);
 
-	COMPONENT(vs)->loadDC_BCD = LoadDC_BCD;
-	COMPONENT(vs)->loadDC_RHS = LoadDC_RHS;
+	COMPONENT(vs)->dcInit = ES_VsourceInit;
 	AG_SetEvent(vs, "circuit-connected", Connected, NULL);
 	AG_SetEvent(vs, "circuit-disconnected", Disconnected, NULL);
 }

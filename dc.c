@@ -65,13 +65,14 @@ LoadMatrices(ES_SimDC *sim, ES_Circuit *ckt)
 
 	/* Formulate the general equations. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-
 		if (com->loadDC_G != NULL)
 			com->loadDC_G(com, sim->G);
 		if (com->loadDC_BCD != NULL)
 			com->loadDC_BCD(com, sim->B, sim->C, sim->D);
 		if (com->loadDC_RHS != NULL)
 			com->loadDC_RHS(com, sim->i, sim->e);
+		if (com->dcInit != NULL)
+			com->dcInit(com, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e);
 #if 0
 		if (com->loadAC != NULL)
 			com->loadAC(com, sim->Y);
@@ -123,8 +124,9 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		if (com->intStep != NULL)
 			com->intStep(com, sim->Telapsed);
 		if (com->dcStep != NULL)
-			com->dcUpdate(com, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e, sim->v, sim->j);
+			com->dcStep(com, sim->Telapsed, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e, sim->v, sim->j);
 	}
+
 	CompileMatrices(sim);
 
 	if (SolveMNA(sim, ckt) == -1)
@@ -135,9 +137,10 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	do
 	{
 		if (++i > sim->max_iters) {
-			AG_SetError(_("Could not find stable solution in "
-			              "%u iterations"), i);
-			goto halt;
+//			AG_SetError(_("Could not find stable solution in "
+	//		              "%u iterations"), i);
+//			goto halt;
+			break;
 		}
 
 		/*
@@ -153,6 +156,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 				com->dcUpdate(com, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e, sim->v, sim->j);
 
 		}
+
 		CompileMatrices(sim);
 
 		if (SolveMNA(sim, ckt) == -1)
