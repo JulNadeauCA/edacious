@@ -20,9 +20,6 @@ typedef struct es_vsquare {
 
 __BEGIN_DECLS
 extern ES_ComponentClass esVSquareClass;
-
-void	 ES_VSquareStep(void *, Uint);
-void	 ES_VSquareUpdate(void *);
 __END_DECLS
 
 #include "close_code.h"

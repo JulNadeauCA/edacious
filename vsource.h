@@ -25,7 +25,6 @@ void	 ES_VsourceFindLoops(ES_Vsource *);
 void	 ES_VsourceFreeLoops(ES_Vsource *);
 double	 ES_VsourceVoltage(void *, int, int);
 int	 ES_VsourceName(ES_Vsource *);
-void	 ES_VsourceInit(void *, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e);
 __END_DECLS
 
 #include "close_code.h"

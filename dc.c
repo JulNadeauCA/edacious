@@ -39,68 +39,31 @@
  * and current vector is no more than MAX_DIFF */
 #define MAX_DIFF 0.001
 
-/* assemble G,B,C,D,i,e into A and z */
-static void
-CompileMatrices(ES_SimDC *sim)
-{
-	/* Compose the right-hand side vector (i, e). */
-	M_Compose21(sim->z, sim->i, sim->e);
-
-	/* Compose the coefficient matrix A from [G,B;C,D] and compute LU. */
-	M_Compose22(sim->A, sim->G, sim->B, sim->C, sim->D);
-}
-
-/* Formulate the KCL/branch equations and compute A=LU. */
-static int
-LoadMatrices(ES_SimDC *sim, ES_Circuit *ckt)
-{
-	ES_Component *com;
-
-	M_SetZero(sim->G);
-	M_SetZero(sim->B);
-	M_SetZero(sim->C);
-	M_SetZero(sim->D);
-	M_SetZero(sim->i);
-	M_SetZero(sim->e);
-
-	/* Load datum node equation */
-
-	sim->G->v[0][0] = 1.0;
-
-	/* Formulate the general equations. */
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (com->loadDC_G != NULL)
-			com->loadDC_G(com, sim->G);
-		if (com->loadDC_BCD != NULL)
-			com->loadDC_BCD(com, sim->B, sim->C, sim->D);
-		if (com->loadDC_RHS != NULL)
-			com->loadDC_RHS(com, sim->i, sim->e);
-		if (com->dcInit != NULL)
-			com->dcInit(com, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e);
-#if 0
-		if (com->loadAC != NULL)
-			com->loadAC(com, sim->Y);
-		if (com->loadSP != NULL)
-			com->loadSP(com, sim->S, sim->N);
-#endif
-	}
-
-	CompileMatrices(sim);
-
-	return 0;
-}
-
+/* Solve Ax=z where A=[G,B;C,D], x=[v,j] and z=[i;e]. */
 static int
 SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 {
 	M_Real d;
-	M_FactorizeLU(sim->A, sim->LU, sim->piv, &d);
+	
+	M_Compose21(sim->z, sim->i, sim->e);
+	M_Compose22(sim->A, sim->G, sim->B, sim->C, sim->D);
 
+	/* Find LU factorization and solve by backsubstitution. */
+	M_FactorizeLU(sim->A, sim->LU, sim->piv, &d);
 	M_Copy(sim->x, sim->z);
 	M_BacksubstLU(sim->LU, sim->piv, sim->x);
 	return (0);
 }
 
+static void
+StopSimulation(ES_SimDC *sim)
+{
+	SIM(sim)->running = 0;
+	ES_SimLog(sim, _("Simulation stopped at %uns."), sim->Telapsed);
+	AG_PostEvent(NULL, SIM(sim)->ckt, "circuit-sim-end", "%p", sim);
+}
+
+/* Simulation timestep. */
 static Uint32
 StepMNA(void *obj, Uint32 ival, void *arg)
 {
@@ -108,9 +71,11 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	ES_SimDC *sim = arg;
 	ES_Component *com;
 	static Uint32 t1 = 0;
-	M_Vector *xprev;
+	M_Vector *xPrev;
 	M_Real diff;
 	Uint i = 1, j;
+
+	xPrev = M_New(sim->x->m, 1);
 
 	if (ckt->m == 0) {
 		AG_SetError(_("Circuit has no voltage sources"));
@@ -121,75 +86,72 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		goto halt;
 	}
 
+	/* Invoke the general pre-timestep callbacks (for ES_Scope, etc.) */
 	AG_PostEvent(NULL, ckt, "circuit-step-begin", NULL);
 
-	/* Invoke the time step function of all models. */
+	/* Formulate and solve for the initial conditions. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (com->intStep != NULL)
-			com->intStep(com, sim->Telapsed);
-		if (com->transientStep != NULL)
-			com->transientStep(com, sim->Telapsed, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e, sim->v, sim->j);
+		if (com->dcStepBegin != NULL)
+			com->dcStepBegin(com, sim);
 	}
-
-	CompileMatrices(sim);
-
 	if (SolveMNA(sim, ckt) == -1)
-	{
 		goto halt;
-	}
 
-	do
-	{
-		if (++i > sim->max_iters) {
-//			AG_SetError(_("Could not find stable solution in "
-	//		              "%u iterations"), i);
-//			goto halt;
+	/* Iterate until a stable solution is found. */
+	do {
+		if (++i > sim->itersMax) {
+#if 1
+			AG_SetError(_("Could not find stable solution in "
+			              "%u iterations"), i);
+			goto halt;
+#endif
 			break;
 		}
 
-		/*
-		 * Save the A matrix and execute per-component procedural update
-		 * functions. The intUpdate function can modify either A or the
-		 * RHS in response to calculated node voltages.
-		 */
-		xprev = M_Dup(sim->x);
+		M_Copy(xPrev, sim->x);
 		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-			if (com->intUpdate != NULL)
-				com->intUpdate(com);
-			if (com->dcUpdate != NULL)
-				com->dcUpdate(com, sim->G, sim->B, sim->C, sim->D, sim->i, sim->e, sim->v, sim->j);
-
+			if (com->dcStepIter != NULL)
+				com->dcStepIter(com, sim);
 		}
-
-		CompileMatrices(sim);
-
 		if (SolveMNA(sim, ckt) == -1)
-		{
 			goto halt;
-		}
 
-		/* Compute difference between previous and current iteration, to
-		 * decide whether or not to continue*/
+		/*
+		 * Compute difference between previous and current iteration,
+		 * to decide whether or not to continue.
+		 */
 		diff = 0;
-		for (j=0; j < sim->x->m; j++)
+		for (j = 0; j < sim->x->m; j++)
 		{
-			M_Real cur_absdiff = M_Fabs(sim->x->v[j][0] - xprev->v[j][0]);
-			if(cur_absdiff > diff)
-				diff = cur_absdiff;
+			M_Real curAbsDiff = Fabs(sim->x->v[j][0] -
+			                         xPrev->v[j][0]);
+			if (curAbsDiff > diff)
+				diff = curAbsDiff;
 		}
 	} while (diff > MAX_DIFF);
+	
+	/* Invoke the Component DC specific post-timestep callbacks. */
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (com->dcStepEnd != NULL)
+			com->dcStepEnd(com, sim);
+	}
 
-	if (i > sim->iters_hiwat) { sim->iters_hiwat = i; }
-	else if (i < sim->iters_lowat) { sim->iters_lowat = i; }
-
+	/* Update the statistics. */
+	if (i > sim->itersHiwat) { sim->itersHiwat = i; }
+	else if (i < sim->itersLowat) { sim->itersLowat = i; }
 	sim->TavgReal = SDL_GetTicks() - t1;
 	t1 = SDL_GetTicks();
-	sim->Telapsed++;
+
+	/* Invoke the general post-timestep callbacks (for ES_Scope, etc.) */
 	AG_PostEvent(NULL, ckt, "circuit-step-end", NULL);
+
+	sim->Telapsed++;
+	M_Free(xPrev);
 	return (ival);
 halt:
 	AG_TextMsg(AG_MSG_ERROR, _("%s; simulation stopped"), AG_GetError());
-	SIM(sim)->running = 0;
+	StopSimulation(sim);
+	M_Free(xPrev);
 	return (0);
 }
 
@@ -202,10 +164,12 @@ Init(void *p)
 	sim->Telapsed = 0;
 	sim->TavgReal = 0;
 	sim->speed = 500;
-	sim->max_iters = 10000;
-	sim->iters_hiwat = 1;
-	sim->iters_lowat = 1;
-	AG_SetTimeout(&sim->update_to, StepMNA, sim, AG_CANCEL_ONDETACH);
+	sim->itersMax = 10000;
+	sim->itersHiwat = 1;
+	sim->itersLowat = 1;
+	AG_SetTimeout(&sim->toUpdate, StepMNA, sim, AG_CANCEL_ONDETACH);
+
+	sim->T0 = 290.0;
 
 	sim->A = M_New(0,0);
 	sim->G = M_New(0,0);
@@ -255,9 +219,11 @@ Resize(void *p, ES_Circuit *ckt)
 	M_SetZero(sim->LU);
 	
 	M_IntVectorSet(sim->piv, 0);
+	
 	M_SetZero(sim->z);
 	M_SetZero(sim->i);
 	M_SetZero(sim->e);
+	
 	M_SetZero(sim->x);
 	M_SetZero(sim->v);
 	M_SetZero(sim->j);
@@ -268,21 +234,54 @@ Start(void *p)
 {
 	ES_SimDC *sim = p;
 	ES_Circuit *ckt = SIM(sim)->ckt;
-		
+	ES_Component *com;
+
+	/* Reallocate the matrices if necessary. */
 	Resize(sim, ckt);
-	
+
+	/* Register the real-time simulation timer. */
 	SIM(sim)->running = 1;
 	AG_LockTimeouts(ckt);
-	if (AG_TimeoutIsScheduled(ckt, &sim->update_to)) {
-		AG_DelTimeout(ckt, &sim->update_to);
+	if (AG_TimeoutIsScheduled(ckt, &sim->toUpdate)) {
+		AG_DelTimeout(ckt, &sim->toUpdate);
 	}
-	AG_AddTimeout(ckt, &sim->update_to, 1000/sim->speed);
+	AG_AddTimeout(ckt, &sim->toUpdate, 1000/sim->speed);
 	AG_UnlockTimeouts(ckt);
 	sim->Telapsed = 0;
 	
-	LoadMatrices(sim, ckt);
+	/* Initialize the matrices. */
+	M_SetZero(sim->G);
+	M_SetZero(sim->B);
+	M_SetZero(sim->C);
+	M_SetZero(sim->D);
+	M_SetZero(sim->i);
+	M_SetZero(sim->e);
 
+	/* Load datum node equation */
+	sim->G->v[0][0] = 1.0;
+	
+	/*
+	 * Invoke the DC-specific simulation start callback. Components can
+	 * use this callback to verify constant parameters.
+	 */
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (com->dcSimBegin != NULL) {
+			if (com->dcSimBegin(com, sim) == -1) {
+				AG_SetError("%s: %s", OBJECT(com)->name,
+				    AG_GetError());
+				goto halt;
+			}
+		}
+	}
+
+	/* Invoke the general simulation start callback. */
+	AG_PostEvent(NULL, ckt, "circuit-sim-begin", "%p", sim);
+	
 	ES_SimLog(sim, _("Simulation started (m=%u, n=%u)"), ckt->m, ckt->n);
+	return;
+halt:
+	SIM(sim)->running = 0;
+	ES_SimLog(sim, "%s", AG_GetError());
 }
 
 static void
@@ -292,11 +291,9 @@ Stop(void *p)
 	ES_Circuit *ckt = SIM(sim)->ckt;
 
 	AG_LockTimeouts(ckt);
-	AG_DelTimeout(ckt, &sim->update_to);
+	AG_DelTimeout(ckt, &sim->toUpdate);
 	AG_UnlockTimeouts(ckt);
-	SIM(sim)->running = 0;
-	
-	ES_SimLog(sim, _("Simulation stopped at %uns."), sim->Telapsed);
+	StopSimulation(sim);
 }
 
 static void
@@ -363,7 +360,7 @@ Edit(void *p, ES_Circuit *ckt)
 		sbu = AG_SpinbuttonNew(ntab, 0,
 		    _("Maximum iterations per step: "));
 		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT,
-		    &sim->max_iters);
+		    &sim->itersMax);
 
 		sbu = AG_SpinbuttonNew(ntab, 0, _("Speed (updates/sec): "));
 		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT32, &sim->speed);
@@ -377,7 +374,7 @@ Edit(void *p, ES_Circuit *ckt)
 		    &sim->TavgReal);
 		AG_LabelNewPolled(ntab, 0,
 		    _("Iterations/step watermark: %u-%u"),
-		    &sim->iters_lowat, &sim->iters_hiwat);
+		    &sim->itersLowat, &sim->itersHiwat);
 	}
 	
 	ntab = AG_NotebookAddTab(nb, "[A]", AG_BOX_VERT);

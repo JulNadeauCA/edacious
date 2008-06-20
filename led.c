@@ -77,27 +77,27 @@ Save(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-void
-ES_LedUpdate(void *p)
+static void
+DC_StepEnd(void *obj, ES_SimDC *dc)
 {
-	ES_Led *r = p;
-	M_Real v1 = ES_NodeVoltage(COMPONENT(r)->ckt,PNODE(r,1));
-	M_Real v2 = ES_NodeVoltage(COMPONENT(r)->ckt,PNODE(r,2));
+	ES_Led *led = obj;
+	M_Real v1 = ES_NodeVoltage(COMPONENT(led)->ckt,PNODE(led,1));
+	M_Real v2 = ES_NodeVoltage(COMPONENT(led)->ckt,PNODE(led,2));
 
-	r->state = ((v1 - v2) >= r->Vrev);
+	led->state = ((v1 - v2) >= led->Vrev);
 }
 
 static void
 Init(void *p)
 {
-	ES_Led *r = p;
+	ES_Led *led = p;
 
-	ES_InitPorts(r, esLedPorts);
-	r->Vforw = 30e-3;
-	r->Vrev = 5.0;
-	r->I = 2500e-3;
-	r->state = 0;
-	COMPONENT(r)->intUpdate = ES_LedUpdate;
+	ES_InitPorts(led, esLedPorts);
+	led->Vforw = 30e-3;
+	led->Vrev = 5.0;
+	led->I = 2500e-3;
+	led->state = 0;
+	COMPONENT(led)->dcStepEnd = DC_StepEnd;
 }
 
 static void *
@@ -106,12 +106,9 @@ Edit(void *p)
 	ES_Led *r = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	M_NumericalNewRealR(box, 0, "V", _("Forward voltage: "),
-	    &r->Vforw, 1.0, HUGE_VAL);
-	M_NumericalNewRealR(box, 0, "V", _("Reverse voltage: "),
-	    &r->Vrev, 1.0, HUGE_VAL);
-	M_NumericalNewReal(box, 0, "mcd", _("Luminous intensity: "),
-	    &r->I);
+	M_NumericalNewRealPNZ(box, 0, "V", _("Forward voltage: "), &r->Vforw);
+	M_NumericalNewRealPNZ(box, 0, "V", _("Reverse voltage: "), &r->Vrev);
+	M_NumericalNewRealP(box, 0, "mcd", _("Luminous intensity: "), &r->I);
 	return (box);
 }
 

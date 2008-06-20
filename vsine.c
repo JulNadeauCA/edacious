@@ -38,16 +38,29 @@ const ES_Port esVSinePorts[] = {
 	{ -1 },
 };
 
-static void
-ES_VSineStep(void *p, Uint Telapsed, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e, const M_Vector *v, const M_Vector *j)
+static int
+DC_SimBegin(void *obj, ES_SimDC *dc)
 {
-	ES_VSine *vs = p;
+	ES_VSine *vs = obj;
 
-	VSOURCE(vs)->voltage = vs->vPeak*M_Sin(vs->phase);
+	vs->phase = 0.0;
+	return (0);
+}
+
+static void
+DC_StepBegin(void *obj, ES_SimDC *dc)
+{
+	ES_VSine *vs = obj;
+	Uint k = PNODE(vs,1);
+	Uint j = PNODE(vs,2);
+
+	VSOURCE(vs)->voltage = vs->vPeak*Sin(vs->phase);
+	StampVoltageSource(VSOURCE(vs)->voltage, k,j,
+	    ES_VsourceName(VSOURCE(vs)),
+	    dc->B, dc->C, dc->e);
+
 	vs->phase += 1e-3*vs->f;
 	if (vs->phase > M_PI*2) { vs->phase -= M_PI*2; }
-
-	ES_VsourceInit(VSOURCE(vs), G, B, C, D, i, e);
 }
 
 static void
@@ -60,9 +73,8 @@ Init(void *p)
 	vs->vPeak = 5.0;
 	vs->f = 60.0;
 	vs->phase = 0.0;
-	VSOURCE(vs)->voltage=0;
-
-	COMPONENT(vs)->transientStep = ES_VSineStep;
+	COMPONENT(vs)->dcSimBegin = DC_SimBegin;
+	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
 }
 
 static int
@@ -92,7 +104,9 @@ Edit(void *p)
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
 	M_NumericalNewReal(box, 0, "V", _("Peak voltage: "), &vs->vPeak);
-	M_NumericalNewReal(box, 0, "Hz", _("Frequency: "), &vs->f);
+	M_NumericalNewRealPNZ(box, 0, "Hz", _("Frequency: "), &vs->f);
+	AG_LabelNewPolledMT(box, 0, &OBJECT(vs)->lock,
+	    _("Effective voltage: %f"), &VSOURCE(vs)->voltage);
 	return (box);
 }
 

@@ -75,13 +75,13 @@ Save(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-/* Stamp the model conductances. */
-static int
-LoadDC_G(void *p, M_Matrix *G)
+static void
+DC_StepIter(void *p, ES_SimDC *dc)
 {
+	M_Matrix *G = dc->G;
 	ES_Digital *dig = p;
 	ES_Node *n;
-	int i;
+	Uint i;
 
 	for (i = 0; i < COMPONENT(dig)->npairs; i++) {
 		ES_Pair *pair = PAIR(dig,i);
@@ -98,7 +98,6 @@ LoadDC_G(void *p, M_Matrix *G)
 		}
 		StampConductance(g, k,j, G);
 	}
-	return (0);
 }
 
 void
@@ -174,7 +173,6 @@ Init(void *obj)
 	dig->VccPort = 1;
 	dig->GndPort = 2;
 	dig->G = M_NewZero(COMPONENT(dig)->npairs,1);
-	COMPONENT(dig)->loadDC_G = LoadDC_G;
 
 	dig->Vcc.min = 3.0;	dig->Vcc.typ = 5.0;	dig->Vcc.max = 15.0;
 	dig->Vol.min = 0.0;	dig->Vol.typ = 0.0;	dig->Vol.max = 0.05;
@@ -184,6 +182,9 @@ Init(void *obj)
 	dig->Iol.min = 0.51;	dig->Iol.typ = 0.88;	dig->Iol.max = HUGE_VAL;
 	dig->Ioh.min = -0.51;	dig->Ioh.typ = -0.88;	dig->Ioh.max = HUGE_VAL;
 	dig->Iin.min = 0.0;	dig->Iin.typ = -10.0e-5; dig->Iin.max = -0.1;
+	
+	COMPONENT(dig)->dcStepIter = DC_StepIter;
+
 }
 
 static void

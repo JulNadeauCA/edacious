@@ -23,6 +23,7 @@ struct es_loop;
 struct es_circuit;
 struct ag_window;
 struct ag_menu_item;
+struct es_sim_dc;
 
 /* Exportable circuit model formats. */
 enum circuit_format {
@@ -95,18 +96,12 @@ typedef struct es_component {
 	Uint    npairs;
 	ES_Spec	*specs;				/* Model specifications */
 	Uint	nspecs;
-	
-	int (*loadDC_G)(void *, M_Matrix *G);
-	int (*loadDC_BCD)(void *, M_Matrix *B, M_Matrix *C, M_Matrix *D);
-	int (*loadDC_RHS)(void *, M_Vector *i, M_Vector *e);
-	int (*loadAC)(void *, M_Matrix *Y);
-	int (*loadSP)(void *, M_Matrix *S, M_Matrix *N);
-	void (*intStep)(void *, Uint);
-	void (*intUpdate)(void *);
 
-	void (*dcInit)(void *, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e);
-	void (*transientStep)(void *, Uint Telapsed, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e, const M_Vector *v, const M_Vector *j);
-	void (*dcUpdate)(void *, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e, const M_Vector *v, const M_Vector *j);
+	int (*dcSimBegin)(void *, struct es_sim_dc *);
+	void (*dcStepBegin)(void *, struct es_sim_dc *);
+	void (*dcStepIter)(void *, struct es_sim_dc *);
+	void (*dcStepEnd)(void *, struct es_sim_dc *);
+	void (*dcSimEnd)(void *, struct es_sim_dc *);
 
 	TAILQ_HEAD(,vg_node) schemEnts;		/* Schematic entities */
 	TAILQ_ENTRY(es_component) components;

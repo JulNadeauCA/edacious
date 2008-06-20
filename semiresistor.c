@@ -37,6 +37,48 @@ const ES_Port esSemiResistorPorts[] = {
 	{ -1 },
 };
 
+/* Compute the effective resistance from the parameters. */
+static int
+DC_SimBegin(void *obj, ES_SimDC *dc)
+{
+	ES_SemiResistor *r = obj;
+
+	if (r->narrow >= r->l || r->narrow >= r->w) {
+		AG_SetError("Narrowing is >= the length/width");
+		return (-1);
+	}
+	r->rEff = r->rSh*(r->l - r->narrow)/(r->w - r->narrow);
+	if (r->rEff <= M_MACHEP) {
+		AG_SetError("Resistance is too small");
+		return (-1);
+	}
+	return (0);
+}
+
+/*
+ * Load the element into the conductance matrix. All conductances between
+ * (k,j) are added to (k,k) and (j,j), and subtracted from (k,j) and (j,k).
+ *
+ *   |  Vk    Vj  | RHS
+ *   |------------|-----
+ * k |  Gkj  -Gkj |
+ * j | -Gkj   Gkj |
+ *   |------------|-----
+ */
+static void
+DC_StepBegin(void *obj, ES_SimDC *dc)
+{
+	ES_SemiResistor *r = obj;
+	ES_Node *n;
+	Uint k = PNODE(r,1);
+	Uint j = PNODE(r,2);
+	M_Real dT = dc->T0 - COMPONENT(r)->Tspec;
+	M_Real g;
+
+	g = 1.0/(r->rEff * (1.0 + r->Tc1*dT + r->Tc2*dT*dT));	
+	StampConductance(g, k, j, dc->G);
+}
+
 static void
 Init(void *p)
 {
@@ -45,11 +87,13 @@ Init(void *p)
 	ES_InitPorts(r, esSemiResistorPorts);
 	r->l = 2e-6;
 	r->w = 1e-6;
-	r->rsh = 1000;
-	r->defw = 1e-6;
-	r->narrow = 0;
+	r->rSh = 1000.0;
+	r->narrow = 0.0;
 	r->Tc1 = 0.0;
 	r->Tc2 = 0.0;
+	r->rEff = 0.0;
+	COMPONENT(r)->dcSimBegin = DC_SimBegin;
+	COMPONENT(r)->dcStepBegin = DC_StepBegin;
 }
 
 static int
@@ -59,8 +103,7 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 
 	r->l = M_ReadReal(buf);
 	r->w = M_ReadReal(buf);
-	r->rsh = M_ReadReal(buf);
-	r->defw = M_ReadReal(buf);
+	r->rSh = M_ReadReal(buf);
 	r->narrow = M_ReadReal(buf);
 	r->Tc1 = M_ReadReal(buf);
 	r->Tc2 = M_ReadReal(buf);
@@ -74,8 +117,7 @@ Save(void *p, AG_DataSource *buf)
 
 	M_WriteReal(buf, r->l);
 	M_WriteReal(buf, r->w);
-	M_WriteReal(buf, r->rsh);
-	M_WriteReal(buf, r->defw);
+	M_WriteReal(buf, r->rSh);
 	M_WriteReal(buf, r->narrow);
 	M_WriteReal(buf, r->Tc1);
 	M_WriteReal(buf, r->Tc2);
@@ -95,10 +137,8 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
 		fprintf(f, ".MODEL Rmod%u R "
-		           "(tc1=%g tc2=%g rsh=%g defw=%g narrow=%g "
-			   "tnom=%g)\n",
-		    nRmod, r->Tc1, r->Tc2, r->rsh, r->defw, r->narrow,
-		    COMCIRCUIT(r)->T0);
+		           "(tc1=%g tc2=%g rsh=%g narrow=%g)\n",
+		    nRmod, r->Tc1, r->Tc2, r->rSh, r->narrow);
 		fprintf(f, "%s %d %d Rmod%u L=%g W=%g TEMP=%g\n",
 		    OBJECT(r)->name, PNODE(r,1), PNODE(r,2),
 		    nRmod, r->l, r->w, COMPONENT(r)->Tspec);
@@ -108,42 +148,25 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 	return (0);
 }
 
-#if 0
-static double
-Resistance(void *p, ES_Port *p1, ES_Port *p2)
-{
-	ES_SemiResistor *r = p;
-	double deltaT = COMCIRCUIT(r)->T0 - COMPONENT(r)->Tspec;
-	double R;
-
-	R = r->rsh*(r->l - r->narrow)/(r->w - r->narrow);
-	return (R*(1.0 + r->Tc1*deltaT + r->Tc2*deltaT*deltaT));
-}
-#endif
-
 static void *
 Edit(void *p)
 {
 	ES_SemiResistor *r = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
-	AG_MFSpinbutton *mfsb;
 
-	mfsb = AG_MFSpinbuttonNew(box, 0, "um", "x", _("Geometry (LxW): "));
-	M_WidgetBindReal(mfsb, "xvalue", &r->l);
-	M_WidgetBindReal(mfsb, "yvalue", &r->w);
-	AG_MFSpinbuttonSetMin(mfsb, M_TINYVAL);
+	M_NumericalNewRealPNZ(box, 0, "um", _("Length: "), &r->l);
+	M_NumericalNewRealPNZ(box, 0, "um", _("Width: "), &r->w);
+	M_NumericalNewRealPNZ(box, 0, "kohm", _("Resistance/sq: "), &r->rSh);
+	M_NumericalNewRealP(box, 0, "um", _("Narrowing: "), &r->narrow);
 	
-	M_NumericalNewRealR(box, 0, "kohm", _("Sheet resistance/sq: "),
-	    &r->rsh, M_TINYVAL, HUGE_VAL);
-	M_NumericalNewReal(box, 0, "um", _("Default width: "),
-	    &r->defw);
-	M_NumericalNewReal(box, 0, "um", _("Narrowing due to side etching: "),
-	    &r->narrow);
-	M_NumericalNewReal(box, 0, "mohm/degC", _("1st order temp. coeff: "),
-	    &r->Tc1);
-	M_NumericalNewReal(box, 0, "mohm/degC^2", _("2nd order temp. coeff: "),
-	    &r->Tc2);
+	AG_SeparatorNewHoriz(box);
+	
+	M_NumericalNewRealP(box, 0, "mohm/degC", "Tc1: ", &r->Tc1);
+	M_NumericalNewRealP(box, 0, "mohm/degC^2", "Tc2: ", &r->Tc2);
+	
+	AG_SeparatorNewHoriz(box);
 
+	AG_LabelNewPolledMT(box, 0, &OBJECT(r)->lock, "rEff: %f", &r->rEff);
 	return (box);
 }
 

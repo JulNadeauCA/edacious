@@ -41,84 +41,83 @@ const ES_Port esDiodePorts[] = {
 	{ -1 },
 };
 
-/* Returns the voltage across the diode calculated
- * in the last Newton-Raphson iteration */
-
+/*
+ * Returns the voltage across the diode calculated in the last Newton-Raphson
+ * iteration.
+ */
 static M_Real
 DiodeVoltage(ES_Diode *d)
 {
 	return VPORT(d,PORT_P)-VPORT(d,PORT_N);
 }
 
-/* Updates the small- and large-signal models, saving the 
- * previous values */
-
+/* Updates the small- and large-signal models, saving the previous values. */
 static void
 UpdateDiodeModel(ES_Diode *d, M_Real v)
 {
 	M_Real vDiff = v - d->vPrev;
+	M_Real I;
 
-	if (M_Fabs(vDiff) > d->Vt)
-	{
-		v = d->vPrev + vDiff/M_Fabs(vDiff)*d->Vt;
+	if (Fabs(vDiff) > d->Vt) {
+		v = d->vPrev + vDiff/Fabs(vDiff)*d->Vt;
 	}
 
 	d->gPrev = d->g;
 	d->IeqPrev = d->Ieq;
 	d->vPrev = v;
 
-	M_Real I =  d->Is*(M_Exp(v/(d->Vt))-1);
-
+	I = d->Is*(Exp(v/(d->Vt)) - 1);
 	d->g = I/(d->Vt);
 	d->Ieq = I-(d->g)*v;
 }
 
-static void
-ES_DiodeInit(void *p, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e)
+static int
+DC_SimBegin(void *obj, ES_SimDC *dc)
 {
-        ES_Diode *d = p;
-
+        ES_Diode *d = obj;
 	Uint k = PNODE(d,PORT_P);
 	Uint l = PNODE(d,PORT_N);
-
 	M_Real vGuess = 0.7;
+	
 	d->vPrev = vGuess;
 
 	UpdateDiodeModel(d, vGuess);
 
-	StampConductance(d->g,k,l,G);
-	StampCurrentSource(d->Ieq,l,k,i);
+	StampConductance(d->g, k,l, dc->G);
+	StampCurrentSource(d->Ieq, l,k, dc->i);
+
+	return (0);
 }
 
 static void
-ES_DiodeStep(void *p, Uint Telapsed, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e, const M_Vector *v, const M_Vector *j)
+DC_StepBegin(void *obj, ES_SimDC *dc)
 {
-        ES_Diode *d = p;
-
+	ES_Diode *d = obj;
 	Uint k = PNODE(d,PORT_P);
 	Uint l = PNODE(d,PORT_N);
-
 	M_Real vGuess = 0.7;
+	
 	d->vPrev = vGuess;
 
 	UpdateDiodeModel(d, vGuess);
 
-	StampConductance(d->g-d->gPrev,k,l,G);
-	StampCurrentSource(d->Ieq-d->IeqPrev,l,k,i);
+	StampConductance(d->g - d->gPrev, k,l, dc->G);
+	StampCurrentSource(d->Ieq - d->IeqPrev, l,k, dc->i);
 }
 
 static void
-ES_DiodeUpdate(void *p, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e, const M_Vector *v, const M_Vector *j)
+DC_StepIter(void *obj, ES_SimDC *dc)
 {
-	ES_Diode *d = p;
-
+	ES_Diode *d = obj;
 	Uint k = PNODE(d,PORT_P);
 	Uint l = PNODE(d,PORT_N);
 
 	UpdateDiodeModel(d, DiodeVoltage(d));
 
-	StampConductance(d->g-d->gPrev,k,l,G);
-	StampCurrentSource(d->Ieq-d->IeqPrev,l,k,i); // note that the current source points the opposite direction
+	StampConductance(d->g - d->gPrev, k,l, dc->G);
+
+	/* Note that the current source points the opposite direction */
+	StampCurrentSource(d->Ieq - d->IeqPrev, l,k, dc->i);
 }
 
 static void
@@ -130,9 +129,9 @@ Init(void *p)
 	d->Is = 1e-14;
 	d->Vt = 0.025;
 
-	COMPONENT(d)->dcInit = ES_DiodeInit;
-	COMPONENT(d)->transientStep = ES_DiodeStep;
-	COMPONENT(d)->dcUpdate = ES_DiodeUpdate;
+	COMPONENT(d)->dcSimBegin = DC_SimBegin;
+	COMPONENT(d)->dcStepBegin = DC_StepBegin;
+	COMPONENT(d)->dcStepIter = DC_StepIter;
 }
 
 static void *
@@ -142,12 +141,10 @@ Edit(void *p)
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 	AG_Numerical *num;
 
-	num = M_NumericalNewRealR(box, 0, "pA", _("Reverse saturation current: "),
-	    &d->Is, M_TINYVAL, HUGE_VAL);
-//	AG_NumericalSetPrecision(num, "f", 8);
+	num = M_NumericalNewRealR(box, 0, "pA",
+	    _("Reverse saturation current: "), &d->Is, M_TINYVAL, HUGE_VAL);
 
-	M_NumericalNewRealR(box, 0, "mV", _("Thermal voltage: "),
-	    &d->Vt, M_TINYVAL, HUGE_VAL);
+	M_NumericalNewRealPNZ(box, 0, "mV", _("Thermal voltage: "), &d->Vt);
 
 	AG_LabelNewPolledMT(box, AG_LABEL_HFILL, &OBJECT(d)->lock,
 	    "Ieq=%f, g=%f", &d->Ieq, &d->g);

@@ -188,10 +188,8 @@ Edit(void *p)
 	ES_Spdt *sw = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	M_NumericalNewRealR(box, 0, "ohm", _("ON resistance: "),
-	    &sw->rOn, M_TINYVAL, HUGE_VAL);
-	M_NumericalNewRealR(box, 0, "ohm", _("OFF resistance: "),
-	    &sw->rOff, M_TINYVAL, HUGE_VAL);
+	M_NumericalNewRealPNZ(box, 0, "ohm", _("ON resistance: "), &sw->rOn);
+	M_NumericalNewRealPNZ(box, 0, "ohm", _("OFF resistance: "), &sw->rOff);
 	AG_ButtonAct(box, AG_BUTTON_EXPAND, _("Toggle state"),
 	    ToggleState, "%p", sw);
 	return (box);

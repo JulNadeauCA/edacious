@@ -252,17 +252,11 @@ Init(void *obj)
 	com->specs = NULL;
 	com->nspecs = 0;
 
-	com->loadDC_G = NULL;
-	com->loadDC_BCD = NULL;
-	com->loadDC_RHS = NULL;
-	com->loadAC = NULL;
-	com->loadSP = NULL;
-	com->intStep = NULL;
-	com->intUpdate = NULL;
-	
-	com->dcInit = NULL;
-	com->transientStep = NULL;
-	com->dcUpdate = NULL;
+	com->dcSimBegin = NULL;
+	com->dcStepBegin = NULL;
+	com->dcStepIter = NULL;
+	com->dcStepEnd = NULL;
+	com->dcSimEnd = NULL;
 
 	TAILQ_INIT(&com->schemEnts);
 

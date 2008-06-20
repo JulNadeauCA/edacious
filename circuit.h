@@ -87,9 +87,6 @@ typedef struct es_circuit {
 	Uint l;				/* Loops */
 	Uint m;				/* Independent voltage sources */
 	Uint n;				/* Nodes (except ground) */
-
-	M_Real Z0;			/* Normalizing impedance */
-	M_Real T0;			/* Reference temperature */
 } ES_Circuit;
 
 #define CIRCUIT(p) ((ES_Circuit *)(p))

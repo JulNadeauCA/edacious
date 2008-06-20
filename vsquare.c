@@ -38,6 +38,28 @@ const ES_Port esVSquarePorts[] = {
 };
 
 static void
+DC_StepBegin(void *obj, ES_SimDC *dc)
+{
+	ES_Vsource *vs = obj;
+	ES_VSquare *vsq = obj;
+	Uint k = PNODE(vs,1);
+	Uint j = PNODE(vs,2);
+
+	if (vs->voltage == vsq->vH && ++vsq->t > vsq->tH) {
+		vs->voltage = vsq->vL;
+		vsq->t = 0;
+	} else if (vs->voltage == vsq->vL && ++vsq->t > vsq->tL) {
+		vs->voltage = vsq->vH;
+		vsq->t = 0;
+	} else if (vs->voltage != vsq->vL && vs->voltage != vsq->vH) {
+		vs->voltage = vsq->vL;
+	}
+	
+	StampVoltageSource(vs->voltage, k,j, ES_VsourceName(vs),
+	    dc->B, dc->C, dc->e);
+}
+
+static void
 Init(void *p)
 {
 	ES_VSquare *vs = p;
@@ -48,7 +70,7 @@ Init(void *p)
 	vs->t = 0;
 	vs->tH = 100;
 	vs->tL = 100;
-	COMPONENT(vs)->intStep = ES_VSquareStep;
+	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
 }
 
 static int
@@ -75,32 +97,6 @@ Save(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-static int
-Export(void *p, enum circuit_format fmt, FILE *f)
-{
-	ES_VSquare *vs = p;
-
-	/* TODO */
-	return (0);
-}
-
-void
-ES_VSquareStep(void *p, Uint ticks)
-{
-	ES_VSquare *vs = p;
-
-	if (VSOURCE(vs)->voltage == vs->vH && ++vs->t > vs->tH) {
-		VSOURCE(vs)->voltage = vs->vL;
-		vs->t = 0;
-	} else if (VSOURCE(vs)->voltage == vs->vL && ++vs->t > vs->tL) {
-		VSOURCE(vs)->voltage = vs->vH;
-		vs->t = 0;
-	} else if (VSOURCE(vs)->voltage != vs->vL &&
-	           VSOURCE(vs)->voltage != vs->vH) {
-		VSOURCE(vs)->voltage = vs->vL;
-	}
-}
-
 static void *
 Edit(void *p)
 {
@@ -109,8 +105,8 @@ Edit(void *p)
 
 	M_NumericalNewReal(box, 0, "V", _("HIGH voltage: "), &vs->vH);
 	M_NumericalNewReal(box, 0, "V", _("LOW voltage: "), &vs->vL);
-	M_NumericalNewTime(box, 0, "ns", _("HIGH duration: "), &vs->tH);
-	M_NumericalNewTime(box, 0, "ns", _("LOW duration: "), &vs->tL);
+	M_NumericalNewTimePNZ(box, 0, "ns", _("HIGH duration: "), &vs->tH);
+	M_NumericalNewTimePNZ(box, 0, "ns", _("LOW duration: "), &vs->tL);
 	return (box);
 }
 
@@ -134,6 +130,6 @@ ES_ComponentClass esVSquareClass = {
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
-	Export,
+	NULL,			/* export */
 	NULL			/* connect */
 };

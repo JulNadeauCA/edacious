@@ -12,8 +12,6 @@ typedef ES_Digital ES_Inverter;
 
 __BEGIN_DECLS
 extern ES_ComponentClass esInverterClass;
-
-void ES_InverterUpdate(void *);
 __END_DECLS
 
 #include "close_code.h"

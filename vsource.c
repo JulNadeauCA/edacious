@@ -194,21 +194,15 @@ ES_VsourceFindLoops(ES_Vsource *vs)
  * br | 1   -1       | Ekj
  *    |--------------|-----
  */
-
-void
-ES_VsourceInit(void *p, M_Matrix *G, M_Matrix *B, M_Matrix *C, M_Matrix *D, M_Vector *i, M_Vector *e)
+static void
+DC_StepBegin(void *obj, ES_SimDC *dc)
 {
-	ES_Vsource *vs = p;
+	ES_Vsource *vs = obj;
 	Uint k = PNODE(vs,1);
 	Uint j = PNODE(vs,2);
-	int v;
 
-	if ((v = ES_VsourceName(vs)) == -1) {
-		AG_SetError("no such vsource");
-		return;
-	}
-
-	StampVoltageSource(vs->voltage, k, j, v, B, C, e);
+	StampVoltageSource(vs->voltage, k,j, ES_VsourceName(vs),
+	    dc->B, dc->C, dc->e);
 }
 
 static void
@@ -254,7 +248,7 @@ Init(void *p)
 	vs->nloops = 0;
 	TAILQ_INIT(&vs->loops);
 
-	COMPONENT(vs)->dcInit = ES_VsourceInit;
+	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
 	AG_SetEvent(vs, "circuit-connected", Connected, NULL);
 	AG_SetEvent(vs, "circuit-disconnected", Disconnected, NULL);
 }

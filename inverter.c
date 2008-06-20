@@ -40,12 +40,28 @@ const ES_Port esInverterPorts[] = {
 };
 
 static void
+DC_StepIter(void *obj, ES_SimDC *dc)
+{
+	ES_Inverter *inv = obj;
+
+	switch (ES_LogicInput(inv, "A")) {
+	case ES_HIGH:
+		ES_LogicOutput(inv, "A-bar", ES_LOW);
+		break;
+	case ES_LOW:
+		ES_LogicOutput(inv, "A-bar", ES_HIGH);
+		break;
+	}
+	COMPONENT(inv)->dcStepIter(inv, dc);
+}
+
+static void
 Init(void *p)
 {
 	ES_Inverter *inv = p;
 
 	ES_InitPorts(inv, esInverterPorts);
-	COMPONENT(inv)->intUpdate = ES_InverterUpdate;
+	COMPONENT(inv)->dcStepIter = DC_StepIter;
 #if 0
 	ES_SetSpec(inv, "Tp", _("Propagation delay from A to A-bar"),
 	    "Vcc=5;Tamb=25",	0, 50, 90,
@@ -76,21 +92,6 @@ Init(void *p)
 	    NULL);
 #endif
 	ES_LogicOutput(inv, "A-bar", ES_HI_Z);
-}
-
-void
-ES_InverterUpdate(void *p)
-{
-	ES_Inverter *inv = p;
-
-	switch (ES_LogicInput(inv, "A")) {
-	case ES_HIGH:
-		ES_LogicOutput(inv, "A-bar", ES_LOW);
-		break;
-	case ES_LOW:
-		ES_LogicOutput(inv, "A-bar", ES_HIGH);
-		break;
-	}
 }
 
 ES_ComponentClass esInverterClass = {

@@ -72,25 +72,25 @@ Save(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-void
-ES_LogicProbeUpdate(void *p)
+static void
+DC_StepEnd(void *obj, ES_SimDC *dc)
 {
-	ES_LogicProbe *r = p;
-	M_Real v1 = ES_NodeVoltage(COMPONENT(r)->ckt,PNODE(r,1));
-	M_Real v2 = ES_NodeVoltage(COMPONENT(r)->ckt,PNODE(r,2));
+	ES_LogicProbe *lp = obj;
+	M_Real v1 = ES_NodeVoltage(COMPONENT(lp)->ckt,PNODE(lp,1));
+	M_Real v2 = ES_NodeVoltage(COMPONENT(lp)->ckt,PNODE(lp,2));
 
-	r->state = ((v1 - v2) >= r->Vhigh);
+	lp->state = ((v1 - v2) >= lp->Vhigh);
 }
 
 static void
 Init(void *p)
 {
-	ES_LogicProbe *r = p;
+	ES_LogicProbe *lp = p;
 
-	ES_InitPorts(r, esLogicProbePorts);
-	r->Vhigh = 5.0;
-	r->state = 0;
-	COMPONENT(r)->intUpdate = ES_LogicProbeUpdate;
+	ES_InitPorts(lp, esLogicProbePorts);
+	lp->Vhigh = 5.0;
+	lp->state = 0;
+	COMPONENT(lp)->dcStepEnd = DC_StepEnd;
 }
 
 static void *
@@ -99,8 +99,7 @@ Edit(void *p)
 	ES_LogicProbe *r = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	M_NumericalNewRealR(box, 0, "V", _("HIGH voltage: "),
-	    &r->Vhigh, 1.0, HUGE_VAL);
+	M_NumericalNewRealPNZ(box, 0, "V", _("HIGH voltage: "), &r->Vhigh);
 	return (box);
 }
 

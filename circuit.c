@@ -196,7 +196,6 @@ Init(void *p)
 
 	ckt->flags = CIRCUIT_SHOW_NODES|CIRCUIT_SHOW_NODESYMS|
 	             CIRCUIT_SHOW_NODENAMES;
-	ckt->simlock = 0;
 	ckt->descr[0] = '\0';
 	ckt->authors[0] = '\0';
 	ckt->keywords[0] = '\0';
@@ -210,9 +209,6 @@ Init(void *p)
 	ckt->console = NULL;
 	TAILQ_INIT(&ckt->syms);
 	InitGround(ckt);
-
-	ckt->Z0 = 50.0;
-	ckt->T0 = 290.0;
 
 	ckt->vg = VG_New(0);
 	Strlcpy(ckt->vg->layers[0].name, _("Schematic"),
