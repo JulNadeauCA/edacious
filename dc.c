@@ -73,7 +73,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	static Uint32 t1 = 0;
 	M_Vector *xPrev;
 	M_Real diff;
-	Uint i = 1, j;
+	Uint i = 0, j;
 
 	xPrev = M_New(sim->x->m, 1);
 
@@ -128,6 +128,10 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 			if (curAbsDiff > diff)
 				diff = curAbsDiff;
 		}
+#ifdef DEBUG
+		printf("Iteration %d : difference %f\n", i, diff);
+#endif
+
 	} while (diff > MAX_DIFF);
 	
 	/* Invoke the Component DC specific post-timestep callbacks. */
