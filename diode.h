@@ -18,6 +18,11 @@ typedef struct es_diode {
 	M_Real vPrev;
 	M_Real IeqPrev;	
 	M_Real gPrev;
+
+	/* Guess at each beginning of a time step for the voltage,
+	 * used for N-R algorithm.
+	 * May be updated to improve efficiency.*/
+	M_Real prevGuess; 
 } ES_Diode;
 
 __BEGIN_DECLS

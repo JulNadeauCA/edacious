@@ -41,11 +41,6 @@ const ES_Port esDiodePorts[] = {
 	{ -1 },
 };
 
-/* Guess at each beginning of a time step for the voltage,
- * used for N-R algorithm.
- * May be updated to improve efficiency.*/
-static M_Real prevGuess = 0.7;
-
 /*
  * Returns the voltage across the diode calculated in the last Newton-Raphson
  * iteration.
@@ -83,7 +78,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
         ES_Diode *d = obj;
 	Uint k = PNODE(d,PORT_P);
 	Uint l = PNODE(d,PORT_N);
-	M_Real vGuess = prevGuess;
+	M_Real vGuess = d->prevGuess;
 	
 	d->vPrev = vGuess;
 
@@ -101,7 +96,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	ES_Diode *d = obj;
 	Uint k = PNODE(d,PORT_P);
 	Uint l = PNODE(d,PORT_N);
-	M_Real vGuess = prevGuess;
+	M_Real vGuess = d->prevGuess;
 	
 	d->vPrev = vGuess;
 
@@ -118,7 +113,7 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 	Uint k = PNODE(d,PORT_P);
 	Uint l = PNODE(d,PORT_N);
 
-	prevGuess = DiodeVoltage(d);
+	d->prevGuess = DiodeVoltage(d);
 	UpdateDiodeModel(d, DiodeVoltage(d));
 
 	StampConductance(d->g - d->gPrev, k,l, dc->G);
@@ -135,7 +130,8 @@ Init(void *p)
 	ES_InitPorts(d, esDiodePorts);
 	d->Is = 1e-14;
 	d->Vt = 0.025;
-
+	d->prevGuess = 0.7;
+	
 	COMPONENT(d)->dcSimBegin = DC_SimBegin;
 	COMPONENT(d)->dcStepBegin = DC_StepBegin;
 	COMPONENT(d)->dcStepIter = DC_StepIter;
