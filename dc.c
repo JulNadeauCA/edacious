@@ -129,11 +129,13 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 				diff = curAbsDiff;
 		}
 #ifdef DEBUG
-		printf("Iteration %d : difference %f\n", i, diff);
+		M_SetReal(ckt, "dcDiff", diff);
+#endif
+	} while (diff > MAX_DIFF);
+#ifdef DEBUG
+	M_SetReal(ckt, "dcIters", i);
 #endif
 
-	} while (diff > MAX_DIFF);
-	
 	/* Invoke the Component DC specific post-timestep callbacks. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (com->dcStepEnd != NULL)
