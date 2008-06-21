@@ -25,6 +25,7 @@ SRCS=	and.c \
 	led.c \
 	logic_probe.c \
 	main.c \
+	nmos.c \
 	or.c \
 	resistor.c \
 	schem.c \

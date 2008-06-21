@@ -44,20 +44,24 @@
 #include "wire.h"
 #include "and.h"
 #include "digital.h"
+#include "diode.h"
 #include "ground.h"
 #include "inverter.h"
 #include "led.h"
 #include "logic_probe.h"
+#include "nmos.h"
 #include "or.h"
 #include "resistor.h"
 #include "semiresistor.h"
 #include "spst.h"
 #include "spdt.h"
-#include "diode.h"
 
 #include "icons_data.h"
 
+#include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <config/enable_nls.h>
 #include <config/have_getopt.h>
@@ -79,6 +83,7 @@ void *esComponentClasses[] = {
 	&esOrClass,
 	&esDiodeClass,
 	&esLedClass,
+	&esNMOSClass, 
 	NULL
 };
 
