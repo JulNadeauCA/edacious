@@ -194,8 +194,8 @@ Init(void *p)
 {
 	ES_Circuit *ckt = p;
 
-	ckt->flags = CIRCUIT_SHOW_NODES|CIRCUIT_SHOW_NODESYMS|
-	             CIRCUIT_SHOW_NODENAMES;
+	ckt->flags = ES_CIRCUIT_SHOW_NODES|ES_CIRCUIT_SHOW_NODESYMS|
+	             ES_CIRCUIT_SHOW_NODENAMES;
 	ckt->descr[0] = '\0';
 	ckt->authors[0] = '\0';
 	ckt->keywords[0] = '\0';
@@ -286,17 +286,54 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_Circuit *ckt = p;
 	ES_Component *com;
-	Uint32 nitems;
-	Uint i, j, nnodes;
+	Uint i, j, count;
+	ES_SchemBlock *sb;
+	ES_SchemWire *sw;
 
+	/* Circuit information */
 	AG_CopyString(ckt->descr, ds, sizeof(ckt->descr));
 	AG_CopyString(ckt->authors, ds, sizeof(ckt->authors));
 	AG_CopyString(ckt->keywords, ds, sizeof(ckt->keywords));
 	ckt->flags = AG_ReadUint32(ds);
+	
+	/* Component models */
+	count = (Uint)AG_ReadUint32(ds);
+	Debug(ckt, "Loading components (%u)\n", count);
+	for (i = 0; i < count; i++) {
+		char comName[AG_OBJECT_NAME_MAX];
+		char clsID[AG_OBJECT_TYPE_MAX];
+		AG_ObjectClass *cls;
+		Uint32 skipSize;
+	
+		AG_CopyString(comName, ds, sizeof(comName));
+		AG_CopyString(clsID, ds, sizeof(clsID));
+		skipSize = AG_ReadUint32(ds);
+		
+		Debug(ckt, "Loading component: %s (%s), %u bytes\n",
+		    comName, clsID, (Uint)skipSize);
 
-	/* Load the circuit nodes. */
-	nnodes = (Uint)AG_ReadUint32(ds);
-	for (i = 0; i < nnodes; i++) {
+		if ((cls = AG_FindClass(clsID)) == NULL) {
+			/* TODO skip? */
+			AG_SetError("%s: Unimplemented class \"%s\"",
+			    comName, clsID);
+			return (-1);
+		}
+
+		com = Malloc(cls->size);
+		AG_ObjectInit(com, cls);
+		AG_ObjectSetName(com, "%s", comName);
+		if (AG_ObjectUnserialize(com, ds) == -1) {
+			AG_ObjectDestroy(com);
+			return (-1);
+		}
+		OBJECT(com)->flags |= AG_OBJECT_RESIDENT;
+		AG_ObjectAttach(ckt, com);
+	}
+
+	/* Circuit nodes and branches */
+	count = (Uint)AG_ReadUint32(ds);
+	Debug(ckt, "Loading nodes (%u)\n", count);
+	for (i = 0; i < count; i++) {
 		Uint nBranches, flags;
 		int name;
 
@@ -312,36 +349,59 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		}
 
 		for (j = 0; j < nBranches; j++) {
-			char ppath[AG_OBJECT_PATH_MAX];
-			ES_Component *pcom;
+			char comName[AG_OBJECT_PATH_MAX];
 			ES_Branch *br;
 			Uint pPort;
 
-			AG_CopyString(ppath, ds, sizeof(ppath));
+			AG_CopyString(comName, ds, sizeof(comName));
 			AG_ReadUint32(ds);			/* Pad */
-			pPort = (int)AG_ReadUint32(ds);
-			if ((pcom = AG_ObjectFind(ckt, ppath)) == NULL) {
+			pPort = (Uint)AG_ReadUint32(ds);
+			Debug(ckt, "n%u: Branch to %s:%u\n", i, comName,
+			    pPort);
+			
+			if ((com = AG_ObjectFindChild(ckt, comName)) == NULL) {
 				AG_SetError("%s", AG_GetError());
 				return (-1);
 			}
-			if (pPort > pcom->nports) {
-				AG_SetError("%s: port #%d > %d", ppath, pPort,
-				    pcom->nports);
+			if (pPort > com->nports) {
+				AG_SetError("Bogus branch: %s:%u", comName,
+				    pPort);
 				return (-1);
 			}
-			br = ES_AddBranch(ckt, name, &pcom->ports[pPort]);
-			pcom->ports[pPort].node = name;
-			pcom->ports[pPort].branch = br;
+			br = ES_AddBranch(ckt, name, &com->ports[pPort]);
+			com->ports[pPort].node = name;
+			com->ports[pPort].branch = br;
 		}
 	}
 
-	/* Load the schematics. */
-	if (VG_Load(ckt->vg, ds) == -1)
+	/* Circuit schematics */
+	Debug(ckt, "Loading schematic\n");
+	if (VG_Load(ckt->vg, ds) == -1) {
 		return (-1);
+	}
+	VG_FOREACH_NODE_CLASS(sb, ckt->vg, es_schem_block, "SchemBlock") {
+		if ((com = AG_ObjectFindChild(ckt, sb->name)) != NULL) {
+			sb->com = com;
+		} else {
+			AG_SetError("SchemBlock refers to unexisting "
+			            "component: \"%s\"", sb->name);
+			return (-1);
+		}
+	}
+	VG_FOREACH_NODE_CLASS(sw, ckt->vg, es_schem_wire, "SchemWire") {
+		if ((com = AG_ObjectFindChild(ckt, sw->name)) != NULL) {
+			sw->wire = sw;
+		} else {
+			AG_SetError("SchemWire refers to unexisting "
+			            "wire: \"%s\"", sw->name);
+			return (-1);
+		}
+	}
 
-	/* Load the symbol table. */
-	nitems = AG_ReadUint32(ds);
-	for (i = 0; i < nitems; i++) {
+	/* Symbol table */
+	count = (Uint)AG_ReadUint32(ds);
+	Debug(ckt, "Loading symbol table (%u)\n", count);
+	for (i = 0; i < count; i++) {
 		ES_Sym *sym;
 		
 		sym = ES_AddSymbol(ckt, NULL);
@@ -362,39 +422,56 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		}
 	}
 
-	/* Load the component port assignments. */
-	nitems = AG_ReadUint32(ds);
-	for (i = 0; i < nitems; i++) {
-		char name[AG_OBJECT_NAME_MAX];
+	/* Component port assignments */
+	count = (Uint)AG_ReadUint32(ds);
+	Debug(ckt, "Loading component ports (%u)\n", count);
+	for (i = 0; i < count; i++) {
+		char comName[AG_OBJECT_NAME_MAX];
 		Uint j;
 		ES_Component *com;
 		ES_Port *port;
 
-		/* Lookup the component. */
-		AG_CopyString(name, ds, sizeof(name));
+		AG_CopyString(comName, ds, sizeof(comName));
 		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-			if (strcmp(OBJECT(com)->name, name) == 0)
+			if (strcmp(OBJECT(com)->name, comName) == 0)
 				break;
 		}
-		if (com == NULL) { Fatal("unexisting component"); }
+		if (com == NULL) {
+			AG_SetError("Bogus port component: %s", comName);
+			return (-1);
+		}
 		
 		/* Load the port information. */
-		com->nports = (int)AG_ReadUint32(ds);
+		com->nports = (Uint)AG_ReadUint32(ds);
+		Debug(ckt, "Loading ports of %s (%u)\n", comName, com->nports);
 		COMPONENT_FOREACH_PORT(port, j, com) {
 			ES_Branch *br;
 			ES_Node *node;
+			int portNode;
 
 			port->n = (int)AG_ReadUint32(ds);
 			AG_CopyString(port->name, ds, sizeof(port->name));
-			port->node = (int)AG_ReadUint32(ds);
+			portNode = (int)AG_ReadUint32(ds);
+			if (portNode >= ckt->n) {
+				AG_SetError("Bogus port node#: %d", port->node);
+				return (-1);
+			}
+			port->node = portNode;
 			node = ckt->nodes[port->node];
+		
+			Debug(ckt, "Port %s:%d: name=\"%s\", node=%d\n",
+			    comName, j, port->name, port->node);
 
 			NODE_FOREACH_BRANCH(br, node) {
 				if (br->port->com == com &&
 				    br->port->n == port->n)
 					break;
 			}
-			if (br == NULL) { Fatal("Illegal branch"); }
+			if (br == NULL) {
+				AG_SetError("Port is missing branch: %u(%s)-%d",
+				    port->n, port->name, port->node);
+				return (-1);
+			}
 			port->branch = br;
 			port->flags = 0;
 		}
@@ -403,6 +480,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	/* Send circuit-connected event to components. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		AG_PostEvent(ckt, com, "circuit-connected", NULL);
+		AG_PostEvent(ckt, com, "circuit-shown", NULL);
 	}
 	ES_CircuitModified(ckt);
 	return (0);
@@ -411,25 +489,47 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 static int
 Save(void *p, AG_DataSource *ds)
 {
-	char path[AG_OBJECT_PATH_MAX];
 	ES_Circuit *ckt = p;
 	ES_Branch *br;
 	ES_Component *com;
 	ES_Sym *sym;
-	off_t count_offs;
+	off_t countOffs, skipSizeOffs;
 	Uint32 count;
 	Uint i;
 
+	/* Circuit information */
 	AG_WriteString(ds, ckt->descr);
 	AG_WriteString(ds, ckt->authors);
 	AG_WriteString(ds, ckt->keywords);
 	AG_WriteUint32(ds, ckt->flags);
+
+	/* Component models */
+	countOffs = AG_Tell(ds);
+	count = 0;
+	AG_WriteUint32(ds, 0);
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		printf("Saving component: %s (%s)\n", OBJECT(com)->name,
+		    OBJECT_CLASS(com)->name);
+		AG_WriteString(ds, OBJECT(com)->name);
+		AG_WriteString(ds, OBJECT_CLASS(com)->name);
+		skipSizeOffs = AG_Tell(ds);
+		AG_WriteUint32(ds, 0);
+
+		if (AG_ObjectSerialize(com, ds) == -1) {
+			return (-1);
+		}
+		AG_WriteUint32At(ds, AG_Tell(ds)-skipSizeOffs, skipSizeOffs);
+		count++;
+	}
+	AG_WriteUint32At(ds, count, countOffs);
+
+	/* Circuit nodes and branches */
 	AG_WriteUint32(ds, ckt->n);
 	for (i = 0; i < ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
 
 		AG_WriteUint32(ds, (Uint32)node->flags);
-		count_offs = AG_Tell(ds);
+		countOffs = AG_Tell(ds);
 		count = 0;
 		AG_WriteUint32(ds, 0);
 		NODE_FOREACH_BRANCH(br, node) {
@@ -437,20 +537,19 @@ Save(void *p, AG_DataSource *ds)
 			    COMPONENT_IS_FLOATING(br->port->com)) {
 				continue;
 			}
-			AG_ObjectCopyName(br->port->com, path, sizeof(path));
-			AG_WriteString(ds, path);
+			AG_WriteString(ds, OBJECT(br->port->com)->name);
 			AG_WriteUint32(ds, 0);			/* Pad */
 			AG_WriteUint32(ds, (Uint32)br->port->n);
 			count++;
 		}
-		AG_WriteUint32At(ds, count, count_offs);
+		AG_WriteUint32At(ds, count, countOffs);
 	}
 	
-	/* Save the schematics. */
+	/* Circuit schematics */
 	VG_Save(ckt->vg, ds);
 
-	/* Save the symbol table. */
-	count_offs = AG_Tell(ds);
+	/* Symbol table */
+	countOffs = AG_Tell(ds);
 	count = 0;
 	AG_WriteUint32(ds, 0);
 	TAILQ_FOREACH(sym, &ckt->syms, syms) {
@@ -471,10 +570,10 @@ Save(void *p, AG_DataSource *ds)
 		}
 		count++;
 	}
-	AG_WriteUint32At(ds, count, count_offs);
+	AG_WriteUint32At(ds, count, countOffs);
 
-	/* Save the component information. */
-	count_offs = AG_Tell(ds);
+	/* Component port assignments */
+	countOffs = AG_Tell(ds);
 	count = 0;
 	AG_WriteUint32(ds, 0);
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
@@ -489,7 +588,7 @@ Save(void *p, AG_DataSource *ds)
 		}
 		count++;
 	}
-	AG_WriteUint32At(ds, count, count_offs);
+	AG_WriteUint32At(ds, count, countOffs);
 	return (0);
 }
 
@@ -1349,11 +1448,11 @@ Edit(void *p)
 		mi2 = AG_MenuNode(mi, _("Schematic"), esIconCircuit.s);
 		{
 			AG_MenuUintFlags(mi2, _("Nodes"), esIconNode.s,
-			    &ckt->flags, CIRCUIT_SHOW_NODES, 0);
+			    &ckt->flags, ES_CIRCUIT_SHOW_NODES, 0);
 			AG_MenuUintFlags(mi2, _("Node names"), esIconNode.s,
-			    &ckt->flags, CIRCUIT_SHOW_NODENAMES, 0);
+			    &ckt->flags, ES_CIRCUIT_SHOW_NODENAMES, 0);
 			AG_MenuUintFlags(mi2, _("Node symbols"), esIconNode.s,
-			    &ckt->flags, CIRCUIT_SHOW_NODESYMS, 0);
+			    &ckt->flags, ES_CIRCUIT_SHOW_NODESYMS, 0);
 			AG_MenuSeparator(mi2);
 			AG_MenuUintFlags(mi2, _("Grid"), vgIconSnapGrid.s,
 			    &vv->flags, VG_VIEW_GRID, 0);

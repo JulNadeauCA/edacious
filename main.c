@@ -90,7 +90,9 @@ void *esComponentClasses[] = {
 };
 
 const void *esSchematicClasses[] = {
+	&esSchemBlockOps,
 	&esSchemPortOps,
+	&esSchemWireOps,
 	NULL
 };
 
@@ -249,10 +251,22 @@ SetArchivePath(void *obj, const char *path)
 
 	AG_ObjectSetArchivePath(obj, path);
 
-	if ((c = strrchr(path, ES_PATHSEP)) != NULL && c[1] != '\0') {
+	if ((c = strrchr(path, PATHSEP)) != NULL && c[1] != '\0') {
 		AG_ObjectSetName(obj, "%s", &c[1]);
 	} else {
 		AG_ObjectSetName(obj, "%s", path);
+	}
+}
+
+static __inline__ char *
+ShortFilename(char *name)
+{
+	char *s;
+
+	if ((s = strrchr(name, PATHSEP)) != NULL && s[1] != '\0') {
+		return (&s[1]);
+	} else {
+		return (name);
 	}
 }
 
@@ -261,12 +275,13 @@ static void
 OpenNativeObject(AG_Event *event)
 {
 	AG_ObjectClass *cls = AG_PTR(1);
-	char *path = AG_STRING(2);
+	char *path = AG_STRING(2), *s;
 	AG_Object *obj;
 
 	obj = AG_ObjectNew(&vfsRoot, NULL, cls);
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
-		AG_TextMsg(AG_MSG_ERROR, "%s: %s", path, AG_GetError());
+		AG_TextMsg(AG_MSG_ERROR, "%s: %s", ShortFilename(s),
+		    AG_GetError());
 #if 0
 		AG_ObjectDetach(obj);		/* XXX */
 		AG_ObjectDestroy(obj);
@@ -606,16 +621,14 @@ main(int argc, char *argv[])
 	}
 	AG_TextParseFontSpec("_agFontVera:12");
 #ifdef HAVE_GETOPT
-	while ((c = getopt(argc, argv, "?vd:t:r:T:t:gG")) != -1) {
+	while ((c = getopt(argc, argv, "?vdt:r:T:t:gG")) != -1) {
 		extern char *optarg;
 
 		switch (c) {
 		case 'v':
 			exit(0);
 		case 'd':
-#ifdef DEBUG
-			agDebugLvl = atoi(optarg);
-#endif
+			agDebugLvl = 2;
 			break;
 		case 'r':
 			fps = atoi(optarg);
@@ -639,7 +652,7 @@ main(int argc, char *argv[])
 #endif
 		case '?':
 		default:
-			printf("Usage: %s [-v] [-d debuglvl] [-r fps] "
+			printf("Usage: %s [-vd] [-r fps] "
 			       "[-T font-path] [-t fontspec]", agProgName);
 #ifdef HAVE_OPENGL
 			printf(" [-gG]");
@@ -679,11 +692,9 @@ main(int argc, char *argv[])
 	appMenu = AG_MenuNewGlobal(0);
 	AG_MenuDynamicItem(appMenu->root, _("File"), NULL, FileMenu, NULL);
 	AG_MenuDynamicItem(appMenu->root, _("Edit"), NULL, EditMenu, NULL);
+
 #if defined(HAVE_AGAR_DEV) && defined(DEBUG)
 	DEV_InitSubsystem(0);
-	if (agDebugLvl >= 5) {
-		DEV_Browser(&vfsRoot);
-	}
 	DEV_ToolMenu(AG_MenuNode(appMenu->root, _("Debug"), NULL));
 #endif
 	AG_EventLoop();

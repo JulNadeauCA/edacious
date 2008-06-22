@@ -38,6 +38,7 @@ Init(void *p)
 	ES_SchemBlock *sb = p;
 
 	sb->name[0] = '\0';
+	sb->com = NULL;
 }
 
 static int
@@ -45,6 +46,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_SchemBlock *sb = p;
 
+	(void)AG_ReadUint32(ds);				/* flags */
 	AG_CopyString(sb->name, ds, sizeof(sb->name));
 	return (0);
 }
@@ -54,6 +56,7 @@ Save(void *p, AG_DataSource *ds)
 {
 	ES_SchemBlock *sb = p;
 
+	AG_WriteUint32(ds, 0);					/* flags */
 	AG_WriteString(ds, sb->name);
 }
 

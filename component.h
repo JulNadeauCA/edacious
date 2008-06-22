@@ -89,6 +89,8 @@ typedef struct es_component {
 #define ES_COMPONENT_FLOATING	 0x01		/* Not yet connected */
 #define ES_COMPONENT_SELECTED	 0x02		/* Selected for edition */
 #define ES_COMPONENT_HIGHLIGHTED 0x04		/* Highlighted for selection */
+#define ES_COMPONENT_SAVED_FLAGS 0
+
 	M_Real Tspec;				/* Instance temp (k) */
 	ES_Port ports[COMPONENT_MAX_PORTS];	/* Interface elements */
 	Uint   nports;

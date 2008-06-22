@@ -55,6 +55,7 @@ Init(void *p)
 	sw->p1 = NULL;
 	sw->p2 = NULL;
 	sw->thickness = 1;
+	sw->name[0] = '\0';
 	sw->wire = NULL;
 }
 
@@ -63,6 +64,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_SchemWire *sw = p;
 
+	AG_CopyString(sw->name, ds, sizeof(sw->name));
 	if ((sw->p1 = VG_ReadRef(ds, sw, "SchemPort")) == NULL ||
 	    (sw->p2 = VG_ReadRef(ds, sw, "SchemPort")) == NULL) {
 		return (-1);
@@ -76,6 +78,7 @@ Save(void *p, AG_DataSource *ds)
 {
 	ES_SchemWire *sw = p;
 
+	AG_WriteString(ds, sw->name);
 	VG_WriteRef(ds, sw->p1);
 	VG_WriteRef(ds, sw->p2);
 	AG_WriteUint32(ds, (Uint32)sw->thickness);

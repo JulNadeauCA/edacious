@@ -342,7 +342,7 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Component *com = p;
 
-	AG_WriteUint32(buf, com->flags);
+	AG_WriteUint32(buf, com->flags & ES_COMPONENT_SAVED_FLAGS);
 	M_WriteReal(buf, com->Tspec);
 	return (0);
 }

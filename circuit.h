@@ -74,9 +74,9 @@ typedef struct es_circuit {
 	struct ag_console *console;		/* Log console */
 	ES_Sim *sim;				/* Current simulation mode */
 	Uint flags;
-#define CIRCUIT_SHOW_NODES	0x01
-#define CIRCUIT_SHOW_NODENAMES	0x02
-#define CIRCUIT_SHOW_NODESYMS	0x04
+#define ES_CIRCUIT_SHOW_NODES		0x01
+#define ES_CIRCUIT_SHOW_NODENAMES	0x02
+#define ES_CIRCUIT_SHOW_NODESYMS	0x04
 	int simlock;			/* Simulation is locked */
 
 	ES_Node **nodes;		/* Nodes (element 0 is ground) */

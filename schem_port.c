@@ -91,7 +91,7 @@ Draw(void *p, VG_View *vv)
 	    VG_MapColorRGB(VGNODE(sp)->color));
 
 	if (sp->port != NULL && sp->port->node != -1 &&
-	    sp->port->com->ckt->flags & CIRCUIT_SHOW_NODENAMES) {
+	    sp->port->com->ckt->flags & ES_CIRCUIT_SHOW_NODENAMES) {
 		char caption[16];
 		SDL_Surface *suTmp;
 		int su;
