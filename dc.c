@@ -169,7 +169,7 @@ Init(void *p)
 	ES_SimInit(sim, &esSimDcOps);
 	sim->Telapsed = 0;
 	sim->TavgReal = 0;
-	sim->speed = 500;
+	sim->speed = 60;
 	sim->itersMax = 10000;
 	sim->itersHiwat = 1;
 	sim->itersLowat = 1;
