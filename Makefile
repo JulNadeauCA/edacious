@@ -50,6 +50,7 @@ SRCS=	and.c \
 	vsine.c \
 	vsource.c \
 	vsquare.c \
+	vsweep.c \
 	wire.c
 
 LIBS+=	${FREESG_LIBS} ${AGAR_DEV_LIBS} ${AGAR_VG_LIBS} ${AGAR_LIBS}

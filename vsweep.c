@@ -24,14 +24,13 @@
  */
 
 /*
- * Independent sinusoidal voltage source.
+ * Independent sweeping voltage source.
  */
 
 #include <eda.h>
-#include "vsource.h"
-#include "vsine.h"
+#include "vsweep.h"
 
-const ES_Port esVSinePorts[] = {
+const ES_Port esVSweepPorts[] = {
 	{  0, "" },
 	{  1, "v+" },
 	{  2, "v-" },
@@ -41,92 +40,107 @@ const ES_Port esVSinePorts[] = {
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
-	ES_VSine *vs = obj;
+	ES_VSweep *vsw = obj;
 
-	vs->phase = 0.0;
+	VSOURCE(vsw)->voltage = vsw->v1;
+	vsw->dv = (vsw->v2 - vsw->v1) / vsw->t;
+	vsw->tElapsed = 0;
+	vsw->cycle = 0;
+
 	return (0);
 }
 
 static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
-	ES_VSine *vs = obj;
-	Uint k = PNODE(vs,1);
-	Uint j = PNODE(vs,2);
+	ES_VSweep *vsw = obj;
+	Uint k = PNODE(vsw,1);
+	Uint j = PNODE(vsw,2);
 
-	VSOURCE(vs)->voltage = vs->vPeak*Sin(vs->phase);
-	StampVoltageSource(VSOURCE(vs)->voltage, k,j,
-	    ES_VsourceName(vs),
+	if (vsw->count != 0 && vsw->cycle >= vsw->count) {
+		VSOURCE(vsw)->voltage = 0.0;
+	} else {
+		VSOURCE(vsw)->voltage += vsw->dv;
+	}
+	StampVoltageSource(VSOURCE(vsw)->voltage, k,j,
+	    ES_VsourceName(vsw),
 	    dc->B, dc->C, dc->e);
-
-	vs->phase += 1e-3*vs->f;
-	if (vs->phase > M_PI*2) { vs->phase -= M_PI*2; }
+	    
+	if (vsw->tElapsed++ >= vsw->t) {
+		vsw->tElapsed = 0;
+		vsw->cycle++;
+		VSOURCE(vsw)->voltage = vsw->v1;
+	}
 }
 
 static void
 Init(void *p)
 {
-	ES_VSine *vs = p;
+	ES_VSweep *vsw = p;
 
-	ES_InitPorts(vs, esVSinePorts);
-
-	vs->vPeak = 5.0;
-	vs->f = 60.0;
-	vs->phase = 0.0;
-	COMPONENT(vs)->dcSimBegin = DC_SimBegin;
-	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
+	ES_InitPorts(vsw, esVSweepPorts);
+	vsw->v1 = 0.0;
+	vsw->v2 = 5.0;
+	vsw->t = 100;
+	vsw->count = 1;
+	COMPONENT(vsw)->dcSimBegin = DC_SimBegin;
+	COMPONENT(vsw)->dcStepBegin = DC_StepBegin;
 }
 
 static int
 Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
-	ES_VSine *vs = p;
+	ES_VSweep *vsw = p;
 
-	vs->vPeak = M_ReadReal(buf);
-	vs->f = M_ReadReal(buf);
+	vsw->v1 = M_ReadReal(buf);
+	vsw->v2 = M_ReadReal(buf);
+	vsw->t = M_ReadTime(buf);
+	vsw->count = (int)AG_ReadUint8(buf);
 	return (0);
 }
 
 static int
 Save(void *p, AG_DataSource *buf)
 {
-	ES_VSine *vs = p;
+	ES_VSweep *vsw = p;
 
-	M_WriteReal(buf, vs->vPeak);
-	M_WriteReal(buf, vs->f);
+	M_WriteReal(buf, vsw->v1);
+	M_WriteReal(buf, vsw->v2);
+	M_WriteTime(buf, vsw->t);
+	AG_WriteUint8(buf, (Uint8)vsw->count);
 	return (0);
 }
 
 static void *
 Edit(void *p)
 {
-	ES_VSine *vs = p;
+	ES_VSweep *vsw = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	M_NumericalNewReal(box, 0, "V", _("Peak voltage: "), &vs->vPeak);
-	M_NumericalNewRealPNZ(box, 0, "Hz", _("Frequency: "), &vs->f);
-	AG_LabelNewPolledMT(box, 0, &OBJECT(vs)->lock,
-	    _("Effective voltage: %f"), &VSOURCE(vs)->voltage);
+	M_NumericalNewReal(box, 0, "V", _("Start voltage: "), &vsw->v1);
+	M_NumericalNewReal(box, 0, "V", _("End voltage: "), &vsw->v2);
+	M_NumericalNewTimePNZ(box, 0, "ns", _("Duration: "), &vsw->t);
+	AG_NumericalNewInt(box, 0, NULL, _("Count (0=loop): "), &vsw->count);
 	return (box);
 }
 
-ES_ComponentClass esVSineClass = {
+ES_ComponentClass esVSweepClass = {
 	{
-		"ES_Component:ES_Vsource:ES_VSine",
-		sizeof(ES_VSine),
+		"ES_Component:ES_Vsource:ES_VSweep",
+		sizeof(ES_VSweep),
 		{ 0,0 },
 		Init,
-		NULL,		/* reinit */
+		NULL,		/* free_dataset */
 		NULL,		/* destroy */
 		Load,
 		Save,
 		Edit
 	},
-	N_("Voltage source (sine)"),
-	"Vsin",
-	"Sources/Vsine.eschem",
+	N_("Voltage source (sweep)"),
+	"Vsw",
+	"Sources/Vsweep.eschem",
 	"Generic|Sources",
-	&esIconVsine,
+	&esIconComponent,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

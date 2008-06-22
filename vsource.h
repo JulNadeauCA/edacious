@@ -24,7 +24,7 @@ extern ES_ComponentClass esVsourceClass;
 void	 ES_VsourceFindLoops(ES_Vsource *);
 void	 ES_VsourceFreeLoops(ES_Vsource *);
 double	 ES_VsourceVoltage(void *, int, int);
-int	 ES_VsourceName(ES_Vsource *);
+int	 ES_VsourceName(void *);
 __END_DECLS
 
 #include "close_code.h"

@@ -326,8 +326,9 @@ ES_VsourceVoltage(void *p, int p1, int p2)
 }
 
 int
-ES_VsourceName(ES_Vsource *vs)
+ES_VsourceName(void *obj)
 {
+	ES_Vsource *vs = obj;
 	ES_Circuit *ckt = COMPONENT(vs)->ckt;
 	int i;
 

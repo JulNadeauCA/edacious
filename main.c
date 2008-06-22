@@ -40,6 +40,7 @@
 #include "vsource.h"
 #include "vsine.h"
 #include "vsquare.h"
+#include "vsweep.h"
 
 #include "wire.h"
 #include "and.h"
@@ -73,6 +74,7 @@ void *esComponentClasses[] = {
 	&esVsourceClass,
 	&esVSquareClass,
 	&esVSineClass,
+	&esVSweepClass,
 	&esResistorClass,
 	&esSemiResistorClass,
 	&esSpstClass,
