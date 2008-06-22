@@ -44,7 +44,7 @@ typedef struct es_digital {
 #define DIGITAL(p) ((ES_Digital *)(p))
 #define PAIR_MATCHES(pair,a,b) \
 	((pair->p1->n == (a) && pair->p2->n == (b)) || \
-	 (pair->p2->n == (a) && pair->p1->n == (b))
+	 (pair->p2->n == (a) && pair->p1->n == (b)))
 
 __BEGIN_DECLS
 extern ES_ComponentClass esDigitalClass;
