@@ -7,6 +7,7 @@ SUBDIR=		Digital \
 SHARESRC=	Ground.eschem \
 		Resistor.eschem \
 		Transistor.eschem \
-		Diode.eschem
+		Diode.eschem \
+		NMOS.eschem
 
 include ${TOP}/mk/build.prog.mk
