@@ -31,6 +31,17 @@
 #include <eda.h>
 #include "digital.h"
 
+void
+ES_DigitalInitPorts(void *obj, const ES_Port *ports)
+{
+	ES_Digital *dig = obj;
+
+	ES_InitPorts(dig, ports);
+	Debug(dig, "Device has %d pairs\n", COMPONENT(dig)->npairs);
+	if ((dig->G = M_NewZero(COMPONENT(dig)->npairs,1)) == NULL)
+		AG_FatalError(NULL);
+}
+
 static int
 Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
@@ -75,8 +86,8 @@ Save(void *p, AG_DataSource *buf)
 	return (0);
 }
 
-static void
-DC_StepIter(void *p, ES_SimDC *dc)
+void
+ES_DigitalStepIter(void *p, ES_SimDC *dc)
 {
 	M_Matrix *G = dc->G;
 	ES_Digital *dig = p;
@@ -126,18 +137,16 @@ ES_LogicOutput(void *p, const char *portname, ES_LogicState nState)
 	for (i = 0; i < COMPONENT(dig)->npairs; i++) {
 		ES_Pair *pair = &COMPONENT(dig)->pairs[i];
 
-		if ((pair->p1 == port && pair->p2->n == dig->VccPort) ||
-		    (pair->p2 == port && pair->p1->n == dig->VccPort)) {
+		if (PAIR_MATCHES(pair, port->n, dig->VccPort)) {
 			dig->G->v[i][0] = (nState == ES_LOW) ?
-			    1e-9 : 1.0 - 1e-9;
+			    M_TINYVAL : 1.0-M_TINYVAL;
 		}
-		if ((pair->p1 == port && pair->p2->n == dig->GndPort) ||
-		    (pair->p2 == port && pair->p1->n == dig->GndPort)) {
+		if (PAIR_MATCHES(pair, port->n, dig->GndPort)) {
 			dig->G->v[i][0] = (nState == ES_HIGH) ?
-			    1e-9 : 1.0 - 1e-9;
+			    M_TINYVAL : 1.0-M_TINYVAL;
 		}
 	}
-	Debug(dig, "LogicOutput: %s -> %s", portname,
+	Debug(dig, "LogicOutput: %s -> %s\n", portname,
 	    nState == ES_LOW ? "LOW" :
 	    nState == ES_HIGH ? "HIGH" : "HI-Z");
 	return (0);
@@ -172,7 +181,7 @@ Init(void *obj)
 
 	dig->VccPort = 1;
 	dig->GndPort = 2;
-	dig->G = M_NewZero(COMPONENT(dig)->npairs,1);
+	dig->G = NULL;
 
 	dig->Vcc.min = 3.0;	dig->Vcc.typ = 5.0;	dig->Vcc.max = 15.0;
 	dig->Vol.min = 0.0;	dig->Vol.typ = 0.0;	dig->Vol.max = 0.05;
@@ -183,8 +192,7 @@ Init(void *obj)
 	dig->Ioh.min = -0.51;	dig->Ioh.typ = -0.88;	dig->Ioh.max = HUGE_VAL;
 	dig->Iin.min = 0.0;	dig->Iin.typ = -10.0e-5; dig->Iin.max = -0.1;
 	
-	COMPONENT(dig)->dcStepIter = DC_StepIter;
-
+	COMPONENT(dig)->dcStepIter = ES_DigitalStepIter;
 }
 
 static void

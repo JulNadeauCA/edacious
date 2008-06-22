@@ -40,6 +40,13 @@ const ES_Port esOrPorts[] = {
 	{ -1 },
 };
 
+static int
+DC_SimBegin(void *obj, ES_SimDC *dc)
+{
+	ES_LogicOutput(obj, "A|B", ES_HI_Z);
+	return (0);
+}
+
 static void
 DC_StepIter(void *obj, ES_SimDC *dc)
 {
@@ -51,7 +58,7 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 	} else {
 		ES_LogicOutput(gate, "A|B", ES_LOW);
 	}
-	COMPONENT(gate)->dcStepIter(gate, dc);
+	ES_DigitalStepIter(gate, dc);
 }
 
 static void
@@ -59,9 +66,9 @@ Init(void *p)
 {
 	ES_Or *gate = p;
 
-	ES_InitPorts(gate, esOrPorts);
+	ES_DigitalInitPorts(gate, esOrPorts);
+	COMPONENT(gate)->dcSimBegin = DC_SimBegin;
 	COMPONENT(gate)->dcStepIter = DC_StepIter;
-	ES_LogicOutput(gate, "A|B", ES_HI_Z);
 }
 
 ES_ComponentClass esOrClass = {

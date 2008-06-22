@@ -42,11 +42,15 @@ typedef struct es_digital {
 } ES_Digital;
 
 #define DIGITAL(p) ((ES_Digital *)(p))
+#define PAIR_MATCHES(pair,a,b) \
+	((pair->p1->n == (a) && pair->p2->n == (b)) || \
+	 (pair->p2->n == (a) && pair->p1->n == (b))
 
 __BEGIN_DECLS
 extern ES_ComponentClass esDigitalClass;
 
-void	 ES_DigitalDraw(void *, VG *);
+void	 ES_DigitalInitPorts(void *, const ES_Port *);
+void	 ES_DigitalStepIter(void *, ES_SimDC *);
 void	 ES_DigitalSetVccPort(void *, int);
 void	 ES_DigitalSetGndPort(void *, int);
 int	 ES_LogicOutput(void *, const char *, ES_LogicState);

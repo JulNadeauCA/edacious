@@ -39,6 +39,13 @@ const ES_Port esInverterPorts[] = {
 	{ -1 },
 };
 
+static int
+DC_SimBegin(void *obj, ES_SimDC *dc)
+{
+	ES_LogicOutput(obj, "A-bar", ES_HI_Z);
+	return (0);
+}
+
 static void
 DC_StepIter(void *obj, ES_SimDC *dc)
 {
@@ -52,7 +59,7 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 		ES_LogicOutput(inv, "A-bar", ES_HIGH);
 		break;
 	}
-	COMPONENT(inv)->dcStepIter(inv, dc);
+	ES_DigitalStepIter(obj, dc);
 }
 
 static void
@@ -60,7 +67,8 @@ Init(void *p)
 {
 	ES_Inverter *inv = p;
 
-	ES_InitPorts(inv, esInverterPorts);
+	ES_DigitalInitPorts(inv, esInverterPorts);
+	COMPONENT(inv)->dcSimBegin = DC_SimBegin;
 	COMPONENT(inv)->dcStepIter = DC_StepIter;
 #if 0
 	ES_SetSpec(inv, "Tp", _("Propagation delay from A to A-bar"),
@@ -91,7 +99,6 @@ Init(void *p)
 	    "Vcc=15;Tamb=125",	0, 0, 30.0,
 	    NULL);
 #endif
-	ES_LogicOutput(inv, "A-bar", ES_HI_Z);
 }
 
 ES_ComponentClass esInverterClass = {
