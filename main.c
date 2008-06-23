@@ -44,6 +44,7 @@
 
 #include "wire.h"
 #include "and.h"
+#include "capacitor.h"
 #include "digital.h"
 #include "diode.h"
 #include "ground.h"
@@ -88,6 +89,7 @@ void *esComponentClasses[] = {
 	&esLedClass,
 	&esNMOSClass, 
 	&esPMOSClass,
+	&esCapacitorClass,
 	NULL
 };
 

@@ -14,6 +14,7 @@ PROG_LINKS=	freesg_m \
 		pthreads SDL SDLmain opengl freetype
 
 SRCS=	and.c \
+	capacitor.c \
 	circuit.c \
 	component.c \
 	dc.c \
