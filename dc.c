@@ -70,10 +70,17 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	ES_Circuit *ckt = obj;
 	ES_SimDC *sim = arg;
 	ES_Component *com;
-	static Uint32 t1 = 0;
 	M_Vector *xPrev;
 	M_Real diff;
 	Uint i = 0, j;
+	Uint32 ticks;
+	Uint32 ticksSinceLast;
+	
+	ticks = SDL_GetTicks();
+	ticksSinceLast = ticks - sim->timeLastStep;
+	printf("%d\n", ticksSinceLast);
+	sim->Telapsed += ticksSinceLast * 1e6;
+	sim->timeLastStep = ticks;
 
 	xPrev = M_New(sim->x->m, 1);
 
@@ -119,10 +126,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		if (SolveMNA(sim, ckt) == -1)
 			goto halt;
 
-		/*
-		 * Compute difference between previous and current iteration,
-		 * to decide whether or not to continue.
-		 */
+		/* Compute difference between previous and current iteration,
+		 * to decide whether or not to continue. */
 		diff = 0;
 		for (j = 0; j < sim->x->m; j++)
 		{
@@ -148,15 +153,25 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	/* Update the statistics. */
 	if (i > sim->itersHiwat) { sim->itersHiwat = i; }
 	else if (i < sim->itersLowat) { sim->itersLowat = i; }
-	sim->TavgReal = SDL_GetTicks() - t1;
-	t1 = SDL_GetTicks();
 
 	/* Invoke the general post-timestep callbacks (for ES_Scope, etc.) */
 	AG_PostEvent(NULL, ckt, "circuit-step-end", NULL);
 
-	sim->Telapsed++;
 	M_Free(xPrev);
-	return (ival);
+
+	/* Schedule next step */
+	AG_LockTimeouts(ckt);
+	if(SIM(sim)->running) {
+		Uint32 nextStep = sim->timeLastStep + 1000/sim->maxSpeed;
+		Uint32 newTicks = SDL_GetTicks();
+		AG_ReplaceTimeout(ckt, &sim->toUpdate, nextStep > newTicks ? nextStep - newTicks : 0);
+	}
+	else {
+		AG_DelTimeout(ckt, &sim->toUpdate);
+	}
+	AG_UnlockTimeouts(ckt);
+	
+	return (0);
 halt:
 	AG_TextMsg(AG_MSG_ERROR, _("%s; simulation stopped"), AG_GetError());
 	StopSimulation(sim);
@@ -170,14 +185,15 @@ Init(void *p)
 	ES_SimDC *sim = p;
 
 	ES_SimInit(sim, &esSimDcOps);
-	sim->Telapsed = 0;
-	sim->TavgReal = 0;
-	sim->speed = 60;
+	AG_SetTimeout(&sim->toUpdate, StepMNA, sim, AG_CANCEL_ONDETACH);
 	sim->itersMax = 10000;
 	sim->itersHiwat = 1;
 	sim->itersLowat = 1;
-	AG_SetTimeout(&sim->toUpdate, StepMNA, sim, AG_CANCEL_ONDETACH);
 
+	sim->Telapsed = 0;
+	sim->maxSpeed = 60;
+	sim->timeLastStep = 0;
+	
 	sim->T0 = 290.0;
 
 	sim->A = M_New(0,0);
@@ -248,15 +264,16 @@ Start(void *p)
 	/* Reallocate the matrices if necessary. */
 	Resize(sim, ckt);
 
-	/* Register the real-time simulation timer. */
 	SIM(sim)->running = 1;
+
 	AG_LockTimeouts(ckt);
 	if (AG_TimeoutIsScheduled(ckt, &sim->toUpdate)) {
 		AG_DelTimeout(ckt, &sim->toUpdate);
 	}
-	AG_AddTimeout(ckt, &sim->toUpdate, 1000/sim->speed);
+	AG_AddTimeout(ckt, &sim->toUpdate, 1000/sim->maxSpeed);
 	AG_UnlockTimeouts(ckt);
 	sim->Telapsed = 0;
+	sim->timeLastStep = SDL_GetTicks();
 	
 	/* Initialize the matrices. */
 	M_SetZero(sim->G);
@@ -298,7 +315,6 @@ Stop(void *p)
 {
 	ES_SimDC *sim = p;
 	ES_Circuit *ckt = SIM(sim)->ckt;
-
 	AG_LockTimeouts(ckt);
 	AG_DelTimeout(ckt, &sim->toUpdate);
 	AG_UnlockTimeouts(ckt);
@@ -371,16 +387,13 @@ Edit(void *p, ES_Circuit *ckt)
 		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT,
 		    &sim->itersMax);
 
-		sbu = AG_SpinbuttonNew(ntab, 0, _("Speed (updates/sec): "));
-		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT32, &sim->speed);
+		sbu = AG_SpinbuttonNew(ntab, 0, _("Max speed (updates/sec): "));
+		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT32, &sim->maxSpeed);
 		AG_SpinbuttonSetRange(sbu, 1, 1000);
 		
 		AG_LabelNewPolled(ntab, 0,
 		    _("Total simulated time: %[u32]ns"),
 		    &sim->Telapsed);
-		AG_LabelNewPolled(ntab, 0,
-		    _("Realtime/step average: %[u32]ms"),
-		    &sim->TavgReal);
 		AG_LabelNewPolled(ntab, 0,
 		    _("Iterations/step watermark: %u-%u"),
 		    &sim->itersLowat, &sim->itersHiwat);

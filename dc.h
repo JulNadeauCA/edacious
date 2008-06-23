@@ -3,14 +3,15 @@
 typedef struct es_sim_dc {
 	struct es_sim _inherit;
 
-	Uint32 Telapsed;	/* Simulated time elapsed (ns) */
-	Uint32 TavgReal;	/* Average step real time */
-	int speed;		/* Simulation speed (updates/sec) */
 	AG_Timeout toUpdate;	/* Timer for simulation updates */
+	Uint32 Telapsed;        /* Simulated elapsed time (ns) */
+	int maxSpeed;           /* Maximum number of iterations/sec */
+	Uint32 timeLastStep;    /* time (as measured in SDL ticks) of last step */
+	
 	Uint itersMax;		/* Maximum solver iterations per step */
 	Uint itersHiwat;	/* Most iterations/step in last simulation */
 	Uint itersLowat;	/* Least iterations/step in last simulation */
-	
+
 	M_Real T0;		/* Reference temperature */
 
 	M_Matrix *A;		/* Block matrix [G,B; C,D] */
