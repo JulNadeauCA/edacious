@@ -47,14 +47,14 @@ const ES_Port esDiodePorts[] = {
  */
 
 static M_Real
-DiodeVoltage(ES_Diode *d)
+v(ES_Diode *d)
 {
 	return VPORT(d,PORT_P)-VPORT(d,PORT_N);
 }
 
 /* Updates the small- and large-signal models, saving the previous values. */
 static void
-UpdateDiodeModel(ES_Diode *d, M_Real v)
+UpdateModel(ES_Diode *d, M_Real v)
 {
 	M_Real vDiff = v - d->vPrev;
 	M_Real I;
@@ -63,8 +63,6 @@ UpdateDiodeModel(ES_Diode *d, M_Real v)
 		v = d->vPrev + vDiff/Fabs(vDiff)*d->Vt;
 	}
 
-	d->gPrev = d->g;
-	d->IeqPrev = d->Ieq;
 	d->vPrev = v;
 
 	I = d->Is*(Exp(v/(d->Vt)) - 1);
@@ -72,20 +70,26 @@ UpdateDiodeModel(ES_Diode *d, M_Real v)
 	d->Ieq = I-(d->g)*v;
 }
 
+static void
+UpdateStamp(ES_Diode *d, ES_SimDC *dc)
+{
+	Uint k = PNODE(d,PORT_P);
+	Uint l = PNODE(d,PORT_N);
+
+	StampConductance(d->g - d->gPrev, k,l, dc->G);
+	StampCurrentSource(d->Ieq - d->IeqPrev, l,k, dc->i);
+
+	d->gPrev = d->g;
+	d->IeqPrev = d->Ieq;
+}
+
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
         ES_Diode *d = obj;
-	Uint k = PNODE(d,PORT_P);
-	Uint l = PNODE(d,PORT_N);
-	M_Real vGuess = d->prevGuess;
 	
-	d->vPrev = vGuess;
-
-	UpdateDiodeModel(d, vGuess);
-
-	StampConductance(d->g, k,l, dc->G);
-	StampCurrentSource(d->Ieq, l,k, dc->i);
+	UpdateModel(d, 0.7);
+	UpdateStamp(d, dc);
 
 	return (0);
 }
@@ -94,32 +98,19 @@ static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Diode *d = obj;
-	Uint k = PNODE(d,PORT_P);
-	Uint l = PNODE(d,PORT_N);
-	M_Real vGuess = d->prevGuess;
 	
-	d->vPrev = vGuess;
+	UpdateModel(d, 0.7);
+	UpdateStamp(d, dc);
 
-	UpdateDiodeModel(d, vGuess);
-
-	StampConductance(d->g - d->gPrev, k,l, dc->G);
-	StampCurrentSource(d->Ieq - d->IeqPrev, l,k, dc->i);
 }
 
 static void
 DC_StepIter(void *obj, ES_SimDC *dc)
 {
 	ES_Diode *d = obj;
-	Uint k = PNODE(d,PORT_P);
-	Uint l = PNODE(d,PORT_N);
 
-	d->prevGuess = DiodeVoltage(d);
-	UpdateDiodeModel(d, DiodeVoltage(d));
-
-	StampConductance(d->g - d->gPrev, k,l, dc->G);
-
-	/* Note that the current source points the opposite direction */
-	StampCurrentSource(d->Ieq - d->IeqPrev, l,k, dc->i);
+	UpdateModel(d, v(d));
+	UpdateStamp(d, dc);
 }
 
 static void
@@ -130,11 +121,35 @@ Init(void *p)
 	ES_InitPorts(d, esDiodePorts);
 	d->Is = 1e-14;
 	d->Vt = 0.025;
-	d->prevGuess = 0.7;
 	
+	d->gPrev = 0.0;
+	d->IeqPrev = 0.0;
+
 	COMPONENT(d)->dcSimBegin = DC_SimBegin;
 	COMPONENT(d)->dcStepBegin = DC_StepBegin;
 	COMPONENT(d)->dcStepIter = DC_StepIter;
+}
+
+static int
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
+{
+	ES_Diode *d = p;
+
+	d->Is = M_ReadReal(buf);
+	d->Vt = M_ReadReal(buf);
+	
+	return (0);
+}
+
+static int
+Save(void *p, AG_DataSource *buf)
+{
+	ES_Diode *d = p;
+
+	M_WriteReal(buf, d->Is);
+	M_WriteReal(buf, d->Vt);
+
+	return (0);
 }
 
 static void *
@@ -166,8 +181,8 @@ ES_ComponentClass esDiodeClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		NULL,		/* load */
-		NULL,		/* save */
+		Load,		/* load */
+		Save,		/* save */
 		Edit
 	},
 	N_("Diode"),

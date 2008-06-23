@@ -99,6 +99,9 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 
 	/* Iterate until a stable solution is found. */
 	do {
+//		M_MatrixPrint(sim->A);
+//		M_MatrixPrint(sim->z);
+//		M_MatrixPrint(sim->x);
 		if (++i > sim->itersMax) {
 #if 1
 			AG_SetError(_("Could not find stable solution in "

@@ -65,3 +65,4 @@ StampVoltageSource(M_Real voltage, Uint k, Uint j, Uint v, M_Matrix *B, M_Matrix
 
 	e->v[v][0] = voltage;
 }
+
