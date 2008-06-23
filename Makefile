@@ -27,6 +27,7 @@ SRCS=	and.c \
 	main.c \
 	nmos.c \
 	or.c \
+	pmos.c \
 	resistor.c \
 	schem.c \
 	schem_block.c \

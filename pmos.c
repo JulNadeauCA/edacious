@@ -24,18 +24,18 @@
  */
 
 /*
- * Model for NMOS transistor
+ * Model for PMOS transistor
  */
 
 #include <eda.h>
-#include "nmos.h"
+#include "pmos.h"
 
 enum {
 	PORT_G = 1,
 	PORT_D = 2,
 	PORT_S = 3
 };
-const ES_Port esNMOSPorts[] = {
+const ES_Port esPMOSPorts[] = {
 	{ 0, "" },
 	{ PORT_G, "G" },	/* Gate */
 	{ PORT_D, "D" },	/* Drain */
@@ -44,19 +44,19 @@ const ES_Port esNMOSPorts[] = {
 };
 
 static M_Real
-NMOS_vDS(ES_NMOS *u)
+PMOS_vSD(ES_PMOS *u)
 {
-	return VPORT(u,PORT_D)-VPORT(u,PORT_S);
+	return VPORT(u,PORT_S)-VPORT(u,PORT_D);
 }
 
 static M_Real
-NMOS_vGS(ES_NMOS *u)
+PMOS_vSG(ES_PMOS *u)
 {
-	return VPORT(u,PORT_G)-VPORT(u,PORT_S);
+	return VPORT(u,PORT_S)-VPORT(u,PORT_G);
 }
 
 static void
-UpdateNMOSModel(ES_NMOS *u, M_Real vGS, M_Real vDS)
+UpdatePMOSModel(ES_PMOS *u, M_Real vSG, M_Real vSD)
 {
 	u->IeqPrev = u->Ieq;
 	u->gmPrev = u->gm;
@@ -64,7 +64,7 @@ UpdateNMOSModel(ES_NMOS *u, M_Real vGS, M_Real vDS)
 
 	M_Real I;
 
-	if (vGS < u->Vt)
+	if (vSG < u->Vt)
 	{
 		// Cutoff 
 
@@ -73,11 +73,11 @@ UpdateNMOSModel(ES_NMOS *u, M_Real vGS, M_Real vDS)
 		u->go = 0;
 
 	}
-	else if ((vGS-u->Vt) < vDS)
+	else if ((vSG-u->Vt) < vSD)
 	{
 		// Saturation
 
-		I=(u->K)/2*(vGS-(u->Vt))*(vGS-(u->Vt));
+		I=(u->K)/2*(vSG-(u->Vt))*(vSG-(u->Vt));
 		u->gm=sqrt(2*(u->K)*I);
 		u->go=I/(u->Va);
 
@@ -86,13 +86,13 @@ UpdateNMOSModel(ES_NMOS *u, M_Real vGS, M_Real vDS)
 	{
 		// Triode
 		
-		I=(u->K)*((vGS-(u->Vt))-vDS/2)*vDS;
-		u->gm=(u->K)*vDS;
-		u->go=(u->K)*((vGS-(u->Vt))-vDS);
+		I=(u->K)*((vSG-(u->Vt))-vSD/2)*vSD;
+		u->gm=(u->K)*vSD;
+		u->go=(u->K)*((vSG-(u->Vt))-vSD);
 
 	}
 
-	u->Ieq = I - u->gm*vGS - u->go*vDS;
+	u->Ieq = I - u->gm*vSG - u->go*vSD;
 
 }
 
@@ -110,19 +110,19 @@ UpdateNMOSModel(ES_NMOS *u, M_Real vGS, M_Real vDS)
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
-	ES_NMOS *u = obj;
+	ES_PMOS *u = obj;
 
 	Uint g = PNODE(u,PORT_G);
 	Uint d = PNODE(u,PORT_D);
 	Uint s = PNODE(u,PORT_S);
 
-	M_Real vGS_Guess = u->Vt+0.1;
-	M_Real vDS_Guess = u->Vt+0.1;
-	UpdateNMOSModel(u,vGS_Guess,vDS_Guess);
+	M_Real vSG_Guess = u->Vt+0.1;
+	M_Real vSD_Guess = u->Vt+0.1;
+	UpdatePMOSModel(u,vSG_Guess,vSD_Guess);
 
-	StampVCCS(u->gm,g,s,d,s,dc->G);
-	StampConductance(u->go,d,s,dc->G);
-	StampCurrentSource(u->Ieq,s,d,dc->i);
+	StampVCCS(u->gm,s,g,s,d,dc->G);
+	StampConductance(u->go,s,d,dc->G);
+	StampCurrentSource(u->Ieq,d,s,dc->i);
 
 	return (0);
 }
@@ -130,43 +130,43 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
-	ES_NMOS *u = obj;
+	ES_PMOS *u = obj;
 
 	Uint g = PNODE(u,PORT_G);
 	Uint d = PNODE(u,PORT_D);
 	Uint s = PNODE(u,PORT_S);
 
-	M_Real vGS_Guess = u->Vt+0.1;
-	M_Real vDS_Guess = u->Vt+0.1;
-	UpdateNMOSModel(u,vGS_Guess,vDS_Guess);
+	M_Real vSG_Guess = u->Vt+0.1;
+	M_Real vSD_Guess = u->Vt+0.1;
+	UpdatePMOSModel(u,vSG_Guess,vSD_Guess);
 
-	StampVCCS(u->gm-u->gmPrev,g,s,d,s,dc->G);
-	StampConductance(u->go-u->goPrev,d,s,dc->G);
-	StampCurrentSource(u->Ieq-u->IeqPrev,s,d,dc->i);
+	StampVCCS(u->gm-u->gmPrev,s,g,s,d,dc->G);
+	StampConductance(u->go-u->goPrev,s,d,dc->G);
+	StampCurrentSource(u->Ieq-u->IeqPrev,d,s,dc->i);
 }
 
 static void
 DC_StepIter(void *obj, ES_SimDC *dc)
 {
-        ES_NMOS *u = obj;
+        ES_PMOS *u = obj;
 
 	Uint g = PNODE(u,PORT_G);
 	Uint d = PNODE(u,PORT_D);
 	Uint s = PNODE(u,PORT_S);
 
-	UpdateNMOSModel(u,NMOS_vGS(u),NMOS_vDS(u));
+	UpdatePMOSModel(u,PMOS_vSG(u),PMOS_vSD(u));
 
-	StampVCCS(u->gm-u->gmPrev,g,s,d,s,dc->G);
-	StampConductance(u->go-u->goPrev,d,s,dc->G);
-	StampCurrentSource(u->Ieq-u->IeqPrev,s,d,dc->i);
+	StampVCCS(u->gm-u->gmPrev,s,g,s,d,dc->G);
+	StampConductance(u->go-u->goPrev,s,d,dc->G);
+	StampCurrentSource(u->Ieq-u->IeqPrev,d,s,dc->i);
 }
 
 static void
 Init(void *p)
 {
-	ES_NMOS *u = p;
+	ES_PMOS *u = p;
 
-	ES_InitPorts(u, esNMOSPorts);
+	ES_InitPorts(u, esPMOSPorts);
 	u->Vt = 0.5;
 	u->Va = 10;
 	u->K = 1e-3;
@@ -176,10 +176,10 @@ Init(void *p)
 	COMPONENT(u)->dcStepIter = DC_StepIter;
 }
 
-ES_ComponentClass esNMOSClass = {
+ES_ComponentClass esPMOSClass = {
 	{
-		"ES_Component:ES_NMOS",
-		sizeof(ES_NMOS),
+		"ES_Component:ES_PMOS",
+		sizeof(ES_PMOS),
 		{ 0,0 },
 		Init,
 		NULL,		/* reinit */
@@ -188,9 +188,9 @@ ES_ComponentClass esNMOSClass = {
 		NULL,		/* save */
 		NULL		/* edit */
 	},
-	N_("NMOS"),
+	N_("PMOS"),
 	"U",
-	"NMOS.eschem",
+	"PMOS.eschem",
 	"Generic|Nonlinear",
 	NULL,
 	NULL,			/* draw */

@@ -52,6 +52,7 @@
 #include "logic_probe.h"
 #include "nmos.h"
 #include "or.h"
+#include "pmos.h"
 #include "resistor.h"
 #include "semiresistor.h"
 #include "spst.h"
@@ -86,6 +87,7 @@ void *esComponentClasses[] = {
 	&esDiodeClass,
 	&esLedClass,
 	&esNMOSClass, 
+	&esPMOSClass,
 	NULL
 };
 

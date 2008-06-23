@@ -8,6 +8,7 @@ SHARESRC=	Ground.eschem \
 		Resistor.eschem \
 		Transistor.eschem \
 		Diode.eschem \
-		NMOS.eschem
+		NMOS.eschem \
+		PMOS.eschem
 
 include ${TOP}/mk/build.prog.mk
