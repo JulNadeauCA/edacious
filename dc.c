@@ -97,15 +97,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	if (SolveMNA(sim, ckt) == -1)
 		goto halt;
 
-	printf("tick\n.");
-
 	/* Iterate until a stable solution is found. */
 	do {
-		printf("iter.\n");
-		printf("before (A,z,x).\n");
-		M_MatrixPrint(sim->A);
-		M_MatrixPrint(sim->z);
-		M_MatrixPrint(sim->x);
 		if (++i > sim->itersMax) {
 #if 1
 			AG_SetError(_("Could not find stable solution in "
@@ -122,11 +115,6 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		}
 		if (SolveMNA(sim, ckt) == -1)
 			goto halt;
-
-		printf("after (A,z,x).\n");
-		M_MatrixPrint(sim->A);
-		M_MatrixPrint(sim->z);
-		M_MatrixPrint(sim->x);
 
 		/*
 		 * Compute difference between previous and current iteration,
