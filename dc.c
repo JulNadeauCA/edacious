@@ -59,7 +59,7 @@ static void
 StopSimulation(ES_SimDC *sim)
 {
 	SIM(sim)->running = 0;
-	ES_SimLog(sim, _("Simulation stopped at %uns."), sim->Telapsed);
+	ES_SimLog(sim, _("Simulation stopped at %fs."), sim->Telapsed);
 	AG_PostEvent(NULL, SIM(sim)->ckt, "circuit-sim-end", "%p", sim);
 }
 
@@ -78,7 +78,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	
 	ticks = SDL_GetTicks();
 	ticksSinceLast = ticks - sim->timeLastStep;
-	sim->Telapsed += ticksSinceLast * 1e6;
+	sim->deltaT = ticksSinceLast / 1000.0;
+	sim->Telapsed += sim->deltaT;
 	sim->timeLastStep = ticks;
 
 	xPrev = M_New(sim->x->m, 1);
@@ -189,7 +190,7 @@ Init(void *p)
 	sim->itersHiwat = 1;
 	sim->itersLowat = 1;
 
-	sim->Telapsed = 0;
+	sim->Telapsed = 0.0;
 	sim->maxSpeed = 60;
 	sim->timeLastStep = 0;
 	
@@ -271,7 +272,7 @@ Start(void *p)
 	}
 	AG_AddTimeout(ckt, &sim->toUpdate, 1000/sim->maxSpeed);
 	AG_UnlockTimeouts(ckt);
-	sim->Telapsed = 0;
+	sim->Telapsed = 0.0;
 	sim->timeLastStep = SDL_GetTicks();
 	
 	/* Initialize the matrices. */
@@ -391,7 +392,7 @@ Edit(void *p, ES_Circuit *ckt)
 		AG_SpinbuttonSetRange(sbu, 1, 1000);
 		
 		AG_LabelNewPolled(ntab, 0,
-		    _("Total simulated time: %[u32]ns"),
+		    _("Total simulated time: %fs"),
 		    &sim->Telapsed);
 		AG_LabelNewPolled(ntab, 0,
 		    _("Iterations/step watermark: %u-%u"),

@@ -4,9 +4,10 @@ typedef struct es_sim_dc {
 	struct es_sim _inherit;
 
 	AG_Timeout toUpdate;	/* Timer for simulation updates */
-	Uint32 Telapsed;        /* Simulated elapsed time (ns) */
+	M_Real Telapsed;        /* Simulated elapsed time (s) */
+	M_Real deltaT;          /* Simulated time since last iteration (s) */
 	int maxSpeed;           /* Maximum number of iterations/sec */
-	Uint32 timeLastStep;    /* time (as measured in SDL ticks) of last step */
+	Uint32 timeLastStep;    /* Time (as measured in SDL ticks) of last step */
 	
 	Uint itersMax;		/* Maximum solver iterations per step */
 	Uint itersHiwat;	/* Most iterations/step in last simulation */
