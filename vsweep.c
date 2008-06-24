@@ -43,10 +43,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	ES_VSweep *vsw = obj;
 
 	VSOURCE(vsw)->voltage = vsw->v1;
-	vsw->dv = (vsw->v2 - vsw->v1) / vsw->t;
-	vsw->tElapsed = 0;
-	vsw->cycle = 0;
-
+	
 	return (0);
 }
 
@@ -56,21 +53,20 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	ES_VSweep *vsw = obj;
 	Uint k = PNODE(vsw,1);
 	Uint j = PNODE(vsw,2);
+	Uint curCycle;
 
-	if (vsw->count != 0 && vsw->cycle >= vsw->count) {
+	curCycle = dc->Telapsed / vsw->t;
+	if (vsw->count != 0 && curCycle >= vsw->count)
 		VSOURCE(vsw)->voltage = 0.0;
-	} else {
-		VSOURCE(vsw)->voltage += vsw->dv;
+	else {
+		/* fraction representing the progress in the current cycle */
+		M_Real relProgress = dc->Telapsed / vsw->t - curCycle;
+		VSOURCE(vsw)->voltage = vsw->v1 + (vsw->v2 - vsw->v1) * relProgress;
 	}
+
 	StampVoltageSource(VSOURCE(vsw)->voltage, k,j,
 	    ES_VsourceName(vsw),
 	    dc->B, dc->C, dc->e);
-	    
-	if (vsw->tElapsed++ >= vsw->t) {
-		vsw->tElapsed = 0;
-		vsw->cycle++;
-		VSOURCE(vsw)->voltage = vsw->v1;
-	}
 }
 
 static void
@@ -81,7 +77,7 @@ Init(void *p)
 	ES_InitPorts(vsw, esVSweepPorts);
 	vsw->v1 = 0.0;
 	vsw->v2 = 5.0;
-	vsw->t = 100;
+	vsw->t = 1.0;
 	vsw->count = 1;
 	COMPONENT(vsw)->dcSimBegin = DC_SimBegin;
 	COMPONENT(vsw)->dcStepBegin = DC_StepBegin;
@@ -94,7 +90,7 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 
 	vsw->v1 = M_ReadReal(buf);
 	vsw->v2 = M_ReadReal(buf);
-	vsw->t = M_ReadTime(buf);
+	vsw->t = M_ReadReal(buf);
 	vsw->count = (int)AG_ReadUint8(buf);
 	return (0);
 }
@@ -106,7 +102,7 @@ Save(void *p, AG_DataSource *buf)
 
 	M_WriteReal(buf, vsw->v1);
 	M_WriteReal(buf, vsw->v2);
-	M_WriteTime(buf, vsw->t);
+	M_WriteReal(buf, vsw->t);
 	AG_WriteUint8(buf, (Uint8)vsw->count);
 	return (0);
 }
@@ -119,7 +115,7 @@ Edit(void *p)
 
 	M_NumericalNewReal(box, 0, "V", _("Start voltage: "), &vsw->v1);
 	M_NumericalNewReal(box, 0, "V", _("End voltage: "), &vsw->v2);
-	M_NumericalNewTimePNZ(box, 0, "ns", _("Duration: "), &vsw->t);
+	M_NumericalNewReal(box, 0, "s", _("Duration: "), &vsw->t);
 	AG_NumericalNewInt(box, 0, NULL, _("Count (0=loop): "), &vsw->count);
 	return (box);
 }

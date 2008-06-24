@@ -45,15 +45,12 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	Uint k = PNODE(vs,1);
 	Uint j = PNODE(vs,2);
 
-	if (vs->voltage == vsq->vH && ++vsq->t > vsq->tH) {
+#define my_modulus(x, y) (x - M_Floor(x/y) * y)
+	if(my_modulus(dc->Telapsed, (vsq->tL + vsq->tH)) < vsq->tL)
 		vs->voltage = vsq->vL;
-		vsq->t = 0;
-	} else if (vs->voltage == vsq->vL && ++vsq->t > vsq->tL) {
+	else
 		vs->voltage = vsq->vH;
-		vsq->t = 0;
-	} else if (vs->voltage != vsq->vL && vs->voltage != vsq->vH) {
-		vs->voltage = vsq->vL;
-	}
+#undef my_modulus
 	
 	StampVoltageSource(vs->voltage, k,j, ES_VsourceName(vs),
 	    dc->B, dc->C, dc->e);
@@ -67,9 +64,8 @@ Init(void *p)
 	ES_InitPorts(vs, esVSquarePorts);
 	vs->vH = 5.0;
 	vs->vL = 0.0;
-	vs->t = 0;
-	vs->tH = 100;
-	vs->tL = 100;
+	vs->tH = 0.5;
+	vs->tL = 0.5;
 	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
 }
 
@@ -80,8 +76,8 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 
 	vs->vH = M_ReadReal(buf);
 	vs->vL = M_ReadReal(buf);
-	vs->tH = M_ReadTime(buf);
-	vs->tL = M_ReadTime(buf);
+	vs->tH = M_ReadReal(buf);
+	vs->tL = M_ReadReal(buf);
 	return (0);
 }
 
@@ -92,8 +88,8 @@ Save(void *p, AG_DataSource *buf)
 
 	M_WriteReal(buf, vs->vH);
 	M_WriteReal(buf, vs->vL);
-	M_WriteTime(buf, vs->tH);
-	M_WriteTime(buf, vs->tL);
+	M_WriteReal(buf, vs->tH);
+	M_WriteReal(buf, vs->tL);
 	return (0);
 }
 
@@ -105,8 +101,8 @@ Edit(void *p)
 
 	M_NumericalNewReal(box, 0, "V", _("HIGH voltage: "), &vs->vH);
 	M_NumericalNewReal(box, 0, "V", _("LOW voltage: "), &vs->vL);
-	M_NumericalNewTimePNZ(box, 0, "ns", _("HIGH duration: "), &vs->tH);
-	M_NumericalNewTimePNZ(box, 0, "ns", _("LOW duration: "), &vs->tL);
+	M_NumericalNewReal(box, 0, "s", _("HIGH duration: "), &vs->tH);
+	M_NumericalNewReal(box, 0, "s", _("LOW duration: "), &vs->tL);
 	return (box);
 }
 

@@ -42,8 +42,6 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSine *vs = obj;
-
-	vs->phase = 0.0;
 	return (0);
 }
 
@@ -54,13 +52,10 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	Uint k = PNODE(vs,1);
 	Uint j = PNODE(vs,2);
 
-	VSOURCE(vs)->voltage = vs->vPeak*Sin(vs->phase);
+	VSOURCE(vs)->voltage = vs->vPeak*Sin(vs->f * dc->Telapsed);
 	StampVoltageSource(VSOURCE(vs)->voltage, k,j,
 	    ES_VsourceName(vs),
 	    dc->B, dc->C, dc->e);
-
-	vs->phase += 1e-3*vs->f;
-	if (vs->phase > M_PI*2) { vs->phase -= M_PI*2; }
 }
 
 static void
@@ -71,8 +66,7 @@ Init(void *p)
 	ES_InitPorts(vs, esVSinePorts);
 
 	vs->vPeak = 5.0;
-	vs->f = 60.0;
-	vs->phase = 0.0;
+	vs->f = 6.0;
 	COMPONENT(vs)->dcSimBegin = DC_SimBegin;
 	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
 }

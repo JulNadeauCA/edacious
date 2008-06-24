@@ -11,12 +11,8 @@ typedef struct es_vsweep {
 	struct es_vsource _inherit;
 	M_Real v1;			/* Start voltage */
 	M_Real v2;			/* End voltage */
-	M_Time t;			/* Duration */
+	M_Real t;			/* Duration */
 	int count;			/* Repeat count (0 = loop) */
-
-	M_Real dv;
-	M_Time tElapsed;
-	int cycle;
 } ES_VSweep;
 
 #define ES_VSWEEP(com) ((struct es_vsweep *)(com))
