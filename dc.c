@@ -78,7 +78,6 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	
 	ticks = SDL_GetTicks();
 	ticksSinceLast = ticks - sim->timeLastStep;
-	printf("%d\n", ticksSinceLast);
 	sim->Telapsed += ticksSinceLast * 1e6;
 	sim->timeLastStep = ticks;
 
@@ -160,16 +159,16 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	M_Free(xPrev);
 
 	/* Schedule next step */
-	AG_LockTimeouts(ckt);
 	if(SIM(sim)->running) {
 		Uint32 nextStep = sim->timeLastStep + 1000/sim->maxSpeed;
 		Uint32 newTicks = SDL_GetTicks();
-		AG_ReplaceTimeout(ckt, &sim->toUpdate, nextStep > newTicks ? nextStep - newTicks : 0);
+		return nextStep > newTicks ? nextStep - newTicks : 0;
 	}
 	else {
+		AG_LockTimeouts(ckt);
 		AG_DelTimeout(ckt, &sim->toUpdate);
+		AG_UnlockTimeouts(ckt);
 	}
-	AG_UnlockTimeouts(ckt);
 	
 	return (0);
 halt:
