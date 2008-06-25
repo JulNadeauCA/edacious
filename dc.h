@@ -1,8 +1,15 @@
 /*	Public domain	*/
 
+
+/* Available integration methods */
+typedef enum integrationMethod {
+	BE                      /* Backwards Euler */
+} IntegrationMethod;
 typedef struct es_sim_dc {
 	struct es_sim _inherit;
 
+	IntegrationMethod method;/*Method of integration used */
+	
 	AG_Timeout toUpdate;	/* Timer for simulation updates */
 	M_Real Telapsed;        /* Simulated elapsed time (s) */
 	M_Real deltaT;          /* Simulated time since last iteration (s) */

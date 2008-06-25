@@ -177,6 +177,8 @@ Init(void *p)
 {
 	ES_SimDC *sim = p;
 
+	sim->method = BE;
+	
 	ES_SimInit(sim, &esSimDcOps);
 	AG_SetTimeout(&sim->toUpdate, StepMNA, sim, AG_CANCEL_ONDETACH);
 	sim->itersMax = 10000;
@@ -185,7 +187,7 @@ Init(void *p)
 
 	sim->Telapsed = 0.0;
 	sim->maxSpeed = 60;
-	sim->timeLastStep = 0;
+	sim->timeLastStep = 0.0;
 	
 	sim->T0 = 290.0;
 
@@ -267,6 +269,8 @@ Start(void *p)
 	AG_UnlockTimeouts(ckt);
 	sim->Telapsed = 0.0;
 	sim->timeLastStep = SDL_GetTicks();
+	/* arbitrary value for initialisation */
+	sim->deltaT = 1.0/sim->maxSpeed;
 	
 	/* Initialize the matrices. */
 	M_SetZero(sim->G);

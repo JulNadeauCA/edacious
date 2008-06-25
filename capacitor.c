@@ -54,10 +54,18 @@ v(ES_Capacitor *c)
 
 /* Updates the small- and large-signal models, saving the previous values. */
 static void
-UpdateModel(ES_Capacitor *c, M_Real v)
+UpdateModel(ES_Capacitor *c, M_Real v, ES_SimDC *dc)
 {
-	c->Ieq=c->C/(1e-9)*v;
-	c->g=c->C/(1e-9);
+	switch(dc->method) {
+	case BE:
+		c->Ieq = c->C / dc->deltaT * v;
+		c->g = c->C / dc->deltaT;
+		break;
+	default:
+		//TODO : error
+		printf("Error");
+		break;
+	}
 }
 
 static void
@@ -77,8 +85,8 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
         ES_Capacitor *c = obj;
-	
-	UpdateModel(c, c->V0);
+
+	UpdateModel(c, c->V0, dc);
 	UpdateStamp(c, dc);
 
 	return (0);
@@ -89,7 +97,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Capacitor *c = obj;
 	
-	UpdateModel(c, v(c));
+	UpdateModel(c, v(c), dc);
 	UpdateStamp(c, dc);
 
 }
@@ -100,8 +108,8 @@ Init(void *p)
 	ES_Capacitor *c = p;
 
 	ES_InitPorts(c, esCapacitorPorts);
-	c->C = 1e-8;
-	c->V0 = 0;
+	c->C = 1.0;
+	c->V0 = 0.0;
 	
 	c->gPrev = 0.0;
 	c->IeqPrev = 0.0;
