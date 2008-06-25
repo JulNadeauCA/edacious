@@ -123,7 +123,8 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_NMOS *u = obj;
 
-	UpdateModel(u,u->Vt+0.1,u->Vt+0.1);
+	u->gm=0.0;
+	u->go=1.0;
 	UpdateStamp(u,dc);
 
 	return (0);
@@ -134,7 +135,8 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_NMOS *u = obj;
 
-	UpdateModel(u,u->Vt+0.1,u->Vt+0.1);
+	u->gm=0.0;
+	u->go=1.0;
 	UpdateStamp(u,dc);
 
 }

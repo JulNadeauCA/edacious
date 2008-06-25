@@ -182,6 +182,15 @@ ES_VsourceFindLoops(ES_Vsource *vs)
 	vs->nlstack = 0;
 }
 
+static void
+UpdateStamp(ES_Vsource *vs, ES_SimDC *dc)
+{
+	Uint k = PNODE(vs,1);
+	Uint j = PNODE(vs,2);
+
+	StampVoltageSource(vs->voltage,k,j,ES_VsourceName(vs),dc->B,dc->C,dc->e);
+}
+
 /*
  * Ideal voltage sources require the addition of one unknown (iE), and a
  * branch current equation (br). Voltage sources contribute two entries to
@@ -194,15 +203,22 @@ ES_VsourceFindLoops(ES_Vsource *vs)
  * br | 1   -1       | Ekj
  *    |--------------|-----
  */
+static int
+DC_SimBegin(void *obj, ES_SimDC *dc)
+{
+	ES_Vsource *vs = obj;
+
+	UpdateStamp(vs, dc);
+
+	return (0);
+}
+
 static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Vsource *vs = obj;
-	Uint k = PNODE(vs,1);
-	Uint j = PNODE(vs,2);
 
-	StampVoltageSource(vs->voltage, k,j, ES_VsourceName(vs),
-	    dc->B, dc->C, dc->e);
+	UpdateStamp(vs, dc);
 }
 
 static void
@@ -248,6 +264,7 @@ Init(void *p)
 	vs->nloops = 0;
 	TAILQ_INIT(&vs->loops);
 
+	COMPONENT(vs)->dcSimBegin = DC_SimBegin;
 	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
 	AG_SetEvent(vs, "circuit-connected", Connected, NULL);
 	AG_SetEvent(vs, "circuit-disconnected", Disconnected, NULL);

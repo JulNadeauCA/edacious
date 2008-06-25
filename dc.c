@@ -293,6 +293,9 @@ Start(void *p)
 		}
 	}
 
+	if (SolveMNA(sim, ckt) == -1)
+		goto halt;
+
 	/* Invoke the general simulation start callback. */
 	AG_PostEvent(NULL, ckt, "circuit-sim-begin", "%p", sim);
 	
