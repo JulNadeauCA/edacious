@@ -30,7 +30,7 @@ typedef enum OPERATIONS {
 	PLUS, MOINS, FOIS, DIV, POW,
 
 	/* 3. Fonctions */
-	OPP, SIN, COS, TAN, ABS, RACINE, LOG, LOG10, EXP,
+	OPP, SIN, COS, TAN, ABS, RACINE, LOG, LOG10, EXP, USTEP
 }OPERATION;
 
 #define NB_OPERATIONS 17
@@ -92,6 +92,7 @@ M_Real  my_Racine(M_Real x);
 M_Real  my_Log(M_Real x);
 M_Real  my_Log10(M_Real x);
 M_Real  my_Exp(M_Real x);
+M_Real  my_UnitStep(M_Real x);
 
 int     Ignorer(char const * s, ...);
 
@@ -206,6 +207,12 @@ void InterpreteurInit()
 	TabOperations[EXP].associativite     = DROITE;
 	TabOperations[EXP].nbArgs            = 1;
 	TabOperations[EXP].p_fonction        = my_Exp;
+
+	TabOperations[USTEP].priorite          = PRIOR_FONCTION;
+	TabOperations[USTEP].associativite     = DROITE;
+	TabOperations[USTEP].nbArgs            = 1;
+	TabOperations[USTEP].p_fonction        = my_UnitStep;
+
 }
 
 void InterpreteurReset()
@@ -412,6 +419,8 @@ int EmpilerChaine(char * lpszMot, LPPARAM lpParams, size_t nbParams)
 
 	if (!strcmp(lpszMot, "exp"))
 		fonction = EXP;
+	if (!strcmp(lpszMot, "u"))
+		fonction = USTEP;
 
 	if (fonction != INVALIDF)
 	{
@@ -739,6 +748,14 @@ M_Real my_Exp(M_Real x)
 	M_Real y;
 	y = exp(x);
 	EvaluerDebug("exp(%g) = %g\n", x, y);
+	return y;
+}
+
+M_Real my_UnitStep(M_Real x)
+{
+	M_Real y;
+	y = x > 0 ? 1 : 0;
+	EvaluerDebug("u(%g) = %g\n", x, y);
 	return y;
 }
 
