@@ -7,7 +7,7 @@ extern AG_StaticIcon esIconCircuit;
 extern AG_StaticIcon esIconComponent;
 extern AG_StaticIcon esIconInsertComponent;
 extern AG_StaticIcon esIconRemoveComponent;
-extern AG_StaticIcon esIconNode;
+extern AG_StaticIcon esIconNodeCurrents;
 extern AG_StaticIcon esIconBranchToNode;
 extern AG_StaticIcon esIconBranchToComponent;
 extern AG_StaticIcon esIconStartSim;
@@ -40,5 +40,9 @@ extern AG_StaticIcon esIconVarb;
 extern AG_StaticIcon esIconORGate;
 extern AG_StaticIcon esIconXORGate;
 extern AG_StaticIcon esIconGround;
+extern AG_StaticIcon esIconNode;
+extern AG_StaticIcon esIconShowNodes;
+extern AG_StaticIcon esIconShowNodeNames;
+extern AG_StaticIcon esIconShowNodeSyms;
 __END_DECLS
 #include "close_code.h"
