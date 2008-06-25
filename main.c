@@ -38,6 +38,7 @@
 #include "scope.h"
 
 #include "vsource.h"
+#include "varb.h"
 #include "vsine.h"
 #include "vsquare.h"
 #include "vsweep.h"
@@ -76,6 +77,7 @@ void *esComponentClasses[] = {
 	&esVsourceClass,
 	&esVSquareClass,
 	&esVSineClass,
+	&esVArbClass,
 	&esVSweepClass,
 	&esResistorClass,
 	&esSemiResistorClass,

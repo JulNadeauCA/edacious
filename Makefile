@@ -22,6 +22,7 @@ SRCS=	and.c \
 	diode.c \
 	ground.c \
 	insert_tool.c \
+	interpreteur.c \
 	inverter.c \
 	led.c \
 	logic_probe.c \
@@ -49,6 +50,7 @@ SRCS=	and.c \
 	spice.c \
 	spst.c \
 	stamp.c \
+	varb.c\
 	vsine.c \
 	vsource.c \
 	vsquare.c \
