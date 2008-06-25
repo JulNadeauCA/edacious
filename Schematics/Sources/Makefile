@@ -6,6 +6,7 @@ SHARESRC=	Vsine.eschem \
 		Varb.eschem \
 		Vsource.eschem \
 		Vsquare.eschem \
-		Vsweep.eschem
+		Vsweep.eschem \
+		Isource.eschem
 
 include ${TOP}/mk/build.prog.mk

@@ -24,6 +24,7 @@ SRCS=	and.c \
 	insert_tool.c \
 	interpreteur.c \
 	inverter.c \
+	isource.c \
 	led.c \
 	logic_probe.c \
 	main.c \

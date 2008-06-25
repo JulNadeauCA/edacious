@@ -50,6 +50,7 @@
 #include "diode.h"
 #include "ground.h"
 #include "inverter.h"
+#include "isource.h"
 #include "led.h"
 #include "logic_probe.h"
 #include "nmos.h"
@@ -74,6 +75,7 @@
 
 void *esComponentClasses[] = {
 	&esGroundClass,
+	&esIsourceClass,
 	&esVsourceClass,
 	&esVSquareClass,
 	&esVSineClass,
