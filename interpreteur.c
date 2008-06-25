@@ -690,7 +690,7 @@ M_Real my_Opp(M_Real x)
 M_Real my_Sin(M_Real x)
 {
 	M_Real y;
-	y = sin(x);
+	y = Sin(x);
 	EvaluerDebug("sin(%g) = %g\n", x, y);
 	return y;
 }
@@ -698,7 +698,7 @@ M_Real my_Sin(M_Real x)
 M_Real my_Cos(M_Real x)
 {
 	M_Real y;
-	y = cos(x);
+	y = Cos(x);
 	EvaluerDebug("cos(%g) = %g\n", x, y);
 	return y;
 }
@@ -706,7 +706,7 @@ M_Real my_Cos(M_Real x)
 M_Real my_Tan(M_Real x)
 {
 	M_Real y;
-	y = tan(x);
+	y = Tan(x);
 	EvaluerDebug("tan(%g) = %g\n", x, y);
 	return y;
 }
@@ -714,7 +714,7 @@ M_Real my_Tan(M_Real x)
 M_Real my_Abs(M_Real x)
 {
 	M_Real y;
-	y = fabs(x);
+	y = Fabs(x);
 	EvaluerDebug("abs(%g) = %g\n", x, y);
 	return y;
 }
@@ -722,7 +722,7 @@ M_Real my_Abs(M_Real x)
 M_Real my_Racine(M_Real x)
 {
 	M_Real y;
-	y = sqrt(x);
+	y = Sqrt(x);
 	EvaluerDebug("sqrt(%g) = %g\n", x, y);
 	return y;
 }
@@ -730,7 +730,7 @@ M_Real my_Racine(M_Real x)
 M_Real my_Log(M_Real x)
 {
 	M_Real y;
-	y = log(x);
+	y = Log(x);
 	EvaluerDebug("ln(%g) = %g\n", x, y);
 	return y;
 }
@@ -738,7 +738,7 @@ M_Real my_Log(M_Real x)
 M_Real my_Log10(M_Real x)
 {
 	M_Real y;
-	y = log10(x);
+	y = Log(x) / Log(10);
 	EvaluerDebug("log(%g) = %g\n", x, y);
 	return y;
 }
@@ -746,7 +746,7 @@ M_Real my_Log10(M_Real x)
 M_Real my_Exp(M_Real x)
 {
 	M_Real y;
-	y = exp(x);
+	y = Exp(x);
 	EvaluerDebug("exp(%g) = %g\n", x, y);
 	return y;
 }
