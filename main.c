@@ -67,6 +67,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#ifdef FP_DEBUG
+#include <fenv.h>
+#endif
 
 #include <config/enable_nls.h>
 #include <config/have_getopt.h>
@@ -705,6 +708,11 @@ main(int argc, char *argv[])
 	DEV_InitSubsystem(0);
 	DEV_ToolMenu(AG_MenuNode(appMenu->root, _("Debug"), NULL));
 #endif
+
+#ifdef FP_DEBUG
+	feenableexcept(FE_DIVBYZERO | FE_OVERFLOW | FE_UNDERFLOW);
+#endif
+	
 	AG_EventLoop();
 	AG_ObjectDestroy(&vfsRoot);
 	AG_Destroy();
