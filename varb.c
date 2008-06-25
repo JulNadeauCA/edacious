@@ -43,10 +43,28 @@ const ES_Port esVArbPorts[] = {
 	{ -1 },
 };
 
+static void 
+UpdateStamp(ES_VArb *vs,ES_SimDC *dc)
+{
+	Uint k = PNODE(vs,1);
+	Uint j = PNODE(vs,2);
+
+	StampVoltageSource(VSOURCE(vs)->voltage, k,j,
+	    ES_VsourceName(vs),
+	    dc->B, dc->C, dc->e);
+}
+
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VArb *vs = obj;
+	
+	/* Calculate initial voltage */
+	params[1].Value = 0.0;
+	Calculer(vs->exp, params, (sizeof(params)/sizeof(params[0])), &(VSOURCE(vs)->voltage));
+	
+	UpdateStamp(vs,dc);
+
 	return (0);
 }
 
@@ -54,8 +72,6 @@ static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VArb *vs = obj;
-	Uint k = PNODE(vs,1);
-	Uint j = PNODE(vs,2);
 	int ret;
 	M_Real res;
 
@@ -66,9 +82,8 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 		printf("Error !");
 	}
 	VSOURCE(vs)->voltage = res; 
-	StampVoltageSource(VSOURCE(vs)->voltage, k,j,
-	    ES_VsourceName(vs),
-	    dc->B, dc->C, dc->e);
+
+	UpdateStamp(vs,dc);
 }
 
 static void

@@ -99,7 +99,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Diode *d = obj;
 	
-	UpdateModel(d, 0.7);
+	UpdateModel(d, d->vPrev);
 	UpdateStamp(d, dc);
 
 }

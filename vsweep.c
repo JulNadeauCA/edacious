@@ -37,6 +37,17 @@ const ES_Port esVSweepPorts[] = {
 	{ -1 },
 };
 
+static void
+UpdateStamp(ES_VSweep *vsw, ES_SimDC *dc)
+{
+	Uint k = PNODE(vsw,1);
+	Uint j = PNODE(vsw,2);
+
+	StampVoltageSource(VSOURCE(vsw)->voltage, k,j,
+	    ES_VsourceName(vsw),
+	    dc->B, dc->C, dc->e);
+}
+
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
@@ -44,6 +55,8 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 
 	VSOURCE(vsw)->voltage = vsw->v1;
 	
+	UpdateStamp(vsw,dc);
+
 	return (0);
 }
 
@@ -51,8 +64,6 @@ static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSweep *vsw = obj;
-	Uint k = PNODE(vsw,1);
-	Uint j = PNODE(vsw,2);
 	Uint curCycle;
 
 	curCycle = dc->Telapsed / vsw->t;
@@ -64,9 +75,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 		VSOURCE(vsw)->voltage = vsw->v1 + (vsw->v2 - vsw->v1) * relProgress;
 	}
 
-	StampVoltageSource(VSOURCE(vsw)->voltage, k,j,
-	    ES_VsourceName(vsw),
-	    dc->B, dc->C, dc->e);
+	UpdateStamp(vsw,dc);
 }
 
 static void
