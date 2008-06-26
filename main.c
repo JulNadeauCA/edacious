@@ -49,6 +49,7 @@
 #include "digital.h"
 #include "diode.h"
 #include "ground.h"
+#include "inductor.h"
 #include "inverter.h"
 #include "isource.h"
 #include "led.h"
@@ -97,6 +98,7 @@ void *esComponentClasses[] = {
 	&esNMOSClass, 
 	&esPMOSClass,
 	&esCapacitorClass,
+	&esInductorClass,
 	NULL
 };
 

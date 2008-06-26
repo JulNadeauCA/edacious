@@ -3,7 +3,8 @@
 
 /* Available integration methods */
 typedef enum integrationMethod {
-	BE                      /* Backwards Euler */
+	BE,                     /* Backwards Euler */
+	FE                      /* Forward Euler */
 } IntegrationMethod;
 typedef struct es_sim_dc {
 	struct es_sim _inherit;

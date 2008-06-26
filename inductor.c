@@ -24,17 +24,17 @@
  */
 
 /*
- * Model for the capacitor.
+ * Model for the inductor.
  */
 
 #include <eda.h>
-#include "capacitor.h"
+#include "inductor.h"
 
 enum {
 	PORT_A = 1,
 	PORT_B = 2
 };
-const ES_Port esCapacitorPorts[] = {
+const ES_Port esInductorPorts[] = {
 	{ 0, "" },
 	{ PORT_A, "A" },
 	{ PORT_B, "B" },
@@ -47,24 +47,21 @@ const ES_Port esCapacitorPorts[] = {
  */
 
 static M_Real
-v(ES_Capacitor *c)
+v(ES_Inductor *i)
 {
-	return VPORT(c,PORT_A)-VPORT(c,PORT_B);
+	return VPORT(i,PORT_A)-VPORT(i,PORT_B);
 }
 
 /* Updates the small- and large-signal models, saving the previous values. */
 static void
-UpdateModel(ES_Capacitor *c, M_Real v, ES_SimDC *dc)
+UpdateModel(ES_Inductor *i, M_Real v, ES_SimDC *dc)
 {
 	switch(dc->method) {
 	case BE:
-		/* Norton companion model */
-		c->Ieq = c->C / dc->deltaT * v;
-		c->g = c->C / dc->deltaT;
+		/* TODO : needs to be considered as a voltage source */
 		break;
 	case FE:
-		/* TODO : needs to be considered as a voltage source */
-		/* equation : v(t+dt) = v(t)+deltaT/C*i */
+		/* TODO : needs to access previous voltage */
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -73,34 +70,34 @@ UpdateModel(ES_Capacitor *c, M_Real v, ES_SimDC *dc)
 }
 
 static void
-UpdateStamp(ES_Capacitor *c, ES_SimDC *dc)
+UpdateStamp(ES_Inductor *i, ES_SimDC *dc)
 {
-	Uint k = PNODE(c,PORT_A);
-	Uint l = PNODE(c,PORT_B);
+	Uint k = PNODE(i,PORT_A);
+	Uint l = PNODE(i,PORT_B);
+	
 	switch(dc->method) {
 	case BE:
-		StampConductance(c->g - c->gPrev,k,l,dc->G);
-		StampCurrentSource(c->Ieq - c->IeqPrev,k,l,dc->i);
+		/* TODO : needs to be considered as a voltage source */
 		break;
 	case FE:
-		/* TODO : needs to be considered as a voltage source */
+		StampCurrentSource(i->Ieq - i->IeqPrev,k,l,dc->i);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
 		break;
 	}
 
-	c->gPrev = c->g;
-	c->IeqPrev = c->Ieq;
+	i->gPrev = i->g;
+	i->IeqPrev = i->Ieq;
 }
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
-        ES_Capacitor *c = obj;
+        ES_Inductor *i = obj;
 
-	UpdateModel(c, c->V0, dc);
-	UpdateStamp(c, dc);
+	UpdateModel(i, 0, dc);
+	UpdateStamp(i, dc);
 
 	return (0);
 }
@@ -108,36 +105,34 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
-	ES_Capacitor *c = obj;
+	ES_Inductor *i = obj;
 	
-	UpdateModel(c, v(c), dc);
-	UpdateStamp(c, dc);
+	UpdateModel(i, v(i), dc);
+	UpdateStamp(i, dc);
 
 }
 
 static void
 Init(void *p)
 {
-	ES_Capacitor *c = p;
+	ES_Inductor *i = p;
 
-	ES_InitPorts(c, esCapacitorPorts);
-	c->C = 1.0;
-	c->V0 = 0.0;
+	ES_InitPorts(i, esInductorPorts);
+	i->L = 1.0;
 	
-	c->gPrev = 0.0;
-	c->IeqPrev = 0.0;
+	i->gPrev = 0.0;
+	i->IeqPrev = 0.0;
 
-	COMPONENT(c)->dcSimBegin = DC_SimBegin;
-	COMPONENT(c)->dcStepBegin = DC_StepBegin;
+	COMPONENT(i)->dcSimBegin = DC_SimBegin;
+	COMPONENT(i)->dcStepBegin = DC_StepBegin;
 }
 
 static int
 Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
-	ES_Capacitor *c = p;
+	ES_Inductor *i = p;
 
-	c->C = M_ReadReal(buf);
-	c->V0 = M_ReadReal(buf);
+	i->L = M_ReadReal(buf);
 	
 	return (0);
 }
@@ -145,10 +140,9 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 static int
 Save(void *p, AG_DataSource *buf)
 {
-	ES_Capacitor *c = p;
+	ES_Inductor *i = p;
 
-	M_WriteReal(buf, c->C);
-	M_WriteReal(buf, c->V0);
+	M_WriteReal(buf, i->L);
 
 	return (0);
 }
@@ -156,20 +150,19 @@ Save(void *p, AG_DataSource *buf)
 static void *
 Edit(void *p)
 {
-	ES_Capacitor *c = p;
+	ES_Inductor *i = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 	AG_Numerical *num;
 
-	M_NumericalNewRealPNZ(box, 0, "uF", _("Capacitance: "), &c->C);
-	M_NumericalNewRealPNZ(box, 0, "V", _("Initial voltage: "), &c->V0);
+	M_NumericalNewRealPNZ(box, 0, "uH", _("Inductance: "), &i->L);
 
 	return (box);
 }
 
-ES_ComponentClass esCapacitorClass = {
+ES_ComponentClass esInductorClass = {
 	{
-		"ES_Component:ES_Capacitor",
-		sizeof(ES_Capacitor),
+		"ES_Component:ES_Inductor",
+		sizeof(ES_Inductor),
 		{ 0,0 },
 		Init,
 		NULL,		/* reinit */
@@ -178,9 +171,9 @@ ES_ComponentClass esCapacitorClass = {
 		Save,		/* save */
 		Edit
 	},
-	N_("Capacitor"),
-	"C",
-	"Capacitor.eschem",
+	N_("Inductor"),
+	"L",
+	"Inductor.eschem",
 	"Generic|Nonlinear",
 	NULL,
 	NULL,			/* draw */

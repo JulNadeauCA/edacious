@@ -21,6 +21,7 @@ SRCS=	and.c \
 	digital.c \
 	diode.c \
 	ground.c \
+	inductor.c \
 	insert_tool.c \
 	interpreteur.c \
 	inverter.c \
