@@ -183,6 +183,7 @@ echo "    --enable-static           Produce a static binary [default: no]"
 echo "    --enable-warnings         Enable compiler warnings [default: no]"
 echo "    --enable-edition          Enable graphical editor [default: yes]"
 echo "    --enable-threads          Thread safety [default: check]"
+echo "    --enable-fpdebug          Catch floating point exceptions [default: no]"
 exit 1
 fi
 
@@ -1704,6 +1705,12 @@ if [ "${enable_static}" = "yes" ]
 LDFLAGS="-static"
 echo "LDFLAGS=$LDFLAGS" >>Makefile.config
 echo "mdefs[\"LDFLAGS\"] = \"$LDFLAGS\"" >>configure.lua
+fi
+if [ "${enable_fpdebug}" = "yes" ]
+ then
+CFLAGS="$CFLAGS -DFP_DEBUG"
+echo "CFLAGS=$CFLAGS" >>Makefile.config
+echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
 fi
 echo "Don't forget to run \"make depend\"."
 echo "Don't forget to run \"make depend\"." >> config.log

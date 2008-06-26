@@ -4,6 +4,7 @@ REGISTER("--enable-static",	"Produce a static binary [default: no]")
 REGISTER("--enable-warnings",	"Enable compiler warnings [default: no]")
 REGISTER("--enable-edition",	"Enable graphical editor [default: yes]")
 REGISTER("--enable-threads",	"Thread safety [default: check]")
+REGISTER("--enable-fpdebug",	"Catch floating point exceptions [default: no]")
 
 HDEFINE(VERSION, "04052008")
 HDEFINE(RELEASE, "")
@@ -109,4 +110,7 @@ if [ "${enable_warnings}" != "no" ]; then
 fi
 if [ "${enable_static}" = "yes" ]; then
 	MDEFINE(LDFLAGS, "-static")
+fi
+if [ "${enable_fpdebug}" = "yes" ]; then
+	MDEFINE(CFLAGS, "$CFLAGS -DFP_DEBUG")
 fi
