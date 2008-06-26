@@ -710,7 +710,7 @@ main(int argc, char *argv[])
 #endif
 
 #ifdef FP_DEBUG
-	feenableexcept(FE_DIVBYZERO | FE_OVERFLOW | FE_UNDERFLOW);
+	feenableexcept(FE_DIVBYZERO | FE_OVERFLOW);
 #endif
 	
 	AG_EventLoop();
