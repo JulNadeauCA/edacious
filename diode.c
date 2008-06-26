@@ -54,13 +54,14 @@ v(ES_Diode *d)
 
 /* Updates the small- and large-signal models, saving the previous values. */
 static void
-UpdateModel(ES_Diode *d, M_Real v)
+UpdateModel(ES_Diode *d, ES_SimDC *dc, M_Real v)
 {
 	M_Real vDiff = v - d->vPrev;
 	M_Real I;
 
 	if (Fabs(vDiff) > d->Vt) {
 		v = d->vPrev + vDiff/Fabs(vDiff)*d->Vt;
+		dc->isDamped = 1;
 	}
 
 	d->vPrev = v;
@@ -68,6 +69,11 @@ UpdateModel(ES_Diode *d, M_Real v)
 	I = d->Is*(Exp(v/(d->Vt)) - 1);
 	d->g = I/(d->Vt);
 	d->Ieq = I-(d->g)*v;
+
+	if (d->g < 0.01)
+	{
+		d->g = 0.01;
+	}
 }
 
 static void
@@ -88,7 +94,9 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 {
         ES_Diode *d = obj;
 	
-	UpdateModel(d, 0.7);
+	d->vPrev = 0.7;
+	UpdateModel(d, dc, 0.7);
+
 	UpdateStamp(d, dc);
 
 	return (0);
@@ -99,9 +107,8 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Diode *d = obj;
 	
-	UpdateModel(d, d->vPrev);
+	UpdateModel(d, dc, d->vPrev);
 	UpdateStamp(d, dc);
-
 }
 
 static void
@@ -109,7 +116,7 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 {
 	ES_Diode *d = obj;
 
-	UpdateModel(d, v(d));
+	UpdateModel(d, dc, v(d));
 	UpdateStamp(d, dc);
 }
 

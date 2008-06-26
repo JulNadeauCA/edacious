@@ -16,6 +16,8 @@ typedef struct es_sim_dc {
 	int maxSpeed;           /* Maximum number of iterations/sec */
 	Uint32 timeLastStep;    /* Time (as measured in SDL ticks) of last step */
 	
+	Uint isDamped;		/* 1 if any components had to damp voltage guesses in the previous iteration, 0 otherwise */
+
 	Uint itersMax;		/* Maximum solver iterations per step */
 	Uint itersHiwat;	/* Most iterations/step in last simulation */
 	Uint itersLowat;	/* Least iterations/step in last simulation */
@@ -36,7 +38,7 @@ typedef struct es_sim_dc {
 	M_Vector *x;		/* Vector of unknowns (v,j) */
 	M_Vector *v;		/* Voltages */
 	M_Vector *j;		/* Currents through independent vsources */
-	
+
 	M_IntVector *piv;	/* Pivot information from last factorization */
 } ES_SimDC;
 

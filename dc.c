@@ -103,7 +103,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	/* Iterate until a stable solution is found. */
 	do {
 		if (++i > sim->itersMax) {
-#if 1
+#if 0
 			AG_SetError(_("Could not find stable solution in "
 			              "%u iterations"), i);
 			goto halt;
@@ -112,6 +112,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		}
 
 		M_Copy(xPrev, sim->x);
+
+		sim->isDamped = 0;
 		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 			if (com->dcStepIter != NULL)
 				com->dcStepIter(com, sim);
@@ -132,7 +134,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 #ifdef DEBUG
 		M_SetReal(ckt, "dcDiff", diff);
 #endif
-	} while (diff > MAX_DIFF);
+	} while (sim->isDamped || (diff > MAX_DIFF));
 #ifdef DEBUG
 	M_SetReal(ckt, "dcIters", i);
 #endif
