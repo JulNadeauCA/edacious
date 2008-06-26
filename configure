@@ -419,8 +419,10 @@ if [ "$CC" = "" ]; then
 	for i in `echo $PATH |sed 's/:/ /g'`; do
 		if [ -x "${i}/cc" ]; then
 			CC="${i}/cc"
+			break
 		elif [ -x "${i}/gcc" ]; then
 			CC="${i}/gcc"
+			break
 		fi
 	done
 	if [ "$CC" = "" ]; then
@@ -841,6 +843,7 @@ AGAR_VERSION=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-config" ]; then
 		AGAR_VERSION=`${path}/agar-config --version`
+		break
 	fi
 done
 if [ "${AGAR_VERSION}" != "" ]; then
@@ -850,12 +853,14 @@ AGAR_CFLAGS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-config" ]; then
 		AGAR_CFLAGS=`${path}/agar-config --cflags`
+		break
 	fi
 done
 AGAR_LIBS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-config" ]; then
 		AGAR_LIBS=`${path}/agar-config --libs`
+		break
 	fi
 done
 echo "AGAR_CFLAGS=$AGAR_CFLAGS" >>Makefile.config
@@ -925,12 +930,14 @@ AGAR_VERSION=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-config" ]; then
 		AGAR_VERSION=`${path}/agar-config --version`
+		break
 	fi
 done
 AGAR_VG_VERSION=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-vg-config" ]; then
 		AGAR_VG_VERSION=`${path}/agar-vg-config --version`
+		break
 	fi
 done
 if [ "${AGAR_VERSION}" != "" -a "${AGAR_VG_VERSION}" != "" ]; then
@@ -942,24 +949,28 @@ AGAR_CFLAGS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-config" ]; then
 		AGAR_CFLAGS=`${path}/agar-config --cflags`
+		break
 	fi
 done
 AGAR_LIBS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-config" ]; then
 		AGAR_LIBS=`${path}/agar-config --libs`
+		break
 	fi
 done
 AGAR_VG_CFLAGS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-vg-config" ]; then
 		AGAR_VG_CFLAGS=`${path}/agar-vg-config --cflags`
+		break
 	fi
 done
 AGAR_VG_LIBS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-vg-config" ]; then
 		AGAR_VG_LIBS=`${path}/agar-vg-config --libs`
+		break
 	fi
 done
 cat << EOT > conftest.c
@@ -1027,12 +1038,14 @@ AGAR_VERSION=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-config" ]; then
 		AGAR_VERSION=`${path}/agar-config --version`
+		break
 	fi
 done
 AGAR_DEV_VERSION=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-dev-config" ]; then
 		AGAR_DEV_VERSION=`${path}/agar-dev-config --version`
+		break
 	fi
 done
 if [ "${AGAR_VERSION}" != "" -a "${AGAR_DEV_VERSION}" != "" ]; then
@@ -1044,24 +1057,28 @@ AGAR_CFLAGS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-config" ]; then
 		AGAR_CFLAGS=`${path}/agar-config --cflags`
+		break
 	fi
 done
 AGAR_LIBS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-config" ]; then
 		AGAR_LIBS=`${path}/agar-config --libs`
+		break
 	fi
 done
 AGAR_DEV_CFLAGS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-dev-config" ]; then
 		AGAR_DEV_CFLAGS=`${path}/agar-dev-config --cflags`
+		break
 	fi
 done
 AGAR_DEV_LIBS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-dev-config" ]; then
 		AGAR_DEV_LIBS=`${path}/agar-dev-config --libs`
+		break
 	fi
 done
 cat << EOT > conftest.c
@@ -1135,12 +1152,14 @@ AGAR_VERSION=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-config" ]; then
 		AGAR_VERSION=`${path}/agar-config --version`
+		break
 	fi
 done
 FREESG_VERSION=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/freesg-config" ]; then
 		FREESG_VERSION=`${path}/freesg-config --version`
+		break
 	fi
 done
 if [ "${AGAR_VERSION}" != "" -a "${FREESG_VERSION}" != "" ]; then
@@ -1152,24 +1171,28 @@ AGAR_CFLAGS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-config" ]; then
 		AGAR_CFLAGS=`${path}/agar-config --cflags`
+		break
 	fi
 done
 AGAR_LIBS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/agar-config" ]; then
 		AGAR_LIBS=`${path}/agar-config --libs`
+		break
 	fi
 done
 FREESG_CFLAGS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/freesg-config" ]; then
 		FREESG_CFLAGS=`${path}/freesg-config --cflags`
+		break
 	fi
 done
 FREESG_LIBS=""
 for path in `echo $PATH | sed 's/:/ /g'`; do
 	if [ -x "${path}/freesg-config" ]; then
 		FREESG_LIBS=`${path}/freesg-config --libs`
+		break
 	fi
 done
 cat << EOT > conftest.c
