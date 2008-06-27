@@ -184,7 +184,7 @@ ES_ComponentClass esPMOSClass = {
 	"U",
 	"PMOS.eschem",
 	"Generic|Nonlinear",
-	NULL,
+	&esIconPMOS,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

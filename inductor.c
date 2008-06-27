@@ -176,7 +176,7 @@ ES_ComponentClass esInductorClass = {
 	"L",
 	"Inductor.eschem",
 	"Generic|Nonlinear",
-	NULL,
+	&esIconInductor,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

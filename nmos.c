@@ -185,7 +185,7 @@ ES_ComponentClass esNMOSClass = {
 	"U",
 	"NMOS.eschem",
 	"Generic|Nonlinear",
-	NULL,
+	&esIconNMOS,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

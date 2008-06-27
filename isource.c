@@ -108,8 +108,8 @@ ES_ComponentClass esIsourceClass = {
 	N_("Current source"),
 	"I",
 	"Sources/Isource.eschem",
-	NULL,
-	NULL,
+	"Generic|Sources",
+	&esIconISource,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */

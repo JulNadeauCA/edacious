@@ -185,7 +185,7 @@ ES_ComponentClass esNPNClass = {
 	"U",
 	"NPN.eschem",
 	"Generic|Nonlinear",
-	NULL,
+	&esIconNPN,
 	NULL,			/* draw */
 	NULL,			/* instance_menu */
 	NULL,			/* class_menu */
