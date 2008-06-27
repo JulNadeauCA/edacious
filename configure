@@ -1729,6 +1729,12 @@ LDFLAGS="-static"
 echo "LDFLAGS=$LDFLAGS" >>Makefile.config
 echo "mdefs[\"LDFLAGS\"] = \"$LDFLAGS\"" >>configure.lua
 fi
+if [ "${enable_debug}" = "yes" ]
+ then
+CFLAGS="$CFLAGS -DDEBUG"
+echo "CFLAGS=$CFLAGS" >>Makefile.config
+echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
+fi
 if [ "${enable_fpdebug}" = "yes" ]
  then
 CFLAGS="$CFLAGS -DFP_DEBUG"

@@ -29,6 +29,7 @@
 
 #include <eda.h>
 #include <config/sharedir.h>
+#include "wire.h"
 
 /* Free all Port information in the given Component. */
 void
@@ -96,28 +97,34 @@ AttachSchemPorts(ES_Component *com, VG_Node *vn)
  * we also scan the block for SchemPorts and link them.
  */
 void
-ES_AttachSchemEntity(ES_Component *com, VG_Node *vn)
+ES_AttachSchemEntity(void *pCom, VG_Node *vn)
 {
+	ES_Component *com = pCom;
+
 	TAILQ_INSERT_TAIL(&com->schemEnts, vn, user);
 	vn->p = com;
 	if (VG_NodeIsClass(vn, "SchemBlock")) {
-		((ES_SchemBlock *)vn)->com = com;
+		SCHEM_BLOCK(vn)->com = com;
+	} else if (VG_NodeIsClass(vn, "SchemWire")) {
+		SCHEM_WIRE(vn)->wire = WIRE(com);
 	}
 	AttachSchemPorts(com, vn);
 }
 
 /* Remove a schematic block associated with a component. */
 void
-ES_DetachSchemEntity(ES_Component *com, VG_Node *vn)
+ES_DetachSchemEntity(void *pCom, VG_Node *vn)
 {
+	ES_Component *com = pCom;
 	vn->p = NULL;
 	TAILQ_REMOVE(&com->schemEnts, vn, user);
 }
 
 /* Load a component schematic block from a file. */
 ES_SchemBlock *
-ES_LoadSchemFromFile(ES_Component *com, const char *path)
+ES_LoadSchemFromFile(void *pCom, const char *path)
 {
+	ES_Component *com = pCom;
 	ES_SchemBlock *sb;
 
 	sb = ES_SchemBlockNew(com->ckt->vg->root, OBJECT(com)->name);
@@ -153,7 +160,7 @@ OnAttach(AG_Event *event)
 		char path[FILENAME_MAX];
 
 #ifdef _WIN32
-		Strlcpy(path, "C:\\Agar-EDA\\Schematics\\", sizeof(path));
+		Strlcpy(path, "Schematics\\", sizeof(path));
 #else
 		Strlcpy(path, SHAREDIR, sizeof(path));
 		Strlcat(path, "/Schematics/", sizeof(path));
@@ -168,7 +175,6 @@ OnAttach(AG_Event *event)
 	if (COMCLASS(com)->draw != NULL) {
 		COMCLASS(com)->draw(com, ckt->vg);
 	}
-
 	ES_UnlockCircuit(ckt);
 }
 
@@ -196,10 +202,14 @@ OnDetach(AG_Event *event)
 	AG_PostEvent(ckt, com, "circuit-disconnected", NULL);
 
 	while ((vn = TAILQ_FIRST(&com->schemEnts)) != NULL) {
+		Debug(com, "Removing schematic entity: %s%u\n",
+		    vn->ops->name, vn->handle);
 		ES_DetachSchemEntity(com, vn);
+		VG_NodeDetach(vn);
 		VG_NodeDestroy(vn);
 	}
 
+del_branches:
 	for (i = 0; i < ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
 		ES_Branch *br, *nbr;
@@ -208,8 +218,11 @@ OnDetach(AG_Event *event)
 		     br != TAILQ_END(&node->branches);
 		     br = nbr) {
 			nbr = TAILQ_NEXT(br, branches);
-			if (br->port != NULL && br->port->com == com)
+			if (br->port != NULL && br->port->com == com) {
+				Debug(com, "Removing branch in n%u\n", i);
 				ES_DelBranch(ckt, i, br);
+				goto del_branches;
+			}
 		}
 	}
 
@@ -220,6 +233,7 @@ del_nodes:
 		ES_Branch *br;
 
 		if (node->nBranches == 0) {
+			Debug(com, "n%u has no more branches; removing\n", i);
 			ES_DelNode(ckt, i);
 			goto del_nodes;
 		}
@@ -428,8 +442,10 @@ DeleteComponent(AG_Event *event)
 	ES_Component *com = AG_PTR(1);
 	VG_View *vv = AG_PTR(2);
 	ES_Circuit *ckt = com->ckt;
-
+	
+	ES_ClearEditAreas(vv);
 	ES_LockCircuit(ckt);
+	
 	if (!AG_ObjectInUse(com)) {
 		VG_Status(vv, _("Removed component %s."), OBJECT(com)->name);
 		AG_ObjectDetach(com);
@@ -450,6 +466,7 @@ DeleteSelections(AG_Event *event)
 	ES_Component *com;
 	int changed = 0;
 
+	ES_ClearEditAreas(vv);
 	ES_LockCircuit(ckt);
 rescan:
 	CIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt) {

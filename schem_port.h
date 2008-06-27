@@ -12,6 +12,10 @@ typedef struct es_schem_port {
 	struct es_port *port;		/* Component port */
 } ES_SchemPort;
 
+#ifdef _ES_INTERNAL
+#define SCHEM_PORT(p) ((ES_SchemPort *)(p))
+#endif
+
 __BEGIN_DECLS
 extern const VG_NodeOps esSchemPortOps;
 

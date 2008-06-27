@@ -155,9 +155,9 @@ void	 ES_ComponentMenu(ES_Component *, VG_View *);
 void	 ES_InitPorts(void *, const ES_Port *);
 void	 ES_FreePorts(ES_Component *);
 
-void           ES_AttachSchemEntity(ES_Component *, VG_Node *);
-void           ES_DetachSchemEntity(ES_Component *, VG_Node *);
-ES_SchemBlock *ES_LoadSchemFromFile(ES_Component *, const char *);
+void           ES_AttachSchemEntity(void *, VG_Node *);
+void           ES_DetachSchemEntity(void *, VG_Node *);
+ES_SchemBlock *ES_LoadSchemFromFile(void *, const char *);
 
 Uint	 ES_PortNode(ES_Component *, int);
 int	 ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);

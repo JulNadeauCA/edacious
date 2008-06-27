@@ -1154,69 +1154,40 @@ ExportToSPICE(AG_Event *event)
 }
 
 static void
-ViewButtonDown(AG_Event *event)
+MouseButtonDown(AG_Event *event)
 {
 	VG_View *vv =  AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
 	int button = AG_INT(2);
 	float x = AG_FLOAT(3);
 	float y = AG_FLOAT(4);
-	ES_Component *com;
-//	VG_Block *block;
+	VG_Node *vn;
 
 	if (button != SDL_BUTTON_RIGHT) {
 		return;
 	}
-#if 0
-	block = VG_BlockClosest(ckt->vg, x, y);
-
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (OBJECT(com)->cls->edit == NULL ||
-		    com->block != block) {
-			continue;
+	if ((vn = ES_SchemNearest(vv, VGVECTOR(x,y))) != NULL) {
+		if (VG_NodeIsClass(vn, "SchemBlock")) {
+			ES_SchemBlock *sb = (ES_SchemBlock *)vn;
+			ES_SelectComponent(sb->com, vv);
+			ES_ComponentMenu(sb->com, vv);
+		} else if (VG_NodeIsClass(vn, "SchemWire")) {
+			ES_SchemWire *sw = (ES_SchemWire *)vn;
+			ES_SelectComponent(sw->wire, vv);
+			ES_ComponentMenu(sw->wire, vv);
 		}
-		ES_ComponentMenu(com, vv);
-		break;
 	}
-#endif
 }
 
 static void
-ViewKeyDown(AG_Event *event)
+KeyDown(AG_Event *event)
 {
 	VG_View *vv =  AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
 }
 
-#if 0
 static void
-CircuitDoubleClick(AG_Event *event)
-{
-	ES_Circuit *ckt = AG_PTR(1);
-	int button = AG_INT(2);
-	float x = AG_INT(3);
-	float y = AG_INT(4);
-	ES_Component *com;
-	VG_Block *block;
-
-	if (button != SDL_BUTTON_LEFT) {
-		return;
-	}
-	block = VG_BlockClosest(ckt->vg, x, y);
-
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (OBJECT(com)->cls->edit == NULL ||
-		    com->block != block) {
-			continue;
-		}
-		DEV_BrowserOpenData(com);
-		break;
-	}
-}
-#endif
-
-static void
-CircuitSelectSim(AG_Event *event)
+SelectSimulation(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
 	ES_SimOps *sops = AG_PTR(2);
@@ -1484,7 +1455,7 @@ Edit(void *p)
 			ops = *pOps;
 			AG_MenuAction(mi, _(ops->name),
 			    ops->icon ? ops->icon->s : NULL,
-			    CircuitSelectSim, "%p,%p,%p", ckt, ops, win);
+			    SelectSimulation, "%p,%p,%p", ckt, ops, win);
 		}
 		AG_MenuToolbar(mi, NULL);
 		AG_ToolbarSeparator(tbTop);
@@ -1563,8 +1534,8 @@ Edit(void *p)
 		AG_ToolbarSeparator(tbRight);
 		
 		VG_ViewRegTool(vv, &esInsertTool, ckt);
-		VG_ViewButtondownFn(vv, ViewButtonDown, "%p", ckt);
-		VG_ViewKeydownFn(vv, ViewKeyDown, "%p", ckt);
+		VG_ViewButtondownFn(vv, MouseButtonDown, "%p", ckt);
+		VG_ViewKeydownFn(vv, KeyDown, "%p", ckt);
 	}
 	
 	mi = AG_MenuAddItem(menu, _("Visualization"));

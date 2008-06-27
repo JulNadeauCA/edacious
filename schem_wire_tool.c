@@ -142,6 +142,8 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			esCurWire->schemWire = ES_SchemWireNew(vg->root,
 			    port1->sp, port2->sp);
 			esCurWire->schemWire->wire = esCurWire;
+			ES_AttachSchemEntity(esCurWire,
+			    VGNODE(esCurWire->schemWire));
 		} else {
 			port1 = &COMPONENT(esCurWire)->ports[1];
 			port2 = &COMPONENT(esCurWire)->ports[2];

@@ -15,6 +15,10 @@ typedef struct es_wire {
 	ES_SchemWire *schemWire;	/* Schematic wire entity */
 } ES_Wire;
 
+#ifdef _ES_INTERNAL
+#define WIRE(p) ((ES_Wire *)(p))
+#endif
+
 __BEGIN_DECLS
 extern ES_ComponentClass esWireClass;
 

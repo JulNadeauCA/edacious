@@ -9,6 +9,10 @@ typedef struct es_schem_wire {
 	void *wire;			/* Back pointer to Wire component */
 } ES_SchemWire;
 
+#ifdef _ES_INTERNAL
+#define SCHEM_WIRE(p) ((ES_SchemWire *)(p))
+#endif
+
 __BEGIN_DECLS
 extern const VG_NodeOps esSchemWireOps;
 

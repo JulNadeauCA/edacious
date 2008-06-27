@@ -8,6 +8,10 @@ typedef struct es_schem_block {
 	struct es_component *com;		/* Back pointer to component */
 } ES_SchemBlock;
 
+#ifdef _ES_INTERNAL
+#define SCHEM_BLOCK(p) ((ES_SchemBlock *)(p))
+#endif
+
 __BEGIN_DECLS
 extern const VG_NodeOps esSchemBlockOps;
 

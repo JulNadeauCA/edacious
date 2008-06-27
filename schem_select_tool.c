@@ -149,19 +149,20 @@ static int
 MouseButtonDown(void *p, VG_Vector v, int b)
 {
 	ES_SchemSelectTool *t = p;
+	ES_SchemBlock *sb;
 	VG_View *vv = VGTOOL(t)->vgv;
-	VG_Vector vSnap;
 	VG_Node *vn;
 	int multiSelect = (SDL_GetModState() & KMOD_CTRL);
 
-	if (b != SDL_BUTTON_LEFT) {
+	if ((vn = ES_SchemNearest(vv, v)) == NULL) {
 		return (0);
 	}
-	if ((vn = ES_SchemNearest(vv, v)) != NULL) {
+	switch (b) {
+	case SDL_BUTTON_LEFT:
 		if (multiSelect) {
 			if (VG_NodeIsClass(vn, "SchemBlock")) {
-				ES_SchemBlock *blk = (ES_SchemBlock *)vn;
-				ES_SelectComponent(blk->com, vv);
+				sb = (ES_SchemBlock *)vn;
+				ES_SelectComponent(sb->com, vv);
 			}
 			if (vn->flags & VG_NODE_SELECTED) {
 				vn->flags &= ~(VG_NODE_SELECTED);
@@ -170,17 +171,19 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 			}
 		} else {
 			if (VG_NodeIsClass(vn, "SchemBlock")) {
-				ES_SchemBlock *blk = (ES_SchemBlock *)vn;
-				ES_UnselectAllComponents(COMCIRCUIT(blk->com),
+				sb = (ES_SchemBlock *)vn;
+				ES_UnselectAllComponents(COMCIRCUIT(sb->com),
 				    vv);
-				ES_SelectComponent(blk->com, vv);
+				ES_SelectComponent(sb->com, vv);
 			}
 			VG_UnselectAll(vv->vg);
 			vn->flags |= VG_NODE_SELECTED;
 		}
+		t->moving = 1;
+		return (1);
+	default:
+		return (0);
 	}
-	t->moving = 1;
-	return (1);
 }
 
 static int

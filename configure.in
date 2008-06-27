@@ -111,6 +111,9 @@ fi
 if [ "${enable_static}" = "yes" ]; then
 	MDEFINE(LDFLAGS, "-static")
 fi
+if [ "${enable_debug}" = "yes" ]; then
+	MDEFINE(CFLAGS, "$CFLAGS -DDEBUG")
+fi
 if [ "${enable_fpdebug}" = "yes" ]; then
 	MDEFINE(CFLAGS, "$CFLAGS -DFP_DEBUG")
 fi

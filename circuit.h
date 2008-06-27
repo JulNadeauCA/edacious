@@ -181,6 +181,21 @@ ES_UnlockCircuit(ES_Circuit *ckt)
 	AG_ObjectUnlock(ckt);
 }
 
+/* Clear component edition areas in the GUI. */
+static __inline__ void
+ES_ClearEditAreas(VG_View *vv)
+{
+	Uint i;
+
+	AG_ObjectLock(vv);
+	for (i = 0; i < vv->nEditAreas; i++) {
+		AG_ObjectFreeChildren(vv->editAreas[i]);
+		AG_WindowUpdate(AG_ParentWindow(vv->editAreas[i]));
+		AG_WidgetHiddenRecursive(vv->editAreas[i]);
+	}
+	AG_ObjectUnlock(vv);
+}
+
 /* Select/unselect components. */
 static __inline__ void
 ES_SelectComponent(ES_Component *com, VG_View *vv)
@@ -214,13 +229,8 @@ ES_UnselectAllComponents(ES_Circuit *ckt, VG_View *vv)
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		com->flags &= ~(ES_COMPONENT_SELECTED);
 	}
-	if (vv->nEditAreas > 0) {
-		AG_ObjectFreeChildren(vv->editAreas[0]);
-		AG_WindowUpdate(AG_ParentWindow(vv->editAreas[0]));
-		AG_WidgetHiddenRecursive(vv->editAreas[0]);
-	}
+	ES_ClearEditAreas(vv);
 }
-
 /* Highlight component for selection. */
 static __inline__ void
 ES_HighlightComponent(ES_Component *hCom)
