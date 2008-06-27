@@ -24,7 +24,7 @@
  */
 
 /*
- * Model for the diode.
+ * Independent current source.
  */
 
 #include <eda.h>
@@ -36,11 +36,6 @@ const ES_Port esIsourcePorts[] = {
 	{ 2, "i-" },
 	{ -1 },
 };
-
-/*
- * Returns the voltage across the diode calculated in the last Newton-Raphson
- * iteration.
- */
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
@@ -110,7 +105,7 @@ ES_ComponentClass esIsourceClass = {
 		Save,		/* save */
 		Edit
 	},
-	N_("Isource"),
+	N_("Current source"),
 	"I",
 	"Sources/Isource.eschem",
 	NULL,
