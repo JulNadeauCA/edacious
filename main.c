@@ -290,12 +290,12 @@ static void
 OpenNativeObject(AG_Event *event)
 {
 	AG_ObjectClass *cls = AG_PTR(1);
-	char *path = AG_STRING(2), *s;
+	char *path = AG_STRING(2);
 	AG_Object *obj;
 
 	obj = AG_ObjectNew(&vfsRoot, NULL, cls);
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
-		AG_TextMsg(AG_MSG_ERROR, "%s: %s", ShortFilename(s),
+		AG_TextMsg(AG_MSG_ERROR, "%s: %s", ShortFilename(path),
 		    AG_GetError());
 #if 0
 		AG_ObjectDetach(obj);		/* XXX */
