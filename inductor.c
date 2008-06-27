@@ -54,14 +54,14 @@ v(ES_Inductor *i)
 
 /* Updates the small- and large-signal models, saving the previous values. */
 static void
-UpdateModel(ES_Inductor *i, M_Real v, ES_SimDC *dc)
+UpdateModel(ES_Inductor *i, ES_SimDC *dc, M_Real v)
 {
 	switch(dc->method) {
 	case BE:
-		/* TODO : needs to be considered as a voltage source */
+		i->Ieq = i->IeqPrev + v*i->gPrev;
+		i->g = dc->deltaT/i->L;
 		break;
 	case FE:
-		/* TODO : needs to access previous voltage */
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -77,10 +77,10 @@ UpdateStamp(ES_Inductor *i, ES_SimDC *dc)
 	
 	switch(dc->method) {
 	case BE:
-		/* TODO : needs to be considered as a voltage source */
+		StampConductance(i->g-i->gPrev,k,l,dc->G);
+		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc->i);
 		break;
 	case FE:
-		StampCurrentSource(i->Ieq - i->IeqPrev,k,l,dc->i);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -96,7 +96,8 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 {
         ES_Inductor *i = obj;
 
-	UpdateModel(i, 0, dc);
+	i->g = 0.01;
+	i->Ieq = 0.0;
 	UpdateStamp(i, dc);
 
 	return (0);
@@ -107,7 +108,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Inductor *i = obj;
 	
-	UpdateModel(i, v(i), dc);
+	UpdateModel(i, dc, v(i));
 	UpdateStamp(i, dc);
 
 }
