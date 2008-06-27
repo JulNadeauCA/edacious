@@ -114,7 +114,7 @@ typedef struct es_circuit {
 /* Iterate over all selected, non-floating Components in the Circuit. */
 #define CIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt)		\
 	CIRCUIT_FOREACH_COMPONENT((com),ckt)			\
-		if (!(com)->flags & ES_COMPONENT_SELECTED) {	\
+		if (!((com)->flags & ES_COMPONENT_SELECTED)) {	\
 			continue;				\
 		} else
 
