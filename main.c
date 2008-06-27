@@ -55,6 +55,7 @@
 #include "led.h"
 #include "logic_probe.h"
 #include "nmos.h"
+#include "npn.h"
 #include "or.h"
 #include "pmos.h"
 #include "resistor.h"
@@ -99,6 +100,7 @@ void *esComponentClasses[] = {
 	&esPMOSClass,
 	&esCapacitorClass,
 	&esInductorClass,
+	&esNPNClass,
 	NULL
 };
 

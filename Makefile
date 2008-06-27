@@ -30,6 +30,7 @@ SRCS=	and.c \
 	logic_probe.c \
 	main.c \
 	nmos.c \
+	npn.c \
 	or.c \
 	pmos.c \
 	resistor.c \
