@@ -184,47 +184,59 @@ Edit(void *obj)
 	{
 		miSub = AG_MenuNode(mi, _("Snapping mode"), NULL);
 		{
+			AG_MenuToolbar(miSub, tbRight);
 			AG_MenuActionKb(miSub, _("No snapping"),
 			    vgIconSnapFree.s, SDLK_f, KMOD_CTRL,
 			    SetSnappingMode, "%p,%i", vv, VG_FREE_POSITIONING);
 			AG_MenuActionKb(miSub, _("Snap to grid"),
 			    vgIconSnapGrid.s, SDLK_g, KMOD_CTRL,
 			    SetSnappingMode, "%p,%i", vv, VG_GRID);
+			AG_MenuToolbar(miSub, NULL);
+			AG_ToolbarSeparator(tbRight);
 		}
 	}
 	mi = AG_MenuAddItem(menu, _("Tools"));
 	{
 		VG_ToolOps **pOps, *ops;
 		VG_Tool *tool;
-		
+	
+		AG_MenuToolbar(mi, tbRight);
 		for (pOps = &esSchemTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, scm);
-			AG_MenuTool(mi, tbRight, ops->name,
-			    ops->icon ? ops->icon->s : NULL, 0,0,
+			AG_MenuAction(mi, ops->name,
+			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, scm);
 		}
 		for (pOps = &esSchemVGTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, scm->vg);
-			AG_MenuTool(mi, tbRight, ops->name,
-			    ops->icon ? ops->icon->s : NULL, 0,0,
+			AG_MenuAction(mi, ops->name,
+			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, scm->vg);
 		}
+		AG_MenuToolbar(mi, NULL);
+		AG_ToolbarSeparator(tbRight);
 	}
 	mi = AG_MenuAddItem(menu, _("View"));
 	{
+		AG_MenuToolbar(miSub, tbRight);
+		
 		AG_MenuActionKb(mi, _("New view..."), esIconComponent.s,
 		    SDLK_v, KMOD_CTRL,
 		    CreateView, "%p,%p", win, scm);
+
 		AG_MenuSeparator(mi);
-		AG_MenuUintFlags(mi, _("Show grid"), vgIconSnapGrid.s,
+
+		AG_MenuFlags(mi, _("Show grid"),
+		    vgIconSnapGrid.s,
 		    &vv->flags, VG_VIEW_GRID, 0);
-		AG_MenuUintFlags(mi, _("Show construction geometry"),
+		AG_MenuFlags(mi, _("Show construction geometry"),
 		    esIconConstructionGeometry.s,
 		    &vv->flags, VG_VIEW_CONSTRUCTION, 0);
 #ifdef DEBUG
-		AG_MenuUintFlags(mi, _("Show extents"), vgIconBlock.s,
+		AG_MenuFlags(mi, _("Show extents"),
+		    vgIconBlock.s,
 		    &vv->flags, VG_VIEW_EXTENTS, 0);
 #endif
 	}

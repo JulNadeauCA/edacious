@@ -78,23 +78,31 @@ static void
 Draw(void *p, VG_View *vv)
 {
 	ES_SchemPort *sp = p;
+	ES_Circuit *ckt;
 	int x, y;
 	float r;
 
-	if (sp->port != NULL && (sp->port->flags & ES_PORT_SELECTED)) {
-		r = sp->r+1.0f;
-	} else {
-		r = sp->r;
+	if (sp->port == NULL || sp->port->com == NULL) {
+		return;
 	}
+	ckt = sp->port->com->ckt;
+	
 	VG_GetViewCoords(vv, VG_Pos(sp), &x, &y);
-	AG_DrawCircle(vv, x, y, (int)(r*vv->scale),
-	    VG_MapColorRGB(VGNODE(sp)->color));
 
-	if (sp->port != NULL && sp->port->node != -1 &&
-	    sp->port->com->ckt->flags & ES_CIRCUIT_SHOW_NODENAMES) {
+	if (ckt->flags & ES_CIRCUIT_SHOW_NODES) {
+		if (sp->port->flags & ES_PORT_SELECTED) {
+			r = sp->r+1.0f;
+		} else {
+			r = sp->r;
+		}
+		AG_DrawCircle(vv, x, y, (int)(r*vv->scale),
+		    VG_MapColorRGB(VGNODE(sp)->color));
+	}
+	if (sp->port->node != -1 &&
+	    ckt->flags & ES_CIRCUIT_SHOW_NODENAMES) {
 		char caption[16];
-		SDL_Surface *suTmp;
-		int su;
+		SDL_Surface *suTmp = NULL;
+		int su = -1;
 	
 		AG_PushTextState();
 		AG_TextColorVideo32(VG_MapColorRGB(VGNODE(sp)->color));

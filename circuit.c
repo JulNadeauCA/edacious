@@ -1447,20 +1447,28 @@ Edit(void *p)
 
 		mi2 = AG_MenuNode(mi, _("Schematic"), esIconCircuit.s);
 		{
-			AG_MenuUintFlags(mi2, _("Nodes"), esIconNode.s,
+			AG_MenuToolbar(mi2, tbTop);
+			AG_MenuFlags(mi2, _("Nodes"),
+			    esIconShowNodes.s,
 			    &ckt->flags, ES_CIRCUIT_SHOW_NODES, 0);
-			AG_MenuUintFlags(mi2, _("Node names"), esIconNode.s,
+			AG_MenuFlags(mi2, _("Node numbers"),
+			    esIconShowNodeNames.s,
 			    &ckt->flags, ES_CIRCUIT_SHOW_NODENAMES, 0);
-			AG_MenuUintFlags(mi2, _("Node symbols"), esIconNode.s,
+			AG_MenuFlags(mi2, _("Node symbols"),
+			    esIconShowNodeSyms.s,
 			    &ckt->flags, ES_CIRCUIT_SHOW_NODESYMS, 0);
+			AG_MenuToolbar(mi2, NULL);
+			AG_ToolbarSeparator(tbTop);
+
 			AG_MenuSeparator(mi2);
-			AG_MenuUintFlags(mi2, _("Grid"), vgIconSnapGrid.s,
+
+			AG_MenuFlags(mi2, _("Grid"), vgIconSnapGrid.s,
 			    &vv->flags, VG_VIEW_GRID, 0);
-			AG_MenuUintFlags(mi2, _("Construction geometry"),
+			AG_MenuFlags(mi2, _("Construction geometry"),
 			    esIconConstructionGeometry.s,
 			    &vv->flags, VG_VIEW_CONSTRUCTION, 0);
 #ifdef DEBUG
-			AG_MenuUintFlags(mi2, _("Extents"), vgIconBlock.s,
+			AG_MenuFlags(mi2, _("Extents"), vgIconBlock.s,
 			    &vv->flags, VG_VIEW_EXTENTS, 0);
 #endif
 		}
@@ -1471,12 +1479,15 @@ Edit(void *p)
 		extern const ES_SimOps *esSimOps[];
 		const ES_SimOps **pOps, *ops;
 
+		AG_MenuToolbar(mi, tbTop);
 		for (pOps = &esSimOps[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
-			AG_MenuTool(mi, tbTop, _(ops->name),
-			    ops->icon ? ops->icon->s : NULL, 0,0,
+			AG_MenuAction(mi, _(ops->name),
+			    ops->icon ? ops->icon->s : NULL,
 			    CircuitSelectSim, "%p,%p,%p", ckt, ops, win);
 		}
+		AG_MenuToolbar(mi, NULL);
+		AG_ToolbarSeparator(tbTop);
 	}
 	
 	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
@@ -1540,13 +1551,17 @@ Edit(void *p)
 		VG_ToolOps **pOps, *ops;
 		VG_Tool *tool;
 
+		AG_MenuToolbar(mi, tbRight);
 		for (pOps = &esCircuitTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, ckt);
-			AG_MenuTool(mi, tbRight, ops->name,
-			    ops->icon ? ops->icon->s : NULL, 0,0,
+			AG_MenuAction(mi, ops->name,
+			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 		}
+		AG_MenuToolbar(mi, NULL);
+		AG_ToolbarSeparator(tbRight);
+		
 		VG_ViewRegTool(vv, &esInsertTool, ckt);
 		VG_ViewButtondownFn(vv, ViewButtonDown, "%p", ckt);
 		VG_ViewKeydownFn(vv, ViewKeyDown, "%p", ckt);
@@ -1554,9 +1569,10 @@ Edit(void *p)
 	
 	mi = AG_MenuAddItem(menu, _("Visualization"));
 	{
-		AG_MenuTool(mi, tbTop, _("New scope..."), esIconScope.s,
-		    0, 0,
+		AG_MenuToolbar(mi, tbTop);
+		AG_MenuAction(mi, _("New scope..."), esIconScope.s,
 		    NewScope, "%p", ckt);
+		AG_MenuToolbar(mi, NULL);
 	}
 
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);

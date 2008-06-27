@@ -36,7 +36,6 @@ extern AG_StaticIcon esIconANDGate;
 extern AG_StaticIcon esIconVsource;
 extern AG_StaticIcon esIconVsquare;
 extern AG_StaticIcon esIconVsine;
-extern AG_StaticIcon esIconVarb;
 extern AG_StaticIcon esIconORGate;
 extern AG_StaticIcon esIconXORGate;
 extern AG_StaticIcon esIconGround;
@@ -44,5 +43,15 @@ extern AG_StaticIcon esIconNode;
 extern AG_StaticIcon esIconShowNodes;
 extern AG_StaticIcon esIconShowNodeNames;
 extern AG_StaticIcon esIconShowNodeSyms;
+extern AG_StaticIcon esIconISource;
+extern AG_StaticIcon esIconNMOS;
+extern AG_StaticIcon esIconPMOS;
+extern AG_StaticIcon esIconCapacitor;
+extern AG_StaticIcon esIconPolarizedCapacitor;
+extern AG_StaticIcon esIconVariableCapacitor;
+extern AG_StaticIcon esIconInductor;
+extern AG_StaticIcon esIconPNP;
+extern AG_StaticIcon esIconNPN;
+extern AG_StaticIcon esIconVarb;
 __END_DECLS
 #include "close_code.h"
