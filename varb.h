@@ -7,10 +7,11 @@
 
 #include "begin_code.h"
 
-#define EXP_MAX_SIZE 20
 typedef struct es_varb {
 	struct es_vsource vs;		/* Derived from independent vsource */
-	char exp[EXP_MAX_SIZE];		/* Expression to interpret */
+	Uint flags;
+#define ES_VARB_ERROR	0x01		/* Parser failed */
+	char exp[64];			/* Expression to interpret */
 } ES_VArb;
 
 #define ES_VARB(com) ((struct es_varb *)(com))

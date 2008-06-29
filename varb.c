@@ -44,26 +44,26 @@ const ES_Port esVArbPorts[] = {
 };
 
 static void 
-UpdateStamp(ES_VArb *vs,ES_SimDC *dc)
+UpdateStamp(ES_VArb *va, ES_SimDC *dc)
 {
-	Uint k = PNODE(vs,1);
-	Uint j = PNODE(vs,2);
+	Uint k = PNODE(va,1);
+	Uint j = PNODE(va,2);
 
-	StampVoltageSource(VSOURCE(vs)->voltage, k,j,
-	    ES_VsourceName(vs),
+	StampVoltageSource(VSOURCE(va)->v, k,j, VSOURCE(va)->vIdx,
 	    dc->B, dc->C, dc->e);
 }
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
-	ES_VArb *vs = obj;
+	ES_VArb *va = obj;
 	
 	/* Calculate initial voltage */
 	params[1].Value = 0.0;
-	Calculer(vs->exp, params, (sizeof(params)/sizeof(params[0])), &(VSOURCE(vs)->voltage));
+	Calculer(va->exp, params, (sizeof(params)/sizeof(params[0])),
+	    &(VSOURCE(va)->v));
 	
-	UpdateStamp(vs,dc);
+	UpdateStamp(va,dc);
 
 	return (0);
 }
@@ -71,63 +71,108 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
-	ES_VArb *vs = obj;
+	ES_VArb *va = obj;
 	int ret;
 	M_Real res;
 
 	params[1].Value = dc->Telapsed;
 	InterpreteurReset();
-	ret = Calculer(vs->exp, params, (sizeof(params)/sizeof(params[0])), &res);
-	if(ret != EVALUER_SUCCESS) {
+	ret = Calculer(va->exp, params, (sizeof(params)/sizeof(params[0])),
+	    &res);
+	if (ret != EVALUER_SUCCESS) {
 		printf("Error !");
 	}
-	VSOURCE(vs)->voltage = res; 
+	VSOURCE(va)->v = res; 
 
-	UpdateStamp(vs,dc);
+	UpdateStamp(va,dc);
 }
 
 static void
 Init(void *p)
 {
-	ES_VArb *vs = p;
+	ES_VArb *va = p;
 
-	ES_InitPorts(vs, esVArbPorts);
+	ES_InitPorts(va, esVArbPorts);
 
-	strcpy(vs->exp, "sin(2*pi*t)");
+	Strlcpy(va->exp, "sin(2*pi*t)", sizeof(va->exp));
+	va->flags = 0;
 	InterpreteurInit();
 	
-	COMPONENT(vs)->dcSimBegin = DC_SimBegin;
-	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
+	COMPONENT(va)->dcSimBegin = DC_SimBegin;
+	COMPONENT(va)->dcStepBegin = DC_StepBegin;
 }
 
 static int
 Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
-	ES_VArb *vs = p;
+	ES_VArb *va = p;
 
-	AG_CopyString(vs->exp, buf, EXP_MAX_SIZE);
+	AG_CopyString(va->exp, buf, sizeof(va->exp));
 	return (0);
 }
 
 static int
 Save(void *p, AG_DataSource *buf)
 {
-	ES_VArb *vs = p;
+	ES_VArb *va = p;
 
-	AG_WriteString(buf, vs->exp);
+	AG_WriteString(buf, va->exp);
 	return (0);
+}
+
+static void
+UpdatePlot(AG_Event *event)
+{
+	M_Plot *pl = AG_PTR(1);
+	ES_VArb *va = AG_PTR(2);
+	M_Real i, v = 0.0;
+	int ret;
+
+	M_PlotClear(pl);
+	pl->flags &= ~(ES_VARB_ERROR);
+	for (i = 0.0; i < 1.5; i += 0.01) {
+		params[1].Value = i;
+		InterpreteurReset();
+		ret = Calculer(va->exp, params,
+		    (sizeof(params)/sizeof(params[0])), &v);
+		if (ret != EVALUER_SUCCESS) {
+			va->flags |= ES_VARB_ERROR;
+			return;
+		}
+		M_PlotReal(pl, v);
+#ifdef THREADS
+		SDL_Delay(5);
+#endif
+	}
 }
 
 static void *
 Edit(void *p)
 {
-	ES_VArb *vs = p;
+	ES_VArb *va = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+	M_Plotter *ptr;
+	M_Plot *pl;
+	AG_Textbox *tb;
+	AG_Event *ev;
 
-	AG_LabelNewPolledMT(box, 0, &OBJECT(vs)->lock,
-	    _("Effective voltage: %f"), &VSOURCE(vs)->voltage);
-	AG_Textbox *tb = AG_TextboxNew(box, 0, "Expression : ");
-	AG_TextboxBindASCII(tb, vs->exp, sizeof(vs->exp));
+	AG_LabelNewPolledMT(box, 0, &OBJECT(va)->lock,
+	    _("Effective voltage: %fv"), &VSOURCE(va)->v);
+	
+	tb = AG_TextboxNew(box, 0, "v(t) = ");
+	AG_TextboxBindASCII(tb, va->exp, sizeof(va->exp));
+	AG_SeparatorNewHoriz(box);
+
+	ptr = M_PlotterNew(box, M_PLOTTER_EXPAND);
+	M_PlotterSizeHint(ptr, 100, 50);
+	pl = M_PlotNew(ptr, M_PLOT_LINEAR);
+	M_PlotSetLabel(pl, "v(t)");
+	M_PlotSetScale(pl, 0.0, 16.0);
+	ev = AG_SetEvent(tb, "textbox-return", UpdatePlot, "%p,%p", pl, va);
+#ifdef THREADS
+	ev->flags |= AG_EVENT_ASYNC;
+#endif
+	AG_PostEvent(NULL, tb, "textbox-return", NULL);
 
 	return (box);
 }
