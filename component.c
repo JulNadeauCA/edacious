@@ -258,6 +258,7 @@ Init(void *obj)
 {
 	ES_Component *com = obj;
 
+	com->flags = 0;
 	com->ckt = NULL;
 	com->Tspec = 27.0+273.15;
 	com->nports = 0;
@@ -437,7 +438,7 @@ ES_FindPort(void *p, const char *portname)
 }
 
 static void
-DeleteComponent(AG_Event *event)
+Delete(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
 	VG_View *vv = AG_PTR(2);
@@ -455,6 +456,32 @@ DeleteComponent(AG_Event *event)
 		VG_Status(vv, _("Cannot delete %s: Component is in use!"),
 		    OBJECT(com)->name);
 	}
+	ES_UnlockCircuit(ckt);
+}
+
+static void
+SuppressComponent(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	VG_View *vv = AG_PTR(2);
+	ES_Circuit *ckt = com->ckt;
+	
+	ES_LockCircuit(ckt);
+	VG_Status(vv, _("Suppressed component %s."), OBJECT(com)->name);
+	com->flags |= ES_COMPONENT_SUPPRESSED;
+	ES_UnlockCircuit(ckt);
+}
+
+static void
+UnsuppressComponent(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	VG_View *vv = AG_PTR(2);
+	ES_Circuit *ckt = com->ckt;
+	
+	ES_LockCircuit(ckt);
+	VG_Status(vv, _("Unsuppressed component %s."), OBJECT(com)->name);
+	com->flags &= ~(ES_COMPONENT_SUPPRESSED);
 	ES_UnlockCircuit(ckt);
 }
 
@@ -520,64 +547,8 @@ SelectTool(AG_Event *event)
 	}
 }
 
-/* Generate a popup menu for the given Component. */
-void
-ES_ComponentMenu(ES_Component *com, VG_View *vgv)
-{
-	AG_PopupMenu *pm;
-	Uint nsel = 0;
-	ES_Component *com2;
-	int common_class = 1;
-	ES_ComponentClass *comCls = NULL;
-
-	CIRCUIT_FOREACH_COMPONENT_SELECTED(com2, com->ckt) {
-		if (comCls != NULL && comCls != COMCLASS(com2)) {
-			common_class = 0;
-		}
-		comCls = COMCLASS(com2);
-		nsel++;
-	}
-
-	pm = AG_PopupNew(vgv);
-	{
-		extern VG_ToolOps esCircuitSelectTool;
-		extern VG_ToolOps esWireTool;
-
-		AG_MenuAction(pm->item, _("Select tool"), NULL,
-		    SelectTool, "%p,%p,%p", vgv, com->ckt,
-		    &esSchemSelectTool);
-		AG_MenuAction(pm->item, _("Wire tool"), NULL,
-		    SelectTool, "%p,%p,%p", vgv, com->ckt,
-		    &esWireTool);
-		AG_MenuSeparator(pm->item);
-	}
-	AG_MenuSection(pm->item, "[Component: %s]", OBJECT(com)->name);
-	AG_MenuAction(pm->item, _("    Delete"), agIconTrash.s,
-	    DeleteComponent, "%p,%p", com, vgv);
-	    
-	if (COMCLASS(com)->instance_menu != NULL) {
-		AG_MenuSeparator(pm->item);
-		COMCLASS(com)->instance_menu(com, pm->item);
-	}
-	if (nsel > 1) {
-		if (common_class && COMCLASS(com)->class_menu != NULL) {
-			AG_MenuSeparator(pm->item);
-			AG_MenuSection(pm->item, _("[Class: %s]"),
-			    comCls->name);
-			COMCLASS(com)->class_menu(com->ckt, pm->item);
-		}
-		AG_MenuSeparator(pm->item);
-		AG_MenuSection(pm->item, _("[All selections]"));
-		AG_MenuAction(pm->item, _("    Delete selected"),
-		    agIconTrash.s,
-		    DeleteSelections, "%p, %p", com->ckt, vgv);
-	}
-
-	AG_PopupShow(pm);
-}
-
 static void
-PollComponentPorts(AG_Event *event)
+PollPorts(AG_Event *event)
 {
 	char text[AG_TLIST_LABEL_MAX];
 	AG_Tlist *tl = AG_SELF();
@@ -608,7 +579,7 @@ out:
 }
 
 static void
-PollComponentPairs(AG_Event *event)
+PollPairs(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
@@ -652,37 +623,133 @@ out:
 	AG_TlistRestore(tl);
 }
 
+static void
+PortInfo(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	AG_Window *win;
+	AG_Tlist *tl;
+
+	if ((win = AG_WindowNewNamed(0, "%s-port-info", OBJECT(com)->name))
+	    == NULL) {
+		return;
+	}
+	tl = AG_TlistNew(win, AG_TLIST_POLL|AG_TLIST_EXPAND);
+	AG_SetEvent(tl, "tlist-poll", PollPorts, "%p", com->ckt);
+	AG_ButtonNewFn(win, AG_BUTTON_HFILL, _("Close"), AGWINCLOSE(win));
+	AG_WindowShow(win);
+}
+
+static void
+PairInfo(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	AG_Window *win;
+	AG_Tlist *tl;
+
+	if ((win = AG_WindowNewNamed(0, "%s-pair-info", OBJECT(com)->name))
+	    == NULL) {
+		return;
+	}
+	tl = AG_TlistNew(win, AG_TLIST_POLL|AG_TLIST_EXPAND);
+	AG_SetEvent(tl, "tlist-poll", PollPairs, "%p", com->ckt);
+	AG_ButtonNewFn(win, AG_BUTTON_HFILL, _("Close"), AGWINCLOSE(win));
+	AG_WindowShow(win);
+}
+
+/* Generate a popup menu for the given Component. */
+void
+ES_ComponentMenu(ES_Component *com, VG_View *vgv)
+{
+	AG_PopupMenu *pm;
+	AG_MenuItem *mi;
+	Uint nsel = 0;
+	ES_Component *com2;
+	int common_class = 1;
+	ES_ComponentClass *comCls = NULL;
+
+	printf("Creating menu for %s\n", OBJECT(com)->name);
+	if (com->ckt == NULL) {
+		AG_FatalError("Unattached component??");
+	}
+	CIRCUIT_FOREACH_COMPONENT_SELECTED(com2, com->ckt) {
+		if (comCls != NULL && comCls != COMCLASS(com2)) {
+			common_class = 0;
+		}
+		comCls = COMCLASS(com2);
+		nsel++;
+	}
+
+	pm = AG_PopupNew(vgv);
+	mi = pm->item;
+	{
+		extern VG_ToolOps esCircuitSelectTool;
+		extern VG_ToolOps esWireTool;
+
+		AG_MenuState(mi, (vgv->curtool != NULL) &&
+		                 (vgv->curtool->ops != &esSchemSelectTool));
+		AG_MenuAction(mi, _("Select tool"), esIconSelectArrow.s,
+		    SelectTool, "%p,%p,%p", vgv, com->ckt,
+		    &esSchemSelectTool);
+
+		AG_MenuState(mi, (vgv->curtool != NULL) &&
+		                 (vgv->curtool->ops != &esWireTool));
+		AG_MenuAction(mi, _("Wire tool"), esIconInsertWire.s,
+		    SelectTool, "%p,%p,%p", vgv, com->ckt,
+		    &esWireTool);
+
+		AG_MenuState(mi, 1);
+		AG_MenuSeparator(mi);
+	}
+
+	AG_MenuSection(mi, "[Component: %s]", OBJECT(com)->name);
+
+	AG_MenuAction(mi, _("Delete"), agIconTrash.s,
+	    Delete, "%p,%p", com, vgv);
+	AG_MenuAction(mi, _("Port information..."), esIconPortEditor.s,
+	    PortInfo, "%p,%p", com, vgv);
+
+	if (com->flags & ES_COMPONENT_SUPPRESSED) {
+		AG_MenuState(mi, 1);
+		AG_MenuAction(mi, _("Unsuppress"), esIconStartSim.s,
+		    UnsuppressComponent, "%p,%p", com, vgv);
+		AG_MenuState(mi, 0);
+	} else {
+		AG_MenuAction(mi, _("Suppress"), esIconStopSim.s,
+		    SuppressComponent, "%p,%p", com, vgv);
+	}
+
+	if (COMCLASS(com)->instance_menu != NULL) {
+		AG_MenuSeparator(mi);
+		COMCLASS(com)->instance_menu(com, mi);
+	}
+	if (nsel > 1) {
+		if (common_class && COMCLASS(com)->class_menu != NULL) {
+			AG_MenuSeparator(mi);
+			AG_MenuSection(mi, _("[Class: %s]"), comCls->name);
+			COMCLASS(com)->class_menu(com->ckt, mi);
+		}
+		AG_MenuSeparator(mi);
+		AG_MenuSection(mi, _("[All selections]"));
+		AG_MenuAction(mi, _("Delete selected"), agIconTrash.s,
+		    DeleteSelections, "%p, %p", com->ckt, vgv);
+	}
+
+	AG_PopupShow(pm);
+}
+
 static void *
 Edit(void *obj)
 {
 	ES_Component *com = obj;
-	AG_Notebook *nb;
-	AG_NotebookTab *ntab;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 	AG_Widget *w;
-	AG_Tlist *tl;
 
-	if (com->ckt == NULL)
-		return (NULL);
-
-	nb = AG_NotebookNew(NULL, AG_NOTEBOOK_EXPAND);
-	if (OBJECT_CLASS(com)->edit != NULL &&
-	    (w = OBJECT_CLASS(com)->edit(com)) != NULL) {
-		ntab = AG_NotebookAddTab(nb, _("Parameters"), AG_BOX_VERT);
-		AG_ObjectAttach(ntab, w);
+	if (com->ckt != NULL && OBJECT_CLASS(com)->edit != NULL) {
+		w = OBJECT_CLASS(com)->edit(com);
+		AG_ObjectAttach(box, w);
 	}
-	ntab = AG_NotebookAddTab(nb, _("Ports"), AG_BOX_VERT);
-	{
-		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_EXPAND);
-		AG_SetEvent(tl, "tlist-poll", PollComponentPorts, "%p",
-		    com->ckt);
-	}
-	ntab = AG_NotebookAddTab(nb, _("Pairs"), AG_BOX_VERT);
-	{
-		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_EXPAND);
-		AG_SetEvent(tl, "tlist-poll", PollComponentPairs, "%p",
-		    com->ckt);
-	}
-	return (nb);
+	return (box);
 }
 
 AG_ObjectClass esComponentClass = {

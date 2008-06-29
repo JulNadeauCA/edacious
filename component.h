@@ -89,16 +89,18 @@ typedef struct es_component {
 #define ES_COMPONENT_FLOATING	 0x01		/* Not yet connected */
 #define ES_COMPONENT_SELECTED	 0x02		/* Selected for edition */
 #define ES_COMPONENT_HIGHLIGHTED 0x04		/* Highlighted for selection */
-#define ES_COMPONENT_SAVED_FLAGS 0
+#define ES_COMPONENT_SUPPRESSED	 0x08		/* Become zero voltage source */
+#define ES_COMPONENT_SAVED_FLAGS (ES_COMPONENT_SUPPRESSED)
 
 	M_Real Tspec;				/* Instance temp (k) */
-	ES_Port ports[COMPONENT_MAX_PORTS];	/* Interface elements */
+	ES_Port ports[COMPONENT_MAX_PORTS];	/* Ports (indices 1..nports) */
 	Uint   nports;
 	ES_Pair *pairs;				/* Port pairs */
 	Uint    npairs;
 	ES_Spec	*specs;				/* Model specifications */
 	Uint	nspecs;
 
+	int (*dcSimPrep)(void *, struct es_sim_dc *);
 	int (*dcSimBegin)(void *, struct es_sim_dc *);
 	void (*dcStepBegin)(void *, struct es_sim_dc *);
 	void (*dcStepIter)(void *, struct es_sim_dc *);
