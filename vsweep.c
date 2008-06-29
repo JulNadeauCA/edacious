@@ -43,8 +43,7 @@ UpdateStamp(ES_VSweep *vsw, ES_SimDC *dc)
 	Uint k = PNODE(vsw,1);
 	Uint j = PNODE(vsw,2);
 
-	StampVoltageSource(VSOURCE(vsw)->voltage, k,j,
-	    ES_VsourceName(vsw),
+	StampVoltageSource(VSOURCE(vsw)->v, k,j, VSOURCE(vsw)->vIdx,
 	    dc->B, dc->C, dc->e);
 }
 
@@ -53,7 +52,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSweep *vsw = obj;
 
-	VSOURCE(vsw)->voltage = vsw->v1;
+	VSOURCE(vsw)->v = vsw->v1;
 	
 	UpdateStamp(vsw,dc);
 
@@ -68,11 +67,11 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 
 	curCycle = dc->Telapsed / vsw->t;
 	if (vsw->count != 0 && curCycle >= vsw->count)
-		VSOURCE(vsw)->voltage = 0.0;
+		VSOURCE(vsw)->v = 0.0;
 	else {
 		/* fraction representing the progress in the current cycle */
 		M_Real relProgress = dc->Telapsed / vsw->t - curCycle;
-		VSOURCE(vsw)->voltage = vsw->v1 + (vsw->v2 - vsw->v1) * relProgress;
+		VSOURCE(vsw)->v = vsw->v1 + (vsw->v2 - vsw->v1) * relProgress;
 	}
 
 	UpdateStamp(vsw,dc);

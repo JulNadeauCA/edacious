@@ -43,7 +43,7 @@ UpdateStamp(ES_VSquare *vsq, ES_SimDC *dc)
 	Uint k = PNODE(vsq,1);
 	Uint j = PNODE(vsq,2);
 
-	StampVoltageSource(VSOURCE(vsq)->voltage, k,j, ES_VsourceName(vsq),
+	StampVoltageSource(VSOURCE(vsq)->v, k,j, VSOURCE(vsq)->vIdx,
 	    dc->B, dc->C, dc->e);
 }
 
@@ -52,7 +52,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSquare *vsq = obj;
 
-	VSOURCE(vsq)->voltage = 0.0;
+	VSOURCE(vsq)->v = 0.0;
 
 	UpdateStamp(vsq,dc);
 
@@ -66,10 +66,10 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	ES_VSquare *vsq = obj;
 
 #define my_modulus(x, y) (x - M_Floor(x/y) * y)
-	if(my_modulus(dc->Telapsed, (vsq->tL + vsq->tH)) < vsq->tL)
-		vs->voltage = vsq->vL;
+	if (my_modulus(dc->Telapsed, (vsq->tL + vsq->tH)) < vsq->tL)
+		vs->v = vsq->vL;
 	else
-		vs->voltage = vsq->vH;
+		vs->v = vsq->vH;
 #undef my_modulus
 	
 	UpdateStamp(vsq,dc);

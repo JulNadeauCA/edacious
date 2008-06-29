@@ -8,15 +8,20 @@
 #include "begin_code.h"
 
 typedef struct es_vsource {
-	struct es_component com;
-	M_Real voltage;			/* current voltage */
+	struct es_component _inherit;
+	int vIdx;			/* Index into e */
+	
+	M_Real v;			/* Effective voltage */
+
 	TAILQ_HEAD(,es_loop) loops;	/* Forward loops */
 	Uint nloops;
-	ES_Port	**lstack;		/* Temporary loop stack */
+	ES_Port	**lstack;		/* For loop computation */
 	Uint nlstack;
 } ES_Vsource;
 
+#ifdef _ES_INTERNAL
 #define VSOURCE(com) ((struct es_vsource *)(com))
+#endif
 
 __BEGIN_DECLS
 extern ES_ComponentClass esVsourceClass;
@@ -24,7 +29,6 @@ extern ES_ComponentClass esVsourceClass;
 void	 ES_VsourceFindLoops(ES_Vsource *);
 void	 ES_VsourceFreeLoops(ES_Vsource *);
 double	 ES_VsourceVoltage(void *, int, int);
-int	 ES_VsourceName(void *);
 __END_DECLS
 
 #include "close_code.h"

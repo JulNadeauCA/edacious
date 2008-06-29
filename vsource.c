@@ -96,21 +96,21 @@ InsertVoltageLoop(ES_Vsource *vs)
 	lnew->origin = vs;
 
 	for (i = 1; i < vs->nlstack; i++) {
-		ES_Pair *dip = NULL;
+		ES_Pair *pair = NULL;
 		int pol = 0;
 
-		if (!FindContigPair(vs->lstack[i], vs->lstack[i-1], &dip, &pol))
+		if (!FindContigPair(vs->lstack[i], vs->lstack[i-1], &pair,&pol))
 			continue;
 
-		lnew->pairs[lnew->npairs++] = dip;
+		lnew->pairs[lnew->npairs++] = pair;
 
-		dip->loops = Realloc(dip->loops,
-		    (dip->nloops+1)*sizeof(ES_Loop *));
-		dip->lpols = Realloc(dip->lpols,
-		    (dip->nloops+1)*sizeof(int));
-		dip->loops[dip->nloops] = lnew;
-		dip->lpols[dip->nloops] = pol;
-		dip->nloops++;
+		pair->loops = Realloc(pair->loops,
+		    (pair->nloops+1)*sizeof(ES_Loop *));
+		pair->lpols = Realloc(pair->lpols,
+		    (pair->nloops+1)*sizeof(int));
+		pair->loops[pair->nloops] = lnew;
+		pair->lpols[pair->nloops] = pol;
+		pair->nloops++;
 	}
 	TAILQ_INSERT_TAIL(&vs->loops, lnew, loops);
 }
@@ -168,7 +168,10 @@ FindLoops(ES_Vsource *vs, ES_Port *portCur)
 	nodeCur->flags &= ~(CKTNODE_EXAM);
 }
 
-/* Isolate the loops relative to the given voltage source. */
+/*
+ * Compute all possible loops relative to the given voltage source. This
+ * function only works with subclasses of Vsource.
+ */
 void
 ES_VsourceFindLoops(ES_Vsource *vs)
 {
@@ -188,21 +191,9 @@ UpdateStamp(ES_Vsource *vs, ES_SimDC *dc)
 	Uint k = PNODE(vs,1);
 	Uint j = PNODE(vs,2);
 
-	StampVoltageSource(vs->voltage,k,j,ES_VsourceName(vs),dc->B,dc->C,dc->e);
+	StampVoltageSource(vs->v,k,j,vs->vIdx,dc->B,dc->C,dc->e);
 }
-
-/*
- * Ideal voltage sources require the addition of one unknown (iE), and a
- * branch current equation (br). Voltage sources contribute two entries to
- * the B/C matrices and one entry to the RHS vector.
- *
- *    |  Vk  Vj  iE  | RHS
- *    |--------------|-----
- *  k |           1  |
- *  j |          -1  |
- * br | 1   -1       | Ekj
- *    |--------------|-----
- */
+	
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
@@ -220,17 +211,14 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 
 	UpdateStamp(vs, dc);
 }
-
+ 
 static void
 Connected(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_SENDER();
 	ES_Vsource *vs = AG_SELF();
 
-	ckt->vsrcs = Realloc(ckt->vsrcs, (ckt->m+1)*sizeof(ES_Vsource *));
-	ckt->vsrcs[ckt->m] = vs;
-	Debug(ckt, "Added voltage source #%d\n", ckt->m);
-	ckt->m++;
+	vs->vIdx = ES_AddVoltageSource(ckt, vs);
 }
 
 static void
@@ -238,18 +226,8 @@ Disconnected(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_SENDER();
 	ES_Vsource *vs = AG_SELF();
-	Uint i, j;
-	
-	for (i = 0; i < ckt->m; i++) {
-		if (ckt->vsrcs[i] == vs) {
-			if (i < --ckt->m) {
-				for (; i < ckt->m; i++)
-					ckt->vsrcs[i] = ckt->vsrcs[i+1];
-			}
-			Debug(ckt, "Removed voltage source #%d\n", i);
-			break;
-		}
-	}
+
+	ES_DelVoltageSource(ckt, vs->vIdx);
 }
 
 static void
@@ -258,14 +236,17 @@ Init(void *p)
 	ES_Vsource *vs = p;
 
 	ES_InitPorts(vs, esVsourcePorts);
-	vs->voltage = 5;
+	vs->vIdx = -1;
+	vs->v = 5;
+	
+	TAILQ_INIT(&vs->loops);
+	vs->nloops = 0;
 	vs->lstack = NULL;
 	vs->nlstack = 0;
-	vs->nloops = 0;
-	TAILQ_INIT(&vs->loops);
 
 	COMPONENT(vs)->dcSimBegin = DC_SimBegin;
 	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
+
 	AG_SetEvent(vs, "circuit-connected", Connected, NULL);
 	AG_SetEvent(vs, "circuit-disconnected", Disconnected, NULL);
 }
@@ -274,6 +255,7 @@ static void
 FreeDataset(void *p)
 {
 	ES_Vsource *vs = p;
+
 	ES_VsourceFreeLoops(vs);
 }
 
@@ -303,7 +285,7 @@ Load(void *p, AG_DataSource *buf, const AG_Version *ver)
 {
 	ES_Vsource *vs = p;
 
-	vs->voltage = M_ReadReal(buf);
+	vs->v = M_ReadReal(buf);
 	return (0);
 }
 
@@ -312,7 +294,7 @@ Save(void *p, AG_DataSource *buf)
 {
 	ES_Vsource *vs = p;
 
-	M_WriteReal(buf, vs->voltage);
+	M_WriteReal(buf, vs->v);
 	return (0);
 }
 
@@ -328,7 +310,7 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 	switch (fmt) {
 	case CIRCUIT_SPICE3:
 		fprintf(f, "%s %d %d %g\n", OBJECT(vs)->name,
-		    PNODE(vs,1), PNODE(vs,2), vs->voltage);
+		    PNODE(vs,1), PNODE(vs,2), vs->v);
 		break;
 	}
 	return (0);
@@ -339,21 +321,7 @@ ES_VsourceVoltage(void *p, int p1, int p2)
 {
 	ES_Vsource *vs = p;
 
-	return (p1 == 1 ? vs->voltage : -(vs->voltage));
-}
-
-int
-ES_VsourceName(void *obj)
-{
-	ES_Vsource *vs = obj;
-	ES_Circuit *ckt = COMPONENT(vs)->ckt;
-	int i;
-
-	for (i = 0; i < ckt->m; i++) {
-		if (VSOURCE(ckt->vsrcs[i]) == vs)
-			return (i);
-	}
-	return (-1);
+	return (p1 == 1 ? vs->v : -(vs->v));
 }
 
 static void
@@ -365,13 +333,11 @@ PollLoops(AG_Event *event)
 	AG_TlistItem *it;
 	ES_Loop *l;
 	Uint i, j;
-	int k;
 
 	AG_TlistClear(tl);
 
-	k = ES_VsourceName(vs);
-	it = AG_TlistAdd(tl, NULL, "I(%d)=%.04fA", k,
-	    ES_BranchCurrent(COMPONENT(vs)->ckt, k));
+	it = AG_TlistAdd(tl, NULL, "I(%d)=%.04fA", vs->vIdx,
+	    ES_BranchCurrent(COMCIRCUIT(vs), vs->vIdx));
 	it->depth = 0;
 
 	TAILQ_FOREACH(l, &vs->loops, loops) {
@@ -380,13 +346,12 @@ PollLoops(AG_Event *event)
 		it->depth = 0;
 
 		for (i = 0; i < l->npairs; i++) {
-			ES_Pair *dip = l->pairs[i];
+			ES_Pair *pair = l->pairs[i];
 
 			Snprintf(text, sizeof(text), "%s:(%s,%s)",
-			    OBJECT(dip->com)->name, dip->p1->name,
-			    dip->p2->name);
-			it = AG_TlistAddPtr(tl, NULL, text,
-			    dip);
+			    OBJECT(pair->com)->name, pair->p1->name,
+			    pair->p2->name);
+			it = AG_TlistAddPtr(tl, NULL, text, pair);
 			it->depth = 1;
 		}
 	}
@@ -399,10 +364,15 @@ Edit(void *p)
 	ES_Vsource *vs = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	M_NumericalNewReal(box, 0, "V", _("Voltage: "), &vs->voltage);
+	M_NumericalNewReal(box, 0, "V", _("Voltage: "), &vs->v);
+	
+	AG_SeparatorNewHoriz(box);
+
+	AG_LabelNewPolled(box, 0, _("Entry in e: %i"), &vs->vIdx);
 	AG_LabelNew(box, 0, _("Loops:"));
 	AG_TlistNewPolled(box, AG_TLIST_TREE|AG_TLIST_EXPAND,
 	    PollLoops, "%p", vs);
+	
 	return (box);
 }
 

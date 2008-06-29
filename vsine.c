@@ -44,8 +44,7 @@ UpdateStamp(ES_VSine *vs, ES_SimDC *dc)
 	Uint k = PNODE(vs,1);
 	Uint j = PNODE(vs,2);
 
-	StampVoltageSource(VSOURCE(vs)->voltage, k,j,
-	    ES_VsourceName(vs),
+	StampVoltageSource(VSOURCE(vs)->v, k,j, VSOURCE(vs)->vIdx,
 	    dc->B, dc->C, dc->e);
 }
 
@@ -54,7 +53,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSine *vs = obj;
 
-	VSOURCE(vs)->voltage = 0.0;
+	VSOURCE(vs)->v = 0.0;
 	UpdateStamp(vs,dc);
 
 	return (0);
@@ -65,7 +64,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSine *vs = obj;
 
-	VSOURCE(vs)->voltage = vs->vPeak*Sin(vs->f * dc->Telapsed);
+	VSOURCE(vs)->v = vs->vPeak*Sin(vs->f * dc->Telapsed);
 	
 	UpdateStamp(vs,dc);
 }
@@ -112,7 +111,7 @@ Edit(void *p)
 	M_NumericalNewReal(box, 0, "V", _("Peak voltage: "), &vs->vPeak);
 	M_NumericalNewRealPNZ(box, 0, "Hz", _("Frequency: "), &vs->f);
 	AG_LabelNewPolledMT(box, 0, &OBJECT(vs)->lock,
-	    _("Effective voltage: %f"), &VSOURCE(vs)->voltage);
+	    _("Effective voltage: %f"), &VSOURCE(vs)->v);
 	return (box);
 }
 
