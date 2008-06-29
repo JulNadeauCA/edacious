@@ -4,8 +4,8 @@ struct es_component;
 
 typedef struct es_schem_block {
 	struct vg_node _inherit;
-	char name[AG_OBJECT_NAME_MAX];		/* Component name */
-	struct es_component *com;		/* Back pointer to component */
+	char name[AG_OBJECT_NAME_MAX];		/* Name of component (R) */
+	struct es_component *com;		/* Pointer to component */
 } ES_SchemBlock;
 
 #ifdef _ES_INTERNAL

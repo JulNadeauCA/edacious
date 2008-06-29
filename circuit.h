@@ -81,7 +81,7 @@ typedef struct es_circuit {
 
 	ES_Node **nodes;		/* Nodes (element 0 is ground) */
 	ES_Loop **loops;		/* Closed loops */
-	struct es_vsource **vsrcs;	/* Independent vsources */
+	struct es_component **vSrcs;	/* Independent voltage sources */
 	TAILQ_HEAD(,es_sym) syms;	/* Symbols */
 
 	Uint l;				/* Loops */
@@ -132,6 +132,9 @@ ES_Circuit *ES_CircuitNew(void *, const char *);
 void	    ES_CircuitLog(void *, const char *, ...);
 
 int         ES_AddNode(ES_Circuit *);
+int         ES_AddVoltageSource(ES_Circuit *, void *);
+void        ES_DelVoltageSource(ES_Circuit *, int);
+void        ES_ClearVoltageSources(ES_Circuit *);
 void        ES_DelNode(ES_Circuit *, int);
 int         ES_MergeNodes(ES_Circuit *, int, int);
 ES_Branch  *ES_AddBranch(ES_Circuit *, int, ES_Port *);
@@ -142,7 +145,7 @@ void        ES_CopyNodeSymbol(ES_Circuit *, int, char *, size_t);
 ES_Node	   *ES_GetNodeBySymbol(ES_Circuit *, const char *);
 ES_Branch  *ES_LookupBranch(ES_Circuit *, int, ES_Port *);
 
-int         ES_NodeVsource(ES_Circuit *, int, int, int *);
+int         ES_NodeIsConnectedToVsrc(ES_Circuit *, int, int, int *);
 M_Real      ES_NodeVoltage(ES_Circuit *, int);
 M_Real      ES_BranchCurrent(ES_Circuit *, int);
 

@@ -5,8 +5,8 @@ typedef struct es_schem_wire {
 	struct vg_node _inherit;
 	VG_Node *p1, *p2;		/* Endpoints */
 	Uint thickness;			/* Thickness in pixels */
-	char name[AG_OBJECT_NAME_MAX];	/* Component name */
-	void *wire;			/* Back pointer to Wire component */
+	void *wire;			/* Pointer to Wire component */
+	char name[AG_OBJECT_NAME_MAX];	/* Wire component name (R) */
 } ES_SchemWire;
 
 #ifdef _ES_INTERNAL

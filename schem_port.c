@@ -51,7 +51,9 @@ Init(void *p)
 	sp->name[0] = '\0';
 	sp->r = 3.0f;
 	sp->com = NULL;
+	sp->comName[0] = '\0';
 	sp->port = NULL;
+	sp->portName = -1;
 	VG_SetColorRGB(sp, 0, 150, 0);
 }
 
@@ -62,6 +64,10 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 
 	sp->flags = (Uint)AG_ReadUint8(ds);
 	AG_CopyString(sp->name, ds, sizeof(sp->name));
+	if (ver->minor >= 1) {
+		AG_CopyString(sp->comName, ds, sizeof(sp->comName));
+		sp->portName = (int)AG_ReadUint32(ds);
+	}
 	return (0);
 }
 
@@ -72,6 +78,8 @@ Save(void *p, AG_DataSource *ds)
 
 	AG_WriteUint8(ds, (Uint8)sp->flags);
 	AG_WriteString(ds, sp->name);
+	AG_WriteString(ds, (sp->com != NULL) ? OBJECT(sp->com)->name : "");
+	AG_WriteUint32(ds, (sp->port != NULL) ? (Uint32)sp->port->n : 0);
 }
 
 static void
@@ -82,15 +90,10 @@ Draw(void *p, VG_View *vv)
 	int x, y;
 	float r;
 
-	if (sp->port == NULL || sp->port->com == NULL) {
-		return;
-	}
-	ckt = sp->port->com->ckt;
-	
 	VG_GetViewCoords(vv, VG_Pos(sp), &x, &y);
-
-	if (ckt->flags & ES_CIRCUIT_SHOW_NODES) {
-		if (sp->port->flags & ES_PORT_SELECTED) {
+	if (sp->port == NULL || sp->port->com == NULL ||
+	    sp->port->com->ckt->flags & ES_CIRCUIT_SHOW_NODES) {
+		if (sp->port != NULL && sp->port->flags & ES_PORT_SELECTED) {
 			r = sp->r+1.0f;
 		} else {
 			r = sp->r;
@@ -98,8 +101,8 @@ Draw(void *p, VG_View *vv)
 		AG_DrawCircle(vv, x, y, (int)(r*vv->scale),
 		    VG_MapColorRGB(VGNODE(sp)->color));
 	}
-	if (sp->port->node != -1 &&
-	    ckt->flags & ES_CIRCUIT_SHOW_NODENAMES) {
+	if (sp->port != NULL && sp->port->node != -1 &&
+	    sp->port->com->ckt->flags & ES_CIRCUIT_SHOW_NODENAMES) {
 		char caption[16];
 		SDL_Surface *suTmp = NULL;
 		int su = -1;

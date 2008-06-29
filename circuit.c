@@ -97,7 +97,12 @@ ReadBranchCurrent(void *p, AG_Prop *pr)
 	return (ES_BranchCurrent(p, atoi(&pr->key[1])));
 }
 
-/* Effect a change in the circuit topology.  */
+/*
+ * Effect a change in the circuit topology. We recalculate loops and invoke
+ * the cktmod() operation of the current simulation object if any. The
+ * circuit property table is also updated and components are notified via
+ * the generic 'circuit-modified' event.
+ */
 void
 ES_CircuitModified(ES_Circuit *ckt)
 {
@@ -202,7 +207,7 @@ Init(void *p)
 	ckt->sim = NULL;
 	ckt->loops = NULL;
 	ckt->l = 0;
-	ckt->vsrcs = NULL;
+	ckt->vSrcs = NULL;
 	ckt->m = 0;
 	ckt->nodes = Malloc(sizeof(ES_Node *));
 	ckt->n = 1;
@@ -252,8 +257,8 @@ FreeDataset(void *p)
 	ckt->loops = NULL;
 	ckt->l = 0;
 
-	Free(ckt->vsrcs);
-	ckt->vsrcs = NULL;
+	Free(ckt->vSrcs);
+	ckt->vSrcs = NULL;
 	ckt->m = 0;
 
 	for (sym = TAILQ_FIRST(&ckt->syms);
@@ -289,6 +294,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	Uint i, j, count;
 	ES_SchemBlock *sb;
 	ES_SchemWire *sw;
+	ES_SchemPort *sp;
 
 	/* Circuit information */
 	AG_CopyString(ckt->descr, ds, sizeof(ckt->descr));
@@ -374,7 +380,10 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		}
 	}
 
-	/* Circuit schematics */
+	/*
+	 * Load the circuit schematics and re-attach the schematic entities
+	 * with the actual circuit structures.
+	 */
 	Debug(ckt, "Loading schematic\n");
 	if (VG_Load(ckt->vg, ds) == -1) {
 		return (-1);
@@ -390,12 +399,31 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	}
 	VG_FOREACH_NODE_CLASS(sw, ckt->vg, es_schem_wire, "SchemWire") {
 		if ((com = AG_ObjectFindChild(ckt, sw->name)) != NULL) {
-			sw->wire = sw;
+			sw->wire = com;
 		} else {
 			AG_SetError("SchemWire refers to unexisting "
 			            "wire: \"%s\"", sw->name);
 			return (-1);
 		}
+	}
+	VG_FOREACH_NODE_CLASS(sp, ckt->vg, es_schem_port, "SchemPort") {
+		if (sp->comName[0] == '\0' || sp->portName == -1) {
+			continue;
+		}
+		if ((com = AG_ObjectFindChild(ckt, sp->comName)) != NULL) {
+			sp->com = com;
+		} else {
+			AG_SetError("SchemPort refers to unexisting "
+			            "component: \"%s\"", sp->name);
+			return (-1);
+		}
+		if (sp->portName < 1 || sp->portName > sp->com->nports) {
+			AG_SetError("SchemPort refers to invalid "
+			            "port of %s: %d", sp->comName,
+				    sp->portName);
+			return (-1);
+		}
+		sp->port = &sp->com->ports[sp->portName];
 	}
 
 	/* Symbol table */
@@ -616,7 +644,126 @@ ES_AddNode(ES_Circuit *ckt)
 	ckt->nodes = Realloc(ckt->nodes, (ckt->n+1)*sizeof(ES_Node *));
 	ckt->nodes[ckt->n] = Malloc(sizeof(ES_Node));
 	InitNode(ckt->nodes[ckt->n]);
+	Debug(ckt, "Added node n%d\n", ckt->n);
 	return (ckt->n++);
+}
+
+/*
+ * Remove a node and all references to it. If necessary, shift the entire
+ * node array and update all port references accordingly.
+ */
+void
+ES_DelNode(ES_Circuit *ckt, int n)
+{
+	ES_Branch *br;
+	int i;
+
+	Debug(ckt, _("Deleting node n%d\n"), n);
+#ifdef DEBUG
+	if (n == 0 || n >= ckt->n)
+		Fatal("Cannot delete n%d (max %u)", n, ckt->n);
+#endif
+	if (n != ckt->n-1) {
+		/* Update the Branch port pointers. */
+		for (i = n; i < ckt->n; i++) {
+			NODE_FOREACH_BRANCH(br, ckt->nodes[i]) {
+				if (br->port != NULL && br->port->com != NULL) {
+					ES_ComponentLog(br->port->com,
+					    _("Updating branch: %s: "
+					      "n%d -> n%d"),
+					    br->port->name,
+					    br->port->node, i-1);
+					br->port->node = i-1;
+				}
+			}
+		}
+		FreeNode(ckt->nodes[n]);
+		memmove(&ckt->nodes[n], &ckt->nodes[n+1],
+		    (ckt->n - n) * sizeof(ES_Node *));
+	} else {
+		FreeNode(ckt->nodes[n]);
+	}
+	ckt->n--;
+}
+
+/*
+ * Merge the branches of two nodes, creating a new node from them. The
+ * new node will always use whichever of the two node names is the lowest
+ * numbered. The reference node (0) is never deleted.
+ */
+int
+ES_MergeNodes(ES_Circuit *ckt, int N1, int N2)
+{
+	ES_Branch *br;
+	int Nnew, Nold;
+
+	if (N1 < N2) {
+		Nnew = N1;
+		Nold = N2;
+	} else {
+		Nnew = N2;
+		Nold = N1;
+	}
+	Debug(ckt, _("Merging nodes: n%d,n%d -> n%d\n"), N1, N2, Nnew);
+rescan:
+	NODE_FOREACH_BRANCH(br, ckt->nodes[Nold]) {
+		ES_Port *brPort = br->port;
+		brPort->node = Nnew;
+		ES_AddBranch(ckt, Nnew, brPort);
+		ES_DelBranch(ckt, Nold, br);
+		goto rescan;
+	}
+	ES_DelNode(ckt, Nold);
+	return (Nnew);
+}
+
+/*
+ * Create a new voltage source and return the new index. Any component
+ * can register as a voltage source.
+ */
+int
+ES_AddVoltageSource(ES_Circuit *ckt, void *obj)
+{
+#ifdef DEBUG
+	if (!AG_ObjectIsClass(obj, "ES_Component:*"))
+		AG_FatalError("Not a component");
+#endif
+	ckt->vSrcs = Realloc(ckt->vSrcs, (ckt->m+1)*sizeof(ES_Component *));
+	ckt->vSrcs[ckt->m] = obj;
+	Debug(ckt, "Added voltage source v%d\n", ckt->m);
+	return (ckt->m++);
+}
+
+/*
+ * Remove a voltage source and all references to it. If necessary, shift the
+ * entire vSrcs array and update all loop references accordingly.
+ */
+void
+ES_DelVoltageSource(ES_Circuit *ckt, int vName)
+{
+	int v = vName;
+
+	if (v == -1)
+		return;
+#ifdef DEBUG
+	if (v <= ckt->m)
+		AG_FatalError("No such voltage source: v%d", vName);
+#endif
+	if (v < --ckt->m) {
+		for (; v < ckt->m; v++)
+			ckt->vSrcs[v] = ckt->vSrcs[v+1];
+	}
+	Debug(ckt, "Removed voltage source v%d\n", v);
+}
+
+/* Clear the voltage sources array. */
+void
+ES_ClearVoltageSources(ES_Circuit *ckt)
+{
+	Debug(ckt, "Clearing %u voltage sources\n", ckt->m);
+	Free(ckt->vSrcs);
+	ckt->vSrcs = NULL;
+	ckt->m = 0;
 }
 
 /* Create a new symbol referencing a node. */
@@ -704,20 +851,18 @@ ES_LookupSymbol(ES_Circuit *ckt, const char *name)
  * is the case, return the polarity.
  */
 int
-ES_NodeVsource(ES_Circuit *ckt, int n, int m, int *sign)
+ES_NodeIsConnectedToVsrc(ES_Circuit *ckt, int n, int m, int *sign)
 {
 	ES_Node *node = ckt->nodes[n];
 	ES_Branch *br;
-	ES_Vsource *vs;
+	ES_Component *vSrc;
 
 	NODE_FOREACH_BRANCH(br, node) {
 		if (br->port == NULL ||
-		   (vs = VSOURCE(br->port->com)) == NULL) {
+		   (vSrc = COMPONENT(br->port->com)) == NULL) {
 			continue;
 		}
-		if (COMPONENT_IS_FLOATING(vs) ||
-		   !AG_ObjectIsClass(vs, "ES_Component:ES_Vsource:*") ||
-		   vs != ckt->vsrcs[m-1]) {
+		if (COMPONENT_IS_FLOATING(vSrc) || vSrc != ckt->vSrcs[m-1]) {
 			continue;
 		}
 		if (br->port->n == 1) {
@@ -805,75 +950,6 @@ ES_GetNodeBySymbol(ES_Circuit *ckt, const char *name)
 	}
 	AG_SetError(_("No such node: `%s'"), name);
 	return (NULL);
-}
-
-/*
- * Remove a node and all references to it. If necessary, shift the entire
- * node array and update all port references accordingly.
- */
-void
-ES_DelNode(ES_Circuit *ckt, int n)
-{
-	ES_Branch *br;
-	int i;
-
-	ES_CircuitLog(ckt, _("Deleting n%d"), n);
-#ifdef DEBUG
-	if (n == 0 || n >= ckt->n)
-		Fatal("Cannot delete n%d (max %u)", n, ckt->n);
-#endif
-	if (n != ckt->n-1) {
-		/* Update the Branch port pointers. */
-		for (i = n; i < ckt->n; i++) {
-			NODE_FOREACH_BRANCH(br, ckt->nodes[i]) {
-				if (br->port != NULL && br->port->com != NULL) {
-					ES_ComponentLog(br->port->com,
-					    _("Updating branch: %s: "
-					      "n%d -> n%d"),
-					    br->port->name,
-					    br->port->node, i-1);
-					br->port->node = i-1;
-				}
-			}
-		}
-		FreeNode(ckt->nodes[n]);
-		memmove(&ckt->nodes[n], &ckt->nodes[n+1],
-		    (ckt->n - n) * sizeof(ES_Node *));
-	} else {
-		FreeNode(ckt->nodes[n]);
-	}
-	ckt->n--;
-}
-
-/*
- * Merge the branches of two nodes, creating a new node from them. The
- * new node will always use whichever of the two node names is the lowest
- * numbered. The reference node (0) is never deleted.
- */
-int
-ES_MergeNodes(ES_Circuit *ckt, int N1, int N2)
-{
-	ES_Branch *br;
-	int Nnew, Nold;
-
-	if (N1 < N2) {
-		Nnew = N1;
-		Nold = N2;
-	} else {
-		Nnew = N2;
-		Nold = N1;
-	}
-	ES_CircuitLog(ckt, _("Merging: n%d,n%d -> n%d"), N1, N2, Nnew);
-rescan:
-	NODE_FOREACH_BRANCH(br, ckt->nodes[Nold]) {
-		ES_Port *brPort = br->port;
-		brPort->node = Nnew;
-		ES_AddBranch(ckt, Nnew, brPort);
-		ES_DelBranch(ckt, Nold, br);
-		goto rescan;
-	}
-	ES_DelNode(ckt, Nold);
-	return (Nnew);
 }
 
 /* Create a new branch, connecting a Circuit Node to a Component Port. */
@@ -994,16 +1070,23 @@ PollCircuitLoops(AG_Event *event)
 
 	AG_TlistClear(tl);
 	for (i = 0; i < ckt->l; i++) {
-		char voltage[32];
+		char txt[32];
 		ES_Loop *loop = ckt->loops[i];
-		ES_Vsource *vs = (ES_Vsource *)loop->origin;
+		ES_Component *vSrc = loop->origin;
 		AG_TlistItem *it;
 
-		AG_UnitFormat(vs->voltage, agEMFUnits, voltage,
-		    sizeof(voltage));
-		it = AG_TlistAdd(tl, NULL, "%s:L%u (%s)", OBJECT(vs)->name,
-		    loop->name, voltage);
-		it->p1 = loop;
+		if (AG_ObjectIsClass(vSrc, "ES_Component:ES_Vsource:*")) {
+			AG_UnitFormat(VSOURCE(vSrc)->v, agEMFUnits, txt,
+			    sizeof(txt));
+			it = AG_TlistAdd(tl, NULL, "%s:L%u (nom %s)",
+			    OBJECT(vSrc)->name,
+			    loop->name, txt);
+			it->p1 = loop;
+		} else {
+			it = AG_TlistAdd(tl, NULL, _("%s:L%u (as vsource)"),
+			    OBJECT(vSrc)->name, loop->name);
+			it->p1 = loop;
+		}
 	}
 	AG_TlistRestore(tl);
 }
@@ -1047,15 +1130,13 @@ PollCircuitSources(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
+	AG_TlistItem *it;
 	int i;
 
 	AG_TlistClear(tl);
 	for (i = 0; i < ckt->m; i++) {
-		ES_Vsource *vs = ckt->vsrcs[i];
-		AG_TlistItem *it;
-
-		it = AG_TlistAdd(tl, NULL, "%s", OBJECT(vs)->name);
-		it->p1 = vs;
+		it = AG_TlistAdd(tl, NULL, "%s", OBJECT(ckt->vSrcs[i])->name);
+		it->p1 = ckt->vSrcs[i];
 	}
 	AG_TlistRestore(tl);
 }
@@ -1213,8 +1294,23 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 {
 	AG_Object *cob;
 	AG_TlistItem *it;
+	int selected = 0;
 
-	it = AG_TlistAdd(tl, NULL, "%s", pob->name);
+	if (AG_ObjectIsClass(pob, "ES_Component:*")) {
+		if (ESCOMPONENT(pob)->flags & ES_COMPONENT_SUPPRESSED) {
+			it = AG_TlistAdd(tl, esIconComponent.s,
+			    _("%s (suppressed)"),
+			    pob->name);
+		} else {
+			it = AG_TlistAdd(tl, esIconComponent.s,
+			    "%s", pob->name);
+		}
+		it->selected = (ESCOMPONENT(pob)->flags &
+		                ES_COMPONENT_SELECTED);
+	} else {
+		it = AG_TlistAdd(tl, NULL, "%s", pob->name);
+	}
+
 	it->depth = depth;
 	it->cat = "object";
 	it->p1 = pob;
@@ -1223,10 +1319,6 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 		it->flags |= AG_TLIST_HAS_CHILDREN;
 		if (pob == OBJECT(ckt))
 			it->flags |= AG_TLIST_VISIBLE_CHILDREN;
-	}
-	if (AG_ObjectIsClass(pob, "ES_Component:*")) {
-		if (ESCOMPONENT(pob)->flags & ES_COMPONENT_SELECTED)
-			it->selected = 1;
 	}
 	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
 	    AG_TlistVisibleChildren(tl, it)) {
@@ -1419,15 +1511,12 @@ Edit(void *p)
 		mi2 = AG_MenuNode(mi, _("Schematic"), esIconCircuit.s);
 		{
 			AG_MenuToolbar(mi2, tbTop);
-			AG_MenuFlags(mi2, _("Nodes"),
+			AG_MenuFlags(mi2, _("Nodes annotations"),
 			    esIconShowNodes.s,
 			    &ckt->flags, ES_CIRCUIT_SHOW_NODES, 0);
-			AG_MenuFlags(mi2, _("Node numbers"),
+			AG_MenuFlags(mi2, _("Node names/numbers"),
 			    esIconShowNodeNames.s,
 			    &ckt->flags, ES_CIRCUIT_SHOW_NODENAMES, 0);
-			AG_MenuFlags(mi2, _("Node symbols"),
-			    esIconShowNodeSyms.s,
-			    &ckt->flags, ES_CIRCUIT_SHOW_NODESYMS, 0);
 			AG_MenuToolbar(mi2, NULL);
 			AG_ToolbarSeparator(tbTop);
 
@@ -1517,12 +1606,13 @@ Edit(void *p)
 		}
 	}
 
-	mi = AG_MenuAddItem(menu, _("Components"));
+	mi = AG_MenuAddItem(menu, _("Tools"));
 	{
 		VG_ToolOps **pOps, *ops;
 		VG_Tool *tool;
 
 		AG_MenuToolbar(mi, tbRight);
+
 		for (pOps = &esCircuitTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, ckt);
@@ -1530,12 +1620,22 @@ Edit(void *p)
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 		}
-		AG_MenuToolbar(mi, NULL);
-		AG_ToolbarSeparator(tbRight);
+
+		AG_MenuSeparator(mi);
+		
+		for (pOps = &esCircuitSchemTools[0]; *pOps != NULL; pOps++) {
+			ops = *pOps;
+			tool = VG_ViewRegTool(vv, ops, ckt);
+			AG_MenuAction(mi, ops->name,
+			    ops->icon ? ops->icon->s : NULL,
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
+		}
 		
 		VG_ViewRegTool(vv, &esInsertTool, ckt);
 		VG_ViewButtondownFn(vv, MouseButtonDown, "%p", ckt);
 		VG_ViewKeydownFn(vv, KeyDown, "%p", ckt);
+		
+		AG_MenuToolbar(mi, NULL);
 	}
 	
 	mi = AG_MenuAddItem(menu, _("Visualization"));
@@ -1547,7 +1647,7 @@ Edit(void *p)
 	}
 
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);
-	AG_PaneMoveDivider(vPane, HEIGHT(win)/2);
+	AG_PaneMoveDivider(vPane, 40*agView->h/100);
 	return (win);
 }
 

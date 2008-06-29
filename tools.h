@@ -2,6 +2,11 @@
 static VG_ToolOps *esCircuitTools[] = {
 	&esSchemSelectTool,
 	&esWireTool,
+	NULL
+};
+
+/* Circuit schematic edition tools */
+static VG_ToolOps *esCircuitSchemTools[] = {
 	&esSchemPointTool,
 	&esSchemLineTool,
 	&esSchemCircleTool,

@@ -118,6 +118,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	ES_Component *com;
 	ES_Port *port1, *port2;
 	ES_SchemPort *sp;
+	ES_SchemWire *sw;
 	int i;
 	
 	switch (button) {
@@ -139,11 +140,10 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			VG_Translate(port2->sp, vPos);
 
 			/* Create the schematic Wire entity. */
-			esCurWire->schemWire = ES_SchemWireNew(vg->root,
-			    port1->sp, port2->sp);
-			esCurWire->schemWire->wire = esCurWire;
-			ES_AttachSchemEntity(esCurWire,
-			    VGNODE(esCurWire->schemWire));
+			sw = ES_SchemWireNew(vg->root, port1->sp, port2->sp);
+			sw->wire = esCurWire;
+			esCurWire->schemWire = sw;
+			ES_AttachSchemEntity(esCurWire, VGNODE(sw));
 		} else {
 			port1 = &COMPONENT(esCurWire)->ports[1];
 			port2 = &COMPONENT(esCurWire)->ports[2];
@@ -165,9 +165,10 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			AG_ObjectDetach(esCurWire);
 			AG_ObjectDestroy(esCurWire);
 			esCurWire = NULL;
+			ES_UnselectAllPorts(ckt);
+			return (1);
 		}
-		ES_UnselectAllPorts(ckt);
-		return (1);
+		return (0);
 	default:
 		return (0);
 	}
