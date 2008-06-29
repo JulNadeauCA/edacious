@@ -8,7 +8,8 @@
 #include "begin_code.h"
 
 typedef struct es_capacitor {
-	struct es_component com;
+	struct es_component _inherit;
+	int vIdx;			/* Index into e */
 
 	M_Real C;
 	M_Real V0;

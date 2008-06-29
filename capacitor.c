@@ -116,11 +116,31 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 }
 
 static void
+Connected(AG_Event *event)
+{
+	ES_Circuit *ckt = AG_SENDER();
+	ES_Capacitor *c = AG_SELF();
+
+	c->vIdx = ES_AddVoltageSource(ckt, c);
+}
+
+static void
+Disconnected(AG_Event *event)
+{
+	ES_Circuit *ckt = AG_SENDER();
+	ES_Capacitor *c = AG_SELF();
+
+	ES_DelVoltageSource(ckt, c->vIdx);
+}
+
+static void
 Init(void *p)
 {
 	ES_Capacitor *c = p;
 
 	ES_InitPorts(c, esCapacitorPorts);
+	c->vIdx = -1;
+
 	c->C = 1.0;
 	c->V0 = 0.0;
 	
@@ -162,6 +182,9 @@ Edit(void *p)
 
 	M_NumericalNewRealPNZ(box, 0, "uF", _("Capacitance: "), &c->C);
 	M_NumericalNewRealPNZ(box, 0, "V", _("Initial voltage: "), &c->V0);
+
+	AG_SeparatorNewHoriz(box);
+	AG_LabelNewPolled(box, 0, _("Entry in e: %i"), &c->vIdx);
 
 	return (box);
 }
