@@ -270,6 +270,8 @@ Start(void *p)
 	AG_AddTimeout(ckt, &sim->toUpdate, 1000/sim->maxSpeed);
 	AG_UnlockTimeouts(ckt);
 	sim->Telapsed = 0.0;
+	sim->itersLowat = 0;
+	sim->itersHiwat = 0;
 	sim->timeLastStep = SDL_GetTicks();
 	/* arbitrary value for initialisation */
 	sim->deltaT = 1.0/sim->maxSpeed;
@@ -397,7 +399,7 @@ Edit(void *p, ES_Circuit *ckt)
 		    _("Total simulated time: %fs"),
 		    &sim->Telapsed);
 		AG_LabelNewPolled(ntab, 0,
-		    _("Iterations/step watermark: %u-%u"),
+		    _("Iterations/step: %u-%u"),
 		    &sim->itersLowat, &sim->itersHiwat);
 	}
 	
