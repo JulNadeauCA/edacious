@@ -111,12 +111,11 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	/* Iterate until a stable solution is found. */
 	do {
 		if (++i > sim->itersMax) {
-#if 0
+#if 1
 			AG_SetError(_("Could not find stable solution in "
 			              "%u iterations"), i);
 			goto halt;
 #endif
-			break;
 		}
 
 		M_Copy(xPrev, sim->x);

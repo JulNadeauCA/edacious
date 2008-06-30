@@ -84,8 +84,10 @@ UpdateModel(ES_NPN *u, ES_SimDC *dc, M_Real vBE, M_Real vBC)
 	u->gPiF = Ibf/u->Vt;
 	u->gPiR = Ibr/u->Vt;
 
-	u->gmR = u->betaF*u->gPiF;
-	u->gmF = u->betaR*u->gPiR;
+	u->go = Icc/u->Va;
+
+	u->gmF = u->betaF*u->gPiF;
+	u->gmR = u->betaR*u->gPiR;
 
     	u->Ibf_eq = Ibf - u->gPiF*vBE;
 	u->Ibr_eq = Ibr - u->gPiR*vBC;
@@ -101,6 +103,8 @@ static void UpdateStamp(ES_NPN *u, ES_SimDC *dc)
 	StampConductance(u->gPiF-u->gPiF_prev,b,e,dc->G);
 	StampConductance(u->gPiR-u->gPiR_prev,b,c,dc->G);
 
+	StampConductance(u->go-u->goPrev,e,c,dc->G);
+
 	StampVCCS(u->gmF-u->gmF_prev,b,e,c,e,dc->G);
 	StampVCCS(u->gmR-u->gmR_prev,b,c,e,c,dc->G);
 
@@ -110,6 +114,7 @@ static void UpdateStamp(ES_NPN *u, ES_SimDC *dc)
 
 	u->gPiF_prev = u->gPiF;
 	u->gPiR_prev = u->gPiR;
+	u->goPrev = u->go;
 	u->gmF_prev = u->gmF;
 	u->gmR_prev = u->gmR;
 	u->Ibf_eq_prev = u->Ibf_eq;
@@ -133,12 +138,10 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
-/*	ES_NPN *u = obj;
+	ES_NPN *u = obj;
 
 	UpdateModel(u,dc,vBE(u),vBC(u));
-	UpdateStamp(u,dc);*/
-
-	DC_SimBegin(obj,dc);
+	UpdateStamp(u,dc);
 
 }
 
@@ -167,6 +170,7 @@ Init(void *p)
 
 	u->gPiF_prev = 0.0;
 	u->gPiR_prev = 0.0;
+	u->goPrev = 0.0;
 	u->gmF_prev = 0.0;
 	u->gmR_prev = 0.0;
 	u->Ibf_eq_prev = 0.0;
