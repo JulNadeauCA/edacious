@@ -59,9 +59,14 @@ UpdateModel(ES_Inductor *i, ES_SimDC *dc, M_Real v)
 	switch(dc->method) {
 	case BE:
 		i->Ieq = i->IeqPrev + v*i->gPrev;
-		i->g = dc->deltaT/i->L;
+		i->g = dc->deltaT / i->L;
 		break;
 	case FE:
+		i->Ieq = i->IeqPrev + dc->deltaT / i->L * v;
+		break;
+	case TR:
+		i->Ieq = i->IeqPrev + v*i->gPrev + dc->deltaT / (2 * i->L) * v;
+		i->g = dc->deltaT / (2 * i->L);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -81,6 +86,11 @@ UpdateStamp(ES_Inductor *i, ES_SimDC *dc)
 		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc->i);
 		break;
 	case FE:
+		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc->i);
+		break;
+	case TR:
+		StampConductance(i->g-i->gPrev,k,l,dc->G);
+		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc->i);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);

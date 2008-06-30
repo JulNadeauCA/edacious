@@ -4,7 +4,8 @@
 /* Available integration methods */
 typedef enum integrationMethod {
 	BE,                     /* Backwards Euler */
-	FE                      /* Forward Euler */
+	FE,                     /* Forward Euler */
+	TR                      /* Trapezoidal rule */
 } IntegrationMethod;
 typedef struct es_sim_dc {
 	struct es_sim _inherit;
