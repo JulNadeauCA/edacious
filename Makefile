@@ -33,6 +33,7 @@ SRCS=	and.c \
 	npn.c \
 	or.c \
 	pmos.c \
+	pnp.c \
 	resistor.c \
 	schem.c \
 	schem_block.c \

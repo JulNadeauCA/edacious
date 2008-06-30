@@ -58,6 +58,7 @@
 #include "npn.h"
 #include "or.h"
 #include "pmos.h"
+#include "pnp.h"
 #include "resistor.h"
 #include "semiresistor.h"
 #include "spst.h"
@@ -101,6 +102,7 @@ void *esComponentClasses[] = {
 	&esCapacitorClass,
 	&esInductorClass,
 	&esNPNClass,
+	&esPNPClass,
 	NULL
 };
 
