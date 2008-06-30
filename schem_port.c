@@ -64,10 +64,8 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 
 	sp->flags = (Uint)AG_ReadUint8(ds);
 	AG_CopyString(sp->name, ds, sizeof(sp->name));
-	if (ver->minor >= 1) {
-		AG_CopyString(sp->comName, ds, sizeof(sp->comName));
-		sp->portName = (int)AG_ReadUint32(ds);
-	}
+	AG_CopyString(sp->comName, ds, sizeof(sp->comName));
+	sp->portName = (int)AG_ReadUint32(ds);
 	return (0);
 }
 
