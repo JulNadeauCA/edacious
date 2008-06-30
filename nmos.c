@@ -169,6 +169,43 @@ Init(void *p)
 	COMPONENT(u)->dcStepIter = DC_StepIter;
 }
 
+static int
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
+{
+	ES_NMOS *u = p;
+
+	u->Vt = M_ReadReal(buf);
+	u->Va = M_ReadReal(buf);
+	u->K = M_ReadReal(buf);
+	
+	return (0);
+}
+
+static int
+Save(void *p, AG_DataSource *buf)
+{
+	ES_NMOS *u = p;
+
+	M_WriteReal(buf, u->Vt);
+	M_WriteReal(buf, u->Va);
+	M_WriteReal(buf, u->K);
+
+	return (0);
+}
+
+static void *
+Edit(void *p)
+{
+	ES_NMOS *u = p;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+
+	M_NumericalNewRealPNZ(box, 0, "V", _("Threshold voltage: "), &u->Vt);
+	M_NumericalNewRealPNZ(box, 0, "V", _("Early voltage: "), &u->Va);
+	M_NumericalNewRealPNZ(box, 0, NULL, _("K: "), &u->K);
+
+	return (box);
+}
+
 ES_ComponentClass esNMOSClass = {
 	{
 		"ES_Component:ES_NMOS",
@@ -177,9 +214,9 @@ ES_ComponentClass esNMOSClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		NULL,		/* load */
-		NULL,		/* save */
-		NULL		/* edit */
+		Load,		/* load */
+		Save,		/* save */
+		Edit		/* edit */
 	},
 	N_("NMOS"),
 	"U",

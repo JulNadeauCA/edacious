@@ -178,6 +178,52 @@ Init(void *p)
 	COMPONENT(u)->dcStepIter = DC_StepIter;
 }
 
+static int
+Load(void *p, AG_DataSource *buf, const AG_Version *ver)
+{
+	ES_NPN *u = p;
+
+	u->Vt = M_ReadReal(buf);
+	u->Va = M_ReadReal(buf);
+	u->betaF = M_ReadReal(buf);
+	u->betaR = M_ReadReal(buf);
+	u->Ifs = M_ReadReal(buf);
+	u->Irs = M_ReadReal(buf);
+	
+	return (0);
+}
+
+static int
+Save(void *p, AG_DataSource *buf)
+{
+	ES_NPN *u = p;
+
+	M_WriteReal(buf, u->Vt);
+	M_WriteReal(buf, u->Va);
+	M_WriteReal(buf, u->betaF);
+	M_WriteReal(buf, u->betaR);
+	M_WriteReal(buf, u->Ifs);
+	M_WriteReal(buf, u->Irs);
+
+	return (0);
+}
+
+static void *
+Edit(void *p)
+{
+	ES_NPN *u = p;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+
+	M_NumericalNewRealPNZ(box, 0, "V", _("Threshold voltage: "), &u->Vt);
+	M_NumericalNewRealPNZ(box, 0, "V", _("Early voltage: "), &u->Va);
+	M_NumericalNewRealPNZ(box, 0, NULL, _("Forward Beta: "), &u->betaF);
+	M_NumericalNewRealPNZ(box, 0, NULL, _("Reverse Beta: "), &u->betaR);
+	M_NumericalNewRealPNZ(box, 0, "pA", _("Forward Sat. Current: "), &u->Ifs);
+	M_NumericalNewRealPNZ(box, 0, "pA", _("Reverse Sat. Current: "), &u->Irs);
+
+	return (box);
+}
+
 ES_ComponentClass esNPNClass = {
 	{
 		"ES_Component:ES_NPN",
@@ -186,9 +232,9 @@ ES_ComponentClass esNPNClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		NULL,		/* load */
-		NULL,		/* save */
-		NULL		/* edit */
+		Load,		/* load */
+		Save,		/* save */
+		Edit		/* edit */
 	},
 	N_("NPN"),
 	"U",
