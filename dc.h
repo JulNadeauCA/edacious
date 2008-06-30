@@ -7,6 +7,13 @@ typedef enum integrationMethod {
 	FE,                     /* Forward Euler */
 	TR                      /* Trapezoidal rule */
 } IntegrationMethod;
+const char *IntegrationMethodStr[] = {
+	"BE",
+	"FE",
+	"TR",
+	(char *) NULL           /* Required by the display widget */
+};
+
 typedef struct es_sim_dc {
 	struct es_sim _inherit;
 

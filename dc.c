@@ -369,6 +369,7 @@ Edit(void *p, ES_Circuit *ckt)
 	ES_SimDC *sim = p;
 	AG_Window *win;
 	AG_Spinbutton *sbu;
+	AG_Radio *r;
 	AG_FSpinbutton *fsu;
 	AG_Tlist *tl;
 	AG_Notebook *nb;
@@ -390,6 +391,9 @@ Edit(void *p, ES_Circuit *ckt)
 		    _("Maximum iterations per step: "));
 		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT,
 		    &sim->itersMax);
+
+		r = AG_RadioNew(ntab, 0, IntegrationMethodStr);
+		AG_WidgetBind(r, "value", AG_WIDGET_UINT, &sim->method);
 
 		sbu = AG_SpinbuttonNew(ntab, 0, _("Max speed (updates/sec): "));
 		AG_WidgetBind(sbu, "value", AG_WIDGET_UINT32, &sim->maxSpeed);
