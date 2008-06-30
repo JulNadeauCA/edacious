@@ -1,18 +1,13 @@
 /*	Public domain	*/
 
-
 /* Available integration methods */
 typedef enum integrationMethod {
 	BE,                     /* Backwards Euler */
 	FE,                     /* Forward Euler */
 	TR                      /* Trapezoidal rule */
 } IntegrationMethod;
-const char *IntegrationMethodStr[] = {
-	"BE",
-	"FE",
-	"TR",
-	(char *) NULL           /* Required by the display widget */
-};
+
+static const char *IntegrationMethodStr[];
 
 typedef struct es_sim_dc {
 	struct es_sim _inherit;

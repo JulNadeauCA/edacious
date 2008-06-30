@@ -39,6 +39,14 @@
  * and current vector is no more than MAX_DIFF */
 #define MAX_DIFF 0.001
 
+static const char *IntegrationMethodStr[] = {
+	"BE",
+	"FE",
+	"TR",
+	(char *) NULL           /* Required by the display widget */
+};
+
+
 /* Solve Ax=z where A=[G,B;C,D], x=[v,j] and z=[i;e]. */
 static int
 SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
