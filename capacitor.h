@@ -14,11 +14,9 @@ typedef struct es_capacitor {
 	M_Real C;
 	M_Real V0;
 
-	M_Real g;
-	M_Real Ieq;
-
-	M_Real gPrev;
-	M_Real IeqPrev;
+	/* Parameters of the thevenin model */
+	M_Real r;
+	M_Real v;
 } ES_Capacitor;
 
 __BEGIN_DECLS

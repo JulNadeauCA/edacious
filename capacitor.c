@@ -45,11 +45,16 @@ const ES_Port esCapacitorPorts[] = {
  * Returns the voltage across the diode calculated in the last Newton-Raphson
  * iteration.
  */
-
 static M_Real
 v(ES_Capacitor *c)
 {
 	return VPORT(c,PORT_A)-VPORT(c,PORT_B);
+}
+
+static M_Real
+i(ES_Capacitor *c)
+{
+	return ES_BranchCurrent(ES_COMPONENT_CIRCUIT(c), c->vIdx);
 }
 
 /* Updates the small- and large-signal models, saving the previous values. */
@@ -58,13 +63,17 @@ UpdateModel(ES_Capacitor *c, M_Real v, ES_SimDC *dc)
 {
 	switch(dc->method) {
 	case BE:
-		/* Norton companion model */
-		c->Ieq = c->C / dc->deltaT * v;
-		c->g = c->C / dc->deltaT;
+		/* Thevenin companion model : better suited
+		 * for small timesteps */
+		c->v = v;
+		c->r = dc->deltaT / c->C;
 		break;
 	case FE:
-		/* TODO : needs to be considered as a voltage source */
-		/* equation : v(t+dt) = v(t)+deltaT/C*i */
+		c->v += dc->deltaT / c->C * i(c);
+		break;
+	case TR:
+		c->v = v + dc->deltaT / (2 * c->C) * i(c);
+		c->r = dc->deltaT / (2 * c->C);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -79,26 +88,25 @@ UpdateStamp(ES_Capacitor *c, ES_SimDC *dc)
 	Uint l = PNODE(c,PORT_B);
 	switch(dc->method) {
 	case BE:
-		StampConductance(c->g - c->gPrev,k,l,dc->G);
-		StampCurrentSource(c->Ieq - c->IeqPrev,k,l,dc->i);
+		StampThevenin(c->v, k, l, c->vIdx, dc->B, dc->C, dc->e, c->r, dc->D);
 		break;
 	case FE:
-		/* TODO : needs to be considered as a voltage source */
+		StampVoltageSource(c->v, k, l, c->vIdx, dc->B, dc->C, dc->e);
+		break;
+	case TR:
+		StampThevenin(c->v, k, l, c->vIdx, dc->B, dc->C, dc->e, c->r, dc->D);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
 		break;
 	}
-
-	c->gPrev = c->g;
-	c->IeqPrev = c->Ieq;
 }
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
         ES_Capacitor *c = obj;
-
+	c->v = c->V0;
 	UpdateModel(c, c->V0, dc);
 	UpdateStamp(c, dc);
 
@@ -112,7 +120,6 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	
 	UpdateModel(c, v(c), dc);
 	UpdateStamp(c, dc);
-
 }
 
 static void
@@ -120,7 +127,7 @@ Connected(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_SENDER();
 	ES_Capacitor *c = AG_SELF();
-
+	
 	c->vIdx = ES_AddVoltageSource(ckt, c);
 }
 
@@ -143,12 +150,12 @@ Init(void *p)
 
 	c->C = 1.0;
 	c->V0 = 0.0;
-	
-	c->gPrev = 0.0;
-	c->IeqPrev = 0.0;
 
 	COMPONENT(c)->dcSimBegin = DC_SimBegin;
 	COMPONENT(c)->dcStepBegin = DC_StepBegin;
+
+	AG_SetEvent(c, "circuit-connected", Connected, NULL);
+	AG_SetEvent(c, "circuit-disconnected", Disconnected, NULL);
 }
 
 static int

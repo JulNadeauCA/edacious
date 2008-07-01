@@ -91,7 +91,22 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	sim->timeLastStep = ticks;
 
 	xPrev = M_New(sim->x->m, 1);
-
+	
+#ifdef DEBUG
+	printf("New iteration \n");
+	printf("G matrix : \n");
+	M_MatrixPrint(sim->G);
+	printf("B matrix : \n");
+	M_MatrixPrint(sim->B);
+	printf("C matrix : \n");
+	M_MatrixPrint(sim->C);
+	printf("D matrix : \n");
+	M_MatrixPrint(sim->D);
+	printf("x vector : \n");
+	M_MatrixPrint(sim->x);
+	printf("z vector : \n");
+	M_MatrixPrint(sim->z);
+#endif
 	if (ckt->n == 0) {
 		AG_SetError(_("Circuit has no nodes to evaluate"));
 		goto halt;
