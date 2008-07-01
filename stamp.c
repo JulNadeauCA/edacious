@@ -52,17 +52,23 @@ StampVCCS(M_Real g, Uint k, Uint l, Uint p, Uint q, M_Matrix *G)
 }
 
 void 
-StampVoltageSource(M_Real voltage, Uint k, Uint j, Uint v, M_Matrix *B, M_Matrix *C, M_Vector *e)
+StampVoltageSource(M_Real voltage, Uint k, Uint l, Uint v, M_Matrix *B, M_Matrix *C, M_Vector *e)
 {
 	if (k != 0) {
 		B->v[k][v] = 1.0;
 		C->v[v][k] = 1.0;
 	}
-	if (j != 0) {
-		B->v[j][v] = -1.0;
-		C->v[v][j] = -1.0;
+	if (l != 0) {
+		B->v[l][v] = -1.0;
+		C->v[v][l] = -1.0;
 	}
 
 	e->v[v][0] = voltage;
 }
 
+void
+StampThevenin(M_Real voltage, Uint k, Uint l, Uint v, M_Matrix *B, M_Matrix *C, M_Vector *e, M_Real resistance, M_Matrix *D)
+{
+	StampVoltageSource(voltage, k, l, v, B, C, e);
+	D->v[v][v] = - resistance;
+}
