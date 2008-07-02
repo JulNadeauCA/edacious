@@ -170,9 +170,17 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	case SDL_BUTTON_MIDDLE:
 		if (esFloatingCom != NULL) {
 			VG_Node *vn;
+			SDLMod mod = SDL_GetModState();
 
-			TAILQ_FOREACH(vn, &esFloatingCom->schemEnts, user)
-				VG_Rotate(vn, VG_PI/2.0f);
+			TAILQ_FOREACH(vn, &esFloatingCom->schemEnts, user) {
+				if (mod & KMOD_ALT) {
+					VG_FlipVert(vn);
+				} else if (mod & KMOD_CTRL) {
+					VG_FlipHoriz(vn);
+				} else {
+					VG_Rotate(vn, VG_PI/2.0f);
+				}
+			}
 		}
 		break;
 	case SDL_BUTTON_RIGHT:

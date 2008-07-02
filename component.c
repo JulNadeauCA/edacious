@@ -460,6 +460,45 @@ Delete(AG_Event *event)
 }
 
 static void
+Rotate(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	VG_View *vv = AG_PTR(2);
+	VG_Node *vn;
+	
+	TAILQ_FOREACH(vn, &com->schemEnts, user) {
+		VG_Rotate(vn, VG_PI/2.0f);
+	}
+	VG_Status(vv, _("Rotated %s 90\xc2\xb0"), OBJECT(com)->name);
+}
+
+static void
+FlipHoriz(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	VG_View *vv = AG_PTR(2);
+	VG_Node *vn;
+	
+	TAILQ_FOREACH(vn, &com->schemEnts, user) {
+		VG_FlipHoriz(vn);
+	}
+	VG_Status(vv, _("Flipped %s horizontally"), OBJECT(com)->name);
+}
+
+static void
+FlipVert(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	VG_View *vv = AG_PTR(2);
+	VG_Node *vn;
+	
+	TAILQ_FOREACH(vn, &com->schemEnts, user) {
+		VG_FlipVert(vn);
+	}
+	VG_Status(vv, _("Flipped %s vertically"), OBJECT(com)->name);
+}
+
+static void
 SuppressComponent(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
@@ -635,6 +674,7 @@ PortInfo(AG_Event *event)
 		return;
 	}
 	tl = AG_TlistNew(win, AG_TLIST_POLL|AG_TLIST_EXPAND);
+	AG_TlistSizeHint(tl, "1 (PORT) -> N123 [0.000V]", 4);
 	AG_SetEvent(tl, "tlist-poll", PollPorts, "%p", com->ckt);
 	AG_ButtonNewFn(win, AG_BUTTON_HFILL, _("Close"), AGWINCLOSE(win));
 	AG_WindowShow(win);
@@ -668,10 +708,6 @@ ES_ComponentMenu(ES_Component *com, VG_View *vgv)
 	int common_class = 1;
 	ES_ComponentClass *comCls = NULL;
 
-	printf("Creating menu for %s\n", OBJECT(com)->name);
-	if (com->ckt == NULL) {
-		AG_FatalError("Unattached component??");
-	}
 	CIRCUIT_FOREACH_COMPONENT_SELECTED(com2, com->ckt) {
 		if (comCls != NULL && comCls != COMCLASS(com2)) {
 			common_class = 0;
@@ -706,7 +742,13 @@ ES_ComponentMenu(ES_Component *com, VG_View *vgv)
 
 	AG_MenuAction(mi, _("Delete"), agIconTrash.s,
 	    Delete, "%p,%p", com, vgv);
-	AG_MenuAction(mi, _("Port information..."), esIconPortEditor.s,
+	AG_MenuAction(mi, _("Rotate 90\xc2\xb0"), esIconRotate.s,
+	    Rotate, "%p,%p", com, vgv);
+	AG_MenuAction(mi, _("Flip horizontally"), esIconFlipHoriz.s,
+	    FlipHoriz, "%p,%p", com, vgv);
+	AG_MenuAction(mi, _("Flip vertically"), esIconFlipVert.s,
+	    FlipVert, "%p,%p", com, vgv);
+	AG_MenuAction(mi, _("Ports..."), esIconPortEditor.s,
 	    PortInfo, "%p,%p", com, vgv);
 
 	if (com->flags & ES_COMPONENT_SUPPRESSED) {

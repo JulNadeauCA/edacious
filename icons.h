@@ -53,5 +53,8 @@ extern AG_StaticIcon esIconInductor;
 extern AG_StaticIcon esIconPNP;
 extern AG_StaticIcon esIconNPN;
 extern AG_StaticIcon esIconVarb;
+extern AG_StaticIcon esIconRotate;
+extern AG_StaticIcon esIconFlipHoriz;
+extern AG_StaticIcon esIconFlipVert;
 __END_DECLS
 #include "close_code.h"
