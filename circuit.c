@@ -85,12 +85,14 @@ EditClose(AG_Event *event)
 		AG_PostEvent(ckt, com, "circuit-hidden", NULL);
 }
 
+/* Update the voltage entries in the Circuit's property table. */
 static M_Real
 ReadNodeVoltage(void *p, AG_Prop *pr)
 {
 	return (ES_NodeVoltage(p, atoi(&pr->key[1])));
 }
 
+/* Update the branch current entries in the Circuit's property table. */
 static M_Real
 ReadBranchCurrent(void *p, AG_Prop *pr)
 {
@@ -162,6 +164,10 @@ ES_CircuitModified(ES_Circuit *ckt)
 		AG_PostEvent(ckt, com, "circuit-modified", NULL);
 }
 
+/*
+ * Notify the child objects of the simulation progress (independent of the
+ * simulation type).
+ */
 static void
 PreSimulationStep(AG_Event *event)
 {
@@ -171,7 +177,6 @@ PreSimulationStep(AG_Event *event)
 	OBJECT_FOREACH_CHILD(obj, ckt, ag_object)
 		AG_PostEvent(ckt, obj, "circuit-step-begin", NULL);
 }
-
 static void
 PostSimulationStep(AG_Event *event)
 {
@@ -222,7 +227,7 @@ Init(void *p)
 	AG_SetEvent(ckt, "edit-open", EditOpen, NULL);
 	AG_SetEvent(ckt, "edit-close", EditClose, NULL);
 
-	/* Notify visualization objects of simulation progress. */
+	/* Notify child objects of simulation progress. */
 	AG_SetEvent(ckt, "circuit-step-begin", PreSimulationStep, NULL);
 	AG_SetEvent(ckt, "circuit-step-end", PostSimulationStep, NULL);
 }
@@ -844,35 +849,6 @@ ES_LookupSymbol(ES_Circuit *ckt, const char *name)
 		    OBJECT(ckt)->name, name);
 	}
 	return (sym);
-}
-
-/*
- * Evaluate whether node n is connected to the voltage source m. If that
- * is the case, return the polarity.
- */
-int
-ES_NodeIsConnectedToVsrc(ES_Circuit *ckt, int n, int m, int *sign)
-{
-	ES_Node *node = ckt->nodes[n];
-	ES_Branch *br;
-	ES_Component *vSrc;
-
-	NODE_FOREACH_BRANCH(br, node) {
-		if (br->port == NULL ||
-		   (vSrc = COMPONENT(br->port->com)) == NULL) {
-			continue;
-		}
-		if (COMPONENT_IS_FLOATING(vSrc) || vSrc != ckt->vSrcs[m-1]) {
-			continue;
-		}
-		if (br->port->n == 1) {
-			*sign = +1;
-		} else {
-			*sign = -1;
-		}
-		return (1);
-	}
-	return (0);
 }
 
 /* Return the DC voltage for the node j from the last simulation step. */
@@ -1608,6 +1584,7 @@ Edit(void *p)
 
 	mi = AG_MenuAddItem(menu, _("Tools"));
 	{
+		AG_MenuItem *mAction;
 		VG_ToolOps **pOps, *ops;
 		VG_Tool *tool;
 
@@ -1616,9 +1593,11 @@ Edit(void *p)
 		for (pOps = &esCircuitTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, ckt);
-			AG_MenuAction(mi, ops->name,
+			mAction = AG_MenuAction(mi, ops->name,
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
+			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
+			    &OBJECT(vv)->lock);
 		}
 
 		AG_MenuSeparator(mi);
@@ -1626,9 +1605,11 @@ Edit(void *p)
 		for (pOps = &esCircuitSchemTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, ckt);
-			AG_MenuAction(mi, ops->name,
+			mAction = AG_MenuAction(mi, ops->name,
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
+			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
+			    &OBJECT(vv)->lock);
 		}
 		
 		VG_ViewRegTool(vv, &esInsertTool, ckt);

@@ -145,7 +145,6 @@ void        ES_CopyNodeSymbol(ES_Circuit *, int, char *, size_t);
 ES_Node	   *ES_GetNodeBySymbol(ES_Circuit *, const char *);
 ES_Branch  *ES_LookupBranch(ES_Circuit *, int, ES_Port *);
 
-int         ES_NodeIsConnectedToVsrc(ES_Circuit *, int, int, int *);
 M_Real      ES_NodeVoltage(ES_Circuit *, int);
 M_Real      ES_BranchCurrent(ES_Circuit *, int);
 
