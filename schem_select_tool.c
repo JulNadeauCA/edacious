@@ -212,10 +212,23 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 		}
 		if ((vn = ES_SchemNearest(vv, vPos)) != NULL) {
 			if (VG_NodeIsClass(vn, "SchemBlock")) {
-				ES_SchemBlock *blk = (ES_SchemBlock *)vn;
-				ES_HighlightComponent(blk->com);
+				ES_HighlightComponent(SCHEM_BLOCK(vn)->com);
+				VG_Status(vv, _("Select component: %s"),
+				    OBJECT(SCHEM_BLOCK(vn)->com)->name);
+			} else if (VG_NodeIsClass(vn, "SchemWire")) {
+				ES_SchemWire *sw = SCHEM_WIRE(vn);
+				vn->flags |= VG_NODE_MOUSEOVER;
+				VG_Status(vv, _("Select wire (n%d)"),
+				    COMPONENT(sw->wire)->ports[1].node);
+			} else if (VG_NodeIsClass(vn, "SchemPort")) {
+				vn->flags |= VG_NODE_MOUSEOVER;
+				VG_Status(vv, _("Select port (n%d)"),
+				    SCHEM_PORT(vn)->port->node);
+			} else {
+				vn->flags |= VG_NODE_MOUSEOVER;
+				VG_Status(vv, _("Select entity: %s%d"),
+				    vn->ops->name, vn->handle);
 			}
-			vn->flags |= VG_NODE_MOUSEOVER;
 		}
 		return (0);
 	}
@@ -227,8 +240,11 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 		if (!(vn->flags & VG_NODE_SELECTED)) {
 			continue;
 		}
-		if (vn->ops->moveNode != NULL)
+		if (vn->ops->moveNode != NULL) {
 			vn->ops->moveNode(vn, v, vRel);
+			VG_Status(vv, _("Moving entity: %s%d"), vn->ops->name,
+			    vn->handle);
+		}
 	}
 	return (0);
 }
