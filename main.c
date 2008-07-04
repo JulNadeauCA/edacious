@@ -211,6 +211,18 @@ WindowLostFocus(AG_Event *event)
 	AG_MutexUnlock(&objLock);
 }
 
+static __inline__ char *
+ShortFilename(char *name)
+{
+	char *s;
+
+	if ((s = strrchr(name, PATHSEP)) != NULL && s[1] != '\0') {
+		return (&s[1]);
+	} else {
+		return (name);
+	}
+}
+
 AG_Window *
 ES_CreateEditionWindow(void *p)
 {
@@ -223,6 +235,11 @@ ES_CreateEditionWindow(void *p)
 	AG_AddEvent(win, "window-lostfocus", WindowLostFocus, "%p", obj);
 	AG_AddEvent(win, "window-hidden", WindowLostFocus, "%p", obj);
 	AG_SetPointer(win, "object", obj);
+	if (obj->archivePath != NULL) {
+		AG_WindowSetCaption(win, "%s", ShortFilename(obj->archivePath));
+	} else {
+		AG_WindowSetCaption(win, _("Untitled"));
+	}
 	AG_WindowShow(win);
 	return (win);
 }
@@ -272,18 +289,6 @@ SetArchivePath(void *obj, const char *path)
 		AG_ObjectSetName(obj, "%s", &c[1]);
 	} else {
 		AG_ObjectSetName(obj, "%s", path);
-	}
-}
-
-static __inline__ char *
-ShortFilename(char *name)
-{
-	char *s;
-
-	if ((s = strrchr(name, PATHSEP)) != NULL && s[1] != '\0') {
-		return (&s[1]);
-	} else {
-		return (name);
 	}
 }
 
@@ -718,7 +723,35 @@ main(int argc, char *argv[])
 #ifdef FP_DEBUG
 	feenableexcept(FE_DIVBYZERO | FE_OVERFLOW);
 #endif
-	
+
+#ifdef HAVE_GETOPT
+	for (i = optind; i < argc; i++) {
+#else
+	for (i = 1; i < argc; i++) {
+#endif
+		AG_ObjectClass *cls = &esCircuitClass;
+		ES_Circuit *ckt;
+		char *ext;
+
+		if ((ext = strrchr(argv[i], '.')) != NULL) {
+			if (strcasecmp(ext, ".ecm") == 0) {
+				cls = &esCircuitClass;
+			} else if (strcasecmp(ext, ".eschem") == 0) {
+				cls = &esSchemClass;
+			}
+		}
+
+		ckt = AG_ObjectNew(&vfsRoot, NULL, cls);
+		if (AG_ObjectLoadFromFile(ckt, argv[i]) == 0) {
+			AG_ObjectSetArchivePath(ckt, argv[i]);
+			ES_CreateEditionWindow(ckt);
+		} else {
+			AG_TextMsgFromError();
+			AG_ObjectDetach(ckt);
+			AG_ObjectDestroy(ckt);
+		}
+	}
+
 	AG_EventLoop();
 	AG_ObjectDestroy(&vfsRoot);
 	AG_Destroy();
