@@ -37,14 +37,9 @@ SRCS=	and.c \
 	resistor.c \
 	schem.c \
 	schem_block.c \
-	schem_circle_tool.c \
-	schem_line_tool.c \
-	schem_point_tool.c \
+	schem_select_tool.c \
 	schem_port.c \
 	schem_port_tool.c \
-	schem_proximity_tool.c \
-	schem_select_tool.c \
-	schem_text_tool.c \
 	schem_wire.c \
 	schem_wire_tool.c \
 	scope.c \

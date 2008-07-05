@@ -1564,7 +1564,7 @@ Edit(void *p)
 			    "%p", vv);
 			AG_WidgetSetFocusable(tl, 0);
 		}
-		VG_ViewAddEditArea(vv, vPane->div[1]);
+		VG_AddEditArea(vv, vPane->div[1]);
 
 		box = AG_BoxNewVert(hPane->div[1], AG_BOX_EXPAND);
 		AG_BoxSetSpacing(box, 0);
@@ -1598,6 +1598,8 @@ Edit(void *p)
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
 			    &OBJECT(vv)->lock);
+			if (ops == &esSchemSelectTool)
+				VG_ViewSetDefaultTool(vv, tool);
 		}
 
 		AG_MenuSeparator(mi);

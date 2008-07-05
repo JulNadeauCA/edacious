@@ -56,7 +56,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	if (button != SDL_BUTTON_LEFT) {
 		return (0);
 	}
-	if ((vp = ES_SchemNearestPoint(vv, vPos, NULL)) != NULL) {
+	if ((vp = VG_NearestPoint(vv, vPos, NULL)) != NULL) {
 		sp = ES_SchemPortNew(vp);
 		AG_TextPromptString(_("Port name: "), SetPortName, "%p", sp);
 	} else {
@@ -74,7 +74,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Point *vp;
 
-	if ((vp = ES_SchemHighlightNearestPoint(vv, vPos, NULL)) != NULL) {
+	if ((vp = VG_HighlightNearestPoint(vv, vPos, NULL)) != NULL) {
 		VG_Status(vv, _("Create port on Point%u"), VGNODE(vp)->handle);
 	} else {
 		VG_Status(vv, _("Create a port at %f,%f"), vPos.x, vPos.y);

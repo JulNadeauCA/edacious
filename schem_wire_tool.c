@@ -186,7 +186,7 @@ MouseButtonUp(void *p, VG_Vector vPos, int button)
 	case SDL_BUTTON_LEFT:
 		ES_UnselectAllPorts(ckt);
 		spNear = VG_PointProximityMax(vv, "SchemPort", &vPos, NULL,
-		    esCurWire, PORT_RADIUS(vv));
+		    esCurWire, vv->pointSelRadius);
 		if (spNear != NULL) {
 			ES_SelectPort(spNear->port);
 		}
@@ -220,7 +220,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	ES_UnselectAllPorts(ckt);
 	spNear = VG_PointProximityMax(vv, "SchemPort", &vPos, NULL,
 	    (esCurWire != NULL) ? COMPONENT(esCurWire)->ports[1].sp : NULL,
-	    PORT_RADIUS(vv));
+	    vv->pointSelRadius);
 	if (spNear != NULL) {
 		ES_SelectPort(spNear->port);
 	}

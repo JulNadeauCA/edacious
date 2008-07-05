@@ -11,7 +11,6 @@ typedef struct es_schem {
 } ES_Schem;
 
 #define SCHEM(p) ((ES_Schem *)(p))
-#define PORT_RADIUS(vv) (((vv)->grid[0].ival/2)*(vv)->wPixel)
 
 #include "schem_port.h"
 #include "schem_wire.h"
@@ -30,9 +29,7 @@ extern VG_ToolOps esSchemTextTool;
 extern VG_ToolOps esSchemPortTool;
 
 ES_Schem *ES_SchemNew(void *);
-void     *ES_SchemNearestPoint(VG_View *, VG_Vector, void *);
 void     *ES_SchemNearest(VG_View *, VG_Vector);
-void     *ES_SchemHighlightNearestPoint(VG_View *, VG_Vector, void *);
 __END_DECLS
 
 #include "close_code.h"

@@ -343,11 +343,15 @@ SaveNativeObject(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
 	char *path = AG_STRING(2);
+	AG_Window *wEdit;
 
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
 		AG_TextMsgFromError();
 	}
 	SetArchivePath(obj, path);
+
+	if ((wEdit = AG_WindowFindFocused()) != NULL)
+		AG_WindowSetCaption(wEdit, "%s", ShortFilename(path));
 }
 
 static void

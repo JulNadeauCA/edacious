@@ -7,12 +7,12 @@ static VG_ToolOps *esCircuitTools[] = {
 
 /* Circuit schematic edition tools */
 static VG_ToolOps *esCircuitSchemTools[] = {
-	&esSchemPointTool,
-	&esSchemLineTool,
-	&esSchemCircleTool,
-	&esSchemTextTool,
+	&vgPointTool,
+	&vgLineTool,
+	&vgCircleTool,
+	&vgTextTool,
 #ifdef DEBUG
-	&esSchemProximityTool,
+	&vgProximityTool,
 #endif
 	NULL
 };
@@ -24,12 +24,12 @@ static VG_ToolOps *esSchemTools[] = {
 	NULL
 };
 static VG_ToolOps *esSchemVGTools[] = {
-	&esSchemPointTool,
-	&esSchemLineTool,
-	&esSchemCircleTool,
-	&esSchemTextTool,
+	&vgPointTool,
+	&vgLineTool,
+	&vgCircleTool,
+	&vgTextTool,
 #ifdef DEBUG
-	&esSchemProximityTool,
+	&vgProximityTool,
 #endif
 	NULL
 };

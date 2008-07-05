@@ -79,7 +79,7 @@ HighlightConnections(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 		}
 		pos = VG_Pos(port->sp);
 		spNear = VG_PointProximityMax(vv, "SchemPort", &pos, NULL,
-		    port->sp, PORT_RADIUS(vv));
+		    port->sp, vv->pointSelRadius);
 		if (spNear != NULL) {
 			ES_SelectPort(port);
 			Snprintf(s, sizeof(s), "%d>[%s:%d] ",
@@ -116,7 +116,7 @@ ConnectComponent(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 		}
 		portPos = VG_Pos(port->sp);
 		spNear = VG_PointProximityMax(vv, "SchemPort", &portPos, NULL,
-		    port->sp, PORT_RADIUS(vv));
+		    port->sp, vv->pointSelRadius);
 		portNear = (spNear != NULL) ? spNear->port : NULL;
 
 		if (COMCLASS(com)->connect == NULL ||

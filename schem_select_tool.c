@@ -35,60 +35,6 @@ typedef struct es_schem_select_tool {
 	int moving;
 } ES_SchemSelectTool;
 
-/* Return the Point nearest to vPos. */
-void *
-ES_SchemNearestPoint(VG_View *vv, VG_Vector vPos, void *ignore)
-{
-	float prox, proxNearest = AG_FLT_MAX;
-	VG_Node *vn, *vnNearest = NULL;
-	VG_Vector v;
-
-	TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
-		if (vn->ops->pointProximity == NULL ||
-		    vn == ignore ||
-		    !VG_NodeIsClass(vn, "Point")) {
-			continue;
-		}
-		v = vPos;
-		prox = vn->ops->pointProximity(vn, vv, &v);
-		if (prox < vv->grid[0].ival) {
-			if (prox < proxNearest) {
-				proxNearest = prox;
-				vnNearest = vn;
-			}
-		}
-	}
-	return (vnNearest);
-}
-
-/* Highlight and return the Point nearest to vPos. */
-void *
-ES_SchemHighlightNearestPoint(VG_View *vv, VG_Vector vPos, void *ignore)
-{
-	VG *vg = vv->vg;
-	float prox, proxNearest = AG_FLT_MAX;
-	VG_Node *vn, *vnNearest = NULL;
-	VG_Vector v;
-
-	TAILQ_FOREACH(vn, &vg->nodes, list) {
-		vn->flags &= ~(VG_NODE_MOUSEOVER);
-		if (vn->ops->pointProximity == NULL ||
-		    vn == ignore ||
-		    !VG_NodeIsClass(vn, "Point")) {
-			continue;
-		}
-		v = vPos;
-		prox = vn->ops->pointProximity(vn, vv, &v);
-		if (prox < vv->grid[0].ival) {
-			if (prox < proxNearest) {
-				proxNearest = prox;
-				vnNearest = vn;
-			}
-		}
-	}
-	return (vnNearest);
-}
-
 /* Return the entity nearest to vPos. */
 void *
 ES_SchemNearest(VG_View *vv, VG_Vector vPos)
@@ -118,7 +64,7 @@ ES_SchemNearest(VG_View *vv, VG_Vector vPos)
 		}
 		v = vPos;
 		prox = vn->ops->pointProximity(vn, vv, &v);
-		if (prox <= PORT_RADIUS(vv)) {
+		if (prox <= vv->pointSelRadius) {
 			if (prox < proxNearest) {
 				proxNearest = prox;
 				vnNearest = vn;
