@@ -34,37 +34,40 @@
 
 #include "eda.h"
 
-#include "spice.h"
-#include "scope.h"
+#include <core/spice.h>
 
-#include "vsource.h"
-#include "varb.h"
-#include "vsine.h"
-#include "vsquare.h"
-#include "vsweep.h"
+#include <sources/isource.h>
+#include <sources/vsource.h>
+#include <sources/varb.h>
+#include <sources/vsine.h>
+#include <sources/vsquare.h>
+#include <sources/vsweep.h>
 
-#include "wire.h"
-#include "and.h"
-#include "capacitor.h"
-#include "digital.h"
-#include "diode.h"
-#include "ground.h"
-#include "inductor.h"
-#include "inverter.h"
-#include "isource.h"
-#include "led.h"
-#include "logic_probe.h"
-#include "nmos.h"
-#include "npn.h"
-#include "or.h"
-#include "pmos.h"
-#include "pnp.h"
-#include "resistor.h"
-#include "semiresistor.h"
-#include "spst.h"
-#include "spdt.h"
+#include <core/wire.h>
 
-#include "icons_data.h"
+#include <macro/and_gate.h>
+#include <macro/digital.h>
+#include <macro/inverter.h>
+#include <macro/or_gate.h>
+
+#include <measurement/scope.h>
+#include <measurement/logic_probe.h>
+
+#include <generic/capacitor.h>
+#include <generic/diode.h>
+#include <generic/ground.h>
+#include <generic/inductor.h>
+#include <generic/led.h>
+#include <generic/nmos.h>
+#include <generic/npn.h>
+#include <generic/pmos.h>
+#include <generic/pnp.h>
+#include <generic/resistor.h>
+#include <generic/semiresistor.h>
+#include <generic/spst.h>
+#include <generic/spdt.h>
+
+#include <core/icons_data.h>
 
 #include <ctype.h>
 #include <stdio.h>

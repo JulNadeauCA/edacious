@@ -50,11 +50,11 @@
 
 /* -------------------------------------------------------------------------- */
 
-#include "schem.h"
-#include "component.h"
-#include "circuit.h"
-#include "icons.h"
-#include "stamp.h"
+#include <schem/schem.h>
+#include <core/component.h>
+#include <core/circuit.h>
+#include <core/icons.h>
+#include <core/stamp.h>
 
 #ifdef _ES_INTERNAL
 
