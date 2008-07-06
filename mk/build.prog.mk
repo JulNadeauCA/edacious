@@ -286,7 +286,7 @@ clean-prog:
 	fi
 
 cleandir-prog:
-	rm -f core *.core config.log .depend tags
+	rm -f *.core config.log .depend tags
 	if [ -e "./config/prefix.h" ]; then rm -fr ./config; fi
 	if [ -e "Makefile.config" ]; then echo -n >Makefile.config; fi
 
