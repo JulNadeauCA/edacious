@@ -82,8 +82,8 @@ UpdateStamp(ES_Diode *d, ES_SimDC *dc)
 	Uint k = PNODE(d,PORT_P);
 	Uint l = PNODE(d,PORT_N);
 
-	StampConductance(d->g - d->gPrev, k,l, dc->G);
-	StampCurrentSource(d->Ieq - d->IeqPrev, l,k, dc->i);
+	StampConductance(d->g - d->gPrev, k,l, dc);
+	StampCurrentSource(d->Ieq - d->IeqPrev, l,k, dc);
 
 	d->gPrev = d->g;
 	d->IeqPrev = d->Ieq;

@@ -76,7 +76,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	M_Real g;
 
 	g = 1.0/(r->rEff * (1.0 + r->Tc1*dT + r->Tc2*dT*dT));	
-	StampConductance(g, k, j, dc->G);
+	StampConductance(g, k, j, dc);
 }
 
 static void

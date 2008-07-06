@@ -43,8 +43,7 @@ UpdateStamp(ES_VSquare *vsq, ES_SimDC *dc)
 	Uint k = PNODE(vsq,1);
 	Uint j = PNODE(vsq,2);
 
-	StampVoltageSource(VSOURCE(vsq)->v, k,j, VSOURCE(vsq)->vIdx,
-	    dc->B, dc->C, dc->e);
+	StampVoltageSource(VSOURCE(vsq)->v, k,j, VSOURCE(vsq)->vIdx, dc);
 }
 
 static int

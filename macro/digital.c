@@ -89,7 +89,6 @@ Save(void *p, AG_DataSource *buf)
 void
 ES_DigitalStepIter(void *p, ES_SimDC *dc)
 {
-	M_Matrix *G = dc->G;
 	ES_Digital *dig = p;
 	ES_Node *n;
 	Uint i;
@@ -107,7 +106,7 @@ ES_DigitalStepIter(void *p, ES_SimDC *dc)
 		    k == -1 || j == -1 || (k == 0 && j == 0)) {
 			continue;
 		}
-		StampConductance(g, k,j, G);
+		StampConductance(g, k,j, dc);
 	}
 }
 

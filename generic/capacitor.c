@@ -88,13 +88,13 @@ UpdateStamp(ES_Capacitor *c, ES_SimDC *dc)
 	Uint l = PNODE(c,PORT_B);
 	switch(dc->method) {
 	case BE:
-		StampThevenin(c->v, k, l, c->vIdx, dc->B, dc->C, dc->e, c->r, dc->D);
+		StampThevenin(c->v, k, l, c->vIdx, c->r, dc);
 		break;
 	case FE:
-		StampVoltageSource(c->v, k, l, c->vIdx, dc->B, dc->C, dc->e);
+		StampVoltageSource(c->v, k, l, c->vIdx, dc);
 		break;
 	case TR:
-		StampThevenin(c->v, k, l, c->vIdx, dc->B, dc->C, dc->e, c->r, dc->D);
+		StampThevenin(c->v, k, l, c->vIdx, c->r, dc);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);

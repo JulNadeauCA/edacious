@@ -105,7 +105,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 		return (-1);
 	}
 	g = 1.0/(r->Rnom * (1.0 + r->Tc1*dT + r->Tc2*dT*dT));
-	StampConductance(g, k, j, dc->G);
+	StampConductance(g, k, j, dc);
 	return (0);
 }
 

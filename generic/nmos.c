@@ -98,9 +98,9 @@ static void UpdateStamp(ES_NMOS *u, ES_SimDC *dc)
 	Uint d = PNODE(u,PORT_D);
 	Uint s = PNODE(u,PORT_S);
 
-	StampVCCS(u->gm-u->gmPrev,g,s,d,s,dc->G);
-	StampConductance(u->go-u->goPrev,d,s,dc->G);
-	StampCurrentSource(u->Ieq-u->IeqPrev,s,d,dc->i);
+	StampVCCS(u->gm-u->gmPrev,g,s,d,s,dc);
+	StampConductance(u->go-u->goPrev,d,s,dc);
+	StampCurrentSource(u->Ieq-u->IeqPrev,s,d,dc);
 
 	u->gmPrev = u->gm;
 	u->goPrev = u->go;

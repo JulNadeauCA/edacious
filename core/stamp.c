@@ -4,71 +4,88 @@
 
 #include <eda.h>
 
+#define N SIM(dc)->ckt->n
+
+#define AddG(k,l,val)	dc->A->v[k][l]	   += val
+#define AddB(k,l,val)	dc->A->v[k][N+l]   += val
+#define AddC(k,l,val)	dc->A->v[N+k][l]   += val
+#define AddD(k,l,val)	dc->A->v[N+k][N+l] += val
+#define AddI(k,val)	dc->z->v[k][0]	   += val
+#define AddV(k,val)	dc->z->v[N+k][0]   += val
+
+#define SetG(k,l,val)	dc->A->v[k][l]	   = val
+#define SetB(k,l,val)	dc->A->v[k][N+l]   = val
+#define SetC(k,l,val)	dc->A->v[N+k][l]   = val
+#define SetD(k,l,val)	dc->A->v[N+k][N+l] = val
+#define SetI(k,val)	dc->z->v[k][0]	   = val
+#define SetV(k,val)	dc->z->v[N+k][0]   = val
+
 void
-StampConductance(M_Real g, Uint k, Uint l, M_Matrix *G)
+StampConductance(M_Real g, Uint k, Uint l, ES_SimDC *dc)
 {
         if (k != 0) {
-                G->v[k][k] += g;
+		AddG(k, k, g);
         }
         if (l != 0) {
-                G->v[l][l] += g;
+                AddG(l, l, g);
         }
         if (k != 0 && l != 0) {
-                G->v[k][l] -= g;
-                G->v[l][k] -= g;
+		AddG(k, l, -g);
+		AddG(l, k, -g);
         }
 }
 
 void
-StampCurrentSource(M_Real I, Uint k, Uint l, M_Vector *i)
+StampCurrentSource(M_Real I, Uint k, Uint l, ES_SimDC *dc)
 {
 	if (k != 0){
-		i->v[k][0] += I;
+		AddI(k, I);
 	}
 	if (l != 0){
-		i->v[l][0] -= I;
+		AddI(l, -I);
 	}
 }
 
 void
-StampVCCS(M_Real g, Uint k, Uint l, Uint p, Uint q, M_Matrix *G)
+StampVCCS(M_Real g, Uint k, Uint l, Uint p, Uint q, ES_SimDC *dc)
 {
 	if (p != 0){
 		if (k != 0){
-			G->v[p][k] += g;
+			AddG(p, k, g);
 		}
 		if (l != 0){
-			G->v[p][l] -= g;
+			AddG(p, l, -g);
 		}
 	}
 	if (q != 0){
 		if (k != 0){
-			G->v[q][k] -= g;
+			AddG(q, k, -g);
 		}
 		if (l != 0){
-			G->v[q][l] += g;
+			AddG(q, l, g);
 		}
 	}
 }
 
 void 
-StampVoltageSource(M_Real voltage, Uint k, Uint l, Uint v, M_Matrix *B, M_Matrix *C, M_Vector *e)
+StampVoltageSource(M_Real voltage, Uint k, Uint l, Uint v, ES_SimDC *dc)
 {
 	if (k != 0) {
-		B->v[k][v] = 1.0;
-		C->v[v][k] = 1.0;
+		SetB(k, v, 1.0);
+		SetC(v, k, 1.0);
 	}
 	if (l != 0) {
-		B->v[l][v] = -1.0;
-		C->v[v][l] = -1.0;
+		SetB(l, v, -1.0);
+		SetC(v, l, -1.0);
 	}
 
-	e->v[v][0] = voltage;
+	SetV(v, voltage);
 }
 
 void
-StampThevenin(M_Real voltage, Uint k, Uint l, Uint v, M_Matrix *B, M_Matrix *C, M_Vector *e, M_Real resistance, M_Matrix *D)
+StampThevenin(M_Real voltage, Uint k, Uint l, Uint v, M_Real resistance, ES_SimDC *dc)
 {
-	StampVoltageSource(voltage, k, l, v, B, C, e);
-	D->v[v][v] = - resistance;
+	
+	StampVoltageSource(voltage, k, l, v, dc);
+	SetD(v, v, -resistance);
 }

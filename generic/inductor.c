@@ -82,15 +82,15 @@ UpdateStamp(ES_Inductor *i, ES_SimDC *dc)
 	
 	switch(dc->method) {
 	case BE:
-		StampConductance(i->g-i->gPrev,k,l,dc->G);
-		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc->i);
+		StampConductance(i->g-i->gPrev,k,l,dc);
+		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc);
 		break;
 	case FE:
-		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc->i);
+		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc);
 		break;
 	case TR:
-		StampConductance(i->g-i->gPrev,k,l,dc->G);
-		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc->i);
+		StampConductance(i->g-i->gPrev,k,l,dc);
+		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);

@@ -53,8 +53,6 @@ SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 {
 	M_Real d;
 	
-	M_Compose21(sim->z, sim->i, sim->e);
-	M_Compose22(sim->A, sim->G, sim->B, sim->C, sim->D);
 
 	/* Find LU factorization and solve by backsubstitution. */
 	M_FactorizeLU(sim->A, sim->LU, sim->piv, &d);
@@ -201,19 +199,11 @@ Init(void *p)
 	sim->T0 = 290.0;
 
 	sim->A = M_New(0,0);
-	sim->G = M_New(0,0);
-	sim->B = M_New(0,0);
-	sim->C = M_New(0,0);
-	sim->D = M_New(0,0);
 	sim->LU = M_New(0,0);
 
 	sim->z = M_New(0,0);
-	sim->i = M_New(0,0);
-	sim->e = M_New(0,0);
 	
 	sim->x = M_New(0,0);
-	sim->v = M_New(0,0);
-	sim->j = M_New(0,0);
 
 	sim->piv = M_IntVectorNew(0);
 }
@@ -226,36 +216,20 @@ Resize(void *p, ES_Circuit *ckt)
 	Uint m = ckt->m;
 
 	M_Resize(sim->A, n+m, n+m);
-	M_Resize(sim->G, n, n);
-	M_Resize(sim->B, n, m);
-	M_Resize(sim->C, m, n);
-	M_Resize(sim->D, m, m);
 	M_Resize(sim->LU, n+m, n+m);
 	
 	M_IntVectorResize(sim->piv, n+m);
 	M_Resize(sim->z, n+m, 1);
-	M_Resize(sim->i, n, 1);
-	M_Resize(sim->e, m, 1);
 	M_Resize(sim->x, n+m, 1);
-	M_Resize(sim->v, n, 1);
-	M_Resize(sim->j, m, 1);
 
 	M_SetZero(sim->A);
-	M_SetZero(sim->G);
-	M_SetZero(sim->B);
-	M_SetZero(sim->C);
-	M_SetZero(sim->D);
 	M_SetZero(sim->LU);
 	
 	M_IntVectorSet(sim->piv, 0);
 	
 	M_SetZero(sim->z);
-	M_SetZero(sim->i);
-	M_SetZero(sim->e);
 	
 	M_SetZero(sim->x);
-	M_SetZero(sim->v);
-	M_SetZero(sim->j);
 }
 
 static void
@@ -284,15 +258,11 @@ Start(void *p)
 	sim->deltaT = 1.0/sim->maxSpeed;
 	
 	/* Initialize the matrices. */
-	M_SetZero(sim->G);
-	M_SetZero(sim->B);
-	M_SetZero(sim->C);
-	M_SetZero(sim->D);
-	M_SetZero(sim->i);
-	M_SetZero(sim->e);
+	M_SetZero(sim->A);
+	M_SetZero(sim->z);
 
 	/* Load datum node equation */
-	sim->G->v[0][0] = 1.0;
+	sim->A->v[0][0] = 1.0;
 	
 	/*
 	 * Invoke the DC-specific simulation start callback. Components can
@@ -340,18 +310,10 @@ Destroy(void *p)
 	Stop(sim);
 
 	M_Free(sim->A);
-	M_Free(sim->G);
-	M_Free(sim->B);
-	M_Free(sim->C);
-	M_Free(sim->D);
 	M_Free(sim->LU);
 	M_IntVectorFree(sim->piv);
 	M_Free(sim->z);
-	M_Free(sim->i);
-	M_Free(sim->e);
 	M_Free(sim->x);
-	M_Free(sim->v);
-	M_Free(sim->j);
 }
 
 static void
@@ -423,28 +385,7 @@ Edit(void *p, ES_Circuit *ckt)
 	mv = M_MatviewNew(ntab, sim->LU, 0);
 	M_MatviewSizeHint(mv, "-0.000", 10, 5);
 	M_MatviewSetNumericalFmt(mv, "%.02f");
-#if 0
-	ntab = AG_NotebookAddTab(nb, "[G]", AG_BOX_VERT);
-	mv = M_MatviewNew(ntab, sim->G, 0);
-	M_MatviewSizeHint(mv, "-0.000", 10, 5);
-	M_MatviewSetNumericalFmt(mv, "%.02f");
 	
-	ntab = AG_NotebookAddTab(nb, "[B]", AG_BOX_VERT);
-	mv = M_MatviewNew(ntab, sim->B, 0);
-	M_MatviewSizeHint(mv, "-0.000", 10, 5);
-	M_MatviewSetNumericalFmt(mv, "%.03f");
-	
-	ntab = AG_NotebookAddTab(nb, "[C]", AG_BOX_VERT);
-	mv = M_MatviewNew(ntab, sim->C, 0);
-	M_MatviewSizeHint(mv, "-0.000", 10, 5);
-	M_MatviewSetNumericalFmt(mv, "%.03f");
-	
-	ntab = AG_NotebookAddTab(nb, "[D]", AG_BOX_VERT);
-	mv = M_MatviewNew(ntab, sim->D, 0);
-	M_MatviewSizeHint(mv, "-0.000", 10, 5);
-	M_MatviewSetNumericalFmt(mv, "%.03f");
-#endif
-
 	ntab = AG_NotebookAddTab(nb, "[z]", AG_BOX_VERT);
 	mv = M_MatviewNew(ntab, sim->z, 0);
 	M_MatviewSizeHint(mv, "-0000.0000", 10, 5);
