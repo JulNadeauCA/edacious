@@ -73,7 +73,9 @@ UpdateModel(ES_NMOS *u, M_Real vGS, M_Real vDS)
 	{
 		// Saturation
 
-		I=(u->K)/2*(vGS-(u->Vt))*(vGS-(u->Vt));
+		M_Real vSat = vGS-u->Vt;
+
+		I=(u->K)/2*vSat*vSat*(1+(vDS-vSat)/u->Va);
 		u->gm=sqrt(2*(u->K)*I);
 		u->go=I/(u->Va);
 

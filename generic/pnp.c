@@ -58,6 +58,8 @@ vCB(ES_PNP *u)
 static void
 UpdateModel(ES_PNP *u, ES_SimDC *dc, M_Real vEB, M_Real vCB)
 {
+	M_Real vEC=vEB-vCB;
+
 	M_Real VebDiff = vEB - u->VebPrev;
 	M_Real VcbDiff = vCB - u->VcbPrev;
 
@@ -79,7 +81,7 @@ UpdateModel(ES_PNP *u, ES_SimDC *dc, M_Real vEB, M_Real vCB)
 	M_Real Ibf = (u->Ifs/u->betaF)*(M_Exp(vEB/u->Vt)-1);
 	M_Real Ibr = (u->Irs/u->betaR)*(M_Exp(vCB/u->Vt)-1);
 
-	M_Real Icc = u->betaF*Ibf-u->betaR*Ibr;
+	M_Real Icc = (u->betaF*Ibf-u->betaR*Ibr)*(1+vEC/u->Va);
 
 	u->gPiF = Ibf/u->Vt;
 	u->gPiR = Ibr/u->Vt;
@@ -91,7 +93,7 @@ UpdateModel(ES_PNP *u, ES_SimDC *dc, M_Real vEB, M_Real vCB)
 
     	u->Ibf_eq = Ibf - u->gPiF*vEB;
 	u->Ibr_eq = Ibr - u->gPiR*vCB;
-	u->Icc_eq = Icc - u->gmF*vEB + u->gmR*vCB;
+	u->Icc_eq = Icc - u->gmF*vEB + u->gmR*vCB - u->go*vEC;
 }
 
 static void UpdateStamp(ES_PNP *u, ES_SimDC *dc)
