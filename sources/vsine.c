@@ -41,16 +41,18 @@ const ES_Port esVSinePorts[] = {
 static void
 UpdateStamp(ES_VSine *vs, ES_SimDC *dc)
 {
-	Uint k = PNODE(vs,1);
-	Uint j = PNODE(vs,2);
 
-	StampVoltageSource(VSOURCE(vs)->v, k,j, VSOURCE(vs)->vIdx, dc);
+	StampVoltageSource(VSOURCE(vs)->v, VSOURCE(vs)->s);
 }
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSine *vs = obj;
+	Uint k = PNODE(vs,1);
+	Uint j = PNODE(vs,2);
+
+	InitStampVoltageSource(k,j, VSOURCE(vs)->vIdx, VSOURCE(vs)->s, dc);
 
 	VSOURCE(vs)->v = 0.0;
 	UpdateStamp(vs,dc);

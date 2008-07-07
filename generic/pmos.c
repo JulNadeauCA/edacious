@@ -101,9 +101,9 @@ UpdateStamp(ES_PMOS *u, ES_SimDC *dc)
 	Uint d = PNODE(u,PORT_D);
 	Uint s = PNODE(u,PORT_S);
 
-	StampVCCS(u->gm-u->gmPrev,s,g,s,d,dc);
-	StampConductance(u->go-u->goPrev,s,d,dc);
-	StampCurrentSource(u->Ieq-u->IeqPrev,d,s,dc);
+	StampVCCS(u->gm-u->gmPrev, u->s_vccs);
+	StampConductance(u->go-u->goPrev, u->s_conductance);
+	StampCurrentSource(u->Ieq-u->IeqPrev, u->s_current);
 
 	u->gmPrev = u->gm;
 	u->goPrev = u->go;
@@ -125,10 +125,16 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_PMOS *u = obj;
+	Uint g = PNODE(u,PORT_G);
+	Uint d = PNODE(u,PORT_D);
+	Uint s = PNODE(u,PORT_S);
+
+	InitStampVCCS(s,g,s,d,u->s_vccs, dc);
+	InitStampConductance(s,d,u->s_conductance, dc);
+	InitStampCurrentSource(d,s, u->s_current, dc);
 
 	UpdateModel(u,u->Vt+0.1,u->Vt+0.1);
 	UpdateStamp(u,dc);
-
 	return (0);
 }
 
@@ -136,7 +142,11 @@ static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_PMOS *u = obj;
+	Uint g = PNODE(u,PORT_G);
+	Uint d = PNODE(u,PORT_D);
+	Uint s = PNODE(u,PORT_S);
 
+	
 	UpdateModel(u,u->Vt+0.1,u->Vt+0.1);
 	UpdateStamp(u,dc);
 

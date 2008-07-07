@@ -188,17 +188,18 @@ ES_VsourceFindLoops(ES_Vsource *vs)
 static void
 UpdateStamp(ES_Vsource *vs, ES_SimDC *dc)
 {
-	Uint k = PNODE(vs,1);
-	Uint j = PNODE(vs,2);
-
-	StampVoltageSource(vs->v,k,j,vs->vIdx, dc);
+	StampVoltageSource(vs->v,vs->s);
 }
 	
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Vsource *vs = obj;
+	Uint k = PNODE(vs,1);
+	Uint j = PNODE(vs,2);
 
+	InitStampVoltageSource(k, j, vs->vIdx, vs->s, dc);
+	
 	UpdateStamp(vs, dc);
 
 	return (0);

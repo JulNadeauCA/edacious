@@ -79,11 +79,8 @@ UpdateModel(ES_Diode *d, ES_SimDC *dc, M_Real v)
 static void
 UpdateStamp(ES_Diode *d, ES_SimDC *dc)
 {
-	Uint k = PNODE(d,PORT_P);
-	Uint l = PNODE(d,PORT_N);
-
-	StampConductance(d->g - d->gPrev, k,l, dc);
-	StampCurrentSource(d->Ieq - d->IeqPrev, l,k, dc);
+	StampConductance(d->g - d->gPrev, d->s_conductance);
+	StampCurrentSource(d->Ieq - d->IeqPrev, d->s_current_source);
 
 	d->gPrev = d->g;
 	d->IeqPrev = d->Ieq;
@@ -93,6 +90,12 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
         ES_Diode *d = obj;
+
+	Uint k = PNODE(d,PORT_P);
+	Uint l = PNODE(d,PORT_N);
+
+	InitStampConductance(k, l, d->s_conductance, dc);
+	InitStampCurrentSource(k, l, d->s_current_source, dc);
 	
 	d->vPrev = 0.7;
 	UpdateModel(d, dc, 0.7);

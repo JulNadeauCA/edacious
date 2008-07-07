@@ -40,18 +40,20 @@ const ES_Port esVSquarePorts[] = {
 static void
 UpdateStamp(ES_VSquare *vsq, ES_SimDC *dc)
 {
-	Uint k = PNODE(vsq,1);
-	Uint j = PNODE(vsq,2);
 
-	StampVoltageSource(VSOURCE(vsq)->v, k,j, VSOURCE(vsq)->vIdx, dc);
+	StampVoltageSource(VSOURCE(vsq)->v, VSOURCE(vsq)->s);
 }
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSquare *vsq = obj;
+	Uint k = PNODE(vsq,1);
+	Uint j = PNODE(vsq,2);
 
 	VSOURCE(vsq)->v = 0.0;
+
+	InitStampVoltageSource(k,j, VSOURCE(vsq)->vIdx, VSOURCE(vsq)->s, dc);
 
 	UpdateStamp(vsq,dc);
 

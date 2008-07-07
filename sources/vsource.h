@@ -15,6 +15,8 @@ typedef struct es_vsource {
 	Uint nloops;
 	ES_Port	**lstack;		/* For loop computation */
 	Uint nlstack;
+
+	M_Real *s[STAMP_VOLTAGE_SOURCE_SIZE];
 } ES_Vsource;
 
 #ifdef _ES_INTERNAL

@@ -106,7 +106,8 @@ ES_DigitalStepIter(void *p, ES_SimDC *dc)
 		    k == -1 || j == -1 || (k == 0 && j == 0)) {
 			continue;
 		}
-		StampConductance(g, k,j, dc);
+		/* TODO : port to new stamp system */
+		/* StampConductance(g, k,j, dc); */
 	}
 }
 

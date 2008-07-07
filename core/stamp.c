@@ -4,88 +4,103 @@
 
 #include <eda.h>
 
+/* Dummy variable to write everything related to ground to */
+M_Real dummy;
+
 #define N SIM(dc)->ckt->n
 
-#define AddG(k,l,val)	dc->A->v[k][l]	   += val
-#define AddB(k,l,val)	dc->A->v[k][N+l]   += val
-#define AddC(k,l,val)	dc->A->v[N+k][l]   += val
-#define AddD(k,l,val)	dc->A->v[N+k][N+l] += val
-#define AddI(k,val)	dc->z->v[k][0]	   += val
-#define AddV(k,val)	dc->z->v[N+k][0]   += val
+/* to remove later, and move to M library */
+#define M_GetElement(A, k, l) &(A->v[k][l])
+#define M_GetElementVector(z, k) &(z->v[k][0])
 
-#define SetG(k,l,val)	dc->A->v[k][l]	   = val
-#define SetB(k,l,val)	dc->A->v[k][N+l]   = val
-#define SetC(k,l,val)	dc->A->v[N+k][l]   = val
-#define SetD(k,l,val)	dc->A->v[N+k][N+l] = val
-#define SetI(k,val)	dc->z->v[k][0]	   = val
-#define SetV(k,val)	dc->z->v[N+k][0]   = val
+#define GetElemG(k, l) (((k) == 0 || (l) == 0) ? &dummy : M_GetElement(dc->A, (k), (l)))
+#define GetElemB(k, l) GetElemG(k, N+l)
+#define GetElemC(k, l) GetElemG(N+k, l)
+#define GetElemD(k, l) GetElemG(N+k, N+l)
 
-void
-StampConductance(M_Real g, Uint k, Uint l, ES_SimDC *dc)
+#define GetElemI(k) ((k) == 0 ? &dummy : M_GetElementVector(dc->z, (k)))
+#define GetElemV(k) GetElemI(k+N)
+
+
+/* Conductance */
+void InitStampConductance(Uint k, Uint l, StampData s, ES_SimDC *dc)
 {
-        if (k != 0) {
-		AddG(k, k, g);
-        }
-        if (l != 0) {
-                AddG(l, l, g);
-        }
-        if (k != 0 && l != 0) {
-		AddG(k, l, -g);
-		AddG(l, k, -g);
-        }
+	s[0] = GetElemG(k, k);
+	s[1] = GetElemG(k, l);
+	s[2] = GetElemG(l, k);
+	s[3] = GetElemG(l, l);
+}
+void
+StampConductance(M_Real g, StampData s)
+{
+	*s[0] += g;
+	*s[1] -= g;
+	*s[2] -= g;
+	*s[3] += g;
 }
 
-void
-StampCurrentSource(M_Real I, Uint k, Uint l, ES_SimDC *dc)
+
+/* Current source */
+void InitStampCurrentSource(Uint k, Uint l, StampData s, ES_SimDC *dc)
 {
-	if (k != 0){
-		AddI(k, I);
-	}
-	if (l != 0){
-		AddI(l, -I);
-	}
+	s[0] = GetElemI(k);
+	s[1] = GetElemI(l);
+}
+void
+StampCurrentSource(M_Real I, StampData s)
+{
+	*s[0] += I;
+	*s[1] -= I;
 }
 
-void
-StampVCCS(M_Real g, Uint k, Uint l, Uint p, Uint q, ES_SimDC *dc)
+
+/* Voltage controlled current source */
+void InitStampVCCS(Uint k, Uint l, Uint p, Uint q, StampData s, ES_SimDC *dc)
 {
-	if (p != 0){
-		if (k != 0){
-			AddG(p, k, g);
-		}
-		if (l != 0){
-			AddG(p, l, -g);
-		}
-	}
-	if (q != 0){
-		if (k != 0){
-			AddG(q, k, -g);
-		}
-		if (l != 0){
-			AddG(q, l, g);
-		}
-	}
+	s[0] = GetElemG(p, k);
+	s[1] = GetElemG(p, l);
+	s[2] = GetElemG(q, k);
+	s[3] = GetElemG(q, l);
+}
+void
+StampVCCS(M_Real g, StampData s)
+{
+	*s[0] += g;
+	*s[1] -= g;
+	*s[2] -= g;
+	*s[3] += g;
 }
 
+
+/* Independant voltage source */
+void InitStampVoltageSource(Uint k, Uint l, Uint v, StampData s, ES_SimDC *dc)
+{
+	s[0] = GetElemB(k, v);
+	s[1] = GetElemC(v, k);
+	s[2] = GetElemB(l, v);
+	s[3] = GetElemC(v, l);
+	s[4] = GetElemV(v);
+}
 void 
-StampVoltageSource(M_Real voltage, Uint k, Uint l, Uint v, ES_SimDC *dc)
+StampVoltageSource(M_Real voltage, StampData s)
 {
-	if (k != 0) {
-		SetB(k, v, 1.0);
-		SetC(v, k, 1.0);
-	}
-	if (l != 0) {
-		SetB(l, v, -1.0);
-		SetC(v, l, -1.0);
-	}
-
-	SetV(v, voltage);
+	*s[0] = 1.0;
+	*s[1] = 1.0;
+	*s[2] = -1.0;
+	*s[3] = -1.0;
+	*s[4] = voltage;
 }
 
-void
-StampThevenin(M_Real voltage, Uint k, Uint l, Uint v, M_Real resistance, ES_SimDC *dc)
+
+/* Thevenin model */
+void InitStampThevenin(Uint k, Uint l, Uint v, StampData s, ES_SimDC *dc)
 {
-	
-	StampVoltageSource(voltage, k, l, v, dc);
-	SetD(v, v, -resistance);
+	InitStampVoltageSource(k, l, v, s, dc);
+	s[5] = GetElemD(v, v);
+}
+void
+StampThevenin(M_Real voltage, M_Real resistance, StampData s)
+{
+	StampVoltageSource(voltage, s);
+	*s[5] = -resistance;
 }

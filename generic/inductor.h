@@ -15,6 +15,9 @@ typedef struct es_inductor {
 
 	M_Real gPrev;
 	M_Real IeqPrev;
+
+	M_Real *s_conductance[STAMP_CONDUCTANCE_SIZE];
+	M_Real *s_current_source[STAMP_CONDUCTANCE_SIZE];
 } ES_Inductor;
 
 __BEGIN_DECLS

@@ -9,6 +9,8 @@ typedef struct es_isource {
 	struct es_component com;
 
 	M_Real I;
+
+	M_Real *s[STAMP_CURRENT_SOURCE_SIZE];
 } ES_Isource;
 
 __BEGIN_DECLS

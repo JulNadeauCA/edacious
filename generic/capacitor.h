@@ -15,6 +15,8 @@ typedef struct es_capacitor {
 	/* Parameters of the thevenin model */
 	M_Real r;
 	M_Real v;
+
+	M_Real *s[STAMP_THEVENIN_SIZE];
 } ES_Capacitor;
 
 __BEGIN_DECLS

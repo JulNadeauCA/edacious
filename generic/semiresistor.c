@@ -42,7 +42,9 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_SemiResistor *r = obj;
-
+	Uint k = PNODE(r,1);
+	Uint j = PNODE(r,2);
+	
 	if (r->narrow >= r->l || r->narrow >= r->w) {
 		AG_SetError("Narrowing is >= the length/width");
 		return (-1);
@@ -52,6 +54,8 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 		AG_SetError("Resistance is too small");
 		return (-1);
 	}
+
+	InitStampConductance(k, j, r->s, dc);
 	return (0);
 }
 
@@ -76,7 +80,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	M_Real g;
 
 	g = 1.0/(r->rEff * (1.0 + r->Tc1*dT + r->Tc2*dT*dT));	
-	StampConductance(g, k, j, dc);
+	StampConductance(g,r->s);
 }
 
 static void

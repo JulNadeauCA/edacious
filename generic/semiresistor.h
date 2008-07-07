@@ -12,6 +12,8 @@ typedef struct es_semiresistor {
 	M_Real narrow;		/* Narrowing due to side etching */
 	M_Real Tc1, Tc2;	/* Resistance/temperature coefficients */
 	M_Real rEff;		/* Effective resistance */
+
+	M_Real *s[STAMP_CONDUCTANCE_SIZE];
 } ES_SemiResistor;
 
 __BEGIN_DECLS

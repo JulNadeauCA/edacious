@@ -96,13 +96,9 @@ UpdateModel(ES_NMOS *u, M_Real vGS, M_Real vDS)
 
 static void UpdateStamp(ES_NMOS *u, ES_SimDC *dc)
 {
-	Uint g = PNODE(u,PORT_G);
-	Uint d = PNODE(u,PORT_D);
-	Uint s = PNODE(u,PORT_S);
-
-	StampVCCS(u->gm-u->gmPrev,g,s,d,s,dc);
-	StampConductance(u->go-u->goPrev,d,s,dc);
-	StampCurrentSource(u->Ieq-u->IeqPrev,s,d,dc);
+	StampVCCS(u->gm-u->gmPrev,u->s_vccs);
+	StampConductance(u->go-u->goPrev,u->s_conductance);
+	StampCurrentSource(u->Ieq-u->IeqPrev,u->s_current);
 
 	u->gmPrev = u->gm;
 	u->goPrev = u->go;
@@ -124,6 +120,13 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_NMOS *u = obj;
+	Uint g = PNODE(u,PORT_G);
+	Uint d = PNODE(u,PORT_D);
+	Uint s = PNODE(u,PORT_S);
+
+	InitStampVCCS(g,s,d,s, u->s_vccs, dc);
+	InitStampConductance(d,s, u->s_conductance, dc);
+	InitStampCurrentSource(s,d, u->s_current, dc);
 
 	u->gm=0.0;
 	u->go=1.0;

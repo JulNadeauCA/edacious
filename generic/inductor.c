@@ -77,20 +77,17 @@ UpdateModel(ES_Inductor *i, ES_SimDC *dc, M_Real v)
 static void
 UpdateStamp(ES_Inductor *i, ES_SimDC *dc)
 {
-	Uint k = PNODE(i,PORT_A);
-	Uint l = PNODE(i,PORT_B);
-	
 	switch(dc->method) {
 	case BE:
-		StampConductance(i->g-i->gPrev,k,l,dc);
-		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc);
+		StampConductance(i->g-i->gPrev, i->s_conductance);
+		StampCurrentSource(i->Ieq-i->IeqPrev, i->s_current_source);
 		break;
 	case FE:
-		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc);
+		StampCurrentSource(i->Ieq-i->IeqPrev,i->s_current_source);
 		break;
 	case TR:
-		StampConductance(i->g-i->gPrev,k,l,dc);
-		StampCurrentSource(i->Ieq-i->IeqPrev,l,k,dc);
+		StampConductance(i->g-i->gPrev, i->s_conductance);
+		StampCurrentSource(i->Ieq-i->IeqPrev, i->s_current_source);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -105,7 +102,26 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
         ES_Inductor *i = obj;
+	Uint k = PNODE(i,PORT_A);
+	Uint l = PNODE(i,PORT_B);
 
+		switch(dc->method) {
+	case BE:
+		InitStampConductance(k, l, i->s_conductance, dc);
+		InitStampCurrentSource(l, k, i->s_current_source, dc);
+		break;
+	case FE:
+		InitStampCurrentSource(l, k, i->s_current_source, dc);
+		break;
+	case TR:
+		InitStampConductance(k, l, i->s_conductance, dc);
+		InitStampCurrentSource(l, k, i->s_current_source, dc);
+		break;
+	default:
+		printf("Method %d not implemented\n", dc->method);
+		break;
+	}
+	
 	i->g = 0.01;
 	i->Ieq = 0.0;
 	UpdateStamp(i, dc);

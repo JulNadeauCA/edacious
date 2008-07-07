@@ -18,6 +18,10 @@ typedef struct es_nmos {
 	M_Real IeqPrev;	
 	M_Real gmPrev;
 	M_Real goPrev;
+
+	M_Real *s_vccs[STAMP_VCCS_SIZE];
+	M_Real *s_conductance[STAMP_CONDUCTANCE_SIZE];
+	M_Real *s_current[STAMP_CURRENT_SOURCE_SIZE];
 } ES_NMOS;
 
 __BEGIN_DECLS

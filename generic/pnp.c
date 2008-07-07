@@ -102,17 +102,17 @@ static void UpdateStamp(ES_PNP *u, ES_SimDC *dc)
 	Uint e = PNODE(u,PORT_E);
 	Uint c = PNODE(u,PORT_C);
 
-	StampConductance(u->gPiF-u->gPiF_prev,b,e,dc);
-	StampConductance(u->gPiR-u->gPiR_prev,b,c,dc);
+	StampConductance(u->gPiF-u->gPiF_prev,u->sc_be);
+	StampConductance(u->gPiR-u->gPiR_prev,u->sc_bc);
 
-	StampConductance(u->go-u->goPrev,e,c,dc);
+	StampConductance(u->go-u->goPrev,u->sc_ec);
 
-	StampVCCS(u->gmF-u->gmF_prev,e,b,e,c,dc);
-	StampVCCS(u->gmR-u->gmR_prev,c,b,c,e,dc);
+	StampVCCS(u->gmF-u->gmF_prev,u->sv_ebec);
+	StampVCCS(u->gmR-u->gmR_prev,u->sv_cbce);
 
-	StampCurrentSource(u->Ibf_eq-u->Ibf_eq_prev,b,e,dc);
-	StampCurrentSource(u->Ibr_eq-u->Ibr_eq_prev,b,c,dc);
-	StampCurrentSource(u->Icc_eq-u->Icc_eq_prev,c,e,dc);
+	StampCurrentSource(u->Ibf_eq-u->Ibf_eq_prev, u->si_be);
+	StampCurrentSource(u->Ibr_eq-u->Ibr_eq_prev, u->si_bc);
+	StampCurrentSource(u->Icc_eq-u->Icc_eq_prev, u->si_ce);
 
 	u->gPiF_prev = u->gPiF;
 	u->gPiR_prev = u->gPiR;
@@ -128,6 +128,23 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_PNP *u = obj;
+
+	Uint b = PNODE(u,PORT_B);
+	Uint e = PNODE(u,PORT_E);
+	Uint c = PNODE(u,PORT_C);
+
+	InitStampConductance(b,e, u->sc_be, dc);
+	InitStampConductance(b,c, u->sc_bc, dc);
+
+	InitStampConductance(e,c, u->sc_ec, dc);
+
+	InitStampVCCS(b,e,c,e, u->sv_ebec, dc);
+	InitStampVCCS(b,c,e,c, u->sv_cbce, dc);
+
+	InitStampCurrentSource(e,b, u->si_be, dc);
+	InitStampCurrentSource(c,b, u->si_bc, dc);
+	InitStampCurrentSource(e,c, u->si_ce, dc);
+
 
 	u->VebPrev = 0.7;
 	u->VcbPrev = 0.7;

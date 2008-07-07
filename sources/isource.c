@@ -45,7 +45,8 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	Uint k = PNODE(i,1);
 	Uint j = PNODE(i,2);
 
-	StampCurrentSource(i->I,k,j,dc);
+	InitStampCurrentSource(k, j, i->s, dc);
+	StampCurrentSource(i->I, i->s);
 
 	return (0);
 }

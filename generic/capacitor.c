@@ -84,17 +84,15 @@ UpdateModel(ES_Capacitor *c, M_Real v, ES_SimDC *dc)
 static void
 UpdateStamp(ES_Capacitor *c, ES_SimDC *dc)
 {
-	Uint k = PNODE(c,PORT_A);
-	Uint l = PNODE(c,PORT_B);
 	switch(dc->method) {
 	case BE:
-		StampThevenin(c->v, k, l, c->vIdx, c->r, dc);
+		StampThevenin(c->v, c->r, c->s);
 		break;
 	case FE:
-		StampVoltageSource(c->v, k, l, c->vIdx, dc);
+		StampVoltageSource(c->v, c->s);
 		break;
 	case TR:
-		StampThevenin(c->v, k, l, c->vIdx, c->r, dc);
+		StampThevenin(c->v, c->r, c->s);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -106,6 +104,23 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
         ES_Capacitor *c = obj;
+	Uint k = PNODE(c,PORT_A);
+	Uint l = PNODE(c,PORT_B);
+	
+	switch(dc->method) {
+	case BE:
+		InitStampThevenin(k, l, c->vIdx, c->s, dc);
+		break;
+	case FE:
+		InitStampVoltageSource(k, l, c->vIdx, c->s, dc);
+		break;
+	case TR:
+		InitStampThevenin(k, l, c->vIdx, c->s, dc);
+		break;
+	default:
+		printf("Method %d not implemented\n", dc->method);
+		break;
+	}
 	c->v = c->V0;
 	UpdateModel(c, c->V0, dc);
 	UpdateStamp(c, dc);

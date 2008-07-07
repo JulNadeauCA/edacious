@@ -32,6 +32,18 @@ typedef struct es_pnp {
 
 	M_Real VebPrev;
 	M_Real VcbPrev;
+
+	M_Real *sc_be[STAMP_CONDUCTANCE_SIZE];
+	M_Real *sc_bc[STAMP_CONDUCTANCE_SIZE];
+	M_Real *sc_ec[STAMP_CONDUCTANCE_SIZE];
+
+	M_Real *sv_ebec[STAMP_VCCS_SIZE];
+	M_Real *sv_cbce[STAMP_VCCS_SIZE];
+	
+	M_Real *si_be[STAMP_CURRENT_SOURCE_SIZE];
+	M_Real *si_bc[STAMP_CURRENT_SOURCE_SIZE];
+	M_Real *si_ce[STAMP_CURRENT_SOURCE_SIZE];
+
 } ES_PNP;
 
 __BEGIN_DECLS
