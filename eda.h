@@ -50,7 +50,7 @@
 
 /* -------------------------------------------------------------------------- */
 
-#include <schem/schem.h>
+#include <core/schem.h>
 #include <core/component.h>
 #include <core/circuit.h>
 #include <core/icons.h>
