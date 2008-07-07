@@ -19,6 +19,13 @@ SRCS=	circuit.c \
 	wire.c \
 	wire_tool.c
 
+SRCS+=	schem.c \
+	schem_block.c \
+	schem_port.c \
+	schem_port_tool.c \
+	schem_select_tool.c \
+	schem_wire.c
+
 CFLAGS+=${FREESG_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 
 include ${TOP}/mk/build.lib.mk
