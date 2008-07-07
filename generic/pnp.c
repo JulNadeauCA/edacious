@@ -138,12 +138,12 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 
 	InitStampConductance(e,c, u->sc_ec, dc);
 
-	InitStampVCCS(b,e,c,e, u->sv_ebec, dc);
-	InitStampVCCS(b,c,e,c, u->sv_cbce, dc);
+	InitStampVCCS(e,b,e,c, u->sv_ebec, dc);
+	InitStampVCCS(c,b,c,e, u->sv_cbce, dc);
 
-	InitStampCurrentSource(e,b, u->si_be, dc);
-	InitStampCurrentSource(c,b, u->si_bc, dc);
-	InitStampCurrentSource(e,c, u->si_ce, dc);
+	InitStampCurrentSource(b,e, u->si_be, dc);
+	InitStampCurrentSource(b,c, u->si_bc, dc);
+	InitStampCurrentSource(c,e, u->si_ce, dc);
 
 
 	u->VebPrev = 0.7;
