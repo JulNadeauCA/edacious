@@ -17,9 +17,8 @@ SRCS=	circuit.c \
 	spice.c \
 	stamp.c \
 	wire.c \
-	wire_tool.c
-
-SRCS+=	schem.c \
+	wire_tool.c \
+	schem.c \
 	schem_block.c \
 	schem_port.c \
 	schem_port_tool.c \
