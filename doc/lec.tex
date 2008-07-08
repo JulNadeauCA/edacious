@@ -30,10 +30,9 @@ The new matrix relation becomes $Ax = z$ :\\
 \item $A$ is the block matrix $(G,C;B,D)$, G being the admittance matrix of NA, and B, C, D representing various constitutive equations concerning the voltage sources.
 \end{itemize}
 \subsection{Non-linear DC analysis}
-TODO
+For simulation of real circuits, which contain transistors and diode, we are interested in simulating components which have arbitrary i-v relations. We use the standard Newton method, described in any numerical analysis textbook. The derivation of how the multidimensional Newton method leads to the algorithm we use is a bit long, but here is the intuitive explanation : the Newton method works by linearizing the equation around the operating point $X_n$, solve the linearized equation to obtain $X_{n+1}$, and iterate until convergence (which is when $X_n$ is near $X_{n+1}$, the precise definition of near involving a compromise between speed and accuracy). In circuits, we linearize the i-v characteristic around point $v_n$ : $i = i(v_n) + (dv/di)(v - v_n)$. That allows us to form companion models describing the linearized component, which we can stamp. The equation is solved for another operating point, and the cycle continues.
 \subsection{Transient analysis}
 TODO
-
 
 \section{Non-linear components}
 \subsection{PN Diode}
