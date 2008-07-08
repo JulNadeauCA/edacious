@@ -10,12 +10,33 @@
 \begin{document}
 
 \title{Companion Models for Basic Non-Linear and Transient Devices}
-\author{Steven Herbst}
+\author{Steven Herbst, Antoine Levitt}
 \date{\today}
 
 \maketitle
 
-\section{PN Diode}
+\section{Introduction}
+\subsection{Linear DC analysis}
+\subsubsection{Nodal analysis}
+The most simple kind of circuit simulation deals with constant sources and resistors. There are a number of different techniques to formulate the network equations in a general way, the most convenient for computer simulation being nodal analysis (NA). This method formulates equation in the matrix form $GV = I$, which is straightforward for current sources and resistors by application of the Kirchoff current law (KCL) at each node.\\
+An interesting side effect is that we can formulate the equations in a per-component basis : each component ``stamps'' itself in the $G$ matrix and $I$ right hand side. For instance, a resistor between node $i$ and node $j$ contributes to the current flowing to node $j$ by $\frac{1}{R} (v_j - v_i)$ and to the current flowing to node $i$ by the negative of the same amount. So its ``stamp'' is four entries in the G matrix : $R$ in $(i,i)$ and $(j,j)$, and $-R$ in $(i,j)$ and $(j,i)$. The stamp for the current source is derived in the same way : a current source of known current J between node $i$ and $j$ adds $J$ to entry number $i$ of $I$, and $-J$ to entry number $j$ of $I$.\\
+\subsubsection{Modified nodal analysis}
+Using NA, we can treat circuits comprised of resistors and current sources. For the other basic building block, voltage source, a trick is required. Since we can not incorporate the missing equations directly, we add another unknown for every voltage source : this is known as modified nodal analysis (MNA) and is at the core of agar-eda. The idea is to split the unknown vector (which is called $x$ in the simulation) and the right hand side (called $z$) in two parts : the first corresponds to classical nodal analysis, the second is used to treat voltage sources.\\
+The second part of the unknowns are the current flowing through the voltage source. A voltage source of known voltage V between nodes $i$ and $j$ adds the unknown $I_{i,j}$ to the unknowns vector, and contributes to the equations with by adding $I_{i,j}$ to $i_i$ and $-I_{i,j}$ to $i_j$, and the new equation $V_j - V_i = V$. These equations, like the previous ones, can be incorporated by stamping.\\
+The new matrix relation becomes $Ax = z$ :\\
+\begin{itemize}
+\item $z$ is $(z_{NA}, z_{MNA})$, $z_{NA}$ being the stamps of current sources, and $z_{MNA}$ the stamps of voltage sources. 
+\item $x$ is $(x_{NA}, x_{MNA})$, $x_{NA}$ being the voltages at the nodes, and $x_{MNA}$ the currents flowing through the voltage sources.
+\item $A$ is the block matrix $(G,C;B,D)$, G being the admittance matrix of NA, and B, C, D representing various constitutive equations concerning the voltage sources.
+\end{itemize}
+\subsection{Non-linear DC analysis}
+TODO
+\subsection{Transient analysis}
+TODO
+
+
+\section{Non-linear components}
+\subsection{PN Diode}
 
 As a two-terminal device with only one distinct operating region, the PN diode was a natural starting point for non-linear simulation.  The current model does not include parasitic capacitances, but this is planned for the future.
 
@@ -30,7 +51,7 @@ where $I_S$ is the reverse saturation current and $V_t$ is the thermal voltage (
 \begin{equation}
 g = \frac{di}{dv} = (I_S/V_t) e^{v/V_T} \approx i(v)/V_t
 \end{equation}
-The error commited in the equation is $I_S / V_t$, which for common diodes is around $10^{-12} S$, which is negligeable for common applications and allow us to avoid computating the $\exp$ function twice.
+The error committed in the equation is $I_S / V_t$, which for common diodes is around $10^{-12} S$, which is negligibly for common applications and allow us to avoid computing the $\exp$ function twice.
 In simulation we use the Newton-Raphson method to solve circuits with non-linear elements. The method works by linearizing the constitutive equations, solve for a new operating point, and iterate until convergence. The linearised curve around operating point $v_n$ is :
 \begin{equation}
 i_{lin}(v) = i(v_n) + (di/dv)(v_n) (v - v_n)
@@ -53,11 +74,11 @@ By rearranging this equation, we find the i-v relation $i_{lin}=(i(v_n)-gv_n)+gv
 
 \pagebreak
 
-\section{Metal-Oxide-Silicon Field-Effect Transistor}
+\subsection{Metal-Oxide-Silicon Field-Effect Transistor}
 
-The next simplest non-linear devices are n- and p-channel MOSFETs, as no current flows into the gate, and the non-linear source-to-drain port depends on only two parameters, $v_{GS}$ and $v_{DS}$.   The model is complicated slightly, however, by the fact that MOSFETs have three distinct operating regions.  For brevity, we derive only the results for n-channel MOSFETs.  Similar results for p-channel MOSFETs are presented at the end of this section.
+The next simplest non-linear devices are n- and p-channel MOSFETs, as no current flows into the gate, and the non-linear source-to-drain port depends on only two parameters, $v_{GS}$ and $v_{DS}$.   The model is complicated slightly, however, by the fact that MOSFETs have three distinct operating regions.  For brevity, we derive only the results for n-channel MOSFETs.  Similar results for p-channel MOSFETs are presented at the end of this subsection.
 
-\subsection{Cutoff: $ v_{GS} - V_T < 0 $ }
+\subsubsection{Cutoff: $ v_{GS} - V_T < 0 $ }
 
 Cutoff is a trivial operating region, as all of the companion model parameters (depicted in Fig.~\ref{fig:nmos}) zero.  No current flows into any of the nodes.
 
@@ -68,7 +89,7 @@ Cutoff is a trivial operating region, as all of the companion model parameters (
 \end{center}
 \end{figure}
 
-\subsection{Saturation: $ 0 \leq v_{GS} - V_T < v_{DS} $}
+\subsubsection{Saturation: $ 0 \leq v_{GS} - V_T < v_{DS} $}
 
 In saturation, the following large-signal model holds:
 
@@ -83,7 +104,7 @@ g_m&=&\frac{\partial I_D}{\partial v_{GS}}=K(v_{GS}-V_T)(1+(v_{DS}-v_{DS,sat})/V
 g_o&=&\frac{\partial I_D}{\partial v_{DS}}=\frac{K}{2}(v_{GS}-V_T)^2 / V_a=I_S/V_a
 \end{eqnarray}
 
-We seek to define a bias current from drain to source that will cause the node voltages to evolve by Newton-Raphson iteration, as we did for the diode in the previous section.  We now use the multivariable form of the iteration equation:
+We seek to define a bias current from drain to source that will cause the node voltages to evolve by Newton-Raphson iteration, as we did for the diode in the previous subsection.  We now use the multivariable form of the iteration equation:
 
 \begin{equation}
 I_{D,n+1}=I_D+g_m(v_{GS,n+1}-v_{GS,n})+g_o(v_{DS,n+1}-v_{DS,n})
@@ -98,7 +119,7 @@ I_{eq}=I(\mathcal{V}_i)-\sum_{v \in \mathcal{V}}\frac{\partial I}{\partial v}v_i
 
 where $\mathcal{V}$ is the set of device port voltages and $\mathcal{V}_i$ is the set of calculated node voltages from the previous iteration.
 
-\subsection{Triode: $ 0 \leq v_{DS} \leq v_{GS}-V_T $}
+\subsubsection{Triode: $ 0 \leq v_{DS} \leq v_{GS}-V_T $}
 
 The drain current in this operating region is related to the $v_{GS}$ and $v_{DS}$ by Equation~\ref{eqn:nmos_triode}.  Note that this model does not include the Early effect.
 
@@ -118,7 +139,7 @@ Again, $I_{D,eq}=I_D-g_mv_{GS}-g_ov_{DS}$.
 
 \pagebreak
 
-\subsection{p-channel Results}
+\subsubsection{p-channel Results}
 
 The linear companion model for a p-channel MOSFET is shown in Figure~\ref{fig:pmos}, and the values of $g_m$, $g_o$, and $I_{S,eq}$ for the various operating regions are summarized in Table~\ref{tb:pmos}.  For all operating regions, $I_{S,eq}$ is related to $I_S$, $g_m$, and $g_o$ by the following equation:
 
@@ -174,7 +195,7 @@ I_{S,eq} =  I_S - g_m v_{SG} - g_o v_{SD}
 
 \pagebreak
 
-\section{Bipolar Junction Transistor}
+\subsection{Bipolar Junction Transistor}
 
 Companion models for BJTs are the most complex circuits presented here because current flows between all nodes.  The model is not quite as unwieldy as it looks, however, because there is only one operating region.
 
@@ -239,9 +260,10 @@ I_{C,eq}&=&I_C(v_{EB},v_{CB})-g_{m,f}v_{EB}+g_{m,r}v_{CB}-g_ov_{EC}
 
 \pagebreak
 
-\section{Capacitor}
+\section{Energy storage components}
+\subsection{Capacitor}
 
-The companion models presented for capacitors and inductors in the next two sections are somewhat different from the companion models presented so far.  Both devices are linear, but require special models to keep track of state variables from timestep to timestep.  The state variable for a capacitor is voltage, so a Thevenin equivalent circuit, shown in Figure~\ref{fig:cap}, is the natural choice for a capacitor companion model.
+The companion models presented for capacitors and inductors in the next two subsections are somewhat different from the companion models presented so far.  Both devices are linear, but require special models to keep track of state variables from timestep to timestep.  The state variable for a capacitor is voltage, so a Thevenin equivalent circuit, shown in Figure~\ref{fig:cap}, is the natural choice for a capacitor companion model.
 
 In deriving the model parameters, we start with the differential equation relating current to voltage in a capacitor:
 
@@ -306,7 +328,7 @@ R&=&\Delta t/2C
 
 \pagebreak
 
-\section{Inductor}
+\subsection{Inductor}
 
 The state variable for an inductor is current, so a Norton equivalent model is better suited to the inductor (see Fig.~\ref{fig:inductor}).  The model parameters can be found in the same way as for the capacitor: discretize the i-v differential equation and select an integration method.
 
