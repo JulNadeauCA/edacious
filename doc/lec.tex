@@ -30,22 +30,20 @@ where $I_S$ is the reverse saturation current and $V_t$ is the thermal voltage (
 \begin{equation}
 g = \frac{di}{dv} = (I_S/V_t) e^{v/V_T} \approx i(v)/V_t
 \end{equation}
-
-A subtlety of non-linear simulation is that devices cannot simply be replaced by their small-signal linear equivalent models.  We must apply a bias current such that branch current evolves as governed by Newton-Raphson iteration:
-
+The error commited in the equation is $I_S / V_t$, which for common diodes is around $10^{-12} S$, which is negligeable for common applications and allow us to avoid computating the $\exp$ function twice.
+In simulation we use the Newton-Raphson method to solve circuits with non-linear elements. The method works by linearizing the constitutive equations, solve for a new operating point, and iterate until convergence. The linearised curve around operating point $v_n$ is :
 \begin{equation}
-i_{n+1}=i_n+(di/dv)(v_{n+1}-v_n)
+i_{lin}(v) = i(v_n) + (di/dv)(v_n) (v - v_n)
 \end{equation}
-
-where $v_n$ is the port voltage computed in the previous iteration.  By rearranging this equation, we find that $i_{n+1}=(i(v_n)-gv_n)+gv_{n+1}$.  Hence the appropriate companion model for a diode is a conductance $g$ in parallel with a current source $i(v_n)-gv_n$, not simply $i(v_n)$, as one might suspect.  The result is shown in Figure~\ref{fig:diode}.
+By rearranging this equation, we find the i-v relation $i_{lin}=(i(v_n)-gv_n)+gv$.  Hence the appropriate companion model for a diode is a conductance $g$ in parallel with a current source $i(v_n)-gv_n$, not simply $i(v_n)$, as one might suspect.  The result is shown in Figure~\ref{fig:diode}.
 
 
 \begin{figure}[h]
 \begin{center}
 \begin{tabular}{m{3cm}<{\centering}m{3cm}<{\centering}}
-	\includegraphics{../fig/diode.eps} & 
+	\includegraphics{fig/diode.eps} & 
 	\begin{eqnarray*}
-		g&=&i(v_n)/V_t \\
+		g_{eq}&=&i(v_n)/V_t \\
 		I_{eq}&=&i(v_n)-g_{eq}v_n
 	\end{eqnarray*}
 \end{tabular}
@@ -65,7 +63,7 @@ Cutoff is a trivial operating region, as all of the companion model parameters (
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics{../fig/nmos.eps}
+\includegraphics{fig/nmos.eps}
 \caption{Linear companion model for n-channel MOSFET \label{fig:nmos}}
 \end{center}
 \end{figure}
@@ -130,7 +128,7 @@ I_{S,eq} =  I_S - g_m v_{SG} - g_o v_{SD}
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics{../fig/pmos.eps}
+\includegraphics{fig/pmos.eps}
 \caption{Linear companion model for p-channel MOSFET \label{fig:pmos}}
 \end{center}
 \end{figure}
@@ -206,14 +204,14 @@ I_{C,eq}&=&I_C(v_{BE},v_{BC})-g_{m,f}v_{BE}+g_{m,r}v_{BC}-g_ov_{CE}
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics{../fig/gummel-poon.eps}
+\includegraphics{fig/gummel-poon.eps}
 \caption{Mid-band Gummel-Poon BJT Model \label{fig:gummel-poon}}
 \end{center}
 \end{figure}
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics{../fig/npn.eps}
+\includegraphics{fig/npn.eps}
 \caption{Linear companion model for NPN BJT \label{fig:npn}}
 \end{center}
 \end{figure}
@@ -234,7 +232,7 @@ I_{C,eq}&=&I_C(v_{EB},v_{CB})-g_{m,f}v_{EB}+g_{m,r}v_{CB}-g_ov_{EC}
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics{../fig/pnp.eps}
+\includegraphics{fig/pnp.eps}
 \caption{Linear companion model for PNP BJT \label{fig:pnp}}
 \end{center}
 \end{figure}
@@ -301,7 +299,7 @@ R&=&\Delta t/2C
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics{../fig/cap.eps}
+\includegraphics{fig/cap.eps}
 \caption{Linear companion model for capacitor \label{fig:cap}}
 \end{center}
 \end{figure}
@@ -361,7 +359,7 @@ R&=&\Delta t/2L
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics{../fig/inductor.eps}
+\includegraphics{fig/inductor.eps}
 \caption{Linear companion model for inductor \label{fig:inductor}}
 \end{center}
 \end{figure}

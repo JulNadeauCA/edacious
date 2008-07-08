@@ -10,7 +10,7 @@ DVIPDF=dvipdf
 lec.pdf : lec.dvi
 	$(DVIPDF) lec.dvi
 
-lec.dvi : lec.tex lec.bib ../fig/*.eps
+lec.dvi : lec.tex lec.bib fig/*.eps
 	make clean && $(LATEX) lec && $(BIBTEX) lec && $(LATEX) lec && $(LATEX) lec 
 
 clean: 
