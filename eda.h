@@ -50,6 +50,7 @@
 
 /* -------------------------------------------------------------------------- */
 
+#include <core/mw.h>
 #include <core/schem.h>
 #include <core/component.h>
 #include <core/circuit.h>

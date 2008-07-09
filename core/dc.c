@@ -76,7 +76,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	ES_Circuit *ckt = obj;
 	ES_SimDC *sim = arg;
 	ES_Component *com;
-	M_Vector *xPrev;
+	MW_Vector *xPrev;
 	M_Real diff;
 	Uint i = 0, j;
 	Uint32 ticks;
@@ -88,7 +88,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	sim->Telapsed += sim->deltaT;
 	sim->timeLastStep = ticks;
 
-	xPrev = M_New(sim->x->m, 1);
+	xPrev = MW_NewVector(sim->x->m);
 
 	if (ckt->n == 0) {
 		AG_SetError(_("Circuit has no nodes to evaluate"));
@@ -116,7 +116,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 #endif
 		}
 
-		M_Copy(xPrev, sim->x);
+		MW_CopyVector(xPrev, sim->x, SIM(dc)->ckt->n + SIM(dc)->ckt->m);
 
 		sim->isDamped = 0;
 		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
@@ -157,7 +157,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	/* Invoke the general post-timestep callbacks (for ES_Scope, etc.) */
 	AG_PostEvent(NULL, ckt, "circuit-step-end", NULL);
 
-	M_Free(xPrev);
+	MW_FreeVector(xPrev);
 
 	/* Schedule next step */
 	if(SIM(sim)->running) {
@@ -175,7 +175,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 halt:
 	AG_TextMsg(AG_MSG_ERROR, _("%s; simulation stopped"), AG_GetError());
 	StopSimulation(sim);
-	M_Free(xPrev);
+	MW_FreeVector(xPrev);
 	return (0);
 }
 
