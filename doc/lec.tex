@@ -3,6 +3,7 @@
 \usepackage{array}
 \usepackage{graphicx}
 \usepackage{listings}
+\usepackage{url}
 \lstdefinelanguage{pseudo}{
 morekeywords={if, else, while, in, remove, from, case, do, end, forever, False, True},
 sensitive=true,%
@@ -39,7 +40,7 @@ The new matrix relation becomes $Ax = z$ :\\
 \subsection{Non-linear DC analysis}
 For simulation of real circuits, which contain transistors and diode, we are interested in simulating components which have arbitrary i-v relations. We use the standard Newton method, described in any numerical analysis textbook. The derivation of how the multidimensional Newton method leads to the algorithm we use is a bit long, but here is the intuitive explanation : the Newton method works by linearizing the equation around the operating point $X_n$, solve the linearized equation to obtain $X_{n+1}$, and iterate until convergence (which is when $X_n$ is near $X_{n+1}$, the precise definition of near involving a compromise between speed and accuracy). In circuits, we linearize the i-v characteristic around point $v_n$ : $i = i(v_n) + (dv/di)(v - v_n)$. That allows us to form companion models describing the linearized component, which we can stamp. The equation is solved for another operating point, and the cycle continues.
 \subsection{Transient analysis}
-Transient analysis uses pretty much the same idea as non-linear analysis. We have to take into account are energy storage components, namely capacitor and inductor. For example the constitutive relation for the inductor is $u = L di/dt$, or equivalently $i(t+\Delta t) = i(t) + 1/L \int_t^{t+\Delta t} u(t)$. We then use an approximation method (we implement single step methods, namely forward euler, backward euler and trapezoidal rule) to compute this integral. This leads to a formula describing the behavior of the component (i.e. a relationship between $i(t+\Delta t)$ and $v(t+\Delta t)$, which we can then convert to a companion model and compute the solution (using a Newton loop). This gives us a new operating point, which we use for the next time step.
+Transient analysis uses pretty much the same idea as non-linear analysis. We have to take into account are energy storage components, namely capacitor and inductor. For example the constitutive relation for the inductor is $u = L di/dt$, or equivalently $i(t+\Delta t) = i(t) + 1/L \int_t^{t+\Delta t} u(x) dx$. We then use an approximation method (we implement single step methods, namely forward euler, backward euler and trapezoidal rule) to compute this integral. This leads to a formula describing the behavior of the component (i.e. a relationship between $i(t+\Delta t)$ and $v(t+\Delta t)$, which we can then convert to a companion model and compute the solution (using a Newton loop). This gives us a new operating point, which we use for the next time step.
 \subsection{Summary}
 The structure of the final algorithm is as follow :
 \begin{lstlisting}
@@ -279,24 +280,22 @@ I_{C,eq}&=&I_C(v_{EB},v_{CB})-g_{m,f}v_{EB}+g_{m,r}v_{CB}-g_ov_{EC}
 \pagebreak
 
 \section{Energy storage components}
+As explained in introduction, transient simulation of energy storage require companion models to be formed. We present here the results for one-step integration methods : Backward Euler (BE), Forward Euler (FE) and Trapezoidal Rule (TR)
 \subsection{Capacitor}
-
-The companion models presented for capacitors and inductors in the next two subsections are somewhat different from the companion models presented so far.  Both devices are linear, but require special models to keep track of state variables from timestep to timestep.  The state variable for a capacitor is voltage, so a Thevenin equivalent circuit, shown in Figure~\ref{fig:cap}, is the natural choice for a capacitor companion model.
-
 In deriving the model parameters, we start with the differential equation relating current to voltage in a capacitor:
-
 \begin{equation}
 I=C(dv/dt)
 \end{equation}
-
-Discretizing this equation, we find
-
+We then transform this differential equation to an integral equation 
+\begin{equation}
+v(t+\Delta t) = v(t) + \int_t^{t+\Delta t} i(x) dx
+\end{equation}
+Then we use an integration method to get an expression for $v_{n+1}$, which can be reformulated as
 \begin{equation}
 v_{n+1} \approx v_n+(\Delta t/C)I
 \end{equation}
-
-How we define $I$ determines the integration method implemented by the companion model.  Table~\ref{tb:cap_int} summarizes three common integration methods and the corresponding model parameters.
-
+How we define $I$ determines the integration method implemented by the companion model. Geometrically, it corresponds to the point at which we evaluate the derivative : FE takes the derivative at the current point, BE at the next point, and TR takes an average of these two. Table~\ref{tb:cap_int} summarizes three common integration methods and the corresponding model parameters.\\
+We recognise either a Thevenin model or a voltage source, depending on whether $I$ depends on $I_{n+1}$ (implicit method) or just $I_n$ (explicit method). We should note that every implicit model is represented by a Thevenin model, and can be converted to an equivalent Norton model. We chose Thevenin model for the capacitor since it is more accurate : computers have trouble dividing by small numbers such as $\Delta t$, and this is precisely what Norton models do. This can be explained by the fact that voltage is the state variable of capacitors, so they change proportionally to $\Delta t$.
 \begin{table}[h]
 \centering
 \caption{Capacitor companion model parameters for integration methods \label{tb:cap_int}}
@@ -347,16 +346,11 @@ R&=&\Delta t/2C
 \pagebreak
 
 \subsection{Inductor}
-
-The state variable for an inductor is current, so a Norton equivalent model is better suited to the inductor (see Fig.~\ref{fig:inductor}).  The model parameters can be found in the same way as for the capacitor: discretize the i-v differential equation and select an integration method.
-
-We start with the relation V=L(di/dt), and make the following approximation for small timesteps
-
+The inductor is the dual of the capacitor, so similar results apply. We end up with the formula
 \begin{equation}
 i_{n+1} \approx i_n + (\Delta t/L)V
 \end{equation}
-
-Again, our choice of V will determine the integration method used.  The results are displayed in Table~\ref{tb:inductor_int}.
+Where $V$ is determined by the integration method. The results are displayed in Table~\ref{tb:inductor_int}. Again, we have the choice between Thevenin and Norton model for implicit methods, and for the same reasons, we choose Norton model (current is the state variable of the inductor).
 
 \begin{table}[h]
 \caption{Induction companion model parameters for integration methods \label{tb:inductor_int}}
