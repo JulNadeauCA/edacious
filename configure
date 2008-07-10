@@ -397,10 +397,10 @@ echo "#ifndef TTFDIR" > config/ttfdir.h
 echo "#define TTFDIR \"$TTFDIR\"" >> config/ttfdir.h
 echo "#endif" >> config/ttfdir.h
 echo "hdefs[\"TTFDIR\"] = \"$TTFDIR\"" >>configure.lua
-LIBDIR="$PREFIX/lib/edacious"
+LIBDIR="$PREFIX/lib"
 echo "LIBDIR=$LIBDIR" >>Makefile.config
 echo "mdefs[\"LIBDIR\"] = \"$LIBDIR\"" >>configure.lua
-LIBDIR="$PREFIX/lib/edacious"
+LIBDIR="$PREFIX/lib"
 echo "#ifndef LIBDIR" > config/libdir.h
 echo "#define LIBDIR \"$LIBDIR\"" >> config/libdir.h
 echo "#endif" >> config/libdir.h
