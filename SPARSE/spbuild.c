@@ -58,18 +58,18 @@ static char RCSid[] =
  *  IMPORTS
  *
  *  >>> Import descriptions:
- *  spConfig.h
+ *  spconfig.h
  *     Macros that customize the sparse matrix routines.
  *  spmatrix.h
  *     Macros and declarations to be imported by the user.
- *  spDefs.h
+ *  spdefs.h
  *     Matrix type and macro definitions for the sparse matrix routines.
  */
 
 #define spINSIDE_SPARSE
-#include "spConfig.h"
+#include "spconfig.h"
 #include "spmatrix.h"
-#include "spDefs.h"
+#include "spdefs.h"
 
 
 
@@ -1048,7 +1048,7 @@ register int I, OldAllocatedSize = Matrix->AllocatedExtSize;
 /*
  *   INITIALIZE MATRIX
  *
- *   With the INITIALIZE compiler option (see spConfig.h) set true,
+ *   With the INITIALIZE compiler option (see spconfig.h) set true,
  *   Sparse allows the user to keep initialization information with each
  *   structurally nonzero matrix element.  Each element has a pointer
  *   that is set and used by the user.  The user can set this pointer

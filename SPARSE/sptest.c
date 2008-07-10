@@ -49,7 +49,7 @@ static char RCSid[] =
  *  >>> Import descriptions:
  *  stdio.h math.h ctype.h
  *      Standard C libraries.
- *  spConfig.h
+ *  spconfig.h
  *      Macros that customize the sparse matrix package. It is not normally
  *      necessary, nor is normally particularly desirable to include this
  *      file into the calling routines.  Nor should spINSIDE_SPARSE be defined.
@@ -66,7 +66,7 @@ static char RCSid[] =
 #include <math.h>
 #include <ctype.h>
 #define spINSIDE_SPARSE
-#include "spConfig.h"
+#include "spconfig.h"
 #undef spINSIDE_SPARSE
 #include "spmatrix.h"
 
@@ -343,7 +343,7 @@ extern char *sbrk();
                 "%s: Sparse is configured inappropriately for test program.\n",
                 ProgramName);
         fprintf(stderr,
-      "    Enable EXPANDABLE, INITIALIZE, and ARRAY_OFFSET in `spConfig.h'.\n");
+      "    Enable EXPANDABLE, INITIALIZE, and ARRAY_OFFSET in `spconfig.h'.\n");
         exit(1);
 #   endif
 
@@ -818,7 +818,7 @@ static char *Syntax = "%s: syntax error in file `%s' at line %d.\n";
     {   fprintf(stderr,
                     "%s: Sparse is not configured to solve complex matrices.\n",
                     ProgramName);
-        fprintf(stderr,"    Enable spCOMPLEX in `spConfig.h'.\n");
+        fprintf(stderr,"    Enable spCOMPLEX in `spconfig.h'.\n");
         return 1;
     }
 #endif
@@ -827,7 +827,7 @@ static char *Syntax = "%s: syntax error in file `%s' at line %d.\n";
     {   fprintf(stderr,
                     "%s: Sparse is not configured to solve real matrices.\n",
                     ProgramName);
-        fprintf(stderr,"    Enable REAL in `spConfig.h'.\n");
+        fprintf(stderr,"    Enable REAL in `spconfig.h'.\n");
         return 1;
     }
 #endif
@@ -1190,7 +1190,7 @@ char *GetProgramName();
             fprintf(stderr,
                     "%s: Sparse is not configured to solve complex matrices.\n",
                     ProgramName);
-            fprintf(stderr,"    Enable spCOMPLEX in `spConfig.h'.\n");
+            fprintf(stderr,"    Enable spCOMPLEX in `spconfig.h'.\n");
 #endif
         }
         else if (!strcmp(Args[I], "-s"))
@@ -1205,7 +1205,7 @@ char *GetProgramName();
             fprintf(stderr,
                    "%s: Sparse is not configured to solve transposed system.\n",
                     ProgramName);
-            fprintf(stderr,"    Enable TRANSPOSE in `spConfig.h'.\n");
+            fprintf(stderr,"    Enable TRANSPOSE in `spconfig.h'.\n");
 #endif
         }
         else if (!strcmp(Args[I], "-n"))
@@ -1244,7 +1244,7 @@ char *GetProgramName();
             fprintf(stderr,
                     "%s: Sparse is not configured to generate plot files.\n",
                     ProgramName);
-            fprintf(stderr,"    Enable DOCUMENTATION in `spConfig.h'.\n");
+            fprintf(stderr,"    Enable DOCUMENTATION in `spconfig.h'.\n");
 #endif
         }
         else if (!strcmp(Args[I], "-u"))

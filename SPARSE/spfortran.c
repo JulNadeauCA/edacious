@@ -16,7 +16,7 @@
  *  the functions can be easily redefined (search for `Routine Renaming').
  *  A simple example of a FORTRAN program that calls Sparse is included in
  *  this file (search for Example).  When interfacing to a FORTRAN program,
- *  the ARRAY_OFFSET option should be set to NO (see spConfig.h).
+ *  the ARRAY_OFFSET option should be set to NO (see spconfig.h).
  *
  *  DISCLAIMER:
  *  These interface routines were written by a C programmer who has little
@@ -115,18 +115,18 @@ static char RCSid[] =
  *  IMPORTS
  *
  *  >>> Import descriptions:
- *  spConfig.h
+ *  spconfig.h
  *     Macros that customize the sparse matrix routines.
  *  spmatrix.h
  *     Macros and declarations to be imported by the user.
- *  spDefs.h
+ *  spdefs.h
  *     Matrix type and macro definitions for the sparse matrix routines.
  */
 
 #define spINSIDE_SPARSE
-#include "spConfig.h"
+#include "spconfig.h"
 #include "spmatrix.h"
-#include "spDefs.h"
+#include "spdefs.h"
 
 #if FORTRAN
 

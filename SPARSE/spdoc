@@ -606,7 +606,7 @@ Size().
 
      It is possible at compile-time to customize Sparse for your particular
 application.  This is done by changing the compiler options, which are kept
-in the personality file, spConfig.h.  There are three  classes  of  choices
+in the personality file, spconfig.h.  There are three  classes  of  choices
 available.   First  are the Sparse options, which specify the dominant per-
 sonality characteristics, such as if real and/or complex systems  of  equa-
 tions are to be handled.  The second class is the Sparse constants, such as
@@ -3552,8 +3552,8 @@ o Arguments:
 at  compile  time  to  alter the personality of the program.  They also are
 used to eliminate routines that are not needed so as to reduce  the  amount
 of  memory  required to hold the object code.  These options and parameters
-consist of macros definitions and are contained in the file spConfig.h.  To
-configure  Sparse, spConfig.h must be edited and then Sparse must be recom-
+consist of macros definitions and are contained in the file spconfig.h.  To
+configure  Sparse, spconfig.h must be edited and then Sparse must be recom-
 piled.
 
      Some terminology should be defined.  The Markowitz row  count  is  the
@@ -4237,7 +4237,7 @@ lems, this one is no exception.  To ease porting the FORTRAN interface file
 to different operating systems, the names of the interface functions can be
 easily  redefined  (search  for  `Routine  Renaming' in spFortran.c).  When
 interfacing to a FORTRAN program, the FORTRAN option should be set  to  YES
-and  the  ARRAY OFFSET  option  should  be set to NO (see spConfig.h).  For
+and  the  ARRAY OFFSET  option  should  be set to NO (see spconfig.h).  For
 details on the return value and argument list  of  a  particular  interface
 routine, see the file spFortran.c.
 
@@ -4491,7 +4491,7 @@ Example:
 10:  SPARSE FILES
 
      The following is a list of the files contained in the  Sparse  package
-and  a  brief description of their contents.  Of the files, only spConfig.h
+and  a  brief description of their contents.  Of the files, only spconfig.h
 is expected to be modified by the user and only spMatrix.h need be imported
 into the program that calls Sparse.
 
@@ -4528,7 +4528,7 @@ o User accessible functions contained in this module:
      spInstallInitInfo()
 
 
-spConfig.h
+spconfig.h
 
 This file contains the options that are used to customize the package.  For
 example,  it is possible to specify whether only real or complex systems of
@@ -4555,7 +4555,7 @@ mance of the routines with his/her matrices.
 
 
 
-spDefs.h
+spdefs.h
 
 This module contains common data structure definitions and macros  for  the
 sparse  matrix routines.  These definitions are meant to remain hidden from

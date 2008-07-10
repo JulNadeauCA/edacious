@@ -47,18 +47,18 @@ static char RCSid[] =
  *  IMPORTS
  *
  *  >>> Import descriptions:
- *  spConfig.h
+ *  spconfig.h
  *     Macros that customize the sparse matrix routines.
  *  spmatrix.h
  *     Macros and declarations to be imported by the user.
- *  spDefs.h
+ *  spdefs.h
  *     Matrix type and macro definitions for the sparse matrix routines.
  */
 
 #define spINSIDE_SPARSE
-#include "spConfig.h"
+#include "spconfig.h"
 #include "spmatrix.h"
-#include "spDefs.h"
+#include "spdefs.h"
 
 
 
