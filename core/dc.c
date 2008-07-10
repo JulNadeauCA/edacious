@@ -88,7 +88,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	sim->Telapsed += sim->deltaT;
 	sim->timeLastStep = ticks;
 
-	xPrev = M_New(sim->x->m, 1);
+	xPrev = M_VecNew(M_VecSize(sim->x));
 
 	if (ckt->n == 0) {
 		AG_SetError(_("Circuit has no nodes to evaluate"));
@@ -129,10 +129,10 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		/* Compute difference between previous and current iteration,
 		 * to decide whether or not to continue. */
 		diff = 0;
-		for (j = 0; j < sim->x->m; j++)
+		for (j = 0; j < M_VecSize(sim->x); j++)
 		{
-			M_Real curAbsDiff = Fabs(sim->x->v[j][0] -
-			                         xPrev->v[j][0]);
+			M_Real curAbsDiff = Fabs(M_VecGet(sim->x,j) -
+			                         M_VecGet(xPrev,j));
 			if (curAbsDiff > diff)
 				diff = curAbsDiff;
 		}
@@ -262,7 +262,7 @@ Start(void *p)
 	M_SetZero(sim->z);
 
 	/* Load datum node equation */
-	sim->A->v[0][0] = 1.0;
+	M_Set(sim->A, 0, 0, 1.0);
 	
 	/*
 	 * Invoke the DC-specific simulation start callback. Components can
@@ -404,7 +404,7 @@ NodeVoltage(void *p, int j)
 {
 	ES_SimDC *sim = p;
 
-	return M_VEC_ENTRY_EXISTS(sim->x,j) ? sim->x->v[j][0] : 0.0;
+	return M_VEC_ENTRY_EXISTS(sim->x,j) ? M_VecGet(sim->x, j) : 0.0;
 }
 
 static M_Real
@@ -414,7 +414,7 @@ BranchCurrent(void *p, int k)
 	ES_Circuit *ckt = SIM(sim)->ckt;
 	int i = ckt->n + k;
 
-	return M_VEC_ENTRY_EXISTS(sim->x,i) ? sim->x->v[i][0] : 0.0;
+	return M_VEC_ENTRY_EXISTS(sim->x,i) ? M_VecGet(sim->x, i) : 0.0;
 }
 
 const ES_SimOps esSimDcOps = {

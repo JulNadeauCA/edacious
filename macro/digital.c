@@ -97,7 +97,7 @@ ES_DigitalStepIter(void *p, ES_SimDC *dc)
 		ES_Pair *pair = PAIR(dig,i);
 		Uint k = pair->p1->node;
 		Uint j = pair->p2->node;
-		M_Real g = dig->G->v[i][0];
+		M_Real g = M_VecGet(dig->G, i);
 
 		if (g == 0.0) {
 			continue;
@@ -138,12 +138,14 @@ ES_LogicOutput(void *p, const char *portname, ES_LogicState nState)
 		ES_Pair *pair = &COMPONENT(dig)->pairs[i];
 
 		if (PAIR_MATCHES(pair, port->n, dig->VccPort)) {
-			dig->G->v[i][0] = (nState == ES_LOW) ?
-			    M_TINYVAL : 1.0-M_TINYVAL;
+			M_VecSet(dig->G, i,
+				 (nState == ES_LOW) ?
+				 M_TINYVAL : 1.0-M_TINYVAL);
 		}
 		if (PAIR_MATCHES(pair, port->n, dig->GndPort)) {
-			dig->G->v[i][0] = (nState == ES_HIGH) ?
-			    M_TINYVAL : 1.0-M_TINYVAL;
+			M_VecSet(dig->G, i,
+				 (nState == ES_HIGH) ?
+				 M_TINYVAL : 1.0-M_TINYVAL);
 		}
 	}
 	Debug(dig, "LogicOutput: %s -> %s\n", portname,
@@ -207,7 +209,7 @@ PollPairs(AG_Event *event)
 		ES_Pair *pair = &COMPONENT(dig)->pairs[i];
 
 		AG_TableAddRow(t, "%d:%s:%s:%f", i+1, pair->p1->name,
-		    pair->p2->name, dig->G->v[i]);
+			       pair->p2->name, M_VecGet(dig->G, i));
 	}
 	AG_TableEnd(t);
 }
