@@ -1,27 +1,27 @@
 
 What is it?
 -----------
-Agar-EDA is an open-source Electronics Design Automation (EDA) toolkit.
-The package includes a graphical circuit editor, a mixed-signal circuit
-simulator and different types of analysis. Agar-EDA requires the Agar
-GUI library (http://libagar.org/)
+EDAcious is an open-source Electronics Design Automation (EDA) toolkit.
+The distribution includes a graphical circuit editor, a mixed-signal
+circuit simulator and PCB layout / fabrication tools. Both GUI and
+command-line interfaces are provided.
 
 Availability
 ------------
-You can download the most recent Agar-EDA version from the Agar-EDA
-home page at http://hypertriton.com/agar-eda/.
+You can download the most recent EDAcious version from the EDAcious
+home page at http://edacious.hypertriton.com/.
 
 License
 -------
-Agar-EDA is freely distributable under the terms of a BSD license.
+EDAcious is freely distributable under the terms of a BSD license.
 
 Portability
 -----------
-Thanks to Agar, Agar-EDA is portable to many different platforms,
+Thanks to Agar, EDAcious is portable to many different platforms,
 including FreeBSD, IRIX, Linux, MacOS Classic, MacOS X, NetBSD,
 OpenBSD and Windows. For the list of official ports, see:
-http://hypertriton.com/agar-eda/portable.html.
+http://edacious.hypertriton.com/portable.html.
 
 Acknowledgements
 ----------------
-See: http://hypertriton.com/agar-eda/credits.html
+See: http://edacious.hypertriton.com/credits.html
