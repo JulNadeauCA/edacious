@@ -1,16 +1,16 @@
 /*	Public domain	*/
 
-#ifndef _AGAR_EDA_H_
-#define _AGAR_EDA_H_
+#ifndef _EDACIOUS_EDACIOUS_H_
+#define _EDACIOUS_EDACIOUS_H_
 
 #ifdef _ES_INTERNAL
 # include <config/debug.h>
 # include <config/enable_nls.h>
 # ifdef ENABLE_NLS
 #  include <libintl.h>
-#  define _(String) dgettext("agar-eda",String)
+#  define _(String) dgettext("edacious",String)
 #  ifdef dgettext_noop
-#   define N_(String) dgettext_noop("agar-eda",String)
+#   define N_(String) dgettext_noop("edacious",String)
 #  else
 #   define N_(String) (String)
 #  endif
@@ -97,4 +97,4 @@ AG_Window *ES_CreateEditionWindow(void *);
 void       ES_CloseEditionWindow(void *);
 __END_DECLS
 
-#endif /* _AGAR_EDA_H_ */
+#endif /* _EDACIOUS_EDACIOUS_H_ */

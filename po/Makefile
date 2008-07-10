@@ -1,7 +1,7 @@
 TOP=	..
 include ${TOP}/Makefile.config
 
-DOMAIN=	agar-eda
+DOMAIN=	edacious
 POS=	fr.po
 MOS=	fr.mo
 

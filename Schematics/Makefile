@@ -1,7 +1,7 @@
 TOP=	..
 include ${TOP}/Makefile.config
 
-SHAREDIR=	${PREFIX}/share/agar-eda/Schematics
+SHAREDIR=	${PREFIX}/share/edacious/Schematics
 SUBDIR=		Digital \
 		Sources
 SHARESRC=	Ground.eschem \

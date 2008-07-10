@@ -1,11 +1,9 @@
 #!/bin/sh
-#
-#	$Csoft: dist.sh,v 1.17 2004/03/13 09:26:44 vedge Exp $
 
 VER=`grep "HDEFINE(VERSION" configure.in |awk -F\\" '{print $3}' |awk -F\\\ '{print $1}'`
 PHASE=beta
-PROJNAME=Agar-EDA
-PROJECT=agar-eda
+PROJNAME=Edacious
+PROJECT=edacious
 DISTFILE=${PROJECT}-${VER}
 HOST=resin.csoft.net
 RUSER=vedge
@@ -35,22 +33,22 @@ gpg -ab ${DISTFILE}.tar.gz
 
 if [ "$1" = "commit" ]; then
 	echo "uploading"
-	scp -C ${DISTFILE}.{tar.gz,tar.gz.md5,tar.gz.asc} ${RUSER}@${HOST}:www/$PHASE.csoft.org/${PROJECT}
+	scp -C ${DISTFILE}.{tar.gz,tar.gz.md5,tar.gz.asc} ${RUSER}@${HOST}:www/$PHASE.hypertriton.com/${PROJECT}
 
-	echo "notifying agar-announce@"
+	echo "notifying eda-announce@"
 	TMP=`mktemp /tmp/agarannounceXXXXXXXX`
 	cat > $TMP << EOF
-From: Wilbern Cobb <vedge@csoft.org>
-To: agar-announce@lists.csoft.net
-Subject: New Agar release: $VER
+From: Julien Nadeau <vedge@hypertriton.com>
+To: eda-announce@hypertriton.com
+Subject: New Edacious release: $VER
 X-Mailer: announce.sh
 X-PGP-Key: 206C63E6
 
-A new $PROJNAME release has been uploaded to $PHASE.csoft.org.
+A new $PROJNAME release has been uploaded to $PHASE.hypertriton.com.
 
-	http://$PHASE.csoft.org/$PROJECT/$DISTFILE.tar.gz
-	http://$PHASE.csoft.org/$PROJECT/$DISTFILE.tar.gz.asc
-	http://$PHASE.csoft.org/$PROJECT/$DISTFILE.tar.gz.md5
+	http://$PHASE.hypertriton.com/$PROJECT/$DISTFILE.tar.gz
+	http://$PHASE.hypertriton.com/$PROJECT/$DISTFILE.tar.gz.asc
+	http://$PHASE.hypertriton.com/$PROJECT/$DISTFILE.tar.gz.md5
 
 EOF
 	cat $TMP | ${MAILER}

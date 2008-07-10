@@ -9,14 +9,14 @@ REGISTER("--enable-fpdebug",	"Catch floating point exceptions [default: no]")
 HDEFINE(VERSION, "04052008")
 HDEFINE(RELEASE, "")
 
-MDEFINE(SHAREDIR, "$PREFIX/share/agar-eda")
-HDEFINE(SHAREDIR, "$PREFIX/share/agar-eda")
-MDEFINE(TTFDIR, "$PREFIX/share/agar-eda/fonts")
-HDEFINE(TTFDIR, "$PREFIX/share/agar-eda/fonts")
-MDEFINE(LIBDIR, "$PREFIX/lib/agar-eda")
-HDEFINE(LIBDIR, "$PREFIX/lib/agar-eda")
-MDEFINE(INCLDIR, "$PREFIX/include/agar-eda")
-HDEFINE(INCLDIR, "$PREFIX/include/agar-eda")
+MDEFINE(SHAREDIR, "$PREFIX/share/edacious")
+HDEFINE(SHAREDIR, "$PREFIX/share/edacious")
+MDEFINE(TTFDIR, "$PREFIX/share/edacious/fonts")
+HDEFINE(TTFDIR, "$PREFIX/share/edacious/fonts")
+MDEFINE(LIBDIR, "$PREFIX/lib/edacious")
+HDEFINE(LIBDIR, "$PREFIX/lib/edacious")
+MDEFINE(INCLDIR, "$PREFIX/include/edacious")
+HDEFINE(INCLDIR, "$PREFIX/include/edacious")
 
 CHECK(cc)
 CHECK(agar, 1.0)
@@ -89,17 +89,17 @@ else
 fi
 
 if [ "${HAVE_AGAR}" != "yes" ]; then
-	echo "This application requires Agar"
+	echo "This application requires the Agar library"
 	echo "(http://libagar.org/)"
 	exit 1
 fi
 if [ "${HAVE_AGAR_VG}" != "yes" ]; then
-	echo "This application requires Agar-VG"
-	echo "(http://hypertriton.com/agar-vg)"
+	echo "This application requires the Agar library"
+	echo "(http://libagar.org/)"
 	exit 1
 fi
 if [ "${HAVE_FREESG}" != "yes" ]; then
-	echo "This application requires the FreeSG math library"
+	echo "This application requires the FreeSG library"
 	echo "(http://freesg.org/)"
 	exit 1
 fi

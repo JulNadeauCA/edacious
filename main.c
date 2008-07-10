@@ -24,7 +24,7 @@
  */
 
 /*
- * Main user interface code for Agar-EDA.
+ * Main user interface code for Edacious.
  */
 
 #include <agar/core.h>
@@ -295,7 +295,7 @@ SetArchivePath(void *obj, const char *path)
 	}
 }
 
-/* Load an object file from native Agar-EDA format. */
+/* Load an object file from native Edacious format. */
 static void
 OpenNativeObject(AG_Event *event)
 {
@@ -328,19 +328,19 @@ OpenDlg(AG_Event *event)
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Open..."));
 
-	fd = AG_FileDlgNewMRU(win, "agar-eda.mru.circuits",
+	fd = AG_FileDlgNewMRU(win, "edacious.mru.circuits",
 	    AG_FILEDLG_LOAD|AG_FILEDLG_EXPAND|AG_FILEDLG_CLOSEWIN);
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 
-	AG_FileDlgAddType(fd, _("Agar-EDA circuit model"), "*.ecm",
+	AG_FileDlgAddType(fd, _("Edacious circuit model"), "*.ecm",
 	    OpenNativeObject, "%p", &esCircuitClass);
-	AG_FileDlgAddType(fd, _("Agar-EDA component schematic"), "*.eschem",
+	AG_FileDlgAddType(fd, _("Edacious component schematic"), "*.eschem",
 	    OpenNativeObject, "%p", &esSchemClass);
 
 	AG_WindowShow(win);
 }
 
-/* Save an object file in native Agar-EDA format. */
+/* Save an object file in native Edacious format. */
 static void
 SaveNativeObject(AG_Event *event)
 {
@@ -427,12 +427,12 @@ SaveAsDlg(AG_Event *event)
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Save %s as..."), obj->name);
 
-	fd = AG_FileDlgNewMRU(win, "agar-eda.mru.circuits",
+	fd = AG_FileDlgNewMRU(win, "edacious.mru.circuits",
 	    AG_FILEDLG_SAVE|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 
 	if (AG_ObjectIsClass(obj, "ES_Circuit:*")) {
-		AG_FileDlgAddType(fd, _("Agar-EDA circuit model"),
+		AG_FileDlgAddType(fd, _("Edacious Circuit Model"),
 		    "*.ecm",
 		    SaveNativeObject, "%p", obj);
 		ft = AG_FileDlgAddType(fd, _("SPICE3 netlist"),
@@ -443,7 +443,7 @@ SaveAsDlg(AG_Event *event)
 		    SaveCircuitToPDF, "%p", obj);
 		/* ... */
 	} else if (AG_ObjectIsClass(obj, "ES_Layout:*")) {
-		AG_FileDlgAddType(fd, _("Agar-EDA circuit layout"),
+		AG_FileDlgAddType(fd, _("Edacious Circuit Layout"),
 		    "*.ecl",
 		    SaveNativeObject, "%p", obj);
 		AG_FileDlgAddType(fd, _("Gerber (RS-274D)"),
@@ -453,7 +453,7 @@ SaveAsDlg(AG_Event *event)
 		    "*.gbl,*.gtl,*.gbs,*.gts,*.gbo,*.gto",
 		    SaveCircuitToXGerber, "%p", obj);
 	} else if (AG_ObjectIsClass(obj, "ES_Schem:*")) {
-		AG_FileDlgAddType(fd, _("Agar-EDA component schematic"),
+		AG_FileDlgAddType(fd, _("Edacious Component Schematic"),
 		    "*.eschem",
 		    SaveNativeObject, "%p", obj);
 		AG_FileDlgAddType(fd, _("Portable Document Format"),
@@ -640,11 +640,11 @@ main(int argc, char *argv[])
 	const void **clsSchem;
 
 #ifdef ENABLE_NLS
-	bindtextdomain("agar-eda", LOCALEDIR);
-	bind_textdomain_codeset("agar-eda", "UTF-8");
-	textdomain("agar-eda");
+	bindtextdomain("edacious", LOCALEDIR);
+	bind_textdomain_codeset("edacious", "UTF-8");
+	textdomain("edacious");
 #endif
-	if (AG_InitCore("agar-eda", 0) == -1) {
+	if (AG_InitCore("edacious", 0) == -1) {
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (1);
 	}

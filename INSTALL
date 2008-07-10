@@ -1,7 +1,7 @@
 
 Prerequisites
 -------------
-EDAcious requires the Agar and FreeSG libraries. You can compile them from
+Edacious requires the Agar and FreeSG libraries. You can compile them from
 source or download one of the many precompiled packages at:
 
 	http://libagar.org/download.html
@@ -28,13 +28,13 @@ available from: http://www.nekochan.net/.
 
 Installation under Windows
 --------------------------
-Under Windows, EDAcious can be compiled under Microsoft Visual Studio,
-Cygwin and MSYS. Precompiled packages may be available from the EDAcious
+Under Windows, Edacious can be compiled under Microsoft Visual Studio,
+Cygwin and MSYS. Precompiled packages may be available from the Edacious
 download page.
 
 Concurrent building
 -------------------
-Under Unix, it is possible to build EDAcious outside of the source directory.
+Under Unix, it is possible to build Edacious outside of the source directory.
 Developers will generally prefer this method, since it results in a faster
 build, does not clutter the source directories with object files and
 facilitates testing on multiple machines using network filesystems.

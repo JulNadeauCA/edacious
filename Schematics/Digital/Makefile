@@ -1,7 +1,7 @@
 TOP=	../..
 include ${TOP}/Makefile.config
 
-SHAREDIR=	${PREFIX}/share/agar-eda/Schematics/Digital
+SHAREDIR=	${PREFIX}/share/edacious/Schematics/Digital
 SHARESRC=	Inverter.eschem \
 		AndGate.eschem \
 		OrGate.eschem
