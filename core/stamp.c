@@ -9,12 +9,16 @@ M_Real dummy;
 
 #define N SIM(dc)->ckt->n
 
-#define GetElemG(k, l) (((k) == 0 || (l) == 0) ? &dummy : MW_GetElement(dc->A, (k), (l)))
+/* to remove later, and move to M library */
+#define M_GetElement(A, k, l) &(A->v[k][l])
+#define M_GetElementVector(z, k) &(z->v[k][0])
+
+#define GetElemG(k, l) (((k) == 0 || (l) == 0) ? &dummy : M_GetElement(dc->A, (k), (l)))
 #define GetElemB(k, l) GetElemG(k, N+l)
 #define GetElemC(k, l) GetElemG(N+k, l)
 #define GetElemD(k, l) GetElemG(N+k, N+l)
 
-#define GetElemI(k) ((k) == 0 ? &dummy : MW_GetElementVector(dc->z, (k)))
+#define GetElemI(k) ((k) == 0 ? &dummy : M_GetElementVector(dc->z, (k)))
 #define GetElemV(k) GetElemI(k+N)
 
 
