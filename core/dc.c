@@ -157,7 +157,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	/* Invoke the general post-timestep callbacks (for ES_Scope, etc.) */
 	AG_PostEvent(NULL, ckt, "circuit-step-end", NULL);
 
-	M_Free(xPrev);
+	M_VecFree(xPrev);
 
 	/* Schedule next step */
 	if(SIM(sim)->running) {
@@ -175,7 +175,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 halt:
 	AG_TextMsg(AG_MSG_ERROR, _("%s; simulation stopped"), AG_GetError());
 	StopSimulation(sim);
-	M_Free(xPrev);
+	M_VecFree(xPrev);
 	return (0);
 }
 
@@ -201,9 +201,9 @@ Init(void *p)
 	sim->A = M_New(0,0);
 	sim->LU = M_New(0,0);
 
-	sim->z = M_New(0,0);
+	sim->z = M_VecNew(0);
 	
-	sim->x = M_New(0,0);
+	sim->x = M_VecNew(0);
 
 	sim->piv = M_IntVectorNew(0);
 }
@@ -217,19 +217,16 @@ Resize(void *p, ES_Circuit *ckt)
 
 	M_Resize(sim->A, n+m, n+m);
 	M_Resize(sim->LU, n+m, n+m);
-	
-	M_IntVectorResize(sim->piv, n+m);
-	M_Resize(sim->z, n+m, 1);
-	M_Resize(sim->x, n+m, 1);
-
 	M_SetZero(sim->A);
 	M_SetZero(sim->LU);
-	
+		
+	M_VecResize(sim->z, n+m);
+	M_VecResize(sim->x, n+m);
+	M_VecSetZero(sim->z);
+	M_VecSetZero(sim->x);
+
+	M_IntVectorResize(sim->piv, n+m);
 	M_IntVectorSet(sim->piv, 0);
-	
-	M_SetZero(sim->z);
-	
-	M_SetZero(sim->x);
 }
 
 static void
@@ -259,7 +256,7 @@ Start(void *p)
 	
 	/* Initialize the matrices. */
 	M_SetZero(sim->A);
-	M_SetZero(sim->z);
+	M_VecSetZero(sim->z);
 
 	/* Load datum node equation */
 	M_Set(sim->A, 0, 0, 1.0);
@@ -312,8 +309,8 @@ Destroy(void *p)
 	M_Free(sim->A);
 	M_Free(sim->LU);
 	M_IntVectorFree(sim->piv);
-	M_Free(sim->z);
-	M_Free(sim->x);
+	M_VecFree(sim->z);
+	M_VecFree(sim->x);
 }
 
 static void
