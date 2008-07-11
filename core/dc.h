@@ -29,13 +29,11 @@ typedef struct es_sim_dc {
 	M_Real T0;		/* Reference temperature */
 
 	M_Matrix *A;		/* Block matrix [G,B; C,D] */
-	M_Matrix *LU;		/* LU factorizations of A */
 
 	M_Vector *z;		/* Right-hand side vector (i,e) */
 
 	M_Vector *x;		/* Vector of unknowns (v,j) */
 
-	M_IntVector *piv;	/* Pivot information from last factorization */
 } ES_SimDC;
 
 __BEGIN_DECLS

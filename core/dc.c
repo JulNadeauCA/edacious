@@ -55,9 +55,9 @@ SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 	
 
 	/* Find LU factorization and solve by backsubstitution. */
-	M_FactorizeLU(sim->A, sim->LU, sim->piv, &d);
+	M_FactorizeLU(sim->A);
 	M_Copy(sim->x, sim->z);
-	M_BacksubstLU(sim->LU, sim->piv, sim->x);
+	M_BacksubstLU(sim->A, sim->x);
 	return (0);
 }
 
@@ -199,13 +199,10 @@ Init(void *p)
 	sim->T0 = 290.0;
 
 	sim->A = M_New(0,0);
-	sim->LU = M_New(0,0);
 
 	sim->z = M_VecNew(0);
 	
 	sim->x = M_VecNew(0);
-
-	sim->piv = M_IntVectorNew(0);
 }
 
 static void
@@ -216,17 +213,12 @@ Resize(void *p, ES_Circuit *ckt)
 	Uint m = ckt->m;
 
 	M_Resize(sim->A, n+m, n+m);
-	M_Resize(sim->LU, n+m, n+m);
 	M_SetZero(sim->A);
-	M_SetZero(sim->LU);
 		
 	M_VecResize(sim->z, n+m);
 	M_VecResize(sim->x, n+m);
 	M_VecSetZero(sim->z);
 	M_VecSetZero(sim->x);
-
-	M_IntVectorResize(sim->piv, n+m);
-	M_IntVectorSet(sim->piv, 0);
 }
 
 static void
@@ -307,8 +299,6 @@ Destroy(void *p)
 	Stop(sim);
 
 	M_Free(sim->A);
-	M_Free(sim->LU);
-	M_IntVectorFree(sim->piv);
 	M_VecFree(sim->z);
 	M_VecFree(sim->x);
 }
@@ -376,11 +366,6 @@ Edit(void *p, ES_Circuit *ckt)
 	ntab = AG_NotebookAddTab(nb, "[A]", AG_BOX_VERT);
 	mv = M_MatviewNew(ntab, sim->A, 0);
 	M_MatviewSizeHint(mv, "-0.000", 4, 4);
-	M_MatviewSetNumericalFmt(mv, "%.02f");
-	
-	ntab = AG_NotebookAddTab(nb, "[LU]", AG_BOX_VERT);
-	mv = M_MatviewNew(ntab, sim->LU, 0);
-	M_MatviewSizeHint(mv, "-0.000", 10, 5);
 	M_MatviewSetNumericalFmt(mv, "%.02f");
 
 #if 0
