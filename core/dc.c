@@ -88,7 +88,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	sim->Telapsed += sim->deltaT;
 	sim->timeLastStep = ticks;
 
-	xPrev = M_VecNew(M_VecSize(sim->x));
+	xPrev = M_VecNew(sim->x->m);
 
 	if (ckt->n == 0) {
 		AG_SetError(_("Circuit has no nodes to evaluate"));
@@ -129,7 +129,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		/* Compute difference between previous and current iteration,
 		 * to decide whether or not to continue. */
 		diff = 0;
-		for (j = 0; j < M_VecSize(sim->x); j++)
+		for (j = 0; j < sim->x->m; j++)
 		{
 			M_Real curAbsDiff = Fabs(M_VecGet(sim->x,j) -
 			                         M_VecGet(xPrev,j));
@@ -382,7 +382,8 @@ Edit(void *p, ES_Circuit *ckt)
 	mv = M_MatviewNew(ntab, sim->LU, 0);
 	M_MatviewSizeHint(mv, "-0.000", 10, 5);
 	M_MatviewSetNumericalFmt(mv, "%.02f");
-	
+
+#if 0
 	ntab = AG_NotebookAddTab(nb, "[z]", AG_BOX_VERT);
 	mv = M_MatviewNew(ntab, sim->z, 0);
 	M_MatviewSizeHint(mv, "-0000.0000", 10, 5);
@@ -392,6 +393,7 @@ Edit(void *p, ES_Circuit *ckt)
 	mv = M_MatviewNew(ntab, sim->x, 0);
 	M_MatviewSizeHint(mv, "-0000.0000", 10, 5);
 	M_MatviewSetNumericalFmt(mv, "%.04f");
+#endif
 
 	return (win);
 }
