@@ -14,6 +14,7 @@ SRCS=	core.c \
 	dc.c \
 	insert_tool.c \
 	interpreteur.c \
+	scope.c \
 	sim.c \
 	spice.c \
 	stamp.c \
