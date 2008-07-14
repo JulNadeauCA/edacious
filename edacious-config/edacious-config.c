@@ -67,8 +67,8 @@ main(int argc, char *argv[])
 			printf("\n");
 		} else if (strcmp(argv[i], "--libs") == 0) {
 			printf("-L%s ", LIBDIR);
-			printf("-les_generic -les_macro -les_measurement "
-			       "-les_sources -les_core");
+			printf("-les_generic -les_macro -les_sources "
+			       "-les_core");
 #ifdef ENABLE_NLS
 			printf("%s ", GETTEXT_LIBS);
 #endif
