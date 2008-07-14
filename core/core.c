@@ -63,6 +63,9 @@ Uint   esComponentClassCount = 0;
 
 AG_Object esVfsRoot;			/* General-purpose VFS */
 
+static AG_Window *(*ObjectOpenFn)(void *) = NULL;
+static void       (*ObjectCloseFn)(void *) = NULL;
+
 /* Initialize the Edacious library. */
 void
 ES_CoreInit(void)
@@ -74,21 +77,26 @@ ES_CoreInit(void)
 	VG_InitSubsystem();
 	M_InitSubsystem();
 
-	esComponentClasses = Malloc(sizeof(void *));
-	esComponentClassCount = 0;
-
-	/* Register our built-in classes. */
+	/* Register the base Agar object and VG entity classes. */
 	for (cls = &esCoreClasses[0]; *cls != NULL; cls++)
 		AG_RegisterClass(*cls);
 	for (clsSchem = &esSchematicClasses[0]; *clsSchem != NULL; clsSchem++)
 		VG_RegisterClass(*clsSchem);
+	
+	/* Allocate Edacious's component class array. */
+	esComponentClasses = Malloc(sizeof(void *));
+	esComponentClassCount = 0;
 
 #ifdef FP_DEBUG
 	/* Handle division by zero and overflow. */
 	feenableexcept(FE_DIVBYZERO | FE_OVERFLOW);
 #endif
-	/* Load our built-in GUI icons. */
+	/* Load libcore's built-in GUI icons. */
 	esIcon_Init();
+
+	/* Initialize libcore's general-purpose VFS. */
+	AG_ObjectInitStatic(&esVfsRoot, NULL);
+	AG_ObjectSetName(&esVfsRoot, "Edacious VFS");
 }
 
 void
@@ -124,4 +132,37 @@ ES_UnregisterClass(void *p)
 	}
 	esComponentClassCount--;
 	AG_UnregisterClass(cls);
+}
+
+/*
+ * Configure a routine allowing the application to open an object for
+ * GUI edition. Not thread safe.
+ */
+void
+ES_SetObjectOpenHandler(AG_Window *(*fn)(void *))
+{
+	ObjectOpenFn = fn;
+}
+
+/*
+ * Configure a routine allowing the application to clean up GUI resources
+ * associated with an object. Not thread safe.
+ */
+void
+ES_SetObjectCloseHandler(void (*fn)(void *))
+{
+	ObjectCloseFn = fn;
+}
+
+AG_Window *
+ES_OpenObject(void *obj)
+{
+	return (ObjectOpenFn != NULL) ? ObjectOpenFn(obj) : NULL;
+}
+
+void
+ES_CloseObject(void *obj)
+{
+	if (ObjectCloseFn != NULL)
+		ObjectCloseFn(obj);
 }

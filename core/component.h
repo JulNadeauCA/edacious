@@ -1,10 +1,5 @@
 /*	Public domain	*/
 
-#ifndef _COMPONENT_COMPONENT_H_
-#define _COMPONENT_COMPONENT_H_
-
-#include "begin_code.h"
-
 #define COMPONENT_MAX_PORTS	128
 #define COMPONENT_PORT_NAME_MAX	16
 
@@ -112,42 +107,42 @@ typedef struct es_component {
 } ES_Component;
 
 #define ESCOMPONENT(p)		((ES_Component *)(p))
-#define ES_COMPONENT_CIRCUIT(p) (ESCOMPONENT(p)->ckt)
-#define ES_COMPONENT_CLASS(p)	((ES_ComponentClass *)(AGOBJECT(p)->cls))
+#define ESCOMPONENT_CIRCUIT(p)	(ESCOMPONENT(p)->ckt)
+#define ESCOMPONENT_CLASS(p)	((ES_ComponentClass *)(AGOBJECT(p)->cls))
 #define ES_PORT(p,n)		(&ESCOMPONENT(p)->ports[n])
 #define ES_PAIR(p,n)		(&ESCOMPONENT(p)->pairs[n])
-#define ES_VPORT(p,n)		ES_NodeVoltage(ES_COMPONENT_CIRCUIT(p),\
+#define ES_VPORT(p,n)		ES_NodeVoltage(ESCOMPONENT_CIRCUIT(p),\
  			        	       ES_PNODE((p),(n)))
 #ifdef DEBUG
-# define ES_PNODE(p,n)		ES_PortNode(COMPONENT(p),(n))
+# define ES_PNODE(p,n)		ES_PortNode(ESCOMPONENT(p),(n))
 #else
-# define ES_PNODE(p,n)		(COMPONENT(p)->ports[n].node)
+# define ES_PNODE(p,n)		(ESCOMPONENT(p)->ports[n].node)
 #endif
 
-#define ES_COMPONENT_FOREACH_PORT(port, i, com) \
+#define ESCOMPONENT_FOREACH_PORT(port, i, com) \
 	for ((i) = 1; \
 	    ((i) <= (com)->nports) && ((port) = &(com)->ports[i]); \
 	    (i)++)
-#define ES_COMPONENT_FOREACH_PAIR(pair, i, com) \
+#define ESCOMPONENT_FOREACH_PAIR(pair, i, com) \
 	for ((i) = 0; \
 	    ((i) < (com)->npairs) && ((pair) = &(com)->pairs[i]); \
 	    (i)++)
-#define ES_COMPONENT_IS_FLOATING(com) \
+#define ESCOMPONENT_IS_FLOATING(com) \
 	(AG_ObjectIsClass((com),"ES_Component:*") && \
 	 ESCOMPONENT(com)->flags & ES_COMPONENT_FLOATING)
 
-#if defined(_ES_INTERNAL) || defined(_USE_AGAR_EDA)
-# define COMPONENT(p)			 ESCOMPONENT(p)
-# define COMCIRCUIT(p)			 ES_COMPONENT_CIRCUIT(p)
-# define COMCLASS(p)			 ES_COMPONENT_CLASS(p)
-# define PORT(p,n)			 ES_PORT(p,n)
-# define PAIR(p,n)			 ES_PAIR(p,n)
-# define VPORT(p,n)			 ES_VPORT(p,n)
-# define PNODE(p,n)			 ES_PNODE(p,n)
-# define COMPONENT_FOREACH_PORT(p,i,com) ES_COMPONENT_FOREACH_PORT(p,i,com)
-# define COMPONENT_FOREACH_PAIR(p,i,com) ES_COMPONENT_FOREACH_PAIR(p,i,com)
-# define COMPONENT_IS_FLOATING(com)	 ES_COMPONENT_IS_FLOATING(com)
-#endif /* _ES_INTERNAL or _USE_AGAR_EDA */
+#if defined(_ES_INTERNAL) || defined(_USE_EDACIOUS_CORE)
+# define COMPONENT(p) ESCOMPONENT(p)
+# define COMCIRCUIT(p) ESCOMPONENT_CIRCUIT(p)
+# define COMCLASS(p) ESCOMPONENT_CLASS(p)
+# define COMPONENT_FOREACH_PORT(p,i,com) ESCOMPONENT_FOREACH_PORT(p,i,com)
+# define COMPONENT_FOREACH_PAIR(p,i,com) ESCOMPONENT_FOREACH_PAIR(p,i,com)
+# define COMPONENT_IS_FLOATING(com)	 ESCOMPONENT_IS_FLOATING(com)
+# define PORT(p,n) ES_PORT(p,n)
+# define PAIR(p,n) ES_PAIR(p,n)
+# define VPORT(p,n) ES_VPORT(p,n)
+# define PNODE(p,n) ES_PNODE(p,n)
+#endif /* _ES_INTERNAL or _USE_EDACIOUS_CORE */
 
 __BEGIN_DECLS
 extern AG_ObjectClass esComponentClass;
@@ -165,6 +160,3 @@ Uint	 ES_PortNode(ES_Component *, int);
 int	 ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
 ES_Port	*ES_FindPort(void *, const char *);
 __END_DECLS
-
-#include "close_code.h"
-#endif /* _COMPONENT_COMPONENT_H_ */

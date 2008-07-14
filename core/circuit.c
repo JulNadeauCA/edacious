@@ -1394,7 +1394,7 @@ tryname:
 		goto tryname;
 	}
 	scope = ES_ScopeNew(ckt, name);
-	ES_CreateEditionWindow(scope);
+	ES_OpenObject(scope);
 }
 
 static void
@@ -1544,8 +1544,6 @@ Edit(void *p)
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
 		ntab = AG_NotebookAddTab(nb, _("Models"), AG_BOX_VERT);
 		{
-			char tname[AG_OBJECT_TYPE_MAX];
-			void **cc;
 			int i;
 
 			tl = AG_TlistNew(ntab, AG_TLIST_EXPAND);
@@ -1554,11 +1552,11 @@ Edit(void *p)
 			AG_SetEvent(tl, "tlist-dblclick", InsertComponent,
 			    "%p,%p,%p", vv, tl, ckt);
 
-			for (cc = &esComponentClasses[0]; *cc != NULL; cc++) {
-				ES_ComponentClass *ccls = *cc;
+			for (i = 0; i < esComponentClassCount; i++) {
+				ES_ComponentClass *cls = esComponentClasses[i];
 				AG_TlistAddPtr(tl,
-				    ccls->icon != NULL ? ccls->icon->s : NULL,
-				    ccls->name, ccls);
+				    cls->icon != NULL ? cls->icon->s : NULL,
+				    cls->name, cls);
 			}
 		}
 		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);

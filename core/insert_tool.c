@@ -45,7 +45,7 @@ RemoveComponent(VG_Tool *t, SDLKey key, int state, void *arg)
 	ES_LockCircuit(ckt);
 scan:
 	CIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt) {
-		ES_CloseEditionWindow(com);
+		ES_CloseObject(com);
 		if (AG_ObjectInUse(com)) {
 			AG_TextMsg(AG_MSG_ERROR, "%s: %s", OBJECT(com)->name,
 			    AG_GetError());

@@ -54,7 +54,7 @@ v(ES_Capacitor *c)
 static M_Real
 i(ES_Capacitor *c)
 {
-	return ES_BranchCurrent(ES_COMPONENT_CIRCUIT(c), c->vIdx);
+	return ES_BranchCurrent(ESCOMPONENT_CIRCUIT(c), c->vIdx);
 }
 
 /* Updates the small- and large-signal models, saving the previous values. */

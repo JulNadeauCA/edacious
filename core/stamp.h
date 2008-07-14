@@ -1,14 +1,16 @@
-/* Public domain */
+/*	Public domain	*/
 
-/* Utility functions for stamping commonly used linear components */
+/*
+ * Utility functions for stamping commonly used linear components.
+ *
+ * Each element is composed of three symbols : its stamp size, an init function,
+ * and a stamp function. The caller component must reserve a memory block of
+ * stamp size M_Real elements, and pass it to the init function for it to
+ * write the adress where subsequent writes will be done. Then the component
+ * passes the StampData and the values to write each time it wants to stamp.
+ */
 
 __BEGIN_DECLS
-
-/* Each element is composed of three symbols : its stamp size, an init function,
- * and a stamp function. The caller component must reserve a memory block of stamp size
- * M_Real elements, and pass it to the init function for it to write the adress
- * where subsequent writes will be done. Then the component passes the StampData
- * and the values to write each time it wants to stamp */
 
 typedef M_Real *StampData[];
 

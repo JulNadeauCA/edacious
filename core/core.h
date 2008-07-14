@@ -13,6 +13,8 @@
 
 #include <edacious/core/schem.h>
 #include <edacious/core/component.h>
+#include <edacious/core/sim.h>
+#include <edacious/core/dc.h>
 #include <edacious/core/circuit.h>
 #include <edacious/core/icons.h>
 #include <edacious/core/scope.h>
@@ -32,12 +34,15 @@ extern const char *esEditableClasses[];	 /* User-editable object classes */
 extern void      **esComponentClasses;	 /* Component model classes */
 extern Uint        esComponentClassCount;
 
-void       ES_CoreInit(void);
-void       ES_CoreDestroy(void);
-void       ES_RegisterClass(void *);
-void       ES_UnregisterClass(void *);
-AG_Window *ES_CreateEditionWindow(void *);
-void       ES_CloseEditionWindow(void *);
+void	ES_CoreInit(void);
+void	ES_CoreDestroy(void);
+void	ES_RegisterClass(void *);
+void	ES_UnregisterClass(void *);
+void	ES_SetObjectOpenHandler(AG_Window *(*fn)(void *));
+void	ES_SetObjectCloseHandler(void (*fn)(void *));
+
+AG_Window *ES_OpenObject(void *);
+void       ES_CloseObject(void *);
 __END_DECLS
 
 #include <edacious/core/core_close.h>

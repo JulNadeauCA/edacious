@@ -139,8 +139,9 @@ ShortFilename(char *name)
 	}
 }
 
-AG_Window *
-ES_CreateEditionWindow(void *p)
+/* Invoked by libcore to set up an edition window for an object. */
+static AG_Window *
+ObjectOpenHandler(void *p)
 {
 	AG_Object *obj = p;
 	AG_Window *win;
@@ -160,8 +161,9 @@ ES_CreateEditionWindow(void *p)
 	return (win);
 }
 
-void
-ES_CloseEditionWindow(void *p)
+/* Invoked by libcore to close edition windows associated with an object. */
+static void
+ObjectCloseHandler(void *p)
 {
 	AG_Window *win;
 	void *wObj;
@@ -180,7 +182,7 @@ NewObject(AG_Event *event)
 	AG_Object *obj;
 
 	obj = AG_ObjectNew(&esVfsRoot, NULL, cls);
-	ES_CreateEditionWindow(obj);
+	ES_OpenObject(obj);
 	AG_PostEvent(NULL, obj, "edit-open", NULL);
 }
 
@@ -190,7 +192,7 @@ EditDevice(AG_Event *event)
 {
 	AG_Object *dev = AG_PTR(1);
 
-	ES_CreateEditionWindow(dev);
+	ES_OpenObject(dev);
 }
 #endif
 
@@ -227,7 +229,7 @@ OpenNativeObject(AG_Event *event)
 		return;
 	}
 	SetArchivePath(obj, path);
-	ES_CreateEditionWindow(obj);
+	ES_OpenObject(obj);
 }
 
 static void
@@ -618,10 +620,12 @@ main(int argc, char *argv[])
 	ES_GenericInit();
 	ES_MacroInit();
 	ES_SourcesInit();
+	
+	/* Configure our editor handlers. */
+	ES_SetObjectOpenHandler(ObjectOpenHandler);
+	ES_SetObjectCloseHandler(ObjectCloseHandler);
 
-	/* Initialize our editor VFS. */
-	AG_ObjectInitStatic(&esVfsRoot, NULL);
-	AG_ObjectSetName(&esVfsRoot, _("Editor VFS"));
+	/* Initialize our object management lock. */
 	AG_MutexInit(&objLock);
 
 	/* Create the application menu. */ 
@@ -654,7 +658,7 @@ main(int argc, char *argv[])
 		ckt = AG_ObjectNew(&esVfsRoot, NULL, cls);
 		if (AG_ObjectLoadFromFile(ckt, argv[i]) == 0) {
 			AG_ObjectSetArchivePath(ckt, argv[i]);
-			ES_CreateEditionWindow(ckt);
+			ES_OpenObject(ckt);
 		} else {
 			AG_TextMsgFromError();
 			AG_ObjectDetach(ckt);

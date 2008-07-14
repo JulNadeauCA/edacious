@@ -2,19 +2,19 @@
 
 #define ES_SCHEM_NAME_MAX 128
 
-#include "begin_code.h"
-
 /* Component schematic block */
 typedef struct es_schem {
 	struct ag_object _inherit;
 	VG *vg;
 } ES_Schem;
 
+#ifdef _ES_INTERNAL
 #define SCHEM(p) ((ES_Schem *)(p))
+#endif
 
-#include "schem_port.h"
-#include "schem_wire.h"
-#include "schem_block.h"
+#include <edacious/core/schem_port.h>
+#include <edacious/core/schem_wire.h>
+#include <edacious/core/schem_block.h>
 
 __BEGIN_DECLS
 extern AG_ObjectClass esSchemClass;
@@ -31,5 +31,3 @@ extern VG_ToolOps esSchemPortTool;
 ES_Schem *ES_SchemNew(void *);
 void     *ES_SchemNearest(VG_View *, VG_Vector);
 __END_DECLS
-
-#include "close_code.h"

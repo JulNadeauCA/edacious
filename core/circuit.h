@@ -1,22 +1,13 @@
 /*	Public domain	*/
 
-#ifndef _CIRCUIT_CIRCUIT_H_
-#define _CIRCUIT_CIRCUIT_H_
+#define ESCIRCUIT_DESCR_MAX	512
+#define ESCIRCUIT_AUTHORS_MAX	128
+#define ESCIRCUIT_KEYWORDS_MAX	128
 
-#include "begin_code.h"
-
-#include <core/sim.h>
-#include <core/dc.h>
-
-#define CIRCUIT_DESCR_MAX	512
-#define CIRCUIT_AUTHORS_MAX	128
-#define CIRCUIT_KEYWORDS_MAX	128
-
-#define CIRCUIT_MAX_BRANCHES	32
-#define CIRCUIT_MAX_NODES	(0xffff-1)
-#define CKTNODE_SYM_MAX		24
-#define CIRCUIT_SYM_MAX		24
-#define CIRCUIT_SYM_DESCR_MAX	128
+#define ESCIRCUIT_MAX_BRANCHES	32
+#define ESCIRCUIT_MAX_NODES	(0xffff-1)
+#define ESCIRCUIT_SYM_MAX	24
+#define ESCIRCUIT_SYM_DESCR_MAX	128
 
 /* Connection to one component. */
 typedef struct es_branch {
@@ -46,8 +37,8 @@ typedef struct es_loop {
 
 /* Entry in Circuit symbol table. */
 typedef struct es_sym {
-	char name[CIRCUIT_SYM_MAX];
-	char descr[CIRCUIT_SYM_DESCR_MAX];
+	char name[ESCIRCUIT_SYM_MAX];
+	char descr[ESCIRCUIT_SYM_DESCR_MAX];
 	enum es_sym_type {
 		ES_SYM_NODE,
 		ES_SYM_VSOURCE,
@@ -67,9 +58,9 @@ struct ag_console;
 /* The basic Circuit model object. */
 typedef struct es_circuit {
 	struct ag_object obj;
-	char descr[CIRCUIT_DESCR_MAX];		/* Description */
-	char authors[CIRCUIT_AUTHORS_MAX];	/* Authors */
-	char keywords[CIRCUIT_KEYWORDS_MAX];	/* Keywords */
+	char descr[ESCIRCUIT_DESCR_MAX];	/* Description */
+	char authors[ESCIRCUIT_AUTHORS_MAX];	/* Authors */
+	char keywords[ESCIRCUIT_KEYWORDS_MAX];	/* Keywords */
 	VG *vg;					/* Schematics */
 	struct ag_console *console;		/* Log console */
 	ES_Sim *sim;				/* Current simulation mode */
@@ -89,38 +80,41 @@ typedef struct es_circuit {
 	Uint n;				/* Nodes (except ground) */
 } ES_Circuit;
 
-#define CIRCUIT(p) ((ES_Circuit *)(p))
-#define VNODE(com,n) ES_NodeVoltage(COMPONENT(com)->ckt,(n))
+#define ESCIRCUIT(p) ((ES_Circuit *)(p))
 
 /* Iterate over all Components of the Circuit, floating or not. */
-#define CIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) \
+#define ESCIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) \
 	AGOBJECT_FOREACH_CLASS((com),(ckt),es_component,"ES_Component:*")
 
-/* Iterate over all non-floating voltage sources in the Circuit. */
-#define CIRCUIT_FOREACH_VSOURCE(vs, ckt) \
-	AGOBJECT_FOREACH_CLASS((vs),(ckt),es_vsource, \
-	"ES_Component:ES_Vsource:*") \
-		if (ESCOMPONENT(vs)->flags & ES_COMPONENT_FLOATING) {	\
-			continue;					\
-		} else
-
 /* Iterate over all non-floating Components in the Circuit. */
-#define CIRCUIT_FOREACH_COMPONENT(com, ckt)			\
-	CIRCUIT_FOREACH_COMPONENT_ALL((com),ckt)		\
+#define ESCIRCUIT_FOREACH_COMPONENT(com, ckt)			\
+	ESCIRCUIT_FOREACH_COMPONENT_ALL((com),ckt)		\
 		if ((com)->flags & ES_COMPONENT_FLOATING) {	\
 			continue;				\
 		} else
 
 /* Iterate over all selected, non-floating Components in the Circuit. */
-#define CIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt)		\
-	CIRCUIT_FOREACH_COMPONENT((com),ckt)			\
+#define ESCIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt)		\
+	ESCIRCUIT_FOREACH_COMPONENT((com),ckt)			\
 		if (!((com)->flags & ES_COMPONENT_SELECTED)) {	\
 			continue;				\
 		} else
 
 /* Iterate over all Branches of a Node. */
-#define NODE_FOREACH_BRANCH(br, node) \
+#define ESNODE_FOREACH_BRANCH(br, node) \
 	AG_TAILQ_FOREACH(br, &(node)->branches, branches)
+
+#if defined(_ES_INTERNAL) || defined(_USE_EDACIOUS_CORE)
+# define CIRCUIT(p) ESCIRCUIT(p)
+# define CIRCUIT_FOREACH_COMPONENT_ALL(com,ckt) \
+	 ESCIRCUIT_FOREACH_COMPONENT_ALL((com),(ckt))
+# define CIRCUIT_FOREACH_COMPONENT(com,ckt) \
+	 ESCIRCUIT_FOREACH_COMPONENT((com),(ckt))
+# define CIRCUIT_FOREACH_COMPONENT_SELECTED(com,ckt) \
+	 ESCIRCUIT_FOREACH_COMPONENT_SELECTED((com),(ckt))
+# define NODE_FOREACH_BRANCH(br,node) \
+         ESNODE_FOREACH_BRANCH((br),(node))
+#endif /* _ES_INTERNAL or _USE_EDACIOUS_CORE */
 
 __BEGIN_DECLS
 extern AG_ObjectClass esCircuitClass;
@@ -220,7 +214,8 @@ static __inline__ void
 ES_SelectAllComponents(ES_Circuit *ckt, VG_View *vv)
 {
 	ES_Component *com;
-	CIRCUIT_FOREACH_COMPONENT(com, ckt)
+
+	ESCIRCUIT_FOREACH_COMPONENT(com, ckt)
 		com->flags |= ES_COMPONENT_SELECTED;
 }
 static __inline__ void
@@ -228,7 +223,7 @@ ES_UnselectAllComponents(ES_Circuit *ckt, VG_View *vv)
 {
 	ES_Component *com;
 
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+	ESCIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		com->flags &= ~(ES_COMPONENT_SELECTED);
 	}
 	ES_ClearEditAreas(vv);
@@ -237,9 +232,10 @@ ES_UnselectAllComponents(ES_Circuit *ckt, VG_View *vv)
 static __inline__ void
 ES_HighlightComponent(ES_Component *hCom)
 {
-	ES_Circuit *ckt = COMCIRCUIT(hCom);
+	ES_Circuit *ckt = ESCOMPONENT_CIRCUIT(hCom);
 	ES_Component *com;
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+
+	ESCIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		com->flags &= ~(ES_COMPONENT_HIGHLIGHTED);
 	}
 	hCom->flags |= ES_COMPONENT_HIGHLIGHTED;
@@ -263,12 +259,9 @@ ES_UnselectAllPorts(struct es_circuit *ckt)
 	ES_Port *port;
 	int i;
 
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		COMPONENT_FOREACH_PORT(port, i, com)
+	ESCIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		ESCOMPONENT_FOREACH_PORT(port, i, com)
 			ES_UnselectPort(port);
 	}
 }
 __END_DECLS
-
-#include "close_code.h"
-#endif	/* _CIRCUIT_CIRCUIT_H_ */
