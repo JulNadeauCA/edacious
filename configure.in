@@ -19,21 +19,39 @@ MDEFINE(INCLDIR, "$PREFIX/include/edacious")
 HDEFINE(INCLDIR, "$PREFIX/include/edacious")
 
 CHECK(cc)
+CHECK(sys_types)
 CHECK(agar, 1.0)
 CHECK(agar-vg, 1.0)
 CHECK(agar-dev, 1.0)
 CHECK(freesg, 1.0)
 CHECK(getopt)
 
+# For internal header definitions.
 C_DEFINE(_ES_INTERNAL)
+
+# Import standard routines provided by Agar (without "AG"_ prefix).
 C_DEFINE(_USE_AGAR_STD)
 C_DEFINE(_USE_AGAR_CORE)
 C_DEFINE(_USE_AGAR_QUEUE)
 C_DEFINE(_USE_AGAR_GUI)
+
+# Import standard math functions (e.g., Sin()) provided by FreeSG's
+# math library (without the "M_" prefix).
 C_DEFINE(_USE_SG_MATH)
 
+# We use #include <edacious/foo> throughout the code.
 C_INCDIR($SRC)
+if [ "${srcdir}" != "" ]; then
+	pwd=`pwd`
+	C_INCDIR($pwd)
+	ln -s "$SRC" edacious
+else
+	if [ ! -e "edacious" ]; then
+		ln -s . edacious
+	fi
+fi
 
+# Disable improper warnings.
 C_NO_SECURE_WARNINGS();
 #C_EXTRA_WARNINGS();
 #C_FATAL_WARNINGS();
@@ -88,6 +106,7 @@ else
 	fi
 fi
 
+# Require Agar and FreeSG.
 if [ "${HAVE_AGAR}" != "yes" ]; then
 	echo "This application requires the Agar library"
 	echo "(http://libagar.org/)"
@@ -104,6 +123,7 @@ if [ "${HAVE_FREESG}" != "yes" ]; then
 	exit 1
 fi
 
+# Apply the compilation options.
 if [ "${enable_warnings}" != "no" ]; then
 	MDEFINE(CFLAGS, "$CFLAGS -Wall -Werror -Wmissing-prototypes")
 	MDEFINE(CFLAGS, "$CFLAGS -Wno-unused")
