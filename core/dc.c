@@ -56,7 +56,7 @@ SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 
 	/* Find LU factorization and solve by backsubstitution. */
 	M_FactorizeLU(sim->A);
-	M_Copy(sim->x, sim->z);
+	M_VecCopy(sim->x, sim->z);
 	M_BacksubstLU(sim->A, sim->x);
 	return (0);
 }
