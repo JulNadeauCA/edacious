@@ -116,7 +116,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 #endif
 		}
 
-		M_Copy(xPrev, sim->x);
+		M_VecCopy(xPrev, sim->x);
 
 		sim->isDamped = 0;
 		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
