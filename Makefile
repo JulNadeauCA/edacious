@@ -36,8 +36,8 @@ LIBS+=	generic/.libs/libes_generic.a \
 CFLAGS+=${FREESG_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 
 all: all-subdir ${PROG}
-clean: clean-config clean-subdir
-cleandir: cleandir-config cleandir-subdir
+clean: clean-subdir
+cleandir: cleandir-subdir
 install: install-subdir install-includes
 deinstall: deinstall-subdir
 depend: depend-subdir
@@ -80,7 +80,7 @@ install-includes:
 	fi
 
 .PHONY: clean cleandir install deinstall depend regress
-.PHONY: configure cleandir-config package snapshot release
+.PHONY: configure package snapshot release
 .PHONY: install-includes
 
 include ${TOP}/mk/build.prog.mk
