@@ -28,7 +28,7 @@
  * functionality for ports and labels.
  */
 
-#include <eda.h>
+#include "core.h"
 
 static VG_ToolOps *ToolsCkt[] = {
 	&esSchemSelectTool,

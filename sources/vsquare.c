@@ -27,8 +27,8 @@
  * Independent square-wave voltage source.
  */
 
-#include <eda.h>
-#include "vsquare.h"
+#include <core/core.h>
+#include "sources.h"
 
 const ES_Port esVSquarePorts[] = {
 	{  0, "" },

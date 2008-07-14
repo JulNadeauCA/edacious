@@ -27,8 +27,8 @@
  * Model for the ideal digital AND gate.
  */
 
-#include <eda.h>
-#include "and_gate.h"
+#include <core/core.h>
+#include "macro.h"
 
 const ES_Port esAndPorts[] = {
 	{ 0, ""	},

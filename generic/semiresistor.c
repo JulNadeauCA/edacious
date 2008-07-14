@@ -27,8 +27,8 @@
  * Model for the semiconductor resistor.
  */
 
-#include <eda.h>
-#include "semiresistor.h"
+#include <core/core.h>
+#include "generic.h"
 
 const ES_Port esSemiResistorPorts[] = {
 	{ 0, "" },

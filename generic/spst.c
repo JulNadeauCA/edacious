@@ -24,12 +24,11 @@
  */
 
 /*
- * Model for an independent (GUI-triggered) SPST switch.
- * TODO simulate hysteresis, etc.
+ * Model for an independent (GUI) SPST switch.
  */
 
-#include <eda.h>
-#include "spst.h"
+#include <core/core.h>
+#include "generic.h"
 
 const ES_Port esSpstPorts[] = {
 	{ 0, "" },

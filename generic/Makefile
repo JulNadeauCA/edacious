@@ -8,7 +8,8 @@ LIB_GUID=	"368455fb-0b23-4ab6-ba37-6d17c8f33a81"
 LIB_LINKS=	es_core ag_gui ag_core_static \
 		pthreads SDL opengl freetype
 
-SRCS=	capacitor.c \
+SRCS=	generic.c \
+	capacitor.c \
 	diode.c \
 	ground.c \
 	inductor.c \

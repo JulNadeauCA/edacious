@@ -1,12 +1,8 @@
 /*	Public domain	*/
 
-#ifndef _COMPONENT_PNP_H_
-#define _COMPONENT_PNP_H_
-
-#include "begin_code.h"
-
 typedef struct es_pnp {
-	struct es_component com;
+	struct es_component _inherit;
+
 	M_Real Vt;		/* Thermal voltage */
 	M_Real Va;		/* Early voltage */
 	M_Real Ifs,Irs;
@@ -43,12 +39,8 @@ typedef struct es_pnp {
 	M_Real *si_be[STAMP_CURRENT_SOURCE_SIZE];
 	M_Real *si_bc[STAMP_CURRENT_SOURCE_SIZE];
 	M_Real *si_ce[STAMP_CURRENT_SOURCE_SIZE];
-
 } ES_PNP;
 
 __BEGIN_DECLS
 extern ES_ComponentClass esPNPClass;
 __END_DECLS
-
-#include "close_code.h"
-#endif /* _COMPONENT_PNP_H_ */

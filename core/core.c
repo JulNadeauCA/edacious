@@ -23,35 +23,8 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <edacious/eda.h>
-
-/* Built-in component model classes. */
-void *esComponentClasses[] = {
-	&esGroundClass,
-	&esIsourceClass,
-	&esVsourceClass,
-	&esVSquareClass,
-	&esVSineClass,
-	&esVArbClass,
-	&esVSweepClass,
-	&esResistorClass,
-	&esSemiResistorClass,
-	&esSpstClass,
-	&esSpdtClass,
-	&esLogicProbeClass,
-	&esInverterClass,
-	&esAndClass,
-	&esOrClass,
-	&esDiodeClass,
-	&esLedClass,
-	&esNMOSClass, 
-	&esPMOSClass,
-	&esCapacitorClass,
-	&esInductorClass,
-	&esNPNClass,
-	&esPNPClass,
-	NULL
-};
+#include "core.h"
+#include <string.h>
 
 /* Built-in schematic entity (VG) classes. */
 const void *esSchematicClasses[] = {
@@ -62,9 +35,8 @@ const void *esSchematicClasses[] = {
 };
 
 /* Agar object classes for core Edacious functionality. */
-void *esBaseClasses[] = {
+void *esCoreClasses[] = {
 	&esComponentClass,
-	&esDigitalClass,
 	&esWireClass,
 	&esCircuitClass,
 	&esScopeClass,
@@ -80,6 +52,9 @@ const char *esEditableClasses[] = {
 	NULL
 };
 
+void **esComponentClasses = NULL;		/* Component model classes */
+Uint   esComponentClassCount = 0;
+
 #ifdef FP_DEBUG
 #include <fenv.h>
 #endif
@@ -90,7 +65,7 @@ AG_Object esVfsRoot;			/* General-purpose VFS */
 
 /* Initialize the Edacious library. */
 void
-ES_InitSubsystem(void)
+ES_CoreInit(void)
 {
 	const void **clsSchem;
 	void **cls;
@@ -98,11 +73,12 @@ ES_InitSubsystem(void)
 	/* Initialize the VG and M libraries. */
 	VG_InitSubsystem();
 	M_InitSubsystem();
-	
+
+	esComponentClasses = Malloc(sizeof(void *));
+	esComponentClassCount = 0;
+
 	/* Register our built-in classes. */
-	for (cls = &esBaseClasses[0]; *cls != NULL; cls++)
-		AG_RegisterClass(*cls);
-	for (cls = &esComponentClasses[0]; *cls != NULL; cls++)
+	for (cls = &esCoreClasses[0]; *cls != NULL; cls++)
 		AG_RegisterClass(*cls);
 	for (clsSchem = &esSchematicClasses[0]; *clsSchem != NULL; clsSchem++)
 		VG_RegisterClass(*clsSchem);
@@ -113,4 +89,39 @@ ES_InitSubsystem(void)
 #endif
 	/* Load our built-in GUI icons. */
 	esIcon_Init();
+}
+
+void
+ES_CoreDestroy(void)
+{
+}
+
+void
+ES_RegisterClass(void *cls)
+{
+	esComponentClasses = Realloc(esComponentClasses,
+	    (esComponentClassCount+1)*sizeof(void *));
+	esComponentClasses[esComponentClassCount++] = cls;
+	AG_RegisterClass(cls);
+}
+
+void
+ES_UnregisterClass(void *p)
+{
+	AG_ObjectClass *cls = p;
+	int i;
+
+	for (i = 0; i < esComponentClassCount; i++) {
+		if (esComponentClasses[i] == cls)
+			break;
+	}
+	if (i == esComponentClassCount) {
+		return;
+	}
+	if (i < esComponentClassCount-1) {
+		memmove(&esComponentClasses[i], &esComponentClasses[i+1],
+		    (esComponentClassCount-1)*sizeof(void *));
+	}
+	esComponentClassCount--;
+	AG_UnregisterClass(cls);
 }

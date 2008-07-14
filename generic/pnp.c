@@ -27,8 +27,8 @@
  * Model for PNP transistor
  */
 
-#include <eda.h>
-#include "pnp.h"
+#include <core/core.h>
+#include "generic.h"
 
 enum {
 	PORT_B = 1,

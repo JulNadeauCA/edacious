@@ -28,8 +28,8 @@
  * voltage and current behavior.
  */
 
-#include <eda.h>
-#include "digital.h"
+#include <core/core.h>
+#include "macro.h"
 
 void
 ES_DigitalInitPorts(void *obj, const ES_Port *ports)

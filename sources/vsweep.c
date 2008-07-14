@@ -27,8 +27,8 @@
  * Independent sweeping voltage source.
  */
 
-#include <eda.h>
-#include "vsweep.h"
+#include <core/core.h>
+#include "sources.h"
 
 const ES_Port esVSweepPorts[] = {
 	{  0, "" },

@@ -27,8 +27,8 @@
  * Model for NPN transistor
  */
 
-#include <eda.h>
-#include "npn.h"
+#include <core/core.h>
+#include "generic.h"
 
 enum {
 	PORT_B = 1,

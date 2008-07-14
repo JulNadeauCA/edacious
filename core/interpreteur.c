@@ -1,3 +1,14 @@
+/*	Public domain	*/
+
+/*
+ * Arbitrary mathematical expression parser.
+ * Public domain, found here :
+ * http://www.developpez.net/forums/showthread.php?t=456224
+ * Modifications made :
+ * - reorganized file structure
+ * - ported code to use M_Real instead of double
+ */
+
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>

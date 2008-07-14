@@ -27,8 +27,8 @@
  * Model for the capacitor.
  */
 
-#include <eda.h>
-#include "capacitor.h"
+#include <core/core.h>
+#include "generic.h"
 
 enum {
 	PORT_A = 1,

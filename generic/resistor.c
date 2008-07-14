@@ -27,8 +27,8 @@
  * Model for the resistor.
  */
 
-#include <eda.h>
-#include "resistor.h"
+#include <core/core.h>
+#include "generic.h"
 
 const ES_Port esResistorPorts[] = {
 	{ 0, "" },

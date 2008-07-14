@@ -1,10 +1,5 @@
 /*	Public domain	*/
 
-#ifndef _COMPONENT_DIGITAL_H_
-#define _COMPONENT_DIGITAL_H_
-
-#include "begin_code.h"
-
 typedef enum es_digital_class {
 	ES_DIGITAL_GATE,
 	ES_DIGITAL_BUFFERS,
@@ -21,7 +16,7 @@ typedef enum es_digital_state {
 } ES_LogicState;
 
 typedef struct es_digital {
-	struct es_component com;
+	struct es_component _inherit;
 	int VccPort;		/* DC supply port */
 	int GndPort;		/* Ground port */
 	M_Vector *G;		/* Current conductive state */
@@ -39,10 +34,14 @@ typedef struct es_digital {
 	M_TimeRange Ttlh;	/* Output transition time; LOW->HIGH */
 } ES_Digital;
 
-#define DIGITAL(p) ((ES_Digital *)(p))
-#define PAIR_MATCHES(pair,a,b) \
+#define ES_DIGITAL(p) ((ES_Digital *)(p))
+
+#ifdef _ES_INTERNAL
+# define DIGITAL(p) ES_DIGITAL(p)
+# define PAIR_MATCHES(pair,a,b) \
 	((pair->p1->n == (a) && pair->p2->n == (b)) || \
 	 (pair->p2->n == (a) && pair->p1->n == (b)))
+#endif
 
 __BEGIN_DECLS
 extern ES_ComponentClass esDigitalClass;
@@ -54,6 +53,3 @@ void	 ES_DigitalSetGndPort(void *, int);
 int	 ES_LogicOutput(void *, const char *, ES_LogicState);
 int	 ES_LogicInput(void *, const char *);
 __END_DECLS
-
-#include "close_code.h"
-#endif /* _COMPONENT_DIGITAL_H_ */

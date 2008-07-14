@@ -27,7 +27,7 @@
  * "Insert component" tool.
  */
 
-#include <eda.h>
+#include "core.h"
 
 ES_Component *esFloatingCom = NULL;
 

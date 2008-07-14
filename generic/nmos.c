@@ -27,8 +27,8 @@
  * Model for NMOS transistor
  */
 
-#include <eda.h>
-#include "nmos.h"
+#include <core/core.h>
+#include "generic.h"
 
 enum {
 	PORT_G = 1,

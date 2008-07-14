@@ -27,7 +27,7 @@
  * Generic interface to different simulation modes.
  */
 
-#include <eda.h>
+#include "core.h"
 #include <stdarg.h>
 
 extern const ES_SimOps esSimDcOps;

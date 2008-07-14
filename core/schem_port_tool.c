@@ -27,7 +27,7 @@
  * Port edition tool.
  */
 
-#include <eda.h>
+#include "core.h"
 #include <agar/gui/primitive.h>
 #include <agar/core/limits.h>
 

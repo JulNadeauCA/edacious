@@ -27,9 +27,8 @@
  * Independent sinusoidal voltage source.
  */
 
-#include <eda.h>
-#include "vsource.h"
-#include "vsine.h"
+#include <core/core.h>
+#include "sources.h"
 
 const ES_Port esVSinePorts[] = {
 	{  0, "" },

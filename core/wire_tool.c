@@ -28,8 +28,7 @@
  * circuit topology (i.e., merging circuit nodes or creating new ones).
  */
 
-#include <eda.h>
-#include "wire.h"
+#include "core.h"
 
 static ES_Wire *esCurWire;
 

@@ -32,7 +32,10 @@
 #include <agar/dev.h>
 #include <agar/vg.h>
 
-#include <edacious/eda.h>
+#include <core/core.h>
+#include <generic/generic.h>
+#include <macro/macro.h>
+#include <sources/sources.h>
 
 #include <ctype.h>
 #include <stdio.h>
@@ -610,8 +613,11 @@ main(int argc, char *argv[])
 	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, AG_Quit);
 	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
 
-	/* Initialize the Edacious library. */
-	ES_InitSubsystem();
+	/* Initialize the Edacious libraries. */
+	ES_CoreInit();
+	ES_GenericInit();
+	ES_MacroInit();
+	ES_SourcesInit();
 
 	/* Initialize our editor VFS. */
 	AG_ObjectInitStatic(&esVfsRoot, NULL);

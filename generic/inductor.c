@@ -27,8 +27,8 @@
  * Model for the inductor.
  */
 
-#include <eda.h>
-#include "inductor.h"
+#include <core/core.h>
+#include "generic.h"
 
 enum {
 	PORT_A = 1,

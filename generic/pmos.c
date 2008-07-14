@@ -27,8 +27,8 @@
  * Model for PMOS transistor
  */
 
-#include <eda.h>
-#include "pmos.h"
+#include <core/core.h>
+#include "generic.h"
 
 enum {
 	PORT_G = 1,

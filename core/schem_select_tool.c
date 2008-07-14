@@ -27,7 +27,7 @@
  * Tool for selecting and moving entities in a component schematic.
  */
 
-#include <eda.h>
+#include "core.h"
 #include <agar/core/limits.h>
 
 typedef struct es_schem_select_tool {

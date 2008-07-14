@@ -1,12 +1,5 @@
 /*	Public domain	*/
 
-#ifndef _SOURCES_VSWEEP_H_
-#define _SOURCES_VSWEEP_H_
-
-#include <sources/vsource.h>
-
-#include "begin_code.h"
-
 typedef struct es_vsweep {
 	struct es_vsource _inherit;
 	M_Real v1;			/* Start voltage */
@@ -20,6 +13,3 @@ typedef struct es_vsweep {
 __BEGIN_DECLS
 extern ES_ComponentClass esVSweepClass;
 __END_DECLS
-
-#include "close_code.h"
-#endif /* _SOURCES_VSWEEP_H_ */

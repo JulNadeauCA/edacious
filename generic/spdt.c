@@ -24,12 +24,11 @@
  */
 
 /*
- * Model for an independent (GUI-triggered) SPDT switch.
- * TODO simulate hysteresis, etc.
+ * Model for an independent (GUI) SPDT switch.
  */
 
-#include <eda.h>
-#include "spdt.h"
+#include <core/core.h>
+#include "generic.h"
 
 const ES_Port esSpdtPorts[] = {
 	{ 0, "" },

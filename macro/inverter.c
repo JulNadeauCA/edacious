@@ -27,8 +27,8 @@
  * Model for an ideal digital inverter.
  */
 
-#include <eda.h>
-#include "inverter.h"
+#include <core/core.h>
+#include "macro.h"
 
 const ES_Port esInverterPorts[] = {
 	{ 0, "" },

@@ -28,8 +28,7 @@
  * to the user-specified Circuit values.
  */
 
-#include <eda.h>
-#include "scope.h"
+#include "core.h"
 #include <freesg/m/m_plotter.h>
 
 ES_Scope *

@@ -27,7 +27,7 @@
  * Port entity. Defines a connection point in the schematic.
  */
 
-#include <eda.h>
+#include "core.h"
 #include <agar/gui/primitive.h>
 #include <agar/gui/opengl.h>
 #include <agar/core/limits.h>

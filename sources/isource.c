@@ -27,8 +27,8 @@
  * Independent current source.
  */
 
-#include <eda.h>
-#include "isource.h"
+#include <core/core.h>
+#include "sources.h"
 
 const ES_Port esIsourcePorts[] = {
 	{ 0, "" },

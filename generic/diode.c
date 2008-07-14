@@ -27,8 +27,8 @@
  * Model for the diode.
  */
 
-#include <eda.h>
-#include "diode.h"
+#include <core/core.h>
+#include "generic.h"
 
 enum {
 	PORT_P = 1,

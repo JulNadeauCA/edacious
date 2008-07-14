@@ -28,7 +28,7 @@
  * circuit components. Components may create one or more blocks on attach.
  */
 
-#include <eda.h>
+#include "core.h"
 #include <agar/gui/primitive.h>
 #include <agar/core/limits.h>
 

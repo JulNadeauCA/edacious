@@ -27,10 +27,9 @@
  * Arbitrary expression evaluator
  */
 
-#include <eda.h>
+#include <core/core.h>
 #include <core/interpreteur.h>
-#include "vsource.h"
-#include "varb.h"
+#include "sources.h"
 
 PARAM params[] = { {"pi" , M_PI},
 		   {"t"  , 0.0}

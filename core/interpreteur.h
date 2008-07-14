@@ -1,24 +1,10 @@
-/* Arbitrary mathematical expression parser.
- * Public domain, found here :
- * http://www.developpez.net/forums/showthread.php?t=456224
- * Modifications made :
- * - reorganized file structure
- * - ported code to use M_Real instead of double
- * */
+/*	Public domain	*/
 
-
-#ifndef INTERPRETEUR_H
-
-#define INTERPRETEUR_H
-
-/*
-Fichier : interpreteur.h
-------------------------
-    Fichier d'en-tete pour l'utilisation de l'interpreteur
-*/
+#ifndef _EDACIOUS_INTERPRETEUR_H
+#define _EDACIOUS_INTERPRETEUR_H
 
 #include <stddef.h>
-#include <eda.h>
+#include <edacious/core/core.h>
 
 typedef enum EVALUER_ERRORS {
 	EVALUER_SUCCESS,
@@ -44,5 +30,4 @@ void  InterpreteurInit(void);
 void  InterpreteurReset(void);
 int   Calculer(char * lpszString, LPPARAM lpParams, size_t nbParams, M_Real * lpResult);
 
-#endif
-
+#endif /* _EDACIOUS_INTERPRETEUR_H_ */

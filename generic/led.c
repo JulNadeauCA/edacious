@@ -27,8 +27,8 @@
  * LED component model.
  */
 
-#include <eda.h>
-#include "led.h"
+#include <core/core.h>
+#include "generic.h"
 
 const ES_Port esLedPorts[] = {
 	{ 0, "" },

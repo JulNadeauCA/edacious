@@ -27,8 +27,8 @@
  * Model for the ideal OR gate.
  */
 
-#include <eda.h>
-#include "or_gate.h"
+#include <core/core.h>
+#include "macro.h"
 
 const ES_Port esOrPorts[] = {
 	{ 0, "" },

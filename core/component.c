@@ -27,9 +27,7 @@
  * Base class for components in circuits.
  */
 
-#include <eda.h>
-#include "wire.h"
-
+#include "core.h"
 #include <config/sharedir.h>
 
 /* Free all Port information in the given Component. */

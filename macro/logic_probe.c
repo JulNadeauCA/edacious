@@ -27,8 +27,8 @@
  * Ideal logic probe.
  */
 
-#include <eda.h>
-#include "logic_probe.h"
+#include <core/core.h>
+#include "macro.h"
 
 const ES_Port esLogicProbePorts[] = {
 	{ 0, "" },

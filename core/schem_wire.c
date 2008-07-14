@@ -27,7 +27,7 @@
  * Wire entity. Displays connections between ports.
  */
 
-#include <eda.h>
+#include "core.h"
 #include <agar/gui/primitive.h>
 #include <agar/core/limits.h>
 

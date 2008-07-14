@@ -27,8 +27,7 @@
  * Wire component.
  */
 
-#include <eda.h>
-#include "wire.h"
+#include "core.h"
 
 const ES_Port esWirePorts[] = {
 	{ 0, "" },

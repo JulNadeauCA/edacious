@@ -1,8 +1,10 @@
 /* Public domain */
 
-/* Utility functions for stamping commonly used linear components */
+/*
+ * Utility functions for stamping commonly used linear components.
+ */
 
-#include <eda.h>
+#include "core.h"
 
 /* Dummy variable to write everything related to ground to */
 M_Real dummy;

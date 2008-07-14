@@ -27,13 +27,9 @@
  * Export of models to SPICE3 format.
  */
 
-#include <eda.h>
-
-#include "spice.h"
-
+#include "core.h"
 #include <errno.h>
 #include <stdio.h>
-
 #include <config/version.h>
 
 /* Generate a SPICE3 input deck for the given circuit. */

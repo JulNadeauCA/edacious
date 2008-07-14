@@ -27,8 +27,8 @@
  * Independent voltage source class.
  */
 
-#include <eda.h>
-#include "vsource.h"
+#include <core/core.h>
+#include "sources.h"
 
 const ES_Port esVsourcePorts[] = {
 	{ 0, "" },

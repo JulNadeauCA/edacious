@@ -28,8 +28,8 @@
  * replaced by node 0.
  */
 
-#include <eda.h>
-#include "ground.h"
+#include <core/core.h>
+#include "generic.h"
 
 const ES_Port esGroundPorts[] = {
 	{ 0, "", },

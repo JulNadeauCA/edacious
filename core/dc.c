@@ -32,7 +32,7 @@
  *	  of a circuit containing nonlinear elements.
  */
 
-#include <eda.h>
+#include "core.h"
 #include <freesg/m/m_matview.h>
 
 /* N-R iterations stop when the difference between previous

@@ -27,10 +27,7 @@
  * Electrical circuit.
  */
 
-#include <eda.h>
-#include <measurement/scope.h>
-
-#include "spice.h"
+#include "core.h"
 
 /* Circuit edition tools */
 static VG_ToolOps *ToolsCkt[] = {
