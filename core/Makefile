@@ -8,7 +8,8 @@ LIB_GUID=	"0c09acdb-225a-4b7f-a8f9-edc0045ae18d"
 LIB_LINKS=	ag_gui ag_core_static \
 		pthreads SDL opengl freetype
 
-SRCS=	circuit.c \
+SRCS=	core.c \
+	circuit.c \
 	component.c \
 	dc.c \
 	insert_tool.c \

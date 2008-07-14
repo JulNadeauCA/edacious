@@ -32,109 +32,19 @@
 #include <agar/dev.h>
 #include <agar/vg.h>
 
-#include "eda.h"
-
-#include <core/spice.h>
-
-#include <sources/isource.h>
-#include <sources/vsource.h>
-#include <sources/varb.h>
-#include <sources/vsine.h>
-#include <sources/vsquare.h>
-#include <sources/vsweep.h>
-
-#include <core/wire.h>
-
-#include <macro/and_gate.h>
-#include <macro/digital.h>
-#include <macro/inverter.h>
-#include <macro/or_gate.h>
-
-#include <measurement/scope.h>
-#include <measurement/logic_probe.h>
-
-#include <generic/capacitor.h>
-#include <generic/diode.h>
-#include <generic/ground.h>
-#include <generic/inductor.h>
-#include <generic/led.h>
-#include <generic/nmos.h>
-#include <generic/npn.h>
-#include <generic/pmos.h>
-#include <generic/pnp.h>
-#include <generic/resistor.h>
-#include <generic/semiresistor.h>
-#include <generic/spst.h>
-#include <generic/spdt.h>
-
-#include <core/icons_data.h>
+#include <edacious/eda.h>
 
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#ifdef FP_DEBUG
-#include <fenv.h>
-#endif
 
 #include <config/enable_nls.h>
 #include <config/have_getopt.h>
 #include <config/have_agar_dev.h>
 #include <agar/config/have_opengl.h>
 
-void *esComponentClasses[] = {
-	&esGroundClass,
-	&esIsourceClass,
-	&esVsourceClass,
-	&esVSquareClass,
-	&esVSineClass,
-	&esVArbClass,
-	&esVSweepClass,
-	&esResistorClass,
-	&esSemiResistorClass,
-	&esSpstClass,
-	&esSpdtClass,
-	&esLogicProbeClass,
-	&esInverterClass,
-	&esAndClass,
-	&esOrClass,
-	&esDiodeClass,
-	&esLedClass,
-	&esNMOSClass, 
-	&esPMOSClass,
-	&esCapacitorClass,
-	&esInductorClass,
-	&esNPNClass,
-	&esPNPClass,
-	NULL
-};
-
-const void *esSchematicClasses[] = {
-	&esSchemBlockOps,
-	&esSchemPortOps,
-	&esSchemWireOps,
-	NULL
-};
-
-void *esBaseClasses[] = {
-	&esComponentClass,
-	&esDigitalClass,
-	&esWireClass,
-	&esCircuitClass,
-	&esScopeClass,
-	&esSchemClass,
-	NULL
-};
-
-const char *esEditableClasses[] = {
-	"ES_Circuit:*",
-	"ES_Schem:*",
-	"ES_Scope:*",
-	NULL
-};
-
 AG_Menu *appMenu = NULL;
-AG_Object vfsRoot;
 static void *objFocus = NULL;
 static AG_Mutex objLock;
 
@@ -266,7 +176,7 @@ NewObject(AG_Event *event)
 	AG_ObjectClass *cls = AG_PTR(1);
 	AG_Object *obj;
 
-	obj = AG_ObjectNew(&vfsRoot, NULL, cls);
+	obj = AG_ObjectNew(&esVfsRoot, NULL, cls);
 	ES_CreateEditionWindow(obj);
 	AG_PostEvent(NULL, obj, "edit-open", NULL);
 }
@@ -303,7 +213,7 @@ OpenNativeObject(AG_Event *event)
 	char *path = AG_STRING(2);
 	AG_Object *obj;
 
-	obj = AG_ObjectNew(&vfsRoot, NULL, cls);
+	obj = AG_ObjectNew(&esVfsRoot, NULL, cls);
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
 		AG_TextMsg(AG_MSG_ERROR, "%s: %s", ShortFilename(path),
 		    AG_GetError());
@@ -511,7 +421,7 @@ Quit(AG_Event *event)
 	}
 	agTerminating = 1;
 
-	OBJECT_FOREACH_CHILD(obj, &vfsRoot, ag_object) {
+	OBJECT_FOREACH_CHILD(obj, &esVfsRoot, ag_object) {
 		if (AG_ObjectChanged(obj))
 			break;
 	}
@@ -589,7 +499,8 @@ FileMenu(AG_Event *event)
 
 		AG_MenuSeparator(node);
 
-		OBJECT_FOREACH_CLASS(dev, &vfsRoot, es_device, "ES_Device:*") {
+		OBJECT_FOREACH_CLASS(dev, &esVfsRoot, es_device,
+		    "ES_Device:*") {
 			AG_MenuAction(node, OBJECT(dev)->name, agIconGear.s,
 			    EditDevice, "%p", dev);
 		}
@@ -636,8 +547,6 @@ main(int argc, char *argv[])
 	Uint videoFlags = AG_VIDEO_OPENGL_OR_SDL|AG_VIDEO_RESIZABLE;
 	int c, i, fps = -1;
 	char *s;
-	void **cls;
-	const void **clsSchem;
 
 #ifdef ENABLE_NLS
 	bindtextdomain("edacious", LOCALEDIR);
@@ -691,31 +600,23 @@ main(int argc, char *argv[])
 		}
 	}
 #endif /* HAVE_GETOPT */
+
+	/* Setup the display. */
 	if (AG_InitVideo(800, 600, 32, videoFlags) == -1) {
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (-1);
 	}
-	VG_InitSubsystem();
-	M_InitSubsystem();
 	AG_SetRefreshRate(fps);
 	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, AG_Quit);
 	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
 
+	/* Initialize the Edacious library. */
+	ES_InitSubsystem();
+
 	/* Initialize our editor VFS. */
-	AG_ObjectInitStatic(&vfsRoot, NULL);
-	AG_ObjectSetName(&vfsRoot, _("Editor VFS"));
+	AG_ObjectInitStatic(&esVfsRoot, NULL);
+	AG_ObjectSetName(&esVfsRoot, _("Editor VFS"));
 	AG_MutexInit(&objLock);
-
-	/* Register our built-in classes. */
-	for (cls = &esBaseClasses[0]; *cls != NULL; cls++)
-		AG_RegisterClass(*cls);
-	for (cls = &esComponentClasses[0]; *cls != NULL; cls++)
-		AG_RegisterClass(*cls);
-	for (clsSchem = &esSchematicClasses[0]; *clsSchem != NULL; clsSchem++)
-		VG_RegisterClass(*clsSchem);
-
-	/* Load our built-in icons. */
-	esIcon_Init();
 
 	/* Create the application menu. */ 
 	appMenu = AG_MenuNewGlobal(0);
@@ -725,10 +626,6 @@ main(int argc, char *argv[])
 #if defined(HAVE_AGAR_DEV) && defined(DEBUG)
 	DEV_InitSubsystem(0);
 	DEV_ToolMenu(AG_MenuNode(appMenu->root, _("Debug"), NULL));
-#endif
-
-#ifdef FP_DEBUG
-	feenableexcept(FE_DIVBYZERO | FE_OVERFLOW);
 #endif
 
 #ifdef HAVE_GETOPT
@@ -748,7 +645,7 @@ main(int argc, char *argv[])
 			}
 		}
 
-		ckt = AG_ObjectNew(&vfsRoot, NULL, cls);
+		ckt = AG_ObjectNew(&esVfsRoot, NULL, cls);
 		if (AG_ObjectLoadFromFile(ckt, argv[i]) == 0) {
 			AG_ObjectSetArchivePath(ckt, argv[i]);
 			ES_CreateEditionWindow(ckt);
@@ -760,7 +657,7 @@ main(int argc, char *argv[])
 	}
 
 	AG_EventLoop();
-	AG_ObjectDestroy(&vfsRoot);
+	AG_ObjectDestroy(&esVfsRoot);
 	AG_Destroy();
 	return (0);
 }
