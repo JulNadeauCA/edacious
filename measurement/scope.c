@@ -135,7 +135,7 @@ AddPlotFromSrc(AG_Event *event)
 	M_Plot *pl;
 
 	AG_PropCopyPath(prop_path, sizeof(prop_path), ckt, prop->key);
-	pl = M_PlotFromProp(ptr, M_PLOT_LINEAR, prop->key, &vfsRoot,
+	pl = M_PlotFromProp(ptr, M_PLOT_LINEAR, prop->key, &esVfsRoot,
 	    prop_path);
 	M_PlotSetXoffs(pl, ptr->xMax-1);
 	M_PlotSetScale(pl, 0.0, 15.0);
