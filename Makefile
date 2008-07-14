@@ -73,7 +73,7 @@ install-includes:
 		    INSTALL_INCL="${INSTALL_INCL}" \
 		    ${SH} mk/install-includes.sh $$DIR ${INCLDIR}/edacious; \
 		done; \
-		(cd ${SRC} && for INC in ${INCPUB}; do \
+		(for INC in ${INCPUB}; do \
 		    ${SUDO} ${INSTALL_INCL} $$INC/$$INC.h \
 		        ${INCLDIR}/edacious/$$INC.h; \
 		done); \
