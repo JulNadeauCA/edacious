@@ -10,7 +10,8 @@ SUBDIR=		core \
 		sources \
 		Schematics \
 		edacious-config \
-		gui
+		gui \
+		ecminfo
 
 INCPUB=		core generic macro sources
 INCDIRS=	core generic macro sources

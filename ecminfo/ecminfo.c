@@ -28,7 +28,10 @@
  * files.
  */
 
-#include <edacious/core.h>
+#include <core/core.h>
+#include <generic/generic.h>
+#include <sources/sources.h>
+#include <macro/macro.h>
 
 int showProps = 0;
 
@@ -65,6 +68,9 @@ main(int argc, char *argv[])
 		case 'h':
 			printusage();
 		}
+	}
+	if (optind == argc) {
+		printusage();
 	}
 	for (i = optind; i < argc; i++) {
 		printf("%s:\n", argv[i]);
