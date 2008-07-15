@@ -30,37 +30,91 @@
 
 #include <edacious/core.h>
 
+int showProps = 0;
+
+static void
+printusage(void)
+{
+	fprintf(stderr, "Usage: ecminfo [-p] [file]\n");
+	exit(1);
+}
+
 int
 main(int argc, char *argv[])
 {
 	ES_Circuit *ckt;
-	char *file;
+	int c;
 	int i;
 
-	if (argc < 2) {
-		fprintf(stderr, "Usage: %s [file]\n", argv[0]);
-		return (1);
-	}
-	file = argv[1];
-
 	AG_InitCore("ecminfo", 0);
+	agDebugLvl = 0;
+
 	ES_CoreInit();
 	ES_GenericInit();
 	ES_MacroInit();
 	ES_SourcesInit();
+	
+	while ((c = getopt(argc, argv, "?hp")) != -1) {
+		extern char *optarg;
 
-	ckt = AG_ObjectNew(&esVfsRoot, NULL, &esCircuitClass);
-	if (AG_ObjectLoadFromFile(ckt, argv[1]) == 0) {
-		printf("%s:\n", file);
-		printf("Name: %s\n", AGOBJECT(ckt)->name);
-		printf("Description: \"%s\"\n", ckt->descr);
-		printf("Author: \"%s\"\n", ckt->authors);
-		printf("Keywords: \"%s\"\n", ckt->keywords);
-		printf("\n");
-		printf("Total voltage sources: %u\n", ckt->m);
-		printf("Total nodes: %u\n", ckt->n);
-	} else {
-		fprintf(stderr, "%s: %s\n", argv[1], AG_GetError());
+		switch (c) {
+		case 'p':
+			showProps = 1;
+			break;
+		case '?':
+		case 'h':
+			printusage();
+		}
+	}
+	for (i = optind; i < argc; i++) {
+		printf("%s:\n", argv[i]);
+		ckt = AG_ObjectNew(&esVfsRoot, NULL, &esCircuitClass);
+		if (AG_ObjectLoadFromFile(ckt, argv[i]) == -1) {
+			fprintf(stderr, "%s: %s\n", argv[i], AG_GetError());
+			AG_ObjectDestroy(ckt);
+			continue;
+		}
+		if (ckt->descr[0] != '\0') {
+			printf("\tDescription: \"%s\"\n", ckt->descr);
+		}
+		if (ckt->authors[0] != '\0') {
+			printf("\tAuthor: \"%s\"\n", ckt->authors);
+		}
+		if (ckt->keywords[0] != '\0') {
+			printf("\tKeywords: \"%s\"\n", ckt->keywords);
+		}
+		printf("\tTotal voltage sources: %u\n", ckt->m);
+		printf("\tTotal nodes: %u\n", ckt->n);
+
+		if (showProps) {
+			AG_Prop *prop;
+			char s[1024];
+
+			printf("\tProperties:\n");
+			AGOBJECT_FOREACH_PROP(prop, ckt) {
+				AG_PropPrint(s, sizeof(s), ckt, prop->key);
+				printf("\t\t%s = %s\n", prop->key, s);
+			}
+		}
+		if (!TAILQ_EMPTY(&AGOBJECT(ckt)->children)) {
+			ES_Component *com;
+
+			printf("\tComponents:\n");
+			ESCIRCUIT_FOREACH_COMPONENT(com, ckt) {
+				printf("%35s: %s (%up)",
+				    ESCOMPONENT_CLASS(com)->name,
+				    AGOBJECT(com)->name,
+				    com->nports);
+				if (com->flags & ES_COMPONENT_FLOATING) {
+					printf(" <FLOATING>");
+				}
+				if (com->flags & ES_COMPONENT_SUPPRESSED) {
+					printf(" <SUPPRESSED>");
+				}
+				printf("\n");
+			}
+		}
+//		AG_ObjectDestroy(ckt);
 	}
 	return (0);
 }
