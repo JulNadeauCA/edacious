@@ -68,10 +68,9 @@ main(int argc, char *argv[])
 	}
 	for (i = optind; i < argc; i++) {
 		printf("%s:\n", argv[i]);
-		ckt = AG_ObjectNew(&esVfsRoot, NULL, &esCircuitClass);
+		ckt = AG_ObjectNew(NULL, NULL, &esCircuitClass);
 		if (AG_ObjectLoadFromFile(ckt, argv[i]) == -1) {
 			fprintf(stderr, "%s: %s\n", argv[i], AG_GetError());
-			AG_ObjectDestroy(ckt);
 			continue;
 		}
 		if (ckt->descr[0] != '\0') {
@@ -114,7 +113,7 @@ main(int argc, char *argv[])
 				printf("\n");
 			}
 		}
-//		AG_ObjectDestroy(ckt);
+		AG_ObjectDestroy(ckt);
 	}
 	return (0);
 }
