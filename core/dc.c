@@ -103,6 +103,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		if (com->dcStepBegin != NULL)
 			com->dcStepBegin(com, sim);
 	}
+
+	sim->inputStep = 1;
 	if (SolveMNA(sim, ckt) == -1)
 		goto halt;
 

@@ -21,6 +21,7 @@ typedef struct es_sim_dc {
 	Uint32 timeLastStep;    /* Time (as measured in SDL ticks) of last step */
 	
 	Uint isDamped;		/* 1 if any components had to damp voltage guesses in the previous iteration, 0 otherwise */
+	Uint inputStep;		/* flag that can be set by active components to aid simulation: 1 if there is a discontinuity in input, 0 otherwise */
 
 	Uint itersMax;		/* Maximum solver iterations per step */
 	Uint itersHiwat;	/* Most iterations/step in last simulation */

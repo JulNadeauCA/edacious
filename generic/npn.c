@@ -55,6 +55,23 @@ vBC(ES_NPN *u)
 	return VPORT(u,PORT_B)-VPORT(u,PORT_C);
 }
 
+static void 
+ResetModel(ES_NPN *u)
+{
+	u->gPiF=1.0;
+	u->gPiR=1.0;
+	u->gmF=1.0;
+	u->gmR=1.0;
+	u->go=1.0;
+
+	u->Ibf_eq = 0.0;
+	u->Ibr_eq = 0.0;
+	u->Icc_eq = 0.0;
+
+	u->VbePrev=0.7;
+	u->VbcPrev=0.7;
+}
+
 static void
 UpdateModel(ES_NPN *u, ES_SimDC *dc, M_Real vBE, M_Real vBC)
 {
@@ -145,9 +162,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	InitStampCurrentSource(c,b, u->si_cb, dc);
 	InitStampCurrentSource(e,c, u->si_ec, dc);
 
-	u->VbePrev = 0.7;
-	u->VbcPrev = 0.7;
-	UpdateModel(u,dc,u->VbePrev,u->VbcPrev);
+	ResetModel(u);
 	UpdateStamp(u,dc);
 
 	return (0);
@@ -158,7 +173,11 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_NPN *u = obj;
 
-	UpdateModel(u,dc,vBE(u),vBC(u));
+	if (dc->inputStep)
+		ResetModel(u);
+	else
+		UpdateModel(u,dc,vBE(u),vBC(u));
+
 	UpdateStamp(u,dc);
 
 }

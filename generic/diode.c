@@ -52,6 +52,16 @@ v(ES_Diode *d)
 	return VPORT(d,PORT_P)-VPORT(d,PORT_N);
 }
 
+static void
+ResetModel(ES_Diode *d)
+{
+	d->g=1.0;
+
+	d->Ieq=0.0;
+
+	d->vPrev=0.7;
+}
+
 /* Updates the small- and large-signal models, saving the previous values. */
 static void
 UpdateModel(ES_Diode *d, ES_SimDC *dc, M_Real v)
@@ -69,11 +79,6 @@ UpdateModel(ES_Diode *d, ES_SimDC *dc, M_Real v)
 	I = d->Is*(Exp(v/(d->Vt)) - 1);
 	d->g = I/(d->Vt);
 	d->Ieq = I-(d->g)*v;
-
-	if (d->g < 0.01)
-	{
-		d->g = 0.01;
-	}
 }
 
 static void
@@ -86,6 +91,7 @@ UpdateStamp(ES_Diode *d, ES_SimDC *dc)
 	d->IeqPrev = d->Ieq;
 }
 
+
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
@@ -95,11 +101,9 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	Uint l = PNODE(d,PORT_N);
 
 	InitStampConductance(k, l, d->s_conductance, dc);
-	InitStampCurrentSource(k, l, d->s_current_source, dc);
-	
-	d->vPrev = 0.7;
-	UpdateModel(d, dc, 0.7);
+	InitStampCurrentSource(l, k, d->s_current_source, dc);
 
+	ResetModel(d);
 	UpdateStamp(d, dc);
 
 	return (0);
@@ -109,8 +113,12 @@ static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Diode *d = obj;
-	
-	UpdateModel(d, dc, d->vPrev);
+
+	if (dc->inputStep)
+		ResetModel(d);
+	else
+		UpdateModel(d, dc, v(d));
+
 	UpdateStamp(d, dc);
 }
 

@@ -133,7 +133,9 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	InitStampConductance(s,d,u->s_conductance, dc);
 	InitStampCurrentSource(d,s, u->s_current, dc);
 
-	UpdateModel(u,u->Vt+0.1,u->Vt+0.1);
+	u->gm=1.0;
+	u->go=1.0;
+	u->Ieq=0.0;
 	UpdateStamp(u,dc);
 	return (0);
 }
@@ -146,8 +148,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	Uint d = PNODE(u,PORT_D);
 	Uint s = PNODE(u,PORT_S);
 
-	
-	UpdateModel(u,u->Vt+0.1,u->Vt+0.1);
+	UpdateModel(u,vSG(u),vSD(u));
 	UpdateStamp(u,dc);
 
 }

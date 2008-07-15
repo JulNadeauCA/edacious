@@ -48,13 +48,17 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSweep *vsw = obj;
+	ES_Vsource *vs = VSOURCE(vsw);
+
 	Uint k = PNODE(vsw,1);
 	Uint j = PNODE(vsw,2);
 
-	VSOURCE(vsw)->v = vsw->v1;
-	InitStampVoltageSource(k,j, VSOURCE(vsw)->vIdx, VSOURCE(vsw)->s, dc);
+	vs->v = vsw->v1;
+	InitStampVoltageSource(k,j, vs->vIdx, vs->s, dc);
 
 	UpdateStamp(vsw,dc);
+
+	vsw->vPrev = vs->v;
 
 	return (0);
 }
@@ -63,16 +67,23 @@ static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSweep *vsw = obj;
+	ES_Vsource *vs = VSOURCE(vsw);
+
 	Uint curCycle;
 
 	curCycle = dc->Telapsed / vsw->t;
 	if (vsw->count != 0 && curCycle >= vsw->count)
-		VSOURCE(vsw)->v = 0.0;
+		vs->v = 0.0;
 	else {
 		/* fraction representing the progress in the current cycle */
 		M_Real relProgress = dc->Telapsed / vsw->t - curCycle;
-		VSOURCE(vsw)->v = vsw->v1 + (vsw->v2 - vsw->v1) * relProgress;
+		vs->v = vsw->v1 + (vsw->v2 - vsw->v1) * relProgress;
 	}
+
+	if (M_Fabs(vs->v-vsw->vPrev) > 0.5)
+		dc->inputStep = 1;
+	
+	vsw->vPrev = vs->v;
 
 	UpdateStamp(vsw,dc);
 }

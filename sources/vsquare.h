@@ -6,6 +6,8 @@ typedef struct es_vsquare {
 	M_Real vL;			/* Voltage of low signal */
 	M_Real tH;			/* High pulse duration (s)*/
 	M_Real tL;			/* Low pulse duration (s)*/
+
+	M_Real vPrev;			/* previous output voltage.  used to determine if there is an input step. */
 } ES_VSquare;
 
 #define ES_VSQUARE(com) ((struct es_vsquare *)(com))

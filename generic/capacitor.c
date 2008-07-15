@@ -203,7 +203,7 @@ Edit(void *p)
 	AG_Numerical *num;
 
 	M_NumericalNewRealPNZ(box, 0, "uF", _("Capacitance: "), &c->C);
-	M_NumericalNewRealPNZ(box, 0, "V", _("Initial voltage: "), &c->V0);
+	M_NumericalNewReal(box, 0, "V", _("Initial voltage: "), &c->V0);
 
 	AG_SeparatorNewHoriz(box);
 	AG_LabelNewPolled(box, 0, _("Entry in e: %i"), &c->vIdx);

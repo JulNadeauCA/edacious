@@ -56,6 +56,23 @@ vCB(ES_PNP *u)
 }
 
 static void
+ResetModel(ES_PNP *u)
+{
+	u->gPiF=1.0;
+	u->gPiR=1.0;
+	u->gmF=1.0;
+	u->gmR=1.0;
+	u->go=1.0;
+
+	u->Ibf_eq = 0.0;
+	u->Ibr_eq = 0.0;
+	u->Icc_eq = 0.0;
+
+	u->VebPrev = 0.7;
+	u->VcbPrev = 0.7;
+}
+
+static void
 UpdateModel(ES_PNP *u, ES_SimDC *dc, M_Real vEB, M_Real vCB)
 {
 	M_Real vEC=vEB-vCB;
@@ -145,10 +162,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	InitStampCurrentSource(b,c, u->si_bc, dc);
 	InitStampCurrentSource(c,e, u->si_ce, dc);
 
-
-	u->VebPrev = 0.7;
-	u->VcbPrev = 0.7;
-	UpdateModel(u,dc,u->VebPrev,u->VcbPrev);
+	ResetModel(u);
 	UpdateStamp(u,dc);
 
 	return (0);
@@ -159,10 +173,12 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_PNP *u = obj;
 
-	UpdateModel(u,dc,vEB(u),vCB(u));
-	UpdateStamp(u,dc);
+	if (dc->inputStep)
+		ResetModel(u);
+	else
+		UpdateModel(u,dc,vEB(u),vCB(u));
 
-//	DC_SimBegin(obj,dc);
+	UpdateStamp(u,dc);
 }
 
 static void

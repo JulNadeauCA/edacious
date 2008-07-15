@@ -6,6 +6,8 @@ typedef struct es_vsweep {
 	M_Real v2;			/* End voltage */
 	M_Real t;			/* Duration */
 	int count;			/* Repeat count (0 = loop) */
+
+	M_Real vPrev;			/* previous output voltage.  used to determine if there is an input step. */
 } ES_VSweep;
 
 #define ES_VSWEEP(com) ((struct es_vsweep *)(com))

@@ -48,14 +48,18 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSquare *vsq = obj;
+	ES_Vsource *vs = VSOURCE(vsq);
+
 	Uint k = PNODE(vsq,1);
 	Uint j = PNODE(vsq,2);
 
-	VSOURCE(vsq)->v = 0.0;
+	vs->v = 0.0;
 
-	InitStampVoltageSource(k,j, VSOURCE(vsq)->vIdx, VSOURCE(vsq)->s, dc);
+	InitStampVoltageSource(k,j, vs->vIdx, vs->s, dc);
 
 	UpdateStamp(vsq,dc);
+
+	vsq->vPrev = vs->v;
 
 	return (0);
 }
@@ -73,6 +77,11 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 		vs->v = vsq->vH;
 #undef my_modulus
 	
+	if (M_Fabs(vs->v - vsq->vPrev) > 0.5)
+		dc->inputStep=1;
+
+	vsq->vPrev = vs->v;
+
 	UpdateStamp(vsq,dc);
 }
 
