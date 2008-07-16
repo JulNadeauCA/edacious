@@ -38,7 +38,7 @@ const ES_Port esVSinePorts[] = {
 };
 
 static void
-UpdateStamp(ES_VSine *vs, ES_SimDC *dc)
+Stamp(ES_VSine *vs, ES_SimDC *dc)
 {
 
 	StampVoltageSource(VSOURCE(vs)->v, VSOURCE(vs)->s);
@@ -47,14 +47,16 @@ UpdateStamp(ES_VSine *vs, ES_SimDC *dc)
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
-	ES_VSine *vs = obj;
-	Uint k = PNODE(vs,1);
-	Uint j = PNODE(vs,2);
+	ES_VSine *vsine = obj;
+	ES_Vsource *vs = VSOURCE(vsine);
 
-	InitStampVoltageSource(k,j, VSOURCE(vs)->vIdx, VSOURCE(vs)->s, dc);
+	Uint k = PNODE(vsine,1);
+	Uint j = PNODE(vsine,2);
 
-	VSOURCE(vs)->v = 0.0;
-	UpdateStamp(vs,dc);
+	InitStampVoltageSource(k,j, vs->vIdx, vs->s, dc);
+
+	vs->v = 0.0;
+	Stamp(vsine,dc);
 
 	return (0);
 }
@@ -66,7 +68,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 
 	VSOURCE(vs)->v = vs->vPeak*Sin(vs->f * dc->Telapsed);
 	
-	UpdateStamp(vs,dc);
+	Stamp(vs,dc);
 }
 
 static void

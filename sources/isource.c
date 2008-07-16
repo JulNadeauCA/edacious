@@ -37,6 +37,12 @@ const ES_Port esIsourcePorts[] = {
 	{ -1 },
 };
 
+static void
+Stamp(ES_Isource *i, ES_SimDC *dc)
+{
+	StampCurrentSource(i->I, i->s);
+}
+
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
@@ -46,9 +52,18 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	Uint j = PNODE(i,2);
 
 	InitStampCurrentSource(k, j, i->s, dc);
-	StampCurrentSource(i->I, i->s);
+	
+	Stamp(i,dc);
 
 	return (0);
+}
+
+static void
+DC_StepBegin(void *obj, ES_SimDC *dc)
+{
+	ES_Isource *i = obj;
+
+	Stamp(i, dc);
 }
 
 static void

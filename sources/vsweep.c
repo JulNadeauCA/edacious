@@ -38,7 +38,7 @@ const ES_Port esVSweepPorts[] = {
 };
 
 static void
-UpdateStamp(ES_VSweep *vsw, ES_SimDC *dc)
+Stamp(ES_VSweep *vsw, ES_SimDC *dc)
 {
 
 	StampVoltageSource(VSOURCE(vsw)->v, VSOURCE(vsw)->s);
@@ -56,7 +56,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	vs->v = vsw->v1;
 	InitStampVoltageSource(k,j, vs->vIdx, vs->s, dc);
 
-	UpdateStamp(vsw,dc);
+	Stamp(vsw,dc);
 
 	vsw->vPrev = vs->v;
 
@@ -85,7 +85,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	
 	vsw->vPrev = vs->v;
 
-	UpdateStamp(vsw,dc);
+	Stamp(vsw,dc);
 }
 
 static void

@@ -8,6 +8,8 @@ typedef struct es_resistor {
 	int tolerance;		/* Tolerance in % */
 	float Tc1, Tc2;		/* Resistance/temperature coefficients */
 
+	M_Real g;
+
 	M_Real *s[STAMP_CONDUCTANCE_SIZE];
 } ES_Resistor;
 

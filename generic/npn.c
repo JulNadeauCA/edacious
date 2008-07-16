@@ -55,6 +55,18 @@ vBC(ES_NPN *u)
 	return VPORT(u,PORT_B)-VPORT(u,PORT_C);
 }
 
+static M_Real
+VbePrevStep(ES_NPN *u)
+{
+	return V_PREV_STEP(u,PORT_B)-V_PREV_STEP(u,PORT_E);
+}
+
+static M_Real
+VbcPrevStep(ES_NPN *u)
+{
+	return V_PREV_STEP(u,PORT_B)-V_PREV_STEP(u,PORT_C);
+}
+
 static void 
 ResetModel(ES_NPN *u)
 {
@@ -68,8 +80,8 @@ ResetModel(ES_NPN *u)
 	u->Ibr_eq = 0.0;
 	u->Icc_eq = 0.0;
 
-	u->VbePrev=0.7;
-	u->VbcPrev=0.7;
+	u->VbePrevIter = 0.7;
+	u->VbcPrevIter = 0.7;
 }
 
 static void
@@ -77,23 +89,23 @@ UpdateModel(ES_NPN *u, ES_SimDC *dc, M_Real vBE, M_Real vBC)
 {
 	M_Real vCE = -vBC+vBE;
 
-	M_Real VbeDiff = vBE - u->VbePrev;
-	M_Real VbcDiff = vBC - u->VbcPrev;
+	M_Real VbeDiff = vBE - u->VbePrevIter;
+	M_Real VbcDiff = vBC - u->VbcPrevIter;
 
 	if (M_Fabs(VbeDiff) > u->Vt)
 	{
-		vBE = u->VbePrev + M_Fabs(VbeDiff)/VbeDiff*u->Vt;
+		vBE = u->VbePrevIter + M_Fabs(VbeDiff)/VbeDiff*u->Vt;
 		dc->isDamped = 1;
 	}
 
 	if (M_Fabs(VbcDiff) > u->Vt)
 	{
-		vBC = u->VbcPrev + M_Fabs(VbcDiff)/VbcDiff*u->Vt;
+		vBC = u->VbcPrevIter + M_Fabs(VbcDiff)/VbcDiff*u->Vt;
 		dc->isDamped = 1;
 	}
 
-	u->VbePrev = vBE;
-	u->VbcPrev = vBC;
+	u->VbePrevIter = vBE;
+	u->VbcPrevIter = vBC;
 
 	M_Real Ibf = (u->Ifs/u->betaF)*(M_Exp(vBE/u->Vt)-1);
 	M_Real Ibr = (u->Irs/u->betaR)*(M_Exp(vBC/u->Vt)-1);
@@ -115,10 +127,6 @@ UpdateModel(ES_NPN *u, ES_SimDC *dc, M_Real vBE, M_Real vBC)
 
 static void UpdateStamp(ES_NPN *u, ES_SimDC *dc)
 {
-	Uint b = PNODE(u,PORT_B);
-	Uint e = PNODE(u,PORT_E);
-	Uint c = PNODE(u,PORT_C);
-
 	StampConductance(u->gPiF-u->gPiF_prev,u->sc_be);
 	StampConductance(u->gPiR-u->gPiR_prev,u->sc_bc);
 
@@ -139,6 +147,20 @@ static void UpdateStamp(ES_NPN *u, ES_SimDC *dc)
 	u->Ibf_eq_prev = u->Ibf_eq;
 	u->Ibr_eq_prev = u->Ibr_eq;
 	u->Icc_eq_prev = u->Icc_eq;
+}
+
+static void Stamp(ES_NPN *u, ES_SimDC *dc)
+{
+	u->gPiF_prev = 0.0;
+	u->gPiR_prev = 0.0;
+	u->goPrev = 0.0;
+	u->gmF_prev = 0.0;
+	u->gmR_prev = 0.0;
+	u->Ibf_eq_prev = 0.0;
+	u->Ibr_eq_prev = 0.0;
+	u->Icc_eq_prev = 0.0;
+
+	UpdateStamp(u, dc);
 }
 
 static int
@@ -163,7 +185,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	InitStampCurrentSource(e,c, u->si_ec, dc);
 
 	ResetModel(u);
-	UpdateStamp(u,dc);
+	Stamp(u,dc);
 
 	return (0);
 }
@@ -176,9 +198,13 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	if (dc->inputStep)
 		ResetModel(u);
 	else
-		UpdateModel(u,dc,vBE(u),vBC(u));
+	{
+		u->VbePrevIter = VbePrevStep(u);
+		u->VbcPrevIter = VbcPrevStep(u);
+		UpdateModel(u,dc,VbePrevStep(u),VbcPrevStep(u));
+	}
 
-	UpdateStamp(u,dc);
+	Stamp(u,dc);
 
 }
 
@@ -204,15 +230,6 @@ Init(void *p)
 	u->betaR = 1.0;
 	u->Ifs = 1e-14;
 	u->Irs = 1e-14;
-
-	u->gPiF_prev = 0.0;
-	u->gPiR_prev = 0.0;
-	u->goPrev = 0.0;
-	u->gmF_prev = 0.0;
-	u->gmR_prev = 0.0;
-	u->Ibf_eq_prev = 0.0;
-	u->Ibr_eq_prev = 0.0;
-	u->Icc_eq_prev = 0.0;
 
 	COMPONENT(u)->dcSimBegin = DC_SimBegin;
 	COMPONENT(u)->dcStepBegin = DC_StepBegin;

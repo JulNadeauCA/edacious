@@ -47,9 +47,9 @@ const ES_Port esInductorPorts[] = {
  */
 
 static M_Real
-v(ES_Inductor *i)
+vPrevStep(ES_Inductor *i)
 {
-	return VPORT(i,PORT_A)-VPORT(i,PORT_B);
+	return V_PREV_STEP(i,PORT_A)-V_PREV_STEP(i,PORT_B);
 }
 
 /* Updates the small- and large-signal models, saving the previous values. */
@@ -58,14 +58,14 @@ UpdateModel(ES_Inductor *i, ES_SimDC *dc, M_Real v)
 {
 	switch(dc->method) {
 	case BE:
-		i->Ieq = i->IeqPrev + v*i->gPrev;
+		i->Ieq += v*i->g;
 		i->g = dc->deltaT / i->L;
 		break;
 	case FE:
-		i->Ieq = i->IeqPrev + dc->deltaT / i->L * v;
+		i->Ieq += dc->deltaT / i->L * v;
 		break;
 	case TR:
-		i->Ieq = i->IeqPrev + v*i->gPrev + dc->deltaT / (2 * i->L) * v;
+		i->Ieq += v*i->g + dc->deltaT / (2 * i->L) * v;
 		i->g = dc->deltaT / (2 * i->L);
 		break;
 	default:
@@ -75,27 +75,24 @@ UpdateModel(ES_Inductor *i, ES_SimDC *dc, M_Real v)
 }
 
 static void
-UpdateStamp(ES_Inductor *i, ES_SimDC *dc)
+Stamp(ES_Inductor *i, ES_SimDC *dc)
 {
 	switch(dc->method) {
 	case BE:
-		StampConductance(i->g-i->gPrev, i->s_conductance);
-		StampCurrentSource(i->Ieq-i->IeqPrev, i->s_current_source);
+		StampConductance(i->g, i->s_conductance);
+		StampCurrentSource(i->Ieq, i->s_current_source);
 		break;
 	case FE:
-		StampCurrentSource(i->Ieq-i->IeqPrev,i->s_current_source);
+		StampCurrentSource(i->Ieq,i->s_current_source);
 		break;
 	case TR:
-		StampConductance(i->g-i->gPrev, i->s_conductance);
-		StampCurrentSource(i->Ieq-i->IeqPrev, i->s_current_source);
+		StampConductance(i->g, i->s_conductance);
+		StampCurrentSource(i->Ieq, i->s_current_source);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
 		break;
 	}
-
-	i->gPrev = i->g;
-	i->IeqPrev = i->Ieq;
 }
 
 static int
@@ -122,9 +119,9 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 		break;
 	}
 	
-	i->g = 0.01;
+	i->g = 0.0;
 	i->Ieq = 0.0;
-	UpdateStamp(i, dc);
+	Stamp(i, dc);
 
 	return (0);
 }
@@ -134,8 +131,8 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Inductor *i = obj;
 	
-	UpdateModel(i, dc, v(i));
-	UpdateStamp(i, dc);
+	UpdateModel(i, dc, vPrevStep(i));
+	Stamp(i, dc);
 
 }
 
@@ -147,9 +144,6 @@ Init(void *p)
 	ES_InitPorts(i, esInductorPorts);
 	i->L = 1.0;
 	
-	i->gPrev = 0.0;
-	i->IeqPrev = 0.0;
-
 	COMPONENT(i)->dcSimBegin = DC_SimBegin;
 	COMPONENT(i)->dcStepBegin = DC_StepBegin;
 }

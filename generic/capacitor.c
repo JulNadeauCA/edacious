@@ -46,15 +46,15 @@ const ES_Port esCapacitorPorts[] = {
  * iteration.
  */
 static M_Real
-v(ES_Capacitor *c)
+vPrevStep(ES_Capacitor *c)
 {
-	return VPORT(c,PORT_A)-VPORT(c,PORT_B);
+	return V_PREV_STEP(c,PORT_A)-V_PREV_STEP(c,PORT_B);
 }
 
 static M_Real
-i(ES_Capacitor *c)
+iPrevStep(ES_Capacitor *c)
 {
-	return ES_BranchCurrent(ESCOMPONENT_CIRCUIT(c), c->vIdx);
+	return ES_BranchCurrentPrevStep(ESCOMPONENT_CIRCUIT(c), c->vIdx);
 }
 
 /* Updates the small- and large-signal models, saving the previous values. */
@@ -69,10 +69,10 @@ UpdateModel(ES_Capacitor *c, M_Real v, ES_SimDC *dc)
 		c->r = dc->deltaT / c->C;
 		break;
 	case FE:
-		c->v += dc->deltaT / c->C * i(c);
+		c->v += dc->deltaT / c->C * iPrevStep(c);
 		break;
 	case TR:
-		c->v = v + dc->deltaT / (2 * c->C) * i(c);
+		c->v = v + dc->deltaT / (2 * c->C) * iPrevStep(c);
 		c->r = dc->deltaT / (2 * c->C);
 		break;
 	default:
@@ -82,7 +82,7 @@ UpdateModel(ES_Capacitor *c, M_Real v, ES_SimDC *dc)
 }
 
 static void
-UpdateStamp(ES_Capacitor *c, ES_SimDC *dc)
+Stamp(ES_Capacitor *c, ES_SimDC *dc)
 {
 	switch(dc->method) {
 	case BE:
@@ -123,7 +123,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	}
 	c->v = c->V0;
 	UpdateModel(c, c->V0, dc);
-	UpdateStamp(c, dc);
+	Stamp(c, dc);
 
 	return (0);
 }
@@ -133,8 +133,8 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Capacitor *c = obj;
 	
-	UpdateModel(c, v(c), dc);
-	UpdateStamp(c, dc);
+	UpdateModel(c, vPrevStep(c), dc);
+	Stamp(c, dc);
 }
 
 static void

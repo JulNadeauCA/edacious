@@ -48,11 +48,21 @@ vSD(ES_PMOS *u)
 {
 	return VPORT(u,PORT_S)-VPORT(u,PORT_D);
 }
-
 static M_Real
 vSG(ES_PMOS *u)
 {
 	return VPORT(u,PORT_S)-VPORT(u,PORT_G);
+}
+
+static M_Real
+VsdPrevStep(ES_PMOS *u)
+{
+	return V_PREV_STEP(u,PORT_S)-V_PREV_STEP(u,PORT_D);
+}
+static M_Real
+VsgPrevStep(ES_PMOS *u)
+{
+	return V_PREV_STEP(u,PORT_S)-V_PREV_STEP(u,PORT_G);
 }
 
 static void
@@ -97,10 +107,6 @@ UpdateModel(ES_PMOS *u, M_Real vSG, M_Real vSD)
 static void
 UpdateStamp(ES_PMOS *u, ES_SimDC *dc)
 {
-	Uint g = PNODE(u,PORT_G);
-	Uint d = PNODE(u,PORT_D);
-	Uint s = PNODE(u,PORT_S);
-
 	StampVCCS(u->gm-u->gmPrev, u->s_vccs);
 	StampConductance(u->go-u->goPrev, u->s_conductance);
 	StampCurrentSource(u->Ieq-u->IeqPrev, u->s_current);
@@ -108,6 +114,15 @@ UpdateStamp(ES_PMOS *u, ES_SimDC *dc)
 	u->gmPrev = u->gm;
 	u->goPrev = u->go;
 	u->IeqPrev = u->Ieq;
+}
+static void
+Stamp(ES_PMOS *u, ES_SimDC *dc)
+{
+	u->gmPrev = 0.0;
+	u->goPrev = 0.0;
+	u->IeqPrev = 0.0;
+
+	UpdateStamp(u, dc);
 }
 
 /*
@@ -136,7 +151,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	u->gm=1.0;
 	u->go=1.0;
 	u->Ieq=0.0;
-	UpdateStamp(u,dc);
+	Stamp(u,dc);
 	return (0);
 }
 
@@ -144,12 +159,9 @@ static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_PMOS *u = obj;
-	Uint g = PNODE(u,PORT_G);
-	Uint d = PNODE(u,PORT_D);
-	Uint s = PNODE(u,PORT_S);
 
-	UpdateModel(u,vSG(u),vSD(u));
-	UpdateStamp(u,dc);
+	UpdateModel(u,VsgPrevStep(u),VsdPrevStep(u));
+	Stamp(u,dc);
 
 }
 
@@ -171,10 +183,6 @@ Init(void *p)
 	u->Vt = 0.5;
 	u->Va = 10;
 	u->K = 1e-3;
-
-	u->gmPrev = 0.0;
-	u->goPrev = 0.0;
-	u->IeqPrev = 0.0;
 
 	COMPONENT(u)->dcSimBegin = DC_SimBegin;
 	COMPONENT(u)->dcStepBegin = DC_StepBegin;

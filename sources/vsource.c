@@ -186,11 +186,11 @@ ES_VsourceFindLoops(ES_Vsource *vs)
 }
 
 static void
-UpdateStamp(ES_Vsource *vs, ES_SimDC *dc)
+Stamp(ES_Vsource *vs, ES_SimDC *dc)
 {
 	StampVoltageSource(vs->v,vs->s);
 }
-	
+
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
@@ -200,7 +200,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 
 	InitStampVoltageSource(k, j, vs->vIdx, vs->s, dc);
 	
-	UpdateStamp(vs, dc);
+	Stamp(vs, dc);
 
 	return (0);
 }
@@ -210,7 +210,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Vsource *vs = obj;
 
-	UpdateStamp(vs, dc);
+	Stamp(vs, dc);
 }
  
 static void

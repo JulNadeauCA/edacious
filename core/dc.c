@@ -37,7 +37,7 @@
 
 /* N-R iterations stop when the difference between previous
  * and current vector is no more than MAX_DIFF */
-#define MAX_DIFF 0.001
+#define MAX_DIFF 0.01
 
 static const char *IntegrationMethodStr[] = {
 	"BE",
@@ -69,64 +69,29 @@ StopSimulation(ES_SimDC *sim)
 	AG_PostEvent(NULL, SIM(sim)->ckt, "circuit-sim-end", "%p", sim);
 }
 
-/* Simulation timestep. */
-static Uint32
-StepMNA(void *obj, Uint32 ival, void *arg)
+/* returns 1 if successful, 0 otherwise */
+static Uint
+NR_Iteration(ES_Circuit *ckt, ES_SimDC *sim)
 {
-	ES_Circuit *ckt = obj;
-	ES_SimDC *sim = arg;
 	ES_Component *com;
-	M_Vector *xPrev;
+
 	M_Real diff;
-	Uint i = 0, j;
-	Uint32 ticks;
-	Uint32 ticksSinceLast;
-	
-	ticks = SDL_GetTicks();
-	ticksSinceLast = ticks - sim->timeLastStep;
-	sim->deltaT = ticksSinceLast / 1000.0;
-	sim->Telapsed += sim->deltaT;
-	sim->timeLastStep = ticks;
 
-	xPrev = M_VecNew(sim->x->m);
+	Uint i=0,j;
 
-	if (ckt->n == 0) {
-		AG_SetError(_("Circuit has no nodes to evaluate"));
-		goto halt;
-	}
-
-	/* Invoke the general pre-timestep callbacks (for ES_Scope, etc.) */
-	AG_PostEvent(NULL, ckt, "circuit-step-begin", NULL);
-
-	/* Formulate and solve for the initial conditions. */
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (com->dcStepBegin != NULL)
-			com->dcStepBegin(com, sim);
-	}
-
-	sim->inputStep = 1;
-	if (SolveMNA(sim, ckt) == -1)
-		goto halt;
-
-	/* Iterate until a stable solution is found. */
 	do {
-		if (++i > sim->itersMax) {
-#if 1
-			AG_SetError(_("Could not find stable solution in "
-			              "%u iterations"), i);
-			goto halt;
-#endif
-		}
-
-		M_VecCopy(xPrev, sim->x);
+		if (++i > sim->itersMax)
+			return 0;
 
 		sim->isDamped = 0;
 		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 			if (com->dcStepIter != NULL)
 				com->dcStepIter(com, sim);
 		}
+
+		M_VecCopy(sim->xPrevIter, sim->x);
 		if (SolveMNA(sim, ckt) == -1)
-			goto halt;
+			return 0;
 
 		/* Compute difference between previous and current iteration,
 		 * to decide whether or not to continue. */
@@ -134,7 +99,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		for (j = 0; j < sim->x->m; j++)
 		{
 			M_Real curAbsDiff = Fabs(M_VecGet(sim->x,j) -
-			                         M_VecGet(xPrev,j));
+			                         M_VecGet(sim->xPrevIter,j));
 			if (curAbsDiff > diff)
 				diff = curAbsDiff;
 		}
@@ -146,26 +111,93 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	M_SetReal(ckt, "dcIters", i);
 #endif
 
+	/* Update the statistics. */
+	if (i > sim->itersHiwat) { sim->itersHiwat = i; }
+	else if (i < sim->itersLowat) { sim->itersLowat = i; }
+
+	return 1;
+}
+
+/* Simulation timestep. */
+static Uint32
+StepMNA(void *obj, Uint32 ival, void *arg)
+{
+	ES_Circuit *ckt = obj;
+	ES_SimDC *sim = arg;
+
+	ES_Component *com;
+
+	Uint retries=0;
+	Uint32 ticks;
+	Uint32 ticksSinceLast;
+	
+	/* save unknowns from last timestep */
+	M_VecCopy(sim->xPrevStep, sim->x);
+
+	ticks = SDL_GetTicks();
+	ticksSinceLast = ticks - sim->timeLastStep;
+	sim->deltaT = ticksSinceLast / 1000.0;
+	sim->Telapsed += sim->deltaT;
+	sim->timeLastStep = ticks;
+
+	/* Invoke the general pre-timestep callbacks (for ES_Scope, etc.) */
+	AG_PostEvent(NULL, ckt, "circuit-step-begin", NULL);
+
+	M_SetZero(sim->A);
+	M_VecSetZero(sim->z);
+	M_Set(sim->A, 0, 0, 1.0);
+	sim->inputStep=0;
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (com->dcStepBegin != NULL)
+			com->dcStepBegin(com, sim);
+	}
+
+	if (SolveMNA(sim, ckt) == -1)
+		goto halt;
+
+	/* shrink timestep until a stable solution is found */
+	while (!NR_Iteration(ckt,sim))
+	{
+		if (++retries > sim->retriesMax)
+		{
+			AG_SetError(_("Could not find stable solution."));
+			goto halt;
+		}
+
+		printf("Simulation did not converge in itersMax; trying a smaller timestep.\n");
+
+		/* undo last time step and and decimate deltaT */
+		sim->Telapsed -= sim->deltaT;
+		sim->deltaT = sim->deltaT/10.0;
+		sim->Telapsed += sim->deltaT;
+		
+		/* load new values into matrices now that timestep has changed */
+		M_SetZero(sim->A);
+		M_VecSetZero(sim->z);
+		M_Set(sim->A, 0, 0, 1.0);
+		sim->inputStep=0;
+		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+			if (com->dcStepBegin != NULL)
+				com->dcStepBegin(com, sim);
+		}
+		if (SolveMNA(sim, ckt) == -1)
+			goto halt;
+	}
+
 	/* Invoke the Component DC specific post-timestep callbacks. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (com->dcStepEnd != NULL)
 			com->dcStepEnd(com, sim);
 	}
 
-	/* Update the statistics. */
-	if (i > sim->itersHiwat) { sim->itersHiwat = i; }
-	else if (i < sim->itersLowat) { sim->itersLowat = i; }
-
 	/* Invoke the general post-timestep callbacks (for ES_Scope, etc.) */
 	AG_PostEvent(NULL, ckt, "circuit-step-end", NULL);
-
-	M_VecFree(xPrev);
 
 	/* Schedule next step */
 	if(SIM(sim)->running) {
 		Uint32 nextStep = sim->timeLastStep + 1000/sim->maxSpeed;
 		Uint32 newTicks = SDL_GetTicks();
-		return nextStep > newTicks ? nextStep - newTicks : 0;
+		return nextStep > newTicks ? nextStep - newTicks : 1;
 	}
 	else {
 		AG_LockTimeouts(ckt);
@@ -177,7 +209,6 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 halt:
 	AG_TextMsg(AG_MSG_ERROR, _("%s; simulation stopped"), AG_GetError());
 	StopSimulation(sim);
-	M_VecFree(xPrev);
 	return (0);
 }
 
@@ -190,9 +221,11 @@ Init(void *p)
 	
 	ES_SimInit(sim, &esSimDcOps);
 	AG_SetTimeout(&sim->toUpdate, StepMNA, sim, AG_CANCEL_ONDETACH);
-	sim->itersMax = 10000;
+	sim->itersMax = 1000;
 	sim->itersHiwat = 1;
 	sim->itersLowat = 1;
+
+	sim->retriesMax = 25;
 
 	sim->Telapsed = 0.0;
 	sim->maxSpeed = 60;
@@ -205,6 +238,8 @@ Init(void *p)
 	sim->z = M_VecNew(0);
 	
 	sim->x = M_VecNew(0);
+	sim->xPrevStep = M_VecNew(0);
+	sim->xPrevIter = M_VecNew(0);
 }
 
 static void
@@ -219,8 +254,12 @@ Resize(void *p, ES_Circuit *ckt)
 		
 	M_VecResize(sim->z, n+m);
 	M_VecResize(sim->x, n+m);
+	M_VecResize(sim->xPrevStep, n+m);
+	M_VecResize(sim->xPrevIter, n+m);
 	M_VecSetZero(sim->z);
 	M_VecSetZero(sim->x);
+	M_VecSetZero(sim->xPrevStep);
+	M_VecSetZero(sim->xPrevIter);
 }
 
 static void
@@ -259,6 +298,7 @@ Start(void *p)
 	 * Invoke the DC-specific simulation start callback. Components can
 	 * use this callback to verify constant parameters.
 	 */
+
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (com->dcSimBegin != NULL) {
 			if (com->dcSimBegin(com, sim) == -1) {
@@ -271,6 +311,9 @@ Start(void *p)
 
 	if (SolveMNA(sim, ckt) == -1)
 		goto halt;
+
+	if (!NR_Iteration(ckt,sim))
+		printf("Failed to find initial bias point\n");
 
 	/* Invoke the general simulation start callback. */
 	AG_PostEvent(NULL, ckt, "circuit-sim-begin", "%p", sim);
@@ -303,6 +346,8 @@ Destroy(void *p)
 	M_Free(sim->A);
 	M_VecFree(sim->z);
 	M_VecFree(sim->x);
+	M_VecFree(sim->xPrevStep);
+	M_VecFree(sim->xPrevIter);
 }
 
 static void
@@ -394,6 +439,14 @@ NodeVoltage(void *p, int j)
 }
 
 static M_Real
+NodeVoltagePrevStep(void *p, int j)
+{
+	ES_SimDC *sim = p;
+
+	return M_VEC_ENTRY_EXISTS(sim->x,j) ? M_VecGet(sim->xPrevStep, j) : 0.0;
+}
+
+static M_Real
 BranchCurrent(void *p, int k)
 {
 	ES_SimDC *sim = p;
@@ -401,6 +454,16 @@ BranchCurrent(void *p, int k)
 	int i = ckt->n + k;
 
 	return M_VEC_ENTRY_EXISTS(sim->x,i) ? M_VecGet(sim->x, i) : 0.0;
+}
+
+static M_Real
+BranchCurrentPrevStep(void *p, int k)
+{
+	ES_SimDC *sim = p;
+	ES_Circuit *ckt = SIM(sim)->ckt;
+	int i = ckt->n + k;
+
+	return M_VEC_ENTRY_EXISTS(sim->x,i) ? M_VecGet(sim->xPrevStep, i) : 0.0;
 }
 
 const ES_SimOps esSimDcOps = {
@@ -413,6 +476,8 @@ const ES_SimOps esSimDcOps = {
 	Stop,
 	Resize,
 	NodeVoltage,
+	NodeVoltagePrevStep,
 	BranchCurrent,
+	BranchCurrentPrevStep,
 	Edit
 };

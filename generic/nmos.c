@@ -44,11 +44,21 @@ const ES_Port esNMOSPorts[] = {
 };
 
 static M_Real
+VdsPrevStep(ES_NMOS *u)
+{
+	return V_PREV_STEP(u,PORT_D)-V_PREV_STEP(u,PORT_S);
+}
+static M_Real
+VgsPrevStep(ES_NMOS *u)
+{
+	return V_PREV_STEP(u,PORT_G)-V_PREV_STEP(u,PORT_S);
+}
+
+static M_Real
 vDS(ES_NMOS *u)
 {
 	return VPORT(u,PORT_D)-VPORT(u,PORT_S);
 }
-
 static M_Real
 vGS(ES_NMOS *u)
 {
@@ -104,6 +114,14 @@ static void UpdateStamp(ES_NMOS *u, ES_SimDC *dc)
 	u->goPrev = u->go;
 	u->IeqPrev = u->Ieq;
 }
+static void Stamp(ES_NMOS *u, ES_SimDC *dc)
+{
+	u->gmPrev = 0.0;
+	u->goPrev = 0.0;
+	u->IeqPrev = 0.0;
+
+	UpdateStamp(u, dc);
+}
 
 /*
  * Load the element into the conductance matrix. All conductances between
@@ -131,7 +149,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	u->gm=1.0;
 	u->go=1.0;
 	u->Ieq=0.0;
-	UpdateStamp(u,dc);
+	Stamp(u,dc);
 
 	return (0);
 }
@@ -141,8 +159,8 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_NMOS *u = obj;
 
-	UpdateModel(u,vGS(u),vDS(u));
-	UpdateStamp(u,dc);
+	UpdateModel(u,VgsPrevStep(u),VdsPrevStep(u));
+	Stamp(u,dc);
 
 }
 
@@ -164,10 +182,6 @@ Init(void *p)
 	u->Vt = 0.5;
 	u->Va = 10;
 	u->K = 1e-3;
-
-	u->gmPrev = 0.0;
-	u->goPrev = 0.0;
-	u->IeqPrev = 0.0;
 
 	COMPONENT(u)->dcSimBegin = DC_SimBegin;
 	COMPONENT(u)->dcStepBegin = DC_StepBegin;

@@ -42,7 +42,7 @@ const ES_Port esVArbPorts[] = {
 };
 
 static void 
-UpdateStamp(ES_VArb *va, ES_SimDC *dc)
+Stamp(ES_VArb *va, ES_SimDC *dc)
 {
 	StampVoltageSource(VSOURCE(va)->v, VSOURCE(va)->s);
 }
@@ -63,7 +63,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 
 	InitStampVoltageSource(k,j, vs->vIdx, vs->s, dc);
 
-	UpdateStamp(va,dc);
+	Stamp(va,dc);
 
 	va->vPrev = vs->v;
 
@@ -93,7 +93,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 
 	va->vPrev=vs->v;
 
-	UpdateStamp(va,dc);
+	Stamp(va,dc);
 }
 
 static void

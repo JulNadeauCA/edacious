@@ -271,7 +271,7 @@ Init(void *obj)
 	com->dcStepIter = NULL;
 	com->dcStepEnd = NULL;
 	com->dcSimEnd = NULL;
-
+	
 	TAILQ_INIT(&com->schemEnts);
 
 	AG_SetEvent(com, "attached", OnAttach, NULL);

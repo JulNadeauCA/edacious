@@ -52,6 +52,12 @@ v(ES_Diode *d)
 	return VPORT(d,PORT_P)-VPORT(d,PORT_N);
 }
 
+static M_Real
+vPrevStep(ES_Diode *d)
+{
+	return V_PREV_STEP(d,PORT_P)-V_PREV_STEP(d,PORT_N);
+}
+
 static void
 ResetModel(ES_Diode *d)
 {
@@ -59,22 +65,23 @@ ResetModel(ES_Diode *d)
 
 	d->Ieq=0.0;
 
-	d->vPrev=0.7;
+	d->vPrevIter = 0.7;
+
 }
 
 /* Updates the small- and large-signal models, saving the previous values. */
 static void
 UpdateModel(ES_Diode *d, ES_SimDC *dc, M_Real v)
 {
-	M_Real vDiff = v - d->vPrev;
+	M_Real vDiff = v - d->vPrevIter;
 	M_Real I;
 
 	if (Fabs(vDiff) > d->Vt) {
-		v = d->vPrev + vDiff/Fabs(vDiff)*d->Vt;
+		v = d->vPrevIter + vDiff/Fabs(vDiff)*d->Vt;
 		dc->isDamped = 1;
 	}
 
-	d->vPrev = v;
+	d->vPrevIter = v;
 
 	I = d->Is*(Exp(v/(d->Vt)) - 1);
 	d->g = I/(d->Vt);
@@ -90,7 +97,14 @@ UpdateStamp(ES_Diode *d, ES_SimDC *dc)
 	d->gPrev = d->g;
 	d->IeqPrev = d->Ieq;
 }
+static void
+Stamp(ES_Diode *d, ES_SimDC *dc)
+{
+	d->gPrev = 0.0;
+	d->IeqPrev = 0.0;
 
+	UpdateStamp(d, dc);
+}
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
@@ -104,7 +118,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	InitStampCurrentSource(l, k, d->s_current_source, dc);
 
 	ResetModel(d);
-	UpdateStamp(d, dc);
+	Stamp(d, dc);
 
 	return (0);
 }
@@ -117,9 +131,12 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	if (dc->inputStep)
 		ResetModel(d);
 	else
-		UpdateModel(d, dc, v(d));
+	{	
+		d->vPrevIter = vPrevStep(d);
+		UpdateModel(d, dc, vPrevStep(d));
+	}
 
-	UpdateStamp(d, dc);
+	Stamp(d, dc);
 }
 
 static void
@@ -140,9 +157,6 @@ Init(void *p)
 	d->Is = 1e-14;
 	d->Vt = 0.025;
 	
-	d->gPrev = 0.0;
-	d->IeqPrev = 0.0;
-
 	COMPONENT(d)->dcSimBegin = DC_SimBegin;
 	COMPONENT(d)->dcStepBegin = DC_StepBegin;
 	COMPONENT(d)->dcStepIter = DC_StepIter;
@@ -185,8 +199,8 @@ Edit(void *p)
 	AG_LabelNewPolledMT(box, AG_LABEL_HFILL, &OBJECT(d)->lock,
 	    "Ieq=%f, g=%f", &d->Ieq, &d->g);
 	AG_LabelNewPolledMT(box, AG_LABEL_HFILL, &OBJECT(d)->lock,
-	    "Prev: v=%f, Ieq=%f, g=%f",
-	    &d->vPrev, &d->IeqPrev, &d->gPrev);
+	    "Prev: Ieq=%f, g=%f",
+	    &d->IeqPrev, &d->gPrev);
 
 	return (box);
 }

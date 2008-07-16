@@ -81,6 +81,21 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 	return (0);
 }
 
+static void
+UpdateModel(ES_Resistor *r, ES_SimDC *dc)
+{
+	M_Real dT = dc->T0 - COMPONENT(r)->Tspec;
+
+	r->g = 1.0/(r->Rnom * (1.0 + r->Tc1*dT + r->Tc2*dT*dT));
+}
+
+static void
+Stamp(ES_Resistor *r, ES_SimDC *dc)
+{
+
+	StampConductance(r->g, r->s);
+}
+
 /*
  * Load the element into the conductance matrix. All conductances between
  * (k,j) are added to (k,k) and (j,j), and subtracted from (k,j) and (j,k).
@@ -97,19 +112,27 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	ES_Resistor *r = obj;
 	Uint k = PNODE(r,1);
 	Uint j = PNODE(r,2);
-	M_Real dT = dc->T0 - COMPONENT(r)->Tspec;
-	M_Real g;
 
 	if (r->Rnom == 0.0 || k == -1 || j == -1 || (k == 0 && j == 0)) {
 		AG_SetError("Null resistance");
 		return (-1);
 	}
-	g = 1.0/(r->Rnom * (1.0 + r->Tc1*dT + r->Tc2*dT*dT));
-
 	InitStampConductance(k, j, r->s, dc);
+
+	UpdateModel(r, dc);
+
+	Stamp(r, dc);
 	
-	StampConductance(g, r->s);
 	return (0);
+}
+
+static void
+DC_StepBegin(void *obj, ES_SimDC *dc)
+{
+	ES_Resistor *r = obj;
+
+	UpdateModel(r, dc);
+	Stamp(r, dc);
 }
 
 static void
@@ -124,6 +147,7 @@ Init(void *p)
 	r->Tc1 = 0.0;
 	r->Tc2 = 0.0;
 	COMPONENT(r)->dcSimBegin = DC_SimBegin;
+	COMPONENT(r)->dcStepBegin = DC_StepBegin;
 }
 
 static void *
