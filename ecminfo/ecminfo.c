@@ -28,10 +28,14 @@
  * files.
  */
 
+
 #include <core/core.h>
+
 #include <generic/generic.h>
 #include <sources/sources.h>
 #include <macro/macro.h>
+
+#include <unistd.h>
 
 int showProps = 0;
 
