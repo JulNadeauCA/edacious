@@ -1,0 +1,20 @@
+# Generic make include for the command-line utilities.
+# ex:syn=make
+
+include ${TOP}/Makefile.config
+
+PROJINCLUDES=	../configure.lua
+PROG_LINKS=	edacious freesg ag_gui ag_core \
+		pthreads SDL SDLmain opengl freetype
+
+all: ${PROG}
+
+CFLAGS+=${FREESG_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
+LIBS=	${TOP}/generic/.libs/libes_generic.a \
+	${TOP}/macro/.libs/libes_macro.a \
+	${TOP}/sources/.libs/libes_sources.a \
+	${TOP}/core/.libs/libes_core.a \
+	${FREESG_LIBS} ${AGAR_DEV_LIBS} ${AGAR_VG_LIBS} ${AGAR_LIBS}
+
+include ${TOP}/mk/build.prog.mk
+include ${TOP}/mk/build.man.mk
