@@ -9,6 +9,7 @@
 #include <edacious/sources/vsine.h>
 #include <edacious/sources/vsquare.h>
 #include <edacious/sources/vsweep.h>
+#include <edacious/sources/vnoise.h>
 
 __BEGIN_DECLS
 extern void *esSourcesClasses[];

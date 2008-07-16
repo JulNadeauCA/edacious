@@ -11,6 +11,7 @@ void *esSourcesClasses[] = {
 	&esVSineClass,
 	&esVSquareClass,
 	&esVSweepClass,
+	&esVNoiseClass,
 	NULL
 };
 

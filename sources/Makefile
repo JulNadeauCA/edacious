@@ -11,6 +11,7 @@ LIB_LINKS=	es_core ag_gui ag_core_static \
 SRCS=	sources.c \
 	isource.c \
 	varb.c \
+	vnoise.c \
 	vsine.c \
 	vsource.c \
 	vsquare.c \
