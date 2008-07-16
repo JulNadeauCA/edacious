@@ -37,7 +37,7 @@
 
 /* N-R iterations stop when the difference between previous
  * and current vector is no more than MAX_DIFF */
-#define MAX_DIFF 0.01
+#define MAX_DIFF 1e-6
 
 static const char *IntegrationMethodStr[] = {
 	"BE",
@@ -83,7 +83,7 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 
 	do {
 		if (++i > sim->itersMax)
-			return -i;
+			return 0; 
 
 		sim->isDamped = 0;
 		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
@@ -93,7 +93,7 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 
 		M_VecCopy(sim->xPrevIter, sim->x);
 		if (SolveMNA(sim, ckt) == -1)
-			return -1;
+			return 0;
 
 		/* Compute difference between previous and current iteration,
 		 * to decide whether or not to continue. */
@@ -105,6 +105,7 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 			if (curAbsDiff > diff)
 				diff = curAbsDiff;
 		}
+
 #ifdef DEBUG
 		M_SetReal(ckt, "dcDiff", diff);
 #endif
@@ -117,7 +118,7 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 	if (i > sim->itersHiwat) { sim->itersHiwat = i; }
 	else if (i < sim->itersLowat) { sim->itersLowat = i; }
 
-	return i;
+	return 1;
 }
 
 /* Simulation timestep. */
@@ -158,7 +159,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		goto halt;
 
 	/* shrink timestep until a stable solution is found */
-	while (NR_Iterations(ckt,sim) < 0)
+	while (!NR_Iterations(ckt,sim))
 	{
 		if (++retries > sim->retriesMax)
 		{
@@ -166,18 +167,17 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 			goto halt;
 		}
 
-		printf("Simulation did not converge in itersMax; trying a smaller timestep.\n");
-
 		/* undo last time step and and decimate deltaT */
 		sim->Telapsed -= sim->deltaT;
-		sim->deltaT = sim->deltaT/10.0;
+		sim->deltaT /= 10.0;
 		sim->Telapsed += sim->deltaT;
 		
 		/* load new values into matrices now that timestep has changed */
 		M_SetZero(sim->A);
 		M_VecSetZero(sim->z);
 		M_Set(sim->A, 0, 0, 1.0);
-		sim->inputStep=0;
+
+		sim->inputStep=1;
 		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 			if (com->dcStepBegin != NULL)
 				com->dcStepBegin(com, sim);
@@ -227,7 +227,7 @@ Init(void *p)
 	sim->itersHiwat = 1;
 	sim->itersLowat = 1;
 
-	sim->retriesMax = 25;
+	sim->retriesMax = 250;
 
 	sim->Telapsed = 0.0;
 	sim->maxSpeed = 60;
@@ -314,8 +314,12 @@ Start(void *p)
 	if (SolveMNA(sim, ckt) == -1)
 		goto halt;
 
-	if (NR_Iterations(ckt,sim) < 0)
-		printf("Failed to find initial bias point\n");
+	sim->inputStep=1;
+	if (!NR_Iterations(ckt,sim))
+	{
+		AG_SetError("Failed to find initial bias point.\n");
+		goto halt;
+	}
 
 	/* Invoke the general simulation start callback. */
 	AG_PostEvent(NULL, ckt, "circuit-sim-begin", "%p", sim);
@@ -437,7 +441,7 @@ NodeVoltage(void *p, int j)
 {
 	ES_SimDC *sim = p;
 
-	return M_VEC_ENTRY_EXISTS(sim->x,j) ? M_VecGet(sim->x, j) : 0.0;
+	return (j>=0)&&(sim->x->m > j) ? M_VecGet(sim->x, j) : 0.0;
 }
 
 static M_Real
@@ -445,7 +449,7 @@ NodeVoltagePrevStep(void *p, int j)
 {
 	ES_SimDC *sim = p;
 
-	return M_VEC_ENTRY_EXISTS(sim->x,j) ? M_VecGet(sim->xPrevStep, j) : 0.0;
+	return (j>=0)&&(sim->xPrevStep->m > j) ? M_VecGet(sim->xPrevStep, j) : 0.0;
 }
 
 static M_Real
@@ -455,7 +459,7 @@ BranchCurrent(void *p, int k)
 	ES_Circuit *ckt = SIM(sim)->ckt;
 	int i = ckt->n + k;
 
-	return M_VEC_ENTRY_EXISTS(sim->x,i) ? M_VecGet(sim->x, i) : 0.0;
+	return (i>=0)&&(sim->x->m > i) ? M_VecGet(sim->x, i) : 0.0;
 }
 
 static M_Real
@@ -465,7 +469,7 @@ BranchCurrentPrevStep(void *p, int k)
 	ES_Circuit *ckt = SIM(sim)->ckt;
 	int i = ckt->n + k;
 
-	return M_VEC_ENTRY_EXISTS(sim->x,i) ? M_VecGet(sim->xPrevStep, i) : 0.0;
+	return (i>=0)&&(sim->xPrevStep->m > i) ? M_VecGet(sim->xPrevStep, i) : 0.0;
 }
 
 const ES_SimOps esSimDcOps = {

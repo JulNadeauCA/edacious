@@ -123,6 +123,9 @@ UpdateModel(ES_NPN *u, ES_SimDC *dc, M_Real vBE, M_Real vBC)
     	u->Ibf_eq = Ibf - u->gPiF*vBE;
 	u->Ibr_eq = Ibr - u->gPiR*vBC;
 	u->Icc_eq = Icc - u->gmF*vBE + u->gmR*vBC - u->go*vCE;
+
+	if (u->go < 1e-6)
+		u->go=1e-6;
 }
 
 static void UpdateStamp(ES_NPN *u, ES_SimDC *dc)

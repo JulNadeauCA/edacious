@@ -86,6 +86,11 @@ UpdateModel(ES_Diode *d, ES_SimDC *dc, M_Real v)
 	I = d->Is*(Exp(v/(d->Vt)) - 1);
 	d->g = I/(d->Vt);
 	d->Ieq = I-(d->g)*v;
+
+	if (d->g < 1e-6)
+	{
+		d->g = 1e-6;
+	}
 }
 
 static void
