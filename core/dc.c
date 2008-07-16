@@ -69,9 +69,11 @@ StopSimulation(ES_SimDC *sim)
 	AG_PostEvent(NULL, SIM(sim)->ckt, "circuit-sim-end", "%p", sim);
 }
 
-/* returns 1 if successful, 0 otherwise */
+/* Performs the NR loop. Returns the number of iterations,
+ * the negative of iterations done if convergence was not achieved
+ * and -1 if matrix is singular */
 static Uint
-NR_Iteration(ES_Circuit *ckt, ES_SimDC *sim)
+NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 {
 	ES_Component *com;
 
@@ -81,7 +83,7 @@ NR_Iteration(ES_Circuit *ckt, ES_SimDC *sim)
 
 	do {
 		if (++i > sim->itersMax)
-			return 0;
+			return -i;
 
 		sim->isDamped = 0;
 		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
@@ -91,7 +93,7 @@ NR_Iteration(ES_Circuit *ckt, ES_SimDC *sim)
 
 		M_VecCopy(sim->xPrevIter, sim->x);
 		if (SolveMNA(sim, ckt) == -1)
-			return 0;
+			return -1;
 
 		/* Compute difference between previous and current iteration,
 		 * to decide whether or not to continue. */
@@ -115,7 +117,7 @@ NR_Iteration(ES_Circuit *ckt, ES_SimDC *sim)
 	if (i > sim->itersHiwat) { sim->itersHiwat = i; }
 	else if (i < sim->itersLowat) { sim->itersLowat = i; }
 
-	return 1;
+	return i;
 }
 
 /* Simulation timestep. */
@@ -156,7 +158,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		goto halt;
 
 	/* shrink timestep until a stable solution is found */
-	while (!NR_Iteration(ckt,sim))
+	while (NR_Iterations(ckt,sim) < 0)
 	{
 		if (++retries > sim->retriesMax)
 		{
@@ -312,7 +314,7 @@ Start(void *p)
 	if (SolveMNA(sim, ckt) == -1)
 		goto halt;
 
-	if (!NR_Iteration(ckt,sim))
+	if (NR_Iterations(ckt,sim) < 0)
 		printf("Failed to find initial bias point\n");
 
 	/* Invoke the general simulation start callback. */
