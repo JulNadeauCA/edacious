@@ -194,18 +194,11 @@ Edit(void *p)
 {
 	ES_Diode *d = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
-	AG_Numerical *num;
 
-	num = M_NumericalNewRealR(box, 0, "pA",
+	M_NumericalNewRealR(box, 0, "pA",
 	    _("Reverse saturation current: "), &d->Is, M_TINYVAL, HUGE_VAL);
-
-	M_NumericalNewRealPNZ(box, 0, "mV", _("Thermal voltage: "), &d->Vt);
-
-	AG_LabelNewPolledMT(box, AG_LABEL_HFILL, &OBJECT(d)->lock,
-	    "Ieq=%f, g=%f", &d->Ieq, &d->g);
-	AG_LabelNewPolledMT(box, AG_LABEL_HFILL, &OBJECT(d)->lock,
-	    "Prev: Ieq=%f, g=%f",
-	    &d->IeqPrev, &d->gPrev);
+	M_NumericalNewRealPNZ(box, 0, "mV",
+	    _("Thermal voltage: "), &d->Vt);
 
 	return (box);
 }
