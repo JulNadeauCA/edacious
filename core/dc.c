@@ -35,9 +35,9 @@
 #include "core.h"
 #include <freesg/m/m_matview.h>
 
-/* N-R iterations stop when the difference between previous
- * and current vector is no more than MAX_DIFF */
-#define MAX_DIFF 1e-6
+/* N-R iterations stop when the relative difference between previous
+ * and current vector is no more than MAX_REL_DIFF */
+#define MAX_REL_DIFF 1e-4 /* 0.01% */
 
 static const char *IntegrationMethodStr[] = {
 	"BE",
@@ -100,18 +100,20 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 		diff = 0;
 		for (j = 0; j < sim->x->m; j++)
 		{
-			M_Real curAbsDiff = Fabs(M_VecGet(sim->x,j) -
-			                         M_VecGet(sim->xPrevIter,j));
-			if (curAbsDiff > diff)
-				diff = curAbsDiff;
+			M_Real prev = M_VecGet(sim->xPrevIter, j);
+			M_Real cur = M_VecGet(sim->x, j);
+			M_Real curRelDiff = Fabs((cur - prev) / prev);
+			if (curRelDiff > diff)
+				diff = curRelDiff;
 		}
 
 #ifdef DEBUG
 		M_SetReal(ckt, "dcDiff", diff);
 #endif
-	} while (sim->isDamped || (diff > MAX_DIFF));
+	} while (sim->isDamped || (diff > MAX_REL_DIFF));
 #ifdef DEBUG
 	M_SetReal(ckt, "dcIters", i);
+	printf("NR iterations : %d\n", i);
 #endif
 
 	/* Update the statistics. */
