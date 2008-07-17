@@ -126,6 +126,10 @@ UpdateModel(ES_NPN *u, ES_SimDC *dc, M_Real vBE, M_Real vBC)
 
 	if (u->go < 1e-6)
 		u->go=1e-6;
+	if (u->gPiF < 1e-6)
+		u->gPiF=1e-6;
+	if (u->gPiR < 1e-6)
+		u->gPiR=1e-6;
 }
 
 static void UpdateStamp(ES_NPN *u, ES_SimDC *dc)

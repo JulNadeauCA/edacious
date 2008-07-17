@@ -33,6 +33,8 @@
 #include <sources/sources.h>
 #include <macro/macro.h>
 
+#include <unistd.h>
+
 volatile int doExit = 0;
 int maxSteps = 0;
 int curSteps = 0;
