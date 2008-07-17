@@ -1039,7 +1039,8 @@ ES_SetSimulationMode(ES_Circuit *ckt, const ES_SimOps *sops)
 	if (sim->ops->init != NULL) {
 		sim->ops->init(sim);
 	}
-	if (sim->ops->edit != NULL &&
+	if (agGUI &&
+	    sim->ops->edit != NULL &&
 	   (sim->win = sim->ops->edit(sim, ckt)) != NULL) {
 		AG_WindowSetCaption(sim->win, "%s: %s", OBJECT(ckt)->name,
 		    _(sim->ops->name));
