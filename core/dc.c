@@ -35,9 +35,14 @@
 #include "core.h"
 #include <freesg/m/m_matview.h>
 
-/* N-R iterations stop when the relative difference between previous
- * and current vector is no more than MAX_REL_DIFF */
-#define MAX_REL_DIFF 1e-4 /* 0.01% */
+/*
+ * N-R iterations stop when :
+ * V_n - V_{n-1} < MAX_V_DIFF + MAX_REL_DIFF * V_{n-1}
+ * I_n - I_{n-1} < MAX_I_DIFF + MAX_REL_DIFF * I_{n-1}
+ * */
+#define MAX_REL_DIFF	1e-4	/* 0.01% */
+#define MAX_V_DIFF	1e-6	/* 1 uV */
+#define MAX_I_DIFF	1e-12	/* 1 pA */
 
 /* Solve Ax=z where A=[G,B;C,D], x=[v,j] and z=[i;e]. */
 static int
@@ -73,6 +78,7 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 	Uint i = 0, j;
 
 	do {
+	nextIter:
 		if (++i > sim->itersMax)
 			return -i; 
 
@@ -87,20 +93,32 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 			return 0;
 
 		/*
-		 * Compute difference between previous and current iteration,
-		 * to decide whether or not to continue.
+		 * Decide whether or not to exit the loop, based on
+		 * the difference from previous iteration and the fact
+		 * that the simulation may be damped
 		 */
-		diff = 0;
-		for (j = 0; j < sim->x->m; j++)
+		if(sim->isDamped)
+			goto nextIter;
+
+		/* 'G' part of the matrix : voltages */
+		for (j = 0; j < ckt->n; j++)
 		{
 			M_Real prev = M_VecGet(sim->xPrevIter, j);
 			M_Real cur = M_VecGet(sim->x, j);
-			M_Real curRelDiff = Fabs((cur - prev) / prev);
-
-			if (curRelDiff > diff)
-				diff = curRelDiff;
+			if(Fabs(cur - prev) > MAX_V_DIFF + Fabs(MAX_REL_DIFF * prev))
+				goto nextIter;
 		}
-	} while (sim->isDamped || (diff > MAX_REL_DIFF));
+
+		/* 'D' part of the matrix : currents */
+		for (j = ckt->n; j < ckt->m + ckt->n; j++)
+		{
+			M_Real prev = M_VecGet(sim->xPrevIter, j);
+			M_Real cur = M_VecGet(sim->x, j);
+			if(Fabs(cur - prev) > MAX_I_DIFF + Fabs(MAX_REL_DIFF * prev))
+				goto nextIter;
+		}
+		
+	} while(0);
 
 	/* Update the statistics. */
 	M_SetReal(ckt, "nrIters", i);
@@ -142,7 +160,6 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 
 	ticks = SDL_GetTicks();
 	ticksSinceLast = ticks - sim->ticksLastStep;
-	
 	SetTimestep(sim, (M_Real)(ticksSinceLast/1000.0));
 	sim->inputStep = 0;
 
@@ -280,9 +297,9 @@ Start(void *p)
 	AG_UnlockTimeouts(ckt);
 
 	/* Set the initial timing parameters and clear the statistics. */
-	sim->ticksLastStep = SDL_GetTicks();
-	sim->deltaT = (M_Real)(sim->ticksDelay/1000);
 	ClearStats(sim);
+	sim->ticksLastStep = SDL_GetTicks();
+	sim->deltaT = ((M_Real) sim->ticksDelay)/1000.0;
 	
 	/* Initialize the matrices. */
 	M_SetZero(sim->A);
