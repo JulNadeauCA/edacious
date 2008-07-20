@@ -40,7 +40,7 @@
  * V_n - V_{n-1} < MAX_V_DIFF + MAX_REL_DIFF * V_{n-1}
  * I_n - I_{n-1} < MAX_I_DIFF + MAX_REL_DIFF * I_{n-1}
  * */
-#define MAX_REL_DIFF	1e-4	/* 0.01% */
+#define MAX_REL_DIFF	1e-3	/* 0.1% */
 #define MAX_V_DIFF	1e-6	/* 1 uV */
 #define MAX_I_DIFF	1e-12	/* 1 pA */
 
@@ -416,18 +416,21 @@ Edit(void *p, ES_Circuit *ckt)
 
 		AG_SeparatorNewHoriz(ntab);
 
-		AG_LabelNewPolled(ntab, 0, _("Simulated time: %gs"),
+		AG_LabelNewPolled(ntab, 0, _("Simulated time: %[T]"),
 		    &sim->Telapsed);
-		AG_LabelNewPolled(ntab, 0, _("Timesteps: %gs - %gs"),
+		AG_LabelNewPolled(ntab, 0, _("Timesteps: %[T] - %[T]"),
 		    &sim->stepLow, &sim->stepHigh);
 		AG_LabelNewPolled(ntab, 0, _("Iterations: %u-%u"),
 		    &sim->itersLow, &sim->itersHigh);
 	}
 	
-	ntab = AG_NotebookAddTab(nb, "[A]", AG_BOX_VERT);
+	ntab = AG_NotebookAddTab(nb, _("Equations"), AG_BOX_VERT);
+	AG_LabelNew(ntab, 0, "A:");
 	mv = M_MatviewNew(ntab, sim->A, 0);
 	M_MatviewSizeHint(mv, "-0.000", 4, 4);
 	M_MatviewSetNumericalFmt(mv, "%.02f");
+	AG_LabelNewPolled(ntab, 0, "z: %[V]", &sim->z);
+	AG_LabelNewPolled(ntab, 0, "x: %[V]", &sim->x);
 
 #if 0
 	ntab = AG_NotebookAddTab(nb, "[z]", AG_BOX_VERT);
