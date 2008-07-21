@@ -178,8 +178,12 @@ static void
 Move(void *p, VG_Vector vPos, VG_Vector vRel)
 {
 	ES_SchemBlock *sb = p;
+	VG_Matrix T;
 
-	VG_SetPosition(sb, vPos);
+	T = VGNODE(sb)->T;
+	VG_LoadIdentity(sb);
+	VG_Translate(sb, vRel);
+	VG_MultMatrix(&VGNODE(sb)->T, &T);
 }
 
 static void

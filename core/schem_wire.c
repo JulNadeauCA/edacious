@@ -134,7 +134,17 @@ Delete(void *p)
 static void
 Move(void *p, VG_Vector vCurs, VG_Vector vRel)
 {
-	/* TODO */
+	ES_SchemWire *sw = p;
+	VG_Matrix T1, T2;
+
+	T1 = sw->p1->T;
+	T2 = sw->p2->T;
+	VG_LoadIdentity(sw->p1);
+	VG_LoadIdentity(sw->p2);
+	VG_Translate(sw->p1, vRel);
+	VG_Translate(sw->p2, vRel);
+	VG_MultMatrix(&sw->p1->T, &T1);
+	VG_MultMatrix(&sw->p2->T, &T2);
 }
 
 const VG_NodeOps esSchemWireOps = {

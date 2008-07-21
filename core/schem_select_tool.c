@@ -33,6 +33,7 @@
 typedef struct es_schem_select_tool {
 	VG_Tool _inherit;
 	int moving;
+	VG_Vector vLast;
 } ES_SchemSelectTool;
 
 /* Return the entity nearest to vPos. */
@@ -98,14 +99,14 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 	ES_SchemBlock *sb;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Node *vn;
-	int multiSelect = (SDL_GetModState() & KMOD_CTRL);
 
 	if ((vn = ES_SchemNearest(vv, v)) == NULL) {
 		return (0);
 	}
 	switch (b) {
 	case SDL_BUTTON_LEFT:
-		if (multiSelect) {
+		t->vLast = v;
+		if (VG_SELECT_MULTI(vv)) {
 			if (VG_NodeIsClass(vn, "SchemBlock")) {
 				sb = (ES_SchemBlock *)vn;
 				ES_SelectComponent(sb->com, vv);
@@ -180,16 +181,35 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	}
 	v = vPos;
 	if (!VG_SKIP_CONSTRAINTS(vv)) {
+		VG_Vector vLast, vSnapRel;
+
+		vLast = t->vLast;
 		VG_ApplyConstraints(vv, &v);
-	}
-	TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
-		if (!(vn->flags & VG_NODE_SELECTED)) {
-			continue;
+		VG_ApplyConstraints(vv, &vLast);
+		vSnapRel.x = v.x - vLast.x;
+		vSnapRel.y = v.y - vLast.y;
+
+		if (vSnapRel.x != 0.0 || vSnapRel.y != 0.0) {
+			TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
+				if (!(vn->flags & VG_NODE_SELECTED) ||
+				    vn->ops->moveNode == NULL) {
+					continue;
+				}
+				vn->ops->moveNode(vn, v, vSnapRel);
+				VG_Status(vv, _("Moving entity: %s%d (grid)"),
+				    vn->ops->name, vn->handle);
+			}
+			t->vLast = v;
 		}
-		if (vn->ops->moveNode != NULL) {
+	} else {
+		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
+			if (!(vn->flags & VG_NODE_SELECTED) ||
+			    vn->ops->moveNode == NULL) {
+				continue;
+			}
 			vn->ops->moveNode(vn, v, vRel);
-			VG_Status(vv, _("Moving entity: %s%d"), vn->ops->name,
-			    vn->handle);
+			VG_Status(vv, _("Moving entity: %s%d (free)"),
+			    vn->ops->name, vn->handle);
 		}
 	}
 	return (0);
