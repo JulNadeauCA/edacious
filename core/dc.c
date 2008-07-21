@@ -50,6 +50,7 @@ SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 {
 	M_Real d;
 
+	*sim->groundNode = 1.0;
 	/* Find LU factorization and solve by backsubstitution. */
 	M_FactorizeLU(sim->A);
 	M_VecCopy(sim->x, sim->z);
@@ -139,7 +140,6 @@ SetTimestep(ES_SimDC *sim, M_Real deltaT)
 	/* Load new values into matrices now that timestep has changed. */
 	M_SetZero(sim->A);
 	M_VecSetZero(sim->z);
-	M_Set(sim->A, 0, 0, 1.0);
 
 	/* Update the timestep statistics. */
 	if (deltaT > sim->stepHigh) { sim->stepHigh = deltaT; }
@@ -257,6 +257,7 @@ Init(void *p)
 	sim->x = M_VecNew(0);
 	sim->xPrevStep = M_VecNew(0);
 	sim->xPrevIter = M_VecNew(0);
+	sim->groundNode = NULL;
 	
 	AG_SetTimeout(&sim->toUpdate, StepMNA, sim, AG_CANCEL_ONDETACH);
 	ClearStats(sim);
@@ -280,6 +281,8 @@ Resize(void *p, ES_Circuit *ckt)
 	M_VecSetZero(sim->x);
 	M_VecSetZero(sim->xPrevStep);
 	M_VecSetZero(sim->xPrevIter);
+
+	sim->groundNode = M_GetElement(sim->A, 0, 0);
 }
 
 static void
@@ -309,7 +312,6 @@ Start(void *p)
 	/* Initialize the matrices. */
 	M_SetZero(sim->A);
 	M_VecSetZero(sim->z);
-	M_Set(sim->A, 0, 0, 1.0);
 	
 	/* Invoke the DC-specific simulation start callback. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {

@@ -41,6 +41,8 @@ typedef struct es_sim_dc {
 	M_Vector *x;		/* Vector of unknowns (v,j) */
 	M_Vector *xPrevIter;	/* Vector of unknowns from last iteration */
 	M_Vector *xPrevStep;	/* Vector of unknowns from last timestep */
+
+	M_Real *groundNode;     /* Pointer to A(0, 0) */
 } ES_SimDC;
 
 __BEGIN_DECLS
