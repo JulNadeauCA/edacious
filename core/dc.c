@@ -55,8 +55,6 @@ SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 	M_FactorizeLU(sim->A);
 	M_VecCopy(sim->x, sim->z);
 	M_BacksubstLU(sim->A, sim->x);
-	M_SetZero(sim->A);
-	M_VecSetZero(sim->z);
 	return (0);
 }
 
@@ -86,6 +84,9 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 			return -i; 
 
 		sim->isDamped = 0;
+		M_SetZero(sim->A);
+		M_VecSetZero(sim->z);
+		
 		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 			if (com->dcStepIter != NULL)
 				com->dcStepIter(com, sim);
@@ -173,6 +174,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	for (i = 0; i < ckt->nExtObjs; i++)
 		AG_PostEvent(ckt, ckt->extObjs[i], "circuit-step-begin", NULL);
 
+	M_SetZero(sim->A);
+	M_VecSetZero(sim->z);
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (com->dcStepBegin != NULL)
 			com->dcStepBegin(com, sim);
@@ -194,6 +197,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		sim->Telapsed += sim->deltaT;
 
 		sim->inputStep = 1;
+		M_SetZero(sim->A);
+		M_VecSetZero(sim->z);
 		CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 			if (com->dcStepBegin != NULL)
 				com->dcStepBegin(com, sim);
