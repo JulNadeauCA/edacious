@@ -155,7 +155,7 @@ ObjectOpenHandler(void *p)
 	if (obj->archivePath != NULL) {
 		AG_WindowSetCaption(win, "%s", ShortFilename(obj->archivePath));
 	} else {
-		AG_WindowSetCaption(win, _("Untitled"));
+		AG_WindowSetCaption(win, "%s", obj->name);
 	}
 	AG_WindowShow(win);
 	return (win);
@@ -391,8 +391,8 @@ Save(AG_Event *event)
 		AG_TextMsg(AG_MSG_ERROR, _("Error saving object: %s"),
 		    AG_GetError());
 	} else {
-		AG_TextInfo(_("Saved object %s successfully"),
-		    OBJECT(obj)->name);
+		AG_TextInfo(_("Saved %s successfully"),
+		    OBJECT(obj)->archivePath);
 	}
 }
 
@@ -562,7 +562,7 @@ main(int argc, char *argv[])
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (1);
 	}
-	AG_TextParseFontSpec("_agFontVera:12");
+	AG_TextParseFontSpec("_agFontVera:10");
 #ifdef HAVE_GETOPT
 	while ((c = getopt(argc, argv, "?vdt:r:T:t:gG")) != -1) {
 		extern char *optarg;
