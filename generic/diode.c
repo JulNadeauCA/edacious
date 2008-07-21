@@ -94,21 +94,10 @@ UpdateModel(ES_Diode *d, ES_SimDC *dc, M_Real v)
 }
 
 static void
-UpdateStamp(ES_Diode *d, ES_SimDC *dc)
-{
-	StampConductance(d->g - d->gPrev, d->s_conductance);
-	StampCurrentSource(d->Ieq - d->IeqPrev, d->s_current_source);
-
-	d->gPrev = d->g;
-	d->IeqPrev = d->Ieq;
-}
-static void
 Stamp(ES_Diode *d, ES_SimDC *dc)
 {
-	d->gPrev = 0.0;
-	d->IeqPrev = 0.0;
-
-	UpdateStamp(d, dc);
+	StampConductance(d->g, d->s_conductance);
+	StampCurrentSource(d->Ieq, d->s_current_source);
 }
 
 static int
@@ -150,7 +139,7 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 	ES_Diode *d = obj;
 
 	UpdateModel(d, dc, v(d));
-	UpdateStamp(d, dc);
+	Stamp(d, dc);
 }
 
 static void

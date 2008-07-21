@@ -8,7 +8,6 @@ typedef struct es_nmos {
 	M_Real K;			/* K-value */
 
 	M_Real Ieq, gm, go;		/* Companion model parameters */
-	M_Real IeqPrev, gmPrev, goPrev;	
 
 	M_Real *s_vccs[STAMP_VCCS_SIZE];
 	M_Real *s_conductance[STAMP_CONDUCTANCE_SIZE];

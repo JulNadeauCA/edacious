@@ -72,6 +72,16 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 }
 
 static void
+DC_StepIter(void *obj, ES_SimDC *dc)
+{
+	ES_VSine *vs = obj;
+
+	VSOURCE(vs)->v = vs->vPeak*Sin(vs->f * dc->Telapsed);
+	
+	Stamp(vs,dc);
+}
+
+static void
 Init(void *p)
 {
 	ES_VSine *vs = p;
@@ -82,6 +92,7 @@ Init(void *p)
 	vs->f = 6.0;
 	COMPONENT(vs)->dcSimBegin = DC_SimBegin;
 	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
+	COMPONENT(vs)->dcStepIter = DC_StepIter;
 }
 
 static int

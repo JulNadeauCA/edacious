@@ -137,6 +137,15 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 }
 
 static void
+DC_StepIter(void *obj, ES_SimDC *dc)
+{
+	ES_Inductor *i = obj;
+	
+	Stamp(i, dc);
+
+}
+
+static void
 Init(void *p)
 {
 	ES_Inductor *i = p;
@@ -146,6 +155,7 @@ Init(void *p)
 	
 	COMPONENT(i)->dcSimBegin = DC_SimBegin;
 	COMPONENT(i)->dcStepBegin = DC_StepBegin;
+	COMPONENT(i)->dcStepIter = DC_StepIter;
 }
 
 static int

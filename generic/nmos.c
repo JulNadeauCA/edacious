@@ -104,35 +104,12 @@ UpdateModel(ES_NMOS *u, M_Real vGS, M_Real vDS)
 
 }
 
-static void UpdateStamp(ES_NMOS *u, ES_SimDC *dc)
-{
-	StampVCCS(u->gm-u->gmPrev,u->s_vccs);
-	StampConductance(u->go-u->goPrev,u->s_conductance);
-	StampCurrentSource(u->Ieq-u->IeqPrev,u->s_current);
-
-	u->gmPrev = u->gm;
-	u->goPrev = u->go;
-	u->IeqPrev = u->Ieq;
-}
 static void Stamp(ES_NMOS *u, ES_SimDC *dc)
 {
-	u->gmPrev = 0.0;
-	u->goPrev = 0.0;
-	u->IeqPrev = 0.0;
-
-	UpdateStamp(u, dc);
+	StampVCCS(u->gm, u->s_vccs);
+	StampConductance(u->go, u->s_conductance);
+	StampCurrentSource(u->Ieq, u->s_current);
 }
-
-/*
- * Load the element into the conductance matrix. All conductances between
- * (k,j) are added to (k,k) and (j,j), and subtracted from (k,j) and (j,k).
- *
- *   |  Vk    Vj  | RHS
- *   |------------|-----
- * k |  g    -g   |  I
- * j | -g     g   | -I
- *   |------------|-----
- */
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
@@ -170,7 +147,7 @@ DC_StepIter(void *obj, ES_SimDC *dc)
         ES_NMOS *u = obj;
 
 	UpdateModel(u,vGS(u),vDS(u));
-	UpdateStamp(u,dc);
+	Stamp(u,dc);
 }
 
 static void

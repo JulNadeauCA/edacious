@@ -138,6 +138,14 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 }
 
 static void
+DC_StepIter(void *obj, ES_SimDC *dc)
+{
+	ES_Capacitor *c = obj;
+	
+	Stamp(c, dc);
+}
+
+static void
 Connected(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_SENDER();
@@ -168,7 +176,8 @@ Init(void *p)
 
 	COMPONENT(c)->dcSimBegin = DC_SimBegin;
 	COMPONENT(c)->dcStepBegin = DC_StepBegin;
-
+	COMPONENT(c)->dcStepIter = DC_StepIter;
+	
 	AG_SetEvent(c, "circuit-connected", Connected, NULL);
 	AG_SetEvent(c, "circuit-disconnected", Disconnected, NULL);
 }

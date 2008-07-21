@@ -96,16 +96,6 @@ Stamp(ES_Resistor *r, ES_SimDC *dc)
 	StampConductance(r->g, r->s);
 }
 
-/*
- * Load the element into the conductance matrix. All conductances between
- * (k,j) are added to (k,k) and (j,j), and subtracted from (k,j) and (j,k).
- *
- *   |  Vk    Vj  | RHS
- *   |------------|-----
- * k |  Gkj  -Gkj |
- * j | -Gkj   Gkj |
- *   |------------|-----
- */
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
@@ -131,7 +121,14 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Resistor *r = obj;
 
-	UpdateModel(r, dc);
+	Stamp(r, dc);
+}
+
+static void
+DC_StepIter(void *obj, ES_SimDC *dc)
+{
+	ES_Resistor *r = obj;
+
 	Stamp(r, dc);
 }
 
@@ -148,6 +145,7 @@ Init(void *p)
 	r->Tc2 = 0.0;
 	COMPONENT(r)->dcSimBegin = DC_SimBegin;
 	COMPONENT(r)->dcStepBegin = DC_StepBegin;
+	COMPONENT(r)->dcStepIter = DC_StepIter;
 }
 
 static void *

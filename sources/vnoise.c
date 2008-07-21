@@ -110,6 +110,12 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 }
 
 static void
+DC_StepIter(void *obj, ES_SimDC *dc)
+{
+	ES_VNoise *vn = obj;
+	StampVoltageSource(VSOURCE(vn)->v, VSOURCE(vn)->s);
+}
+static void
 Init(void *p)
 {
 	ES_VNoise *vn = p;
@@ -130,6 +136,7 @@ Init(void *p)
 	COMPONENT(vn)->dcSimBegin = DC_SimBegin;
 	COMPONENT(vn)->dcSimEnd = DC_SimEnd;
 	COMPONENT(vn)->dcStepBegin = DC_StepBegin;
+	COMPONENT(vn)->dcStepIter = DC_StepIter;
 }
 
 static void

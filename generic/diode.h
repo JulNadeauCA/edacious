@@ -6,7 +6,6 @@ typedef struct es_diode {
 	M_Real Is;		/* Resistance at Tnom */
 	M_Real Vt;		/* Thermal voltage */
 	M_Real Ieq, g;		/* Companion model parameters */
-	M_Real IeqPrev, gPrev;
 
 	M_Real vPrevIter;
 

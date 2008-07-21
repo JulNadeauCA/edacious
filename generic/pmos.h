@@ -10,10 +10,6 @@ typedef struct es_pmos {
 	M_Real Ieq;
 	M_Real gm;
 	M_Real go;
-
-	M_Real IeqPrev;	
-	M_Real gmPrev;
-	M_Real goPrev;
 	
 	M_Real *s_vccs[STAMP_VCCS_SIZE];
 	M_Real *s_conductance[STAMP_CONDUCTANCE_SIZE];

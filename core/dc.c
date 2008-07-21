@@ -54,6 +54,8 @@ SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 	M_FactorizeLU(sim->A);
 	M_VecCopy(sim->x, sim->z);
 	M_BacksubstLU(sim->A, sim->x);
+	M_SetZero(sim->A);
+	M_VecSetZero(sim->z);
 	return (0);
 }
 

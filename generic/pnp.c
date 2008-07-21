@@ -130,42 +130,19 @@ UpdateModel(ES_PNP *u, ES_SimDC *dc, M_Real vEB, M_Real vCB)
 		u->gPiR=1e-6;
 }
 
-static void UpdateStamp(ES_PNP *u, ES_SimDC *dc)
-{
-	StampConductance(u->gPiF-u->gPiF_prev,u->sc_be);
-	StampConductance(u->gPiR-u->gPiR_prev,u->sc_bc);
-
-	StampConductance(u->go-u->goPrev,u->sc_ec);
-
-	StampVCCS(u->gmF-u->gmF_prev,u->sv_ebec);
-	StampVCCS(u->gmR-u->gmR_prev,u->sv_cbce);
-
-	StampCurrentSource(u->Ibf_eq-u->Ibf_eq_prev, u->si_be);
-	StampCurrentSource(u->Ibr_eq-u->Ibr_eq_prev, u->si_bc);
-	StampCurrentSource(u->Icc_eq-u->Icc_eq_prev, u->si_ce);
-
-	u->gPiF_prev = u->gPiF;
-	u->gPiR_prev = u->gPiR;
-	u->goPrev = u->go;
-	u->gmF_prev = u->gmF;
-	u->gmR_prev = u->gmR;
-	u->Ibf_eq_prev = u->Ibf_eq;
-	u->Ibr_eq_prev = u->Ibr_eq;
-	u->Icc_eq_prev = u->Icc_eq;
-}
-
 static void Stamp(ES_PNP *u, ES_SimDC *dc)
 {
-	u->gPiF_prev = 0.0;
-	u->gPiR_prev = 0.0;
-	u->goPrev = 0.0;
-	u->gmF_prev = 0.0;
-	u->gmR_prev = 0.0;
-	u->Ibf_eq_prev = 0.0;
-	u->Ibr_eq_prev = 0.0;
-	u->Icc_eq_prev = 0.0;
+	StampConductance(u->gPiF,u->sc_be);
+	StampConductance(u->gPiR,u->sc_bc);
 
-	UpdateStamp(u, dc);
+	StampConductance(u->go,u->sc_ec);
+
+	StampVCCS(u->gmF,u->sv_ebec);
+	StampVCCS(u->gmR,u->sv_cbce);
+
+	StampCurrentSource(u->Ibf_eq, u->si_be);
+	StampCurrentSource(u->Ibr_eq, u->si_bc);
+	StampCurrentSource(u->Icc_eq, u->si_ce);
 }
 
 static int
@@ -218,7 +195,7 @@ DC_StepIter(void *obj, ES_SimDC *dc)
         ES_PNP *u = obj;
 
 	UpdateModel(u,dc,vEB(u),vCB(u));
-	UpdateStamp(u,dc);
+	Stamp(u,dc);
 }
 
 static void

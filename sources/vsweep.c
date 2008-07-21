@@ -89,6 +89,13 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 }
 
 static void
+DC_StepIter(void *obj, ES_SimDC *dc)
+{
+	ES_VSweep *vsw = obj;
+	Stamp(vsw,dc);
+}
+
+static void
 Init(void *p)
 {
 	ES_VSweep *vsw = p;

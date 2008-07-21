@@ -20,15 +20,6 @@ typedef struct es_pnp {
 	M_Real VebPrevIter;
 	M_Real VcbPrevIter;
 
-	M_Real Ibf_eq_prev;	
-	M_Real Ibr_eq_prev;
-	M_Real Icc_eq_prev;
-	M_Real gPiF_prev;
-	M_Real gmF_prev;
-	M_Real gPiR_prev;
-	M_Real gmR_prev;
-	M_Real goPrev;
-
 	M_Real *sc_be[STAMP_CONDUCTANCE_SIZE];
 	M_Real *sc_bc[STAMP_CONDUCTANCE_SIZE];
 	M_Real *sc_ec[STAMP_CONDUCTANCE_SIZE];

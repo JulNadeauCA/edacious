@@ -59,18 +59,23 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	return (0);
 }
 
-/*
- * Load the element into the conductance matrix. All conductances between
- * (k,j) are added to (k,k) and (j,j), and subtracted from (k,j) and (j,k).
- *
- *   |  Vk    Vj  | RHS
- *   |------------|-----
- * k |  Gkj  -Gkj |
- * j | -Gkj   Gkj |
- *   |------------|-----
- */
+/* TODO : move computations out of the loop */
 static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
+{
+	ES_SemiResistor *r = obj;
+	ES_Node *n;
+	Uint k = PNODE(r,1);
+	Uint j = PNODE(r,2);
+	M_Real dT = dc->T0 - COMPONENT(r)->Tspec;
+	M_Real g;
+
+	g = 1.0/(r->rEff * (1.0 + r->Tc1*dT + r->Tc2*dT*dT));	
+	StampConductance(g,r->s);
+}
+
+static void
+DC_StepIter(void *obj, ES_SimDC *dc)
 {
 	ES_SemiResistor *r = obj;
 	ES_Node *n;
@@ -98,6 +103,7 @@ Init(void *p)
 	r->rEff = 0.0;
 	COMPONENT(r)->dcSimBegin = DC_SimBegin;
 	COMPONENT(r)->dcStepBegin = DC_StepBegin;
+	COMPONENT(r)->dcStepIter = DC_StepIter;
 }
 
 static int
