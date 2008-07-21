@@ -34,19 +34,25 @@
 #include <macro/macro.h>
 
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 
 volatile int doExit = 0;
 int maxSteps = 0;
 int curSteps = 0;
 int showHeader = 1;
+int plotDerivative = 0;
+
+char fmtString[16];
 char **vars = NULL;
+M_Real *vPrev = NULL;
 Uint nVars = 0;
 
 static void
 printusage(void)
 {
-	fprintf(stderr, "Usage: transient [-H] [-s maxSteps] [file] "
-	                "[var1] [var2] [...]\n");
+	fprintf(stderr, "Usage: transient [-dHg] [-s maxSteps] [-p prec] "
+	                "[file] [var1] [var2] [...]\n");
 	exit(1);
 }
 		
@@ -62,7 +68,7 @@ PrintHeader(void)
 	printf("\n");
 	printf(" -------- ");
 	for (i = 0; i < nVars; i++) {
-		printf(" -----------");
+		printf(" ------------");
 	}
 	printf("\n");
 }
@@ -82,13 +88,17 @@ Step(AG_Event *event)
 	for (i = 0; i < nVars; i++) {
 		v = M_GetReal(ckt, vars[i]);
 		if (v > 0.0) { printf(" "); }
-		printf("%.08f ", v);
+		if (plotDerivative) {
+			printf(fmtString, v-vPrev[i]);
+			vPrev[i] = v;
+		} else {
+			printf("%.08f ", v);
+		}
 	}
 	printf("\n");
 
-	if (maxSteps > 0 && ++curSteps >= maxSteps) {
+	if (maxSteps > 0 && ++curSteps >= maxSteps)
 		doExit = 1;
-	}
 }
 
 int
@@ -99,6 +109,8 @@ main(int argc, char *argv[])
 	char *file;
 	int i, c;
 	AG_Object *mon;
+	int prec = 8;
+	char pfmt = 'f';
 
 	AG_InitCore("transient", 0);
 	agDebugLvl = 0;
@@ -107,29 +119,43 @@ main(int argc, char *argv[])
 	ES_GenericInit();
 	ES_MacroInit();
 	ES_SourcesInit();
-	
-	while ((c = getopt(argc, argv, "?hs:H")) != -1) {
+
+	while ((c = getopt(argc, argv, "?hHdgs:p:")) != -1) {
 		extern char *optarg;
 
 		switch (c) {
+		case 'H':
+			showHeader = 0;
+			break;
+		case 'd':
+			plotDerivative = 1;
+			break;
+		case 'g':
+			pfmt = 'g';
+			break;
 		case 's':
 			maxSteps = atoi(optarg);
 			break;
-		case 'H':
-			showHeader = 0;
+		case 'p':
+			prec = atoi(optarg);
 			break;
 		case '?':
 		case 'h':
 			printusage();
 		}
 	}
+	Snprintf(fmtString, sizeof(fmtString), "%%.0%d%c ",
+	    prec, pfmt);
+
 	if (optind == argc) {
 		printusage();
 	}
 	nVars = argc-optind-1;
 	vars = Malloc(nVars*sizeof(char *));
+	vPrev = Malloc(nVars*sizeof(char *));
 	for (i = 0; i < nVars; i++) {
 		vars[i] = Strdup(argv[optind+1+i]);
+		vPrev[i] = 0.0;
 	}
 
 	file = argv[optind];
@@ -161,6 +187,8 @@ main(int argc, char *argv[])
 		}
 	}
 
+	Free(vars);
+	Free(vPrev);
 	AG_ObjectDestroy(mon);
 	AG_ObjectDestroy(ckt);
 	return (0);
