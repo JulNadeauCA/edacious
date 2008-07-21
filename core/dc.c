@@ -154,6 +154,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	Uint retries=0;
 	Uint32 ticks;
 	Uint32 ticksSinceLast;
+	int i;
 	
 	/* Save unknowns from last timestep. */
 	M_VecCopy(sim->xPrevStep, sim->x);
@@ -166,8 +167,9 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	sim->Telapsed += sim->deltaT;
 	sim->ticksLastStep = ticks;
 
-	/* Invoke the general pre-timestep callbacks (for ES_Scope, etc.) */
-	AG_PostEvent(NULL, ckt, "circuit-step-begin", NULL);
+	/* Notify the simulation objects of the beginning timestep. */
+	for (i = 0; i < ckt->nExtObjs; i++)
+		AG_PostEvent(ckt, ckt->extObjs[i], "circuit-step-begin", NULL);
 
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (com->dcStepBegin != NULL)
@@ -204,8 +206,9 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 			com->dcStepEnd(com, sim);
 	}
 
-	/* Invoke the general post-timestep callbacks (for ES_Scope, etc.) */
-	AG_PostEvent(NULL, ckt, "circuit-step-end", NULL);
+	/* Notify the simulation objects of the completed timestep. */
+	for (i = 0; i < ckt->nExtObjs; i++)
+		AG_PostEvent(ckt, ckt->extObjs[i], "circuit-step-end", NULL);
 
 	/* Schedule next step */
 	if (SIM(sim)->running) {

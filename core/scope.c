@@ -32,7 +32,7 @@
 #include <freesg/m/m_plotter.h>
 
 ES_Scope *
-ES_ScopeNew(void *parent, const char *name)
+ES_ScopeNew(void *parent, const char *name, ES_Circuit *ckt)
 {
 	ES_Scope *scope;
 
@@ -40,19 +40,11 @@ ES_ScopeNew(void *parent, const char *name)
 	AG_ObjectInit(scope, &esScopeClass);
 	AG_ObjectSetName(scope, "%s", name);
 	AG_ObjectAttach(parent, scope);
-	return (scope);
-}
 
-static void
-Attached(AG_Event *event)
-{
-	ES_Circuit *ckt = AG_SENDER();
-	ES_Scope *scope = AG_SELF();
-
-	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*")) {
-		AG_FatalError("bad parent");
-	}
+	ES_AddSimulationObj(ckt, scope);
+	AG_ObjectAddDep(scope, ckt, 0);
 	scope->ckt = ckt;
+	return (scope);
 }
 
 static void
@@ -71,7 +63,6 @@ Init(void *obj)
 
 	scope->ckt = NULL;
 	scope->plotter = NULL;
-	AG_SetEvent(scope, "attached", Attached, NULL);
 	AG_SetEvent(scope, "circuit-step-end", PostSimStep, NULL);
 }
 

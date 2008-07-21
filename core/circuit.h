@@ -52,7 +52,7 @@ typedef struct es_sym {
 	TAILQ_ENTRY(es_sym) syms;
 } ES_Sym;
 
-struct es_vsource;
+struct es_scope;
 struct ag_console;
 
 /* The basic Circuit model object. */
@@ -62,7 +62,7 @@ typedef struct es_circuit {
 	char authors[ESCIRCUIT_AUTHORS_MAX];	/* Authors */
 	char keywords[ESCIRCUIT_KEYWORDS_MAX];	/* Keywords */
 	VG *vg;					/* Schematics */
-	struct ag_console *console;		/* Log console */
+	
 	ES_Sim *sim;				/* Current simulation mode */
 	Uint flags;
 #define ES_CIRCUIT_SHOW_NODES		0x01
@@ -78,13 +78,17 @@ typedef struct es_circuit {
 	Uint l;				/* Loops */
 	Uint m;				/* Independent voltage sources */
 	Uint n;				/* Nodes (except ground) */
+	
+	struct ag_console *console;	/* Log console */
+	struct ag_object **extObjs;	/* External simulation objects */
+	Uint              nExtObjs;
 } ES_Circuit;
 
 #define ESCIRCUIT(p) ((ES_Circuit *)(p))
 
 /* Iterate over all Components of the Circuit, floating or not. */
 #define ESCIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) \
-	AGOBJECT_FOREACH_CLASS((com),(ckt),es_component,"ES_Component:*")
+	AGOBJECT_FOREACH_CHILD((com),(ckt),es_component)
 
 /* Iterate over all non-floating Components in the Circuit. */
 #define ESCIRCUIT_FOREACH_COMPONENT(com, ckt)			\
@@ -148,6 +152,7 @@ M_Real      ES_BranchCurrentPrevStep(ES_Circuit *, int);
 void        ES_ResumeSimulation(ES_Circuit *);
 void        ES_SuspendSimulation(ES_Circuit *);
 ES_Sim     *ES_SetSimulationMode(ES_Circuit *, const ES_SimOps *);
+void        ES_AddSimulationObj(ES_Circuit *, void *);
 void        ES_CircuitModified(ES_Circuit *);
 void        ES_DestroySimulation(ES_Circuit *);
 

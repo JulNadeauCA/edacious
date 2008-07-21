@@ -70,7 +70,7 @@ PrintHeader(void)
 static void
 Step(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_SELF();
+	ES_Circuit *ckt = AG_SENDER();
 	ES_SimDC *sim = AG_PTR(1);
 	M_Real v;
 	int i;
@@ -98,6 +98,7 @@ main(int argc, char *argv[])
 	ES_SimDC *sim;
 	char *file;
 	int i, c;
+	AG_Object *mon;
 
 	AG_InitCore("transient", 0);
 	agDebugLvl = 0;
@@ -138,14 +139,20 @@ main(int argc, char *argv[])
 		fprintf(stderr, "%s: %s\n", file, AG_GetError());
 		exit(1);
 	}
-
+	
+	/* Initialize and begin transient simulation. */
 	sim = (ES_SimDC *)ES_SetSimulationMode(ckt, &esSimDcOps);
-	AG_SetEvent(ckt, "circuit-step-begin", Step, "%p", sim);
-	SIM(sim)->ops->start(sim);
+	
+	/* Create a "monitor" object to receive notification events. */
+	mon = AG_ObjectNew(NULL, "mon", &agObjectClass);
+	ES_AddSimulationObj(ckt, mon);
+	AG_SetEvent(mon, "circuit-step-begin", Step, "%p", sim);
 
-	if (showHeader) {
+	if (showHeader)
 		PrintHeader();
-	}
+
+	/* Transient simulation loop */
+	SIM(sim)->ops->start(sim);
 	for (;;) {
 		if (doExit) {
 			break;
@@ -153,6 +160,8 @@ main(int argc, char *argv[])
 			AG_ProcessTimeouts(SDL_GetTicks());
 		}
 	}
+
+	AG_ObjectDestroy(mon);
 	AG_ObjectDestroy(ckt);
 	return (0);
 }

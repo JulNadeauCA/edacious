@@ -180,29 +180,6 @@ ES_CircuitModified(ES_Circuit *ckt)
 		AG_PostEvent(ckt, com, "circuit-modified", NULL);
 }
 
-/*
- * Notify the child objects of the simulation progress (independent of the
- * simulation type).
- */
-static void
-PreSimulationStep(AG_Event *event)
-{
-	ES_Circuit *ckt = AG_SELF();
-	AG_Object *obj;
-
-	OBJECT_FOREACH_CHILD(obj, ckt, ag_object)
-		AG_PostEvent(ckt, obj, "circuit-step-begin", NULL);
-}
-static void
-PostSimulationStep(AG_Event *event)
-{
-	ES_Circuit *ckt = AG_SELF();
-	AG_Object *obj;
-
-	OBJECT_FOREACH_CHILD(obj, ckt, ag_object)
-		AG_PostEvent(ckt, obj, "circuit-step-end", NULL);
-}
-
 ES_Circuit *
 ES_CircuitNew(void *parent, const char *name)
 {
@@ -233,6 +210,8 @@ Init(void *p)
 	ckt->nodes = Malloc(sizeof(ES_Node *));
 	ckt->n = 1;
 	ckt->console = NULL;
+	ckt->extObjs = NULL;
+	ckt->nExtObjs = 0;
 	TAILQ_INIT(&ckt->syms);
 	InitGround(ckt);
 
@@ -242,10 +221,6 @@ Init(void *p)
 	
 	AG_SetEvent(ckt, "edit-open", EditOpen, NULL);
 	AG_SetEvent(ckt, "edit-close", EditClose, NULL);
-
-	/* Notify child objects of simulation progress. */
-	AG_SetEvent(ckt, "circuit-step-begin", PreSimulationStep, NULL);
-	AG_SetEvent(ckt, "circuit-step-end", PostSimulationStep, NULL);
 }
 
 static void
@@ -1019,7 +994,8 @@ static void
 Destroy(void *p)
 {
 	ES_Circuit *ckt = p;
-	
+
+	Free(ckt->extObjs);
 	VG_Destroy(ckt->vg);
 }
 
@@ -1070,6 +1046,16 @@ ES_CircuitLog(void *p, const char *fmt, ...)
 		ln->len = strlen(ln->text);
 	}
 	va_end(args);
+}
+
+/* Attach an external simulation object to the circuit. */
+void
+ES_AddSimulationObj(ES_Circuit *ckt, void *obj)
+{
+	ckt->extObjs = Realloc(ckt->extObjs, (ckt->nExtObjs+1) * 
+	                                     sizeof(AG_Object *));
+	ckt->extObjs[ckt->nExtObjs++] = obj;
+	AG_ObjectAddDep(ckt, obj, 0);
 }
 
 static void
@@ -1412,7 +1398,7 @@ tryname:
 	if (AG_ObjectFindChild(ckt, name) != NULL) {
 		goto tryname;
 	}
-	scope = ES_ScopeNew(ckt, name);
+	scope = ES_ScopeNew(&esVfsRoot, name, ckt);
 	ES_OpenObject(scope);
 }
 
