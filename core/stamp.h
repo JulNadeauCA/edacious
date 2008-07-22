@@ -17,6 +17,10 @@ typedef M_Real *StampData[];
 extern M_Real dummy;
 
 
+/* smallest and largest acceptable conductances */
+#define G_TINY 1e-6
+#define G_HUGE 1e6
+
 /* Macros to simplify function bodies */
 #define N SIM(dc)->ckt->n
 
@@ -27,8 +31,6 @@ extern M_Real dummy;
 
 #define GetElemI(k) ((k) == 0 ? &dummy : M_VecGetElement(dc->z, (k)))
 #define GetElemV(k) GetElemI(k+N)
-
-
 
 /* Conductance */
 #define STAMP_CONDUCTANCE_SIZE 4
@@ -43,6 +45,11 @@ InitStampConductance(Uint k, Uint l, StampData s, ES_SimDC *dc)
 static void __inline__
 StampConductance(M_Real g, StampData s)
 {
+	if (g < G_TINY)
+		g = G_TINY;
+	else if (g > G_HUGE)
+		g = G_HUGE;
+
 	*s[0] += g;
 	*s[1] -= g;
 	*s[2] -= g;
@@ -115,10 +122,13 @@ InitStampThevenin(Uint k, Uint l, Uint v, StampData s, ES_SimDC *dc)
 static void __inline__
 StampThevenin(M_Real voltage, M_Real resistance, StampData s)
 {
+	if (resistance < (1/G_HUGE))
+		resistance = 1/G_HUGE;
+	else if (resistance > (1/G_TINY))
+		resistance = 1/G_TINY;
+
 	StampVoltageSource(voltage, s);
 	*s[5] = -resistance;
 }
-
-
 
 #undef N

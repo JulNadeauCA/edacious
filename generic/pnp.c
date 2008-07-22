@@ -70,8 +70,8 @@ ResetModel(ES_PNP *u)
 {
 	u->gPiF=1.0;
 	u->gPiR=1.0;
-	u->gmF=1.0;
-	u->gmR=1.0;
+	u->gmF=0.0;
+	u->gmR=0.0;
 	u->go=1.0;
 
 	u->Ibf_eq = 0.0;
@@ -121,13 +121,6 @@ UpdateModel(ES_PNP *u, ES_SimDC *dc, M_Real vEB, M_Real vCB)
     	u->Ibf_eq = Ibf - u->gPiF*vEB;
 	u->Ibr_eq = Ibr - u->gPiR*vCB;
 	u->Icc_eq = Icc - u->gmF*vEB + u->gmR*vCB - u->go*vEC;
-
-	if (u->go < 1e-6)
-		u->go=1e-6;
-	if (u->gPiF < 1e-6)
-		u->gPiF=1e-6;
-	if (u->gPiR < 1e-6)
-		u->gPiR=1e-6;
 }
 
 static void Stamp(ES_PNP *u, ES_SimDC *dc)

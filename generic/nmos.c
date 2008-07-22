@@ -123,7 +123,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	InitStampConductance(d,s, u->s_conductance, dc);
 	InitStampCurrentSource(s,d, u->s_current, dc);
 
-	u->gm=1.0;
+	u->gm=0.0;
 	u->go=1.0;
 	u->Ieq=0.0;
 	Stamp(u,dc);

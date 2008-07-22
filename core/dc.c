@@ -254,7 +254,7 @@ Init(void *p)
 
 	sim->method = BE;
 	sim->itersMax = 1000;
-	sim->retriesMax = 250;
+	sim->retriesMax = 25;
 	sim->ticksDelay = 16;
 	sim->T0 = 290.0;
 	sim->A = M_New(0,0);
