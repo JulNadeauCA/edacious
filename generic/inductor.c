@@ -72,6 +72,9 @@ UpdateModel(ES_Inductor *i, ES_SimDC *dc, M_Real v)
 		printf("Method %d not implemented\n", dc->method);
 		break;
 	}
+
+	if (i->g < 1e-6)
+		i->g = 1e-6;
 }
 
 static void
@@ -119,7 +122,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 		break;
 	}
 	
-	i->g = 0.0;
+	i->g = 1e-6;
 	i->Ieq = 0.0;
 	Stamp(i, dc);
 
@@ -142,7 +145,6 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 	ES_Inductor *i = obj;
 	
 	Stamp(i, dc);
-
 }
 
 static void

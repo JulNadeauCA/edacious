@@ -333,7 +333,7 @@ Start(void *p)
 	if (SolveMNA(sim, ckt) == -1) {
 		goto halt;
 	}
-	sim->inputStep = 1;
+	sim->inputStep = 0;
 	if (NR_Iterations(ckt,sim) <= 0) {
 		AG_SetError("Failed to find initial bias point.");
 		goto halt;

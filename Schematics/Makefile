@@ -13,6 +13,7 @@ SHARESRC=	Ground.eschem \
 		Capacitor.eschem \
 		Inductor.eschem \
 		NPN.eschem \
-		PNP.eschem
+		PNP.eschem \
+		SPST.eschem
 
 include ${TOP}/mk/build.prog.mk

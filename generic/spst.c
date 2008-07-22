@@ -37,45 +37,51 @@ const ES_Port esSpstPorts[] = {
 	{ -1 },
 };
 
-#if 0
 static void
-Draw(void *p, VG *vg)
+UpdateModel(ES_Spst *sw)
 {
-	ES_Spst *sw = p;
-
-	VG_Begin(vg, VG_LINES);
-	VG_Vertex2(vg, 0.000, 0.000);
-	VG_Vertex2(vg, 0.400, 0.000);
-	VG_Vertex2(vg, 1.600, 0.000);
-	VG_Vertex2(vg, 2.000, 0.000);
-	VG_End(vg);
-	
-	VG_Begin(vg, VG_CIRCLE);
-	VG_Vertex2(vg, 0.525, 0.0000);
-	VG_CircleRadius(vg, 0.0625);
-	VG_End(vg);
-
-	VG_Begin(vg, VG_CIRCLE);
-	VG_Vertex2(vg, 1.475, 0.0000);
-	VG_CircleRadius(vg, 0.0625);
-	VG_End(vg);
-
-	VG_Begin(vg, VG_LINES);
-	VG_Vertex2(vg, 0.65, 0.00);
-	if (sw->state == 1) {
-		VG_Vertex2(vg, 1.35, 0.0);
-	} else {
-		VG_Vertex2(vg, 1.35, -0.5);
-	}
-	VG_End(vg);
-
-	VG_Begin(vg, VG_TEXT);
-	VG_Vertex2(vg, 1.000, 0.250);
-	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_TextPrintf(vg, "%s", OBJECT(sw)->name);
-	VG_End(vg);
+	sw->g = 1.0/(sw->state ? sw->rOn : sw->rOff);
 }
-#endif
+
+static void
+Stamp(ES_Spst *sw)
+{
+	StampConductance(sw->g, sw->s);
+}
+
+static int
+DC_SimBegin(void *obj, ES_SimDC *dc)
+{
+	ES_Spst *sw = obj;
+	Uint k = PNODE(sw,1);
+	Uint j = PNODE(sw,2);
+
+	InitStampConductance(k, j, sw->s, dc);
+
+	UpdateModel(sw);
+
+	Stamp(sw);
+	
+	return (0);
+}
+
+static void
+DC_StepBegin(void *obj, ES_SimDC *dc)
+{
+	ES_Spst *sw = obj;
+
+	UpdateModel(sw);
+	Stamp(sw);
+}
+
+static void
+DC_StepIter(void *obj, ES_SimDC *dc)
+{
+	ES_Spst *sw = obj;
+
+	/* note that we do not call UpdateModel here; this is to ensure numerical stability if the user changes the switch state in the middle of a timestep */
+	Stamp(sw);
+}
 
 static void
 Init(void *p)
@@ -86,6 +92,10 @@ Init(void *p)
 	sw->rOn = 1.0;
 	sw->rOff = HUGE_VAL;
 	sw->state = 0;
+
+	COMPONENT(sw)->dcSimBegin = DC_SimBegin;
+	COMPONENT(sw)->dcStepBegin = DC_StepBegin;
+	COMPONENT(sw)->dcStepIter = DC_StepIter;
 }
 
 static int
@@ -154,7 +164,7 @@ ToggleState(AG_Event *event)
 {
 	ES_Spst *sw = AG_PTR(1);
 
-	sw->state = (sw->state == 1) ? 2 : 1;
+	sw->state = (sw->state == 1) ? 0 : 1;
 }
 
 static void
@@ -203,7 +213,7 @@ ES_ComponentClass esSpstClass = {
 	},
 	N_("Switch (SPST)"),
 	"Sw",
-	NULL,			/* schem */
+	"SPST.eschem",		/* schem */
 	"Generic|Switches|User Interface",
 	&esIconSPST,
 	NULL,			/* draw */
