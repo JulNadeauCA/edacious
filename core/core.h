@@ -40,6 +40,7 @@ void	ES_RegisterClass(void *);
 void	ES_UnregisterClass(void *);
 void	ES_SetObjectOpenHandler(AG_Window *(*fn)(void *));
 void	ES_SetObjectCloseHandler(void (*fn)(void *));
+void	ES_InsertComponent(ES_Circuit *, VG_Tool *, ES_ComponentClass *);
 
 AG_Window *ES_OpenObject(void *);
 void       ES_CloseObject(void *);

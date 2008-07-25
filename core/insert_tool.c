@@ -29,37 +29,45 @@
 
 #include "core.h"
 
-ES_Component *esFloatingCom = NULL;
+typedef struct es_insert_tool {
+	VG_Tool _inherit;
+	ES_Component *floatingCom;
+} ES_InsertTool;
 
-/* Remove the selected components from the circuit. */
-static int
-RemoveComponent(VG_Tool *t, SDLKey key, int state, void *arg)
+/* Insert a new floating component instance in the circuit. */
+void
+ES_InsertComponent(ES_Circuit *ckt, VG_Tool *pt, ES_ComponentClass *cls)
 {
-	ES_Circuit *ckt = t->p;
+	ES_InsertTool *t = (ES_InsertTool *)pt;
+	char name[AG_OBJECT_NAME_MAX];
+	VG_View *vv = VGTOOL(t)->vgv;
+	AG_TlistItem *it;
 	ES_Component *com;
+	int n = 1;
 
-	if (!state) {
-		return (0);
-	}
-	AG_LockVFS(ckt);
 	ES_LockCircuit(ckt);
-scan:
-	CIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt) {
-		ES_CloseObject(com);
-		if (AG_ObjectInUse(com)) {
-			AG_TextMsg(AG_MSG_ERROR, "%s: %s", OBJECT(com)->name,
-			    AG_GetError());
-			continue;
-		}
-		AG_ObjectDetach(com);
-		AG_ObjectUnlinkDatafiles(com);
-		AG_ObjectDestroy(com);
-		goto scan;
+tryname:
+	Snprintf(name, sizeof(name), "%s%d", cls->pfx, n++);
+	CIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) {
+		if (strcmp(OBJECT(com)->name, name) == 0)
+			break;
 	}
-	AG_UnlockVFS(ckt);
-	ES_CircuitModified(ckt);
+	if (com != NULL)
+		goto tryname;
+
+	com = Malloc(cls->obj.size);
+	AG_ObjectInit(com, cls);
+	AG_ObjectSetName(com, "%s", name);
+	OBJECT(com)->flags |= AG_OBJECT_RESIDENT;
+
+	com->flags |= ES_COMPONENT_FLOATING;
+	t->floatingCom = com;
+
+	AG_ObjectAttach(ckt, com);
+	ES_SelectComponent(com, vv);
+	AG_PostEvent(ckt, com, "circuit-shown", NULL);
+
 	ES_UnlockCircuit(ckt);
-	return (1);
 }
 
 /* Highlight the component connections that would be made to existing nodes. */
@@ -99,8 +107,9 @@ HighlightConnections(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
  * there is no overlap, create new nodes.
  */
 static int
-ConnectComponent(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
+ConnectComponent(ES_InsertTool *t, ES_Circuit *ckt, ES_Component *com)
 {
+	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Vector portPos;
 	ES_Port *port, *portNear;
 	ES_SchemPort *spNear;
@@ -139,40 +148,64 @@ ConnectComponent(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 		ES_UnselectPort(port);
 	}
 	com->flags &= ~(ES_COMPONENT_FLOATING);
-
 	AG_PostEvent(ckt, com, "circuit-connected", NULL);
 	ES_CircuitModified(ckt);
 	ES_UnlockCircuit(ckt);
+	
+	ES_UnselectAllComponents(ckt, vv);
+	ES_SelectComponent(t->floatingCom, vv);
+	t->floatingCom = NULL;
+
+	/* Insert another one. */
+	ES_InsertComponent(ckt, VGTOOL(t), COMCLASS(com));
 	return (0);
+}
+
+/* Remove the current floating component if any. */
+static void
+RemoveFloatingComponent(ES_InsertTool *t)
+{
+	if (t->floatingCom != NULL) {
+		AG_ObjectDetach(t->floatingCom);
+		AG_ObjectDestroy(t->floatingCom);
+		t->floatingCom = NULL;
+	}
 }
 
 static int
 MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
-	VG_Tool *t = p;
-	ES_Circuit *ckt = t->p;
+	ES_InsertTool *t = p;
+	ES_Circuit *ckt = VGTOOL(t)->p;
+	VG_View *vv = VGTOOL(t)->vgv;
 	VG *vg = ckt->vg;
 	int i;
 	
 	switch (button) {
 	case SDL_BUTTON_LEFT:
-		if (esFloatingCom != NULL) {
-			if (ConnectComponent(t->vgv, ckt, esFloatingCom) == -1){
+		if (t->floatingCom != NULL) {
+			if (ConnectComponent(t, ckt, t->floatingCom) == -1){
 				AG_TextMsgFromError();
 				break;
 			}
-			ES_UnselectAllComponents(ckt, t->vgv);
-			ES_SelectComponent(esFloatingCom, t->vgv);
-			esFloatingCom = NULL;
-			VG_ViewSelectTool(t->vgv, NULL, NULL);
+			if (t->floatingCom != NULL) {
+				VG_Node *vn;
+
+				TAILQ_FOREACH(vn, &t->floatingCom->schemEnts,
+				    user) {
+					VG_SetPosition(vn, vPos);
+				}
+				HighlightConnections(vv, ckt, t->floatingCom);
+				return (1);
+			}
 		}
 		break;
 	case SDL_BUTTON_MIDDLE:
-		if (esFloatingCom != NULL) {
+		if (t->floatingCom != NULL) {
 			VG_Node *vn;
 			SDLMod mod = SDL_GetModState();
 
-			TAILQ_FOREACH(vn, &esFloatingCom->schemEnts, user) {
+			TAILQ_FOREACH(vn, &t->floatingCom->schemEnts, user) {
 				if (mod & KMOD_ALT) {
 					VG_FlipVert(vn);
 				} else if (mod & KMOD_CTRL) {
@@ -184,14 +217,9 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 		}
 		break;
 	case SDL_BUTTON_RIGHT:
-		if (esFloatingCom != NULL) {
-			AG_ObjectDetach(esFloatingCom);
-			AG_ObjectDestroy(esFloatingCom);
-			esFloatingCom = NULL;
-			VG_ViewSelectTool(t->vgv, NULL, NULL);
-			return (1);
-		}
-		break;
+		RemoveFloatingComponent(t);
+		VG_ViewSelectTool(vv, NULL, NULL);
+		return (1);
 	default:
 		return (0);
 	}
@@ -202,35 +230,46 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 static int
 MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 {
-	VG_Tool *t = p;
-	ES_Circuit *ckt = t->p;
+	ES_InsertTool *t = p;
+	VG_View *vv = VGTOOL(t)->vgv;
+	ES_Circuit *ckt = VGTOOL(t)->p;
 	VG_Node *vn;
 
-	if (esFloatingCom != NULL) {
-		TAILQ_FOREACH(vn, &esFloatingCom->schemEnts, user) {
+	if (t->floatingCom != NULL) {
+		TAILQ_FOREACH(vn, &t->floatingCom->schemEnts, user) {
 			VG_SetPosition(vn, vPos);
 		}
-		HighlightConnections(t->vgv, ckt, esFloatingCom);
+		HighlightConnections(vv, ckt, t->floatingCom);
 		return (1);
 	}
 	return (0);
 }
 
+static int
+Abort(VG_Tool *t, SDLKey key, int state, void *arg)
+{
+	if (state) {
+		RemoveFloatingComponent((ES_InsertTool *)t);
+		VG_ViewSelectTool(t->vgv, NULL, NULL);
+	}
+	return (1);
+}
+
 static void
 Init(void *p)
 {
-	VG_Tool *t = p;
+	ES_InsertTool *t = p;
 
-	esFloatingCom = NULL;
-	VG_ToolBindKey(t, KMOD_NONE, SDLK_DELETE, RemoveComponent, NULL);
-	VG_ToolBindKey(t, KMOD_NONE, SDLK_d, RemoveComponent, NULL);
+	t->floatingCom = NULL;
+	VG_ToolBindKey(t, KMOD_NONE, SDLK_ESCAPE, Abort, NULL);
+	VG_ToolBindKey(t, KMOD_NONE, SDLK_DELETE, Abort, NULL);
 }
 
 VG_ToolOps esInsertTool = {
 	N_("Insert component"),
 	N_("Insert new components into the circuit."),
 	NULL,
-	sizeof(VG_Tool),
+	sizeof(ES_InsertTool),
 	0,
 	Init,
 	NULL,			/* destroy */

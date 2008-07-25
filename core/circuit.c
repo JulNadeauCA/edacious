@@ -48,7 +48,6 @@ static VG_ToolOps *ToolsSchem[] = {
 	NULL
 };
 
-extern ES_Component *esFloatingCom;		/* insert_tool.c */
 static void InitNode(ES_Node *);
 static void InitGround(ES_Circuit *);
 
@@ -279,7 +278,7 @@ FreeDataset(void *p)
 			port->flags = 0;
 		}
 	}
-	VG_Reinit(ckt->vg);
+	VG_Clear(ckt->vg);
 }
 
 static int
@@ -739,12 +738,9 @@ ES_DelVoltageSource(ES_Circuit *ckt, int vName)
 {
 	int v = vName;
 
-	if (v == -1)
+	if (v == -1 || v <= ckt->m) {
 		return;
-#ifdef DEBUG
-	if (v <= ckt->m)
-		AG_FatalError("No such voltage source: v%d", vName);
-#endif
+	}
 	if (v < --ckt->m) {
 		for (; v < ckt->m; v++)
 			ckt->vSrcs[v] = ckt->vSrcs[v+1];
@@ -1405,47 +1401,20 @@ tryname:
 static void
 InsertComponent(AG_Event *event)
 {
-	char name[AG_OBJECT_NAME_MAX];
 	VG_View *vv = AG_PTR(1);
 	AG_Tlist *tl = AG_PTR(2);
 	ES_Circuit *ckt = AG_PTR(3);
 	AG_TlistItem *it;
-	ES_ComponentClass *cls;
-	ES_Component *com;
-	VG_Tool *t;
-	int n = 1;
+	VG_Tool *insTool;
 
 	if ((it = AG_TlistSelectedItem(tl)) == NULL) {
 		AG_TextMsg(AG_MSG_ERROR, _("No component type is selected."));
 		return;
 	}
-	cls = (ES_ComponentClass *)it->p1;
-tryname:
-	Snprintf(name, sizeof(name), "%s%d", cls->pfx, n++);
-	CIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) {
-		if (strcmp(OBJECT(com)->name, name) == 0)
-			break;
+	if ((insTool = VG_ViewFindTool(vv, "Insert component")) != NULL) {
+		VG_ViewSelectTool(vv, insTool, ckt);
+		ES_InsertComponent(ckt, insTool, it->p1);
 	}
-	if (com != NULL)
-		goto tryname;
-
-	com = Malloc(cls->obj.size);
-	AG_ObjectInit(com, cls);
-	AG_ObjectSetName(com, "%s", name);
-	OBJECT(com)->flags |= AG_OBJECT_RESIDENT;
-	com->flags |= ES_COMPONENT_FLOATING;
-
-	ES_LockCircuit(ckt);
-
-	AG_ObjectAttach(ckt, com);
-	AG_PostEvent(ckt, com, "circuit-shown", NULL);
-
-	if ((t = VG_ViewFindTool(vv, "Insert component")) != NULL) {
-		VG_ViewSelectTool(vv, t, ckt);
-		esFloatingCom = com;
-		ES_SelectComponent(esFloatingCom, vv);
-	}
-	ES_UnlockCircuit(ckt);
 }
 
 static void *

@@ -71,7 +71,7 @@ Reinit(void *obj)
 {
 	ES_Schem *scm = obj;
 
-	VG_Reinit(scm->vg);
+	VG_Clear(scm->vg);
 }
 
 static void
