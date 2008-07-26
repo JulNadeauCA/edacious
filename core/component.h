@@ -101,7 +101,8 @@ typedef struct es_component {
 	void (*dcStepIter)(void *, struct es_sim_dc *);
 	void (*dcStepEnd)(void *, struct es_sim_dc *);
 	void (*dcSimEnd)(void *, struct es_sim_dc *);
-
+	void (*dcUpdateError)(void *, struct es_sim_dc *, M_Real *);
+	
 	TAILQ_HEAD(,vg_node) schemEnts;		/* Schematic entities */
 	TAILQ_ENTRY(es_component) components;
 } ES_Component;

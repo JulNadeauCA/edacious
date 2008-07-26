@@ -271,6 +271,7 @@ Init(void *obj)
 	com->dcStepIter = NULL;
 	com->dcStepEnd = NULL;
 	com->dcSimEnd = NULL;
+	com->dcUpdateError = NULL;
 	
 	TAILQ_INIT(&com->schemEnts);
 

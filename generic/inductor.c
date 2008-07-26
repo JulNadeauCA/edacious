@@ -51,6 +51,12 @@ vPrevStep(ES_Inductor *i)
 {
 	return V_PREV_STEP(i,PORT_A)-V_PREV_STEP(i,PORT_B);
 }
+static M_Real
+vThisStep(ES_Inductor *i)
+{
+	return ES_NodeVoltage(ESCOMPONENT_CIRCUIT(i), PORT_A) - ES_NodeVoltage(ESCOMPONENT_CIRCUIT(i), PORT_A);
+}
+
 
 /* Updates the small- and large-signal models, saving the previous values. */
 static void
@@ -144,6 +150,47 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 	Stamp(i, dc);
 }
 
+/* Returns current flowing through the linearized model at previous step */
+static M_Real
+BranchCurrent(ES_Inductor *i, ES_SimDC *dc)
+{
+	switch(dc->method) {
+	case BE:
+	case TR:
+		return i->Ieq + i->g * vPrevStep(i);
+	case FE:
+		return i->Ieq;
+	default:
+		printf("Method %d not implemented\n", dc->method);
+		break;
+	}
+
+}
+
+/* LTE for capacitor, estimated via divided differences */
+static void
+DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
+{
+	ES_Inductor *i = obj;
+	M_Real localErr;
+	M_Real I = BranchCurrent(i, dc);
+	switch(dc->method) {
+	case BE:
+	case FE:
+		localErr = dc->deltaT / 2.0 / i->L * M_Fabs((vThisStep(i) - vPrevStep(i))
+							  / I);
+		break;
+	case TR:
+	default:
+		printf("Method %d not implemented\n", dc->method);
+		break;
+	}
+
+	if(localErr < *err)
+		*err = localErr;
+}
+
+
 static void
 Init(void *p)
 {
@@ -155,6 +202,7 @@ Init(void *p)
 	COMPONENT(i)->dcSimBegin = DC_SimBegin;
 	COMPONENT(i)->dcStepBegin = DC_StepBegin;
 	COMPONENT(i)->dcStepIter = DC_StepIter;
+	COMPONENT(i)->dcUpdateError = DC_UpdateError;
 }
 
 static int

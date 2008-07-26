@@ -57,6 +57,13 @@ iPrevStep(ES_Capacitor *c)
 	return ES_BranchCurrentPrevStep(ESCOMPONENT_CIRCUIT(c), c->vIdx);
 }
 
+static M_Real
+iThisStep(ES_Capacitor *c)
+{
+	return ES_BranchCurrent(ESCOMPONENT_CIRCUIT(c), c->vIdx);
+}
+
+
 /* Updates the small- and large-signal models, saving the previous values. */
 static void
 UpdateModel(ES_Capacitor *c, M_Real v, ES_SimDC *dc)
@@ -145,6 +152,28 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 	Stamp(c, dc);
 }
 
+/* LTE for capacitor, estimated via divided differences */
+static void
+DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
+{
+	ES_Capacitor *c = obj;
+	M_Real localErr;
+	switch(dc->method) {
+	case BE:
+	case FE:
+		localErr = dc->deltaT / 2.0 / c->C * M_Fabs((iThisStep(c) - iPrevStep(c))
+							  / vPrevStep(c));
+		break;
+	case TR:
+	default:
+		printf("Method %d not implemented\n", dc->method);
+		break;
+	}
+
+	if(localErr < *err)
+		*err = localErr;
+}
+
 static void
 Connected(AG_Event *event)
 {
@@ -177,6 +206,7 @@ Init(void *p)
 	COMPONENT(c)->dcSimBegin = DC_SimBegin;
 	COMPONENT(c)->dcStepBegin = DC_StepBegin;
 	COMPONENT(c)->dcStepIter = DC_StepIter;
+	COMPONENT(c)->dcUpdateError = DC_UpdateError;
 	
 	AG_SetEvent(c, "circuit-connected", Connected, NULL);
 	AG_SetEvent(c, "circuit-disconnected", Disconnected, NULL);

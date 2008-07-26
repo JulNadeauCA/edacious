@@ -158,6 +158,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	Uint32 ticks;
 	Uint32 ticksSinceLast;
 	int i;
+	M_Real error;
 	
 	/* Save unknowns from last timestep. */
 	M_VecCopy(sim->xPrevStep, sim->x);
@@ -206,6 +207,19 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		if (SolveMNA(sim, ckt) == -1)
 			goto halt;
 	}
+
+	/* Get error from components */
+	error = HUGE_VAL;
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (com->dcUpdateError != NULL)
+			com->dcUpdateError(com, sim, &error);
+	}
+
+	/* No energy storage components : no error */
+	if(error == HUGE_VAL)
+		error = 0;
+
+	M_SetReal(ckt, "%err", error*100);
 
 	/* Invoke the Component DC specific post-timestep callbacks. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
