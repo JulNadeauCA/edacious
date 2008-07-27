@@ -48,8 +48,6 @@
 static int
 SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 {
-	M_Real d;
-
 	*sim->groundNode = 1.0;
 	/* Find LU factorization and solve by backsubstitution. */
 	M_FactorizeLU(sim->A);
@@ -78,8 +76,7 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 	M_Real diff;
 	Uint i = 0, j;
 
-	do {
-	nextIter:
+	while(1) {
 		if (++i > sim->itersMax)
 			return -i; 
 
@@ -102,27 +99,28 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 		 * that the simulation may be damped
 		 */
 		if(sim->isDamped)
-			goto nextIter;
-
-		/* 'G' part of the matrix : voltages */
+			continue;
+		
+		/* check difference on voltages and currents */
+		/* voltages */
 		for (j = 0; j < ckt->n; j++)
 		{
 			M_Real prev = M_VecGet(sim->xPrevIter, j);
 			M_Real cur = M_VecGet(sim->x, j);
 			if(Fabs(cur - prev) > MAX_V_DIFF + Fabs(MAX_REL_DIFF * prev))
-				goto nextIter;
+				continue;
 		}
 
-		/* 'D' part of the matrix : currents */
+		/* currents */
 		for (j = ckt->n; j < ckt->m + ckt->n; j++)
 		{
 			M_Real prev = M_VecGet(sim->xPrevIter, j);
 			M_Real cur = M_VecGet(sim->x, j);
 			if(Fabs(cur - prev) > MAX_I_DIFF + Fabs(MAX_REL_DIFF * prev))
-				goto nextIter;
+				continue;
 		}
-		
-	} while(0);
+		break;
+	}
 
 	/* Update the statistics. */
 	M_SetReal(ckt, "nrIters", i);
@@ -137,10 +135,6 @@ static void
 SetTimestep(ES_SimDC *sim, M_Real deltaT)
 {
 	sim->deltaT = deltaT;
-
-	/* Load new values into matrices now that timestep has changed. */
-	M_SetZero(sim->A);
-	M_VecSetZero(sim->z);
 
 	/* Update the timestep statistics. */
 	if (deltaT > sim->stepHigh) { sim->stepHigh = deltaT; }
@@ -163,11 +157,10 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	/* Save unknowns from last timestep. */
 	M_VecCopy(sim->xPrevStep, sim->x);
 
+	/* Get time since last step and set that to be our deltaT */
 	ticks = SDL_GetTicks();
 	ticksSinceLast = ticks - sim->ticksLastStep;
 	SetTimestep(sim, (M_Real)(ticksSinceLast/1000.0));
-	sim->inputStep = 0;
-
 	sim->Telapsed += sim->deltaT;
 	sim->ticksLastStep = ticks;
 
@@ -175,6 +168,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	for (i = 0; i < ckt->nExtObjs; i++)
 		AG_PostEvent(ckt, ckt->extObjs[i], "circuit-step-begin", NULL);
 
+	sim->inputStep = 0;
 	M_SetZero(sim->A);
 	M_VecSetZero(sim->z);
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
@@ -182,11 +176,14 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 			com->dcStepBegin(com, sim);
 	}
 
+	/* DC biasing */
 	if (SolveMNA(sim, ckt) == -1)
 		goto halt;
 
-	/* Shrink timestep until a stable solution is found. */
+	/* NR control loop : shrink timestep until a stable solution is found. */
 	while (NR_Iterations(ckt,sim) <= 0) {
+		/* NR_Iterations failed to converge : we reduce step size */
+		
 		if (++retries > sim->retriesMax) {
 			AG_SetError(_("Could not find stable solution."));
 			goto halt;
@@ -214,11 +211,9 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		if (com->dcUpdateError != NULL)
 			com->dcUpdateError(com, sim, &error);
 	}
-
 	/* No energy storage components : no error */
 	if(error == HUGE_VAL)
 		error = 0;
-
 	M_SetReal(ckt, "%err", error*100);
 
 	/* Invoke the Component DC specific post-timestep callbacks. */
@@ -283,7 +278,7 @@ Init(void *p)
 }
 
 static void
-Resize(void *p, ES_Circuit *ckt)
+InitMatrices(void *p, ES_Circuit *ckt)
 {
 	ES_SimDC *sim = p;
 	Uint n = ckt->n;
@@ -311,27 +306,14 @@ Start(void *p)
 	ES_Circuit *ckt = SIM(sim)->ckt;
 	ES_Component *com;
 
-	/* Reallocate the matrices if necessary. */
-	Resize(sim, ckt);
-
-	/* Set up the timer for automatic simulation updates. */
-	SIM(sim)->running = 1;
-	AG_LockTimeouts(ckt);
-	if (AG_TimeoutIsScheduled(ckt, &sim->toUpdate)) {
-		AG_DelTimeout(ckt, &sim->toUpdate);
-	}
-	AG_AddTimeout(ckt, &sim->toUpdate, sim->ticksDelay);
-	AG_UnlockTimeouts(ckt);
+	/* Initialize vectors/matrices with proper size */
+	InitMatrices(sim, ckt);
 
 	/* Set the initial timing parameters and clear the statistics. */
 	ClearStats(sim);
 	sim->ticksLastStep = SDL_GetTicks();
 	sim->deltaT = ((M_Real) sim->ticksDelay)/1000.0;
-	
-	/* Initialize the matrices. */
-	M_SetZero(sim->A);
-	M_VecSetZero(sim->z);
-	
+
 	/* Invoke the DC-specific simulation start callback. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (com->dcSimBegin != NULL) {
@@ -353,6 +335,15 @@ Start(void *p)
 		goto halt;
 	}
 
+	/* Schedule the call to StepMNA*/
+	AG_LockTimeouts(ckt);
+	if (AG_TimeoutIsScheduled(ckt, &sim->toUpdate)) {
+		AG_DelTimeout(ckt, &sim->toUpdate);
+	}
+	AG_AddTimeout(ckt, &sim->toUpdate, sim->ticksDelay);
+	AG_UnlockTimeouts(ckt);
+
+	SIM(sim)->running = 1;
 	/* Invoke the general-purpose "simulation begin" callback. */
 	AG_PostEvent(NULL, ckt, "circuit-sim-begin", "%p", sim);
 
@@ -517,7 +508,7 @@ const ES_SimOps esSimDcOps = {
 	Destroy,
 	Start,
 	Stop,
-	Resize,
+	InitMatrices,
 	NodeVoltage,
 	NodeVoltagePrevStep,
 	BranchCurrent,
