@@ -10,7 +10,7 @@ sensitive=true,%
 morecomment=[l]\#,%
 morestring=[b]',%
 }
-\lstset{language=Ada,breaklines, language=pseudo}
+\lstset{breaklines, language=pseudo}
 \setlength{\columnsep}{5pt}
 
 \bibliographystyle{plain}
@@ -75,10 +75,10 @@ where $I_S$ is the reverse saturation current and $V_t$ is the thermal voltage (
 \begin{equation}
 g = \frac{di}{dv} = (I_S/V_t) e^{v/V_T} \approx i(v)/V_t
 \end{equation}
-The error committed in the equation is $I_S / V_t$, which for common diodes is around $10^{-12} S$, which is negligibly for common applications and allow us to avoid computing the $\exp$ function twice.
+The error committed in the approximation is $I_S / V_t$, which for common diodes is around $10^{-12} S$. This is negligible for ordinary applications and allows us to avoid computing the $\exp$ function twice.\\
 In simulation we use the Newton-Raphson method to solve circuits with non-linear elements. The method works by linearizing the constitutive equations, solve for a new operating point, and iterate until convergence. The linearised curve around operating point $v_n$ is :
 \begin{equation}
-i_{lin}(v) = i(v_n) + (di/dv)(v_n) (v - v_n)
+i_{lin}(v) = i(v_n) + (v - v_n) \frac{di}{dv}(v_n)
 \end{equation}
 By rearranging this equation, we find the i-v relation $i_{lin}=(i(v_n)-gv_n)+gv$.  Hence the appropriate companion model for a diode is a conductance $g$ in parallel with a current source $i(v_n)-gv_n$, not simply $i(v_n)$, as one might suspect.  The result is shown in Figure~\ref{fig:diode}.
 
@@ -299,8 +299,8 @@ Then we use an integration method to get an expression for $v_{n+1}$, which can 
 \begin{equation}
 v_{n+1} \approx v_n+(\Delta t/C)I
 \end{equation}
-How we define $I$ determines the integration method implemented by the companion model. Geometrically, it corresponds to the point at which we evaluate the derivative : FE takes the derivative at the current point, BE at the next point, and TR takes an average of these two. Table~\ref{tb:cap_int} summarizes three common integration methods and the corresponding model parameters.\\
-We recognise either a Thevenin model or a voltage source, depending on whether $I$ depends on $I_{n+1}$ (implicit method) or just $I_n$ (explicit method). We should note that every implicit model is represented by a Thevenin model, and can be converted to an equivalent Norton model. We chose Thevenin model for the capacitor since it is more accurate : computers have trouble dividing by small numbers such as $\Delta t$, and this is precisely what Norton models do. This can be explained by the fact that voltage is the state variable of capacitors, so they change proportionally to $\Delta t$.
+How we define $I$ determines the integration method implemented by the companion model. Geometrically, it corresponds to the point at which we evaluate the derivative : FE computes the derivative at the current point, BE at the next point, and TR is an average of the two. Table~\ref{tb:cap_int} summarizes three common integration methods and the corresponding model parameters.\\
+We recognise either a Thevenin model or a voltage source, depending on whether $I$ depends on $I_{n+1}$ (implicit method) or just $I_n$ (explicit method). Note that every implicit model uses a Thevenin model, which can be converted to an equivalent Norton model. We chose Thevenin model for the capacitor since it is more accurate : computers have trouble dividing by small numbers such as $\Delta t$, and this is precisely what Norton models do. This can be explained by the fact that voltage is the state variable of capacitors : $v(t)$ is derivable, which means its change in $\Delta t$ is proportional to $\Delta t$.
 \begin{table}[h]
 \centering
 \caption{Capacitor companion model parameters for integration methods \label{tb:cap_int}}
