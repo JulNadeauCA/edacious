@@ -232,7 +232,7 @@ Edit(void *p)
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 	AG_Numerical *num;
 
-	M_NumericalNewRealPNZ(box, 0, "uH", _("Inductance: "), &i->L);
+	M_NumericalNewRealPNZ(box, 0, "H", _("Inductance: "), &i->L);
 
 	return (box);
 }
