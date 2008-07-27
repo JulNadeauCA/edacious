@@ -11,9 +11,9 @@ typedef struct es_pmos {
 	M_Real gm;
 	M_Real go;
 	
-	M_Real *s_vccs[STAMP_VCCS_SIZE];
-	M_Real *s_conductance[STAMP_CONDUCTANCE_SIZE];
-	M_Real *s_current[STAMP_CURRENT_SOURCE_SIZE];
+	StampVCCSData s_vccs;
+	StampConductanceData s_conductance;
+	StampCurrentSourceData s_current;
 } ES_PMOS;
 
 __BEGIN_DECLS

@@ -20,16 +20,16 @@ typedef struct es_pnp {
 	M_Real VebPrevIter;
 	M_Real VcbPrevIter;
 
-	M_Real *sc_be[STAMP_CONDUCTANCE_SIZE];
-	M_Real *sc_bc[STAMP_CONDUCTANCE_SIZE];
-	M_Real *sc_ec[STAMP_CONDUCTANCE_SIZE];
+	StampConductanceData sc_be;
+	StampConductanceData sc_bc;
+	StampConductanceData sc_ec;
 
-	M_Real *sv_ebec[STAMP_VCCS_SIZE];
-	M_Real *sv_cbce[STAMP_VCCS_SIZE];
+	StampVCCSData sv_ebec;
+	StampVCCSData sv_cbce;
 	
-	M_Real *si_be[STAMP_CURRENT_SOURCE_SIZE];
-	M_Real *si_bc[STAMP_CURRENT_SOURCE_SIZE];
-	M_Real *si_ce[STAMP_CURRENT_SOURCE_SIZE];
+	StampCurrentSourceData si_be;
+	StampCurrentSourceData si_bc;
+	StampCurrentSourceData si_ce;
 } ES_PNP;
 
 __BEGIN_DECLS

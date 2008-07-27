@@ -10,7 +10,7 @@ typedef struct es_resistor {
 
 	M_Real g;
 
-	M_Real *s[STAMP_CONDUCTANCE_SIZE];
+	StampConductanceData s;
 } ES_Resistor;
 
 __BEGIN_DECLS

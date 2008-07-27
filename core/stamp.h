@@ -11,8 +11,6 @@
  */
 
 
-typedef M_Real *StampData[];
-
 /* Dummy variable to write everything related to ground to */
 extern M_Real dummy;
 
@@ -33,9 +31,10 @@ extern M_Real dummy;
 #define GetElemV(k) GetElemI(k+N)
 
 /* Conductance */
-#define STAMP_CONDUCTANCE_SIZE 4
+typedef M_Real *StampConductanceData[4];
+
 static void __inline__
-InitStampConductance(Uint k, Uint l, StampData s, ES_SimDC *dc)
+InitStampConductance(Uint k, Uint l, StampConductanceData s, ES_SimDC *dc)
 {
 	s[0] = GetElemG(k, k);
 	s[1] = GetElemG(k, l);
@@ -43,7 +42,7 @@ InitStampConductance(Uint k, Uint l, StampData s, ES_SimDC *dc)
 	s[3] = GetElemG(l, l);
 }
 static void __inline__
-StampConductance(M_Real g, StampData s)
+StampConductance(M_Real g, StampConductanceData s)
 {
 	if (g < G_TINY)
 		g = G_TINY;
@@ -57,24 +56,24 @@ StampConductance(M_Real g, StampData s)
 }
 
 /* Current source */
-#define STAMP_CURRENT_SOURCE_SIZE 2
+typedef M_Real *StampCurrentSourceData[2];
 static void __inline__
-InitStampCurrentSource(Uint k, Uint l, StampData s, ES_SimDC *dc)
+InitStampCurrentSource(Uint k, Uint l, StampCurrentSourceData s, ES_SimDC *dc)
 {
 	s[0] = GetElemI(k);
 	s[1] = GetElemI(l);
 }
 static void __inline__
-StampCurrentSource(M_Real I, StampData s)
+StampCurrentSource(M_Real I, StampCurrentSourceData s)
 {
 	*s[0] += I;
 	*s[1] -= I;
 }
 
 /* Voltage controlled current source */
-#define STAMP_VCCS_SIZE 4
+typedef M_Real *StampVCCSData[4];
 static void __inline__
-InitStampVCCS(Uint k, Uint l, Uint p, Uint q, StampData s, ES_SimDC *dc)
+InitStampVCCS(Uint k, Uint l, Uint p, Uint q, StampVCCSData s, ES_SimDC *dc)
 {
 	s[0] = GetElemG(p, k);
 	s[1] = GetElemG(p, l);
@@ -82,7 +81,7 @@ InitStampVCCS(Uint k, Uint l, Uint p, Uint q, StampData s, ES_SimDC *dc)
 	s[3] = GetElemG(q, l);
 }
 static void __inline__
-StampVCCS(M_Real g, StampData s)
+StampVCCS(M_Real g, StampVCCSData s)
 {
 	*s[0] += g;
 	*s[1] -= g;
@@ -91,9 +90,9 @@ StampVCCS(M_Real g, StampData s)
 }
 
 /* Independant voltage source */
-#define STAMP_VOLTAGE_SOURCE_SIZE 5
+typedef M_Real *StampVoltageSourceData[5];
 static void __inline__
-InitStampVoltageSource(Uint k, Uint l, Uint v, StampData s, ES_SimDC *dc)
+InitStampVoltageSource(Uint k, Uint l, Uint v, StampVoltageSourceData s, ES_SimDC *dc)
 {
 	s[0] = GetElemB(k, v);
 	s[1] = GetElemC(v, k);
@@ -102,7 +101,7 @@ InitStampVoltageSource(Uint k, Uint l, Uint v, StampData s, ES_SimDC *dc)
 	s[4] = GetElemV(v);
 }
 static void __inline__ 
-StampVoltageSource(M_Real voltage, StampData s)
+StampVoltageSource(M_Real voltage, StampVoltageSourceData s)
 {
 	*s[0] = 1.0;
 	*s[1] = 1.0;
@@ -112,15 +111,15 @@ StampVoltageSource(M_Real voltage, StampData s)
 }
 
 /* Thevenin model */
-#define STAMP_THEVENIN_SIZE 6
+typedef M_Real *StampTheveninData[6];
 static void __inline__
-InitStampThevenin(Uint k, Uint l, Uint v, StampData s, ES_SimDC *dc)
+InitStampThevenin(Uint k, Uint l, Uint v, StampTheveninData s, ES_SimDC *dc)
 {
 	InitStampVoltageSource(k, l, v, s, dc);
 	s[5] = GetElemD(v, v);
 }
 static void __inline__
-StampThevenin(M_Real voltage, M_Real resistance, StampData s)
+StampThevenin(M_Real voltage, M_Real resistance, StampTheveninData s)
 {
 	if (resistance < (1/G_HUGE))
 		resistance = 1/G_HUGE;

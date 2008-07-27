@@ -3,7 +3,8 @@
 typedef struct es_isource {
 	struct es_component _inherit;
 	M_Real I;				/* Current (amps) */
-	M_Real *s[STAMP_CURRENT_SOURCE_SIZE];
+	
+	StampCurrentSourceData s;
 } ES_Isource;
 
 __BEGIN_DECLS

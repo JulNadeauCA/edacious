@@ -5,7 +5,7 @@ typedef struct es_vsource {
 
 	int vIdx;				/* Index into e */
 	M_Real v;				/* Effective voltage */
-	M_Real *s[STAMP_VOLTAGE_SOURCE_SIZE];	/* Matrix stamp */
+	StampVoltageSourceData s;
 
 	TAILQ_HEAD(,es_loop) loops;		/* Forward loops */
 	Uint nloops;

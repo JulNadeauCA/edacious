@@ -9,8 +9,8 @@ typedef struct es_diode {
 
 	M_Real vPrevIter;
 
-	M_Real *s_conductance[STAMP_CONDUCTANCE_SIZE];
-	M_Real *s_current_source[STAMP_CONDUCTANCE_SIZE];
+	StampConductanceData s_conductance;
+	StampCurrentSourceData s_current_source;
 } ES_Diode;
 
 __BEGIN_DECLS

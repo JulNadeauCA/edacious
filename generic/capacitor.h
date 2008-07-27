@@ -7,7 +7,7 @@ typedef struct es_capacitor {
 	M_Real C;			/* Capacitance (farads) */
 	M_Real V0;			/* Starting voltage */
 	M_Real r, v;			/* Parameters of Thevenin model */
-	M_Real *s[STAMP_THEVENIN_SIZE];
+	StampTheveninData s;
 } ES_Capacitor;
 
 __BEGIN_DECLS

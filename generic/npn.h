@@ -20,16 +20,16 @@ typedef struct es_npn {
 	M_Real VbePrevIter;
 	M_Real VbcPrevIter;
 
-	M_Real *sc_be[STAMP_CONDUCTANCE_SIZE];
-	M_Real *sc_bc[STAMP_CONDUCTANCE_SIZE];
-	M_Real *sc_ec[STAMP_CONDUCTANCE_SIZE];
+	StampConductanceData sc_be;
+	StampConductanceData sc_bc;
+	StampConductanceData sc_ec;
 
-	M_Real *sv_bece[STAMP_VCCS_SIZE];
-	M_Real *sv_bcec[STAMP_VCCS_SIZE];
+	StampVCCSData sv_bece;
+	StampVCCSData sv_bcec;
 	
-	M_Real *si_eb[STAMP_CURRENT_SOURCE_SIZE];
-	M_Real *si_cb[STAMP_CURRENT_SOURCE_SIZE];
-	M_Real *si_ec[STAMP_CURRENT_SOURCE_SIZE];
+	StampCurrentSourceData si_eb;
+	StampCurrentSourceData si_cb;
+	StampCurrentSourceData si_ec;
 } ES_NPN;
 
 __BEGIN_DECLS

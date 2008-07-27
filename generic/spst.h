@@ -9,7 +9,7 @@ typedef struct es_spst {
 
 	int state;			/* Last state */
 
-	M_Real *s[STAMP_CONDUCTANCE_SIZE];
+	StampConductanceData s;
 } ES_Spst;
 
 __BEGIN_DECLS
