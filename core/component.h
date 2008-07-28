@@ -116,10 +116,8 @@ typedef struct es_component {
  			        	       ES_PNODE((p),(n)))
 #define ES_V_PREV_STEP(p,k,n)	ES_NodeVoltagePrevStep(ESCOMPONENT_CIRCUIT(p), \
 						       ES_PNODE((p),(k)),(n))
-#define ES_IBRANCH(p,n)		ES_BranchCurrent(ESCOMPONENT_CIRCUIT(p),\
- 			        	       ES_PNODE((p),(n)))
-#define ES_I_PREV_STEP(p,k,n)	ES_BranchCurrentPrevStep(ESCOMPONENT_CIRCUIT(p), \
-							 ES_PNODE((p),(k)),(n))
+#define ES_IBRANCH(p,n)		ES_BranchCurrent(ESCOMPONENT_CIRCUIT(p), n)
+#define ES_I_PREV_STEP(p,k,n)	ES_BranchCurrentPrevStep(ESCOMPONENT_CIRCUIT(p), k, n)
 #ifdef DEBUG
 # define ES_PNODE(p,n)		ES_PortNode(ESCOMPONENT(p),(n))
 #else
