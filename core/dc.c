@@ -141,6 +141,26 @@ SetTimestep(ES_SimDC *sim, M_Real deltaT)
 	if (deltaT < sim->stepLow) { sim->stepLow = deltaT; }
 }
 
+/* Cycle the xPrevSteps array : shift each solution one step back
+ * in time, and forget the oldest one */
+static void
+CyclePreviousSolutions(ES_SimDC *sim)
+{
+	int i;
+	M_Vector *last = sim->xPrevSteps[sim->stepsToKeep - 1];
+	if(sim->stepsToKeep == 1)
+	{
+		M_VecSetZero(sim->xPrevSteps[0]);
+		return;
+	}
+	for(i = sim->stepsToKeep - 2 ; i >= 0 ; i--)
+	{
+		sim->xPrevSteps[i+1] = sim->xPrevSteps[i];
+	}
+	sim->xPrevSteps[0] = last;
+	M_VecSetZero(last);
+}
+
 /* Simulation timestep. */
 static Uint32
 StepMNA(void *obj, Uint32 ival, void *arg)
@@ -153,9 +173,6 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	Uint32 ticksSinceLast;
 	int i;
 	M_Real error;
-	
-	/* Save unknowns from last timestep. */
-	M_VecCopy(sim->xPrevStep, sim->x);
 
 	/* Get time since last step and set that to be our deltaT */
 	ticks = SDL_GetTicks();
@@ -204,6 +221,10 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		if (SolveMNA(sim, ckt) == -1)
 			goto halt;
 	}
+
+	/* Keep solution */
+	CyclePreviousSolutions(sim);
+	M_VecCopy(sim->xPrevSteps[0], sim->x);
 
 	/* Get error from components */
 	error = HUGE_VAL;
@@ -269,7 +290,8 @@ Init(void *p)
 	sim->A = M_New(0,0);
 	sim->z = M_VecNew(0);
 	sim->x = M_VecNew(0);
-	sim->xPrevStep = M_VecNew(0);
+	sim->xPrevSteps = NULL;
+	sim->stepsToKeep = 0;
 	sim->xPrevIter = M_VecNew(0);
 	sim->groundNode = NULL;
 	
@@ -283,20 +305,29 @@ InitMatrices(void *p, ES_Circuit *ckt)
 	ES_SimDC *sim = p;
 	Uint n = ckt->n;
 	Uint m = ckt->m;
+	int i;
 
 	M_Resize(sim->A, n+m, n+m);
 	M_SetZero(sim->A);
 		
 	M_VecResize(sim->z, n+m);
 	M_VecResize(sim->x, n+m);
-	M_VecResize(sim->xPrevStep, n+m);
 	M_VecResize(sim->xPrevIter, n+m);
 	M_VecSetZero(sim->z);
 	M_VecSetZero(sim->x);
-	M_VecSetZero(sim->xPrevStep);
 	M_VecSetZero(sim->xPrevIter);
 
 	sim->groundNode = M_GetElement(sim->A, 0, 0);
+
+	/* Get number of steps to keep according to integration method */
+	sim->stepsToKeep = 4;
+	/* Initialise solutions from previous steps */
+	sim->xPrevSteps = malloc(sim->stepsToKeep * sizeof(M_Vector *));
+	for(i = 0; i < sim->stepsToKeep ; i++)
+	{
+		sim->xPrevSteps[i] = M_VecNew(n+m);
+		M_VecSetZero(sim->xPrevSteps[i]);
+	}
 }
 
 static void
@@ -334,6 +365,10 @@ Start(void *p)
 		AG_SetError("Failed to find initial bias point.");
 		goto halt;
 	}
+
+	/* Keep solution */
+	CyclePreviousSolutions(sim);
+	M_VecCopy(sim->xPrevSteps[0], sim->x);
 
 	/* Schedule the call to StepMNA*/
 	AG_LockTimeouts(ckt);
@@ -375,8 +410,17 @@ Destroy(void *p)
 	M_Free(sim->A);
 	M_VecFree(sim->z);
 	M_VecFree(sim->x);
-	M_VecFree(sim->xPrevStep);
 	M_VecFree(sim->xPrevIter);
+
+	if(sim->xPrevSteps)
+	{
+		int i;
+		for(i = 0; i < sim->stepsToKeep ; i++)
+		{
+			M_VecFree(sim->xPrevSteps[i]);
+		}
+	}
+	free(sim->xPrevSteps);
 }
 
 static void
@@ -477,7 +521,7 @@ NodeVoltagePrevStep(void *p, int j)
 {
 	ES_SimDC *sim = p;
 
-	return (j>=0)&&(sim->xPrevStep->m > j) ? M_VecGet(sim->xPrevStep, j) : 0.0;
+	return (j>=0)&&(sim->xPrevSteps[0]->m > j) ? M_VecGet(sim->xPrevSteps[0], j) : 0.0;
 }
 
 static M_Real
@@ -497,7 +541,7 @@ BranchCurrentPrevStep(void *p, int k)
 	ES_Circuit *ckt = SIM(sim)->ckt;
 	int i = ckt->n + k;
 
-	return (i>=0)&&(sim->xPrevStep->m > i) ? M_VecGet(sim->xPrevStep, i) : 0.0;
+	return (i>=0)&&(sim->xPrevSteps[0]->m > i) ? M_VecGet(sim->xPrevSteps[0], i) : 0.0;
 }
 
 const ES_SimOps esSimDcOps = {

@@ -24,8 +24,6 @@ typedef struct es_sim_dc {
 	Uint inputStep;		/* flag that can be set by active components
 	                           to aid simulation: 1 if there is a
 				   discontinuity in input, 0 otherwise */
-	Uint firstIter;		/* 1 if the first NR iteration for a given
-				   time step is in progress, 0 otherwise */
 	Uint retriesMax;	/* Maximum number of times time step may be
 				   decimated before halting simulation */
 
@@ -39,8 +37,10 @@ typedef struct es_sim_dc {
 	M_Matrix *A;		/* Block matrix [G,B; C,D] */
 	M_Vector *z;		/* Right-hand side vector (i,e) */
 	M_Vector *x;		/* Vector of unknowns (v,j) */
-	M_Vector *xPrevIter;	/* Vector of unknowns from last iteration */
-	M_Vector *xPrevStep;	/* Vector of unknowns from last timestep */
+	
+	M_Vector *xPrevIter;	/* Solution from last iteration */
+	M_Vector **xPrevSteps;	/* Solutions from last steps */
+	int stepsToKeep;        /* Number of solutions to keep in xPrevSteps */
 
 	M_Real *groundNode;     /* Pointer to A(0, 0) */
 } ES_SimDC;
