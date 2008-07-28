@@ -225,11 +225,6 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 			goto halt;
 	}
 
-	/* Keep solution */
-	CyclePreviousSolutions(sim);
-	M_VecCopy(sim->xPrevSteps[0], sim->x);
-	sim->deltaTPrevSteps[0] = sim->deltaT;
-
 	/* Get error from components */
 	error = HUGE_VAL;
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
@@ -250,6 +245,11 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	/* Notify the simulation objects of the completed timestep. */
 	for (i = 0; i < ckt->nExtObjs; i++)
 		AG_PostEvent(ckt, ckt->extObjs[i], "circuit-step-end", NULL);
+
+	/* Keep solution */
+	CyclePreviousSolutions(sim);
+	M_VecCopy(sim->xPrevSteps[0], sim->x);
+	sim->deltaTPrevSteps[0] = sim->deltaT;
 
 	/* Schedule next step */
 	if (SIM(sim)->running) {
