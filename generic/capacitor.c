@@ -46,15 +46,21 @@ const ES_Port esCapacitorPorts[] = {
  * iteration.
  */
 static M_Real
-vPrevStep(ES_Capacitor *c)
+vPrevStep(ES_Capacitor *c, int n)
 {
-	return V_PREV_STEP(c,PORT_A, 1)-V_PREV_STEP(c,PORT_B, 1);
+	return V_PREV_STEP(c,PORT_A, n)-V_PREV_STEP(c,PORT_B, n);
 }
 
 static M_Real
-iPrevStep(ES_Capacitor *c)
+vThisStep(ES_Capacitor *c)
 {
-	return I_PREV_STEP(c, c->vIdx, 1);
+	return VPORT(c,PORT_A)-VPORT(c,PORT_B);
+}
+
+static M_Real
+iPrevStep(ES_Capacitor *c, int n)
+{
+	return I_PREV_STEP(c, c->vIdx, n);
 }
 
 static M_Real
@@ -76,10 +82,10 @@ UpdateModel(ES_Capacitor *c, M_Real v, ES_SimDC *dc)
 		c->r = dc->deltaT / c->C;
 		break;
 	case FE:
-		c->v += dc->deltaT / c->C * iPrevStep(c);
+		c->v += dc->deltaT / c->C * iPrevStep(c, 1);
 		break;
 	case TR:
-		c->v = v + dc->deltaT / (2 * c->C) * iPrevStep(c);
+		c->v = v + dc->deltaT / (2 * c->C) * iPrevStep(c, 1);
 		c->r = dc->deltaT / (2 * c->C);
 		break;
 	default:
@@ -140,7 +146,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Capacitor *c = obj;
 	
-	UpdateModel(c, vPrevStep(c), dc);
+	UpdateModel(c, vPrevStep(c, 1), dc);
 	Stamp(c, dc);
 }
 
@@ -161,10 +167,30 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 	switch(dc->method) {
 	case BE:
 	case FE:
-		localErr = dc->deltaT / 2.0 / c->C * M_Fabs((iThisStep(c) - iPrevStep(c))
-							  / vPrevStep(c));
+		localErr = dc->deltaT / 2.0 / c->C * M_Fabs((iThisStep(c) - iPrevStep(c, 1))
+							    / vPrevStep(c, 1));
 		break;
 	case TR:
+	{
+		M_Real dtn = dc->deltaT;
+		M_Real dtnm1 = dc->deltaTPrevSteps[0];
+		M_Real dtnm2 = dc->deltaTPrevSteps[1];
+		
+		M_Real vnp1 = vThisStep(c);
+		M_Real vn = vPrevStep(c, 1);
+		M_Real vnm1 = vPrevStep(c, 2);
+		M_Real vnm2 = vPrevStep(c, 3);
+		
+		M_Real term1 = (vnp1 - vn)/dtn - (vn - vnm1)/dtnm1;
+		M_Real term2 = (vn - vnm1)/dtnm1 - (vnm1 - vnm2)/dtnm2;
+
+		M_Real thirdDerivative = term1 / (dtn + dtnm1) - term2/ (dtnm1 + dtnm2);
+		thirdDerivative /= (dtn + dtnm1 + dtnm2);
+
+		localErr = dtn * dtn * dtn * Fabs(thirdDerivative) / 12.0 / vPrevStep(c, 1);
+
+		break;
+	}
 	default:
 		printf("Method %d not implemented\n", dc->method);
 		break;
