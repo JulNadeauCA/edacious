@@ -849,12 +849,12 @@ ES_NodeVoltage(ES_Circuit *ckt, int j)
 }
 
 M_Real
-ES_NodeVoltagePrevStep(ES_Circuit *ckt, int j)
+ES_NodeVoltagePrevStep(ES_Circuit *ckt, int j, int n)
 {
 	if (ckt->sim == NULL || ckt->sim->ops->node_voltage_prev_step == NULL) {
 		return (0.0);
 	}
-	return (ckt->sim->ops->node_voltage_prev_step(ckt->sim, j));
+	return (ckt->sim->ops->node_voltage_prev_step(ckt->sim, j, n));
 }
 
 /* Return the branch current for the voltage source k from the last step. */
@@ -868,12 +868,12 @@ ES_BranchCurrent(ES_Circuit *ckt, int k)
 }
 
 M_Real
-ES_BranchCurrentPrevStep(ES_Circuit *ckt, int k)
+ES_BranchCurrentPrevStep(ES_Circuit *ckt, int k, int n)
 {
 	if (ckt->sim == NULL || ckt->sim->ops->branch_current_prev_step == NULL) {
 		return (0.0);
 	}
-	return (ckt->sim->ops->branch_current_prev_step(ckt->sim, k));
+	return (ckt->sim->ops->branch_current_prev_step(ckt->sim, k, n));
 }
 
 /* Lookup an existing node by number or die. */

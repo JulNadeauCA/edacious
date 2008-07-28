@@ -48,19 +48,19 @@ const ES_Port esCapacitorPorts[] = {
 static M_Real
 vPrevStep(ES_Capacitor *c)
 {
-	return V_PREV_STEP(c,PORT_A)-V_PREV_STEP(c,PORT_B);
+	return V_PREV_STEP(c,PORT_A, 1)-V_PREV_STEP(c,PORT_B, 1);
 }
 
 static M_Real
 iPrevStep(ES_Capacitor *c)
 {
-	return ES_BranchCurrentPrevStep(ESCOMPONENT_CIRCUIT(c), c->vIdx);
+	return I_PREV_STEP(c, c->vIdx, 1);
 }
 
 static M_Real
 iThisStep(ES_Capacitor *c)
 {
-	return ES_BranchCurrent(ESCOMPONENT_CIRCUIT(c), c->vIdx);
+	return IBRANCH(c, c->vIdx);
 }
 
 

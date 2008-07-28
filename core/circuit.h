@@ -144,10 +144,10 @@ ES_Node	   *ES_GetNodeBySymbol(ES_Circuit *, const char *);
 ES_Branch  *ES_LookupBranch(ES_Circuit *, int, ES_Port *);
 
 M_Real      ES_NodeVoltage(ES_Circuit *, int);
-M_Real      ES_NodeVoltagePrevStep(ES_Circuit *, int);
+M_Real      ES_NodeVoltagePrevStep(ES_Circuit *, int, int);
 
 M_Real      ES_BranchCurrent(ES_Circuit *, int);
-M_Real      ES_BranchCurrentPrevStep(ES_Circuit *, int);
+M_Real      ES_BranchCurrentPrevStep(ES_Circuit *, int, int);
 
 void        ES_ResumeSimulation(ES_Circuit *);
 void        ES_SuspendSimulation(ES_Circuit *);

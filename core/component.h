@@ -114,12 +114,12 @@ typedef struct es_component {
 #define ES_PAIR(p,n)		(&ESCOMPONENT(p)->pairs[n])
 #define ES_VPORT(p,n)		ES_NodeVoltage(ESCOMPONENT_CIRCUIT(p),\
  			        	       ES_PNODE((p),(n)))
-#define ES_V_PREV_STEP(p,n)	ES_NodeVoltagePrevStep(ESCOMPONENT_CIRCUIT(p),\
- 			        	       ES_PNODE((p),(n)))
+#define ES_V_PREV_STEP(p,k,n)	ES_NodeVoltagePrevStep(ESCOMPONENT_CIRCUIT(p), \
+						       ES_PNODE((p),(k)),(n))
 #define ES_IBRANCH(p,n)		ES_BranchCurrent(ESCOMPONENT_CIRCUIT(p),\
  			        	       ES_PNODE((p),(n)))
-#define ES_I_PREV_STEP(p,n)	ES_BranchCurrentPrevStep(ESCOMPONENT_CIRCUIT(p),\
- 			        	       ES_PNODE((p),(n)))
+#define ES_I_PREV_STEP(p,k,n)	ES_BranchCurrentPrevStep(ESCOMPONENT_CIRCUIT(p), \
+							 ES_PNODE((p),(k)),(n))
 #ifdef DEBUG
 # define ES_PNODE(p,n)		ES_PortNode(ESCOMPONENT(p),(n))
 #else
@@ -148,9 +148,9 @@ typedef struct es_component {
 # define PORT(p,n) ES_PORT(p,n)
 # define PAIR(p,n) ES_PAIR(p,n)
 # define VPORT(p,n) ES_VPORT(p,n)
-# define V_PREV_STEP(p,n) ES_V_PREV_STEP(p,n)
+# define V_PREV_STEP(p,k,n) ES_V_PREV_STEP(p,k,n)
 # define IBRANCH(p,n) ES_IBRANCH(p,n)
-# define I_PREV_STEP(p,n) ES_I_PREV_STEP(p,n)
+# define I_PREV_STEP(p,k,n) ES_I_PREV_STEP(p,k,n)
 # define PNODE(p,n) ES_PNODE(p,n)
 #endif /* _ES_INTERNAL or _USE_EDACIOUS_CORE */
 

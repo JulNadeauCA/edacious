@@ -58,13 +58,13 @@ vBC(ES_NPN *u)
 static M_Real
 VbePrevStep(ES_NPN *u)
 {
-	return V_PREV_STEP(u,PORT_B)-V_PREV_STEP(u,PORT_E);
+	return V_PREV_STEP(u,PORT_B,1)-V_PREV_STEP(u,PORT_E,1);
 }
 
 static M_Real
 VbcPrevStep(ES_NPN *u)
 {
-	return V_PREV_STEP(u,PORT_B)-V_PREV_STEP(u,PORT_C);
+	return V_PREV_STEP(u,PORT_B,1)-V_PREV_STEP(u,PORT_C,1);
 }
 
 static void 

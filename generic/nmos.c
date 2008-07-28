@@ -46,12 +46,12 @@ const ES_Port esNMOSPorts[] = {
 static M_Real
 VdsPrevStep(ES_NMOS *u)
 {
-	return V_PREV_STEP(u,PORT_D)-V_PREV_STEP(u,PORT_S);
+	return V_PREV_STEP(u,PORT_D,1)-V_PREV_STEP(u,PORT_S,1);
 }
 static M_Real
 VgsPrevStep(ES_NMOS *u)
 {
-	return V_PREV_STEP(u,PORT_G)-V_PREV_STEP(u,PORT_S);
+	return V_PREV_STEP(u,PORT_G,1)-V_PREV_STEP(u,PORT_S,1);
 }
 
 static M_Real

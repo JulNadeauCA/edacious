@@ -49,12 +49,12 @@ const ES_Port esInductorPorts[] = {
 static M_Real
 vPrevStep(ES_Inductor *i)
 {
-	return V_PREV_STEP(i,PORT_A)-V_PREV_STEP(i,PORT_B);
+	return V_PREV_STEP(i,PORT_A, 1)-V_PREV_STEP(i,PORT_B, 1);
 }
 static M_Real
 vThisStep(ES_Inductor *i)
 {
-	return ES_NodeVoltage(ESCOMPONENT_CIRCUIT(i), PORT_A) - ES_NodeVoltage(ESCOMPONENT_CIRCUIT(i), PORT_A);
+	return VPORT(i, PORT_A) - VPORT(i, PORT_B);
 }
 
 

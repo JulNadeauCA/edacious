@@ -529,11 +529,11 @@ NodeVoltage(void *p, int j)
 }
 
 static M_Real
-NodeVoltagePrevStep(void *p, int j)
+NodeVoltagePrevStep(void *p, int j, int n)
 {
 	ES_SimDC *sim = p;
 
-	return (j>=0)&&(sim->xPrevSteps[0]->m > j) ? M_VecGet(sim->xPrevSteps[0], j) : 0.0;
+	return (j>=0)&&(sim->xPrevSteps[n-1]->m > j) ? M_VecGet(sim->xPrevSteps[n-1], j) : 0.0;
 }
 
 static M_Real
@@ -547,13 +547,13 @@ BranchCurrent(void *p, int k)
 }
 
 static M_Real
-BranchCurrentPrevStep(void *p, int k)
+BranchCurrentPrevStep(void *p, int k, int n)
 {
 	ES_SimDC *sim = p;
 	ES_Circuit *ckt = SIM(sim)->ckt;
 	int i = ckt->n + k;
 
-	return (i>=0)&&(sim->xPrevSteps[0]->m > i) ? M_VecGet(sim->xPrevSteps[0], i) : 0.0;
+	return (i>=0)&&(sim->xPrevSteps[n-1]->m > i) ? M_VecGet(sim->xPrevSteps[n-1], i) : 0.0;
 }
 
 const ES_SimOps esSimDcOps = {

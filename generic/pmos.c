@@ -57,12 +57,12 @@ vSG(ES_PMOS *u)
 static M_Real
 VsdPrevStep(ES_PMOS *u)
 {
-	return V_PREV_STEP(u,PORT_S)-V_PREV_STEP(u,PORT_D);
+	return V_PREV_STEP(u,PORT_S,1)-V_PREV_STEP(u,PORT_D,1);
 }
 static M_Real
 VsgPrevStep(ES_PMOS *u)
 {
-	return V_PREV_STEP(u,PORT_S)-V_PREV_STEP(u,PORT_G);
+	return V_PREV_STEP(u,PORT_S,1)-V_PREV_STEP(u,PORT_G,1);
 }
 
 static void

@@ -55,7 +55,7 @@ v(ES_Diode *d)
 static M_Real
 vPrevStep(ES_Diode *d)
 {
-	return V_PREV_STEP(d,PORT_P)-V_PREV_STEP(d,PORT_N);
+	return V_PREV_STEP(d,PORT_P, 1)-V_PREV_STEP(d,PORT_N, 1);
 }
 
 static void

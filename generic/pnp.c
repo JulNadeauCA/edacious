@@ -57,12 +57,12 @@ vCB(ES_PNP *u)
 static M_Real
 VebPrevStep(ES_PNP *u)
 {
-	return V_PREV_STEP(u,PORT_E)-V_PREV_STEP(u,PORT_B);
+	return V_PREV_STEP(u,PORT_E,1)-V_PREV_STEP(u,PORT_B,1);
 }
 static M_Real
 VcbPrevStep(ES_PNP *u)
 {
-	return V_PREV_STEP(u,PORT_C)-V_PREV_STEP(u,PORT_B);
+	return V_PREV_STEP(u,PORT_C,1)-V_PREV_STEP(u,PORT_B,1);
 }
 
 static void
