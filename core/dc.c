@@ -141,7 +141,7 @@ SetTimestep(ES_SimDC *sim, M_Real deltaT)
 	if (deltaT < sim->stepLow) { sim->stepLow = deltaT; }
 }
 
-/* Cycle the xPrevSteps array : shift each solution one step back
+/* Cycle the xPrevSteps and deltaTPrevSteps array : shift each solution one step back
  * in time, and forget the oldest one */
 static void
 CyclePreviousSolutions(ES_SimDC *sim)
@@ -151,13 +151,16 @@ CyclePreviousSolutions(ES_SimDC *sim)
 	if(sim->stepsToKeep == 1)
 	{
 		M_VecSetZero(sim->xPrevSteps[0]);
+		sim->deltaTPrevSteps[0] = 0;
 		return;
 	}
 	for(i = sim->stepsToKeep - 2 ; i >= 0 ; i--)
 	{
 		sim->xPrevSteps[i+1] = sim->xPrevSteps[i];
+		sim->deltaTPrevSteps[i+1] = sim->deltaTPrevSteps[i];
 	}
 	sim->xPrevSteps[0] = last;
+	sim->deltaTPrevSteps[0] = 0;
 	M_VecSetZero(last);
 }
 
@@ -225,6 +228,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	/* Keep solution */
 	CyclePreviousSolutions(sim);
 	M_VecCopy(sim->xPrevSteps[0], sim->x);
+	sim->deltaTPrevSteps[0] = sim->deltaT;
 
 	/* Get error from components */
 	error = HUGE_VAL;
@@ -321,12 +325,17 @@ InitMatrices(void *p, ES_Circuit *ckt)
 
 	/* Get number of steps to keep according to integration method */
 	sim->stepsToKeep = 4;
-	/* Initialise solutions from previous steps */
+	/* Initialise arrays */
 	sim->xPrevSteps = malloc(sim->stepsToKeep * sizeof(M_Vector *));
 	for(i = 0; i < sim->stepsToKeep ; i++)
 	{
 		sim->xPrevSteps[i] = M_VecNew(n+m);
 		M_VecSetZero(sim->xPrevSteps[i]);
+	}
+	sim->deltaTPrevSteps = malloc(sim->stepsToKeep * sizeof(M_Real));
+	for(i = 0; i < sim->stepsToKeep ; i++)
+	{
+		sim->deltaTPrevSteps[i] = 0.0;
 	}
 }
 
@@ -369,7 +378,8 @@ Start(void *p)
 	/* Keep solution */
 	CyclePreviousSolutions(sim);
 	M_VecCopy(sim->xPrevSteps[0], sim->x);
-
+	sim->deltaTPrevSteps[0] = sim->deltaT;
+	
 	/* Schedule the call to StepMNA*/
 	AG_LockTimeouts(ckt);
 	if (AG_TimeoutIsScheduled(ckt, &sim->toUpdate)) {
@@ -419,8 +429,10 @@ Destroy(void *p)
 		{
 			M_VecFree(sim->xPrevSteps[i]);
 		}
+		free(sim->xPrevSteps);
 	}
-	free(sim->xPrevSteps);
+	if(sim->deltaTPrevSteps)
+		free(sim->deltaTPrevSteps);
 }
 
 static void

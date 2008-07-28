@@ -37,10 +37,13 @@ typedef struct es_sim_dc {
 	M_Matrix *A;		/* Block matrix [G,B; C,D] */
 	M_Vector *z;		/* Right-hand side vector (i,e) */
 	M_Vector *x;		/* Vector of unknowns (v,j) */
-	
+
 	M_Vector *xPrevIter;	/* Solution from last iteration */
+
+	int stepsToKeep;        /* Number of previous solutions to keep */
 	M_Vector **xPrevSteps;	/* Solutions from last steps */
-	int stepsToKeep;        /* Number of solutions to keep in xPrevSteps */
+	M_Real *deltaTPrevSteps;/* Previous timesteps. deltaTPrevSteps[i] is
+				 * the timestep used to compute xPrevSteps[i] */
 
 	M_Real *groundNode;     /* Pointer to A(0, 0) */
 } ES_SimDC;
