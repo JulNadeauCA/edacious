@@ -33,6 +33,7 @@
  */
 
 #include "core.h"
+#include <unistd.h>
 #include <freesg/m/m_matview.h>
 
 /*
@@ -43,6 +44,18 @@
 #define MAX_REL_DIFF	1e-3	/* 0.1% */
 #define MAX_V_DIFF	1e-6	/* 1 uV */
 #define MAX_I_DIFF	1e-12	/* 1 pA */
+
+static void
+MatrixDebug(ES_SimDC *sim, ES_Circuit *ckt, char *str)
+{
+	Debug(ckt, "%s\n", str);
+	Debug(ckt, "A:\n");
+	M_MatrixPrint(sim->A);
+	Debug(ckt, "x:\n");
+	M_VectorPrint(sim->x);
+	Debug(ckt, "z:\n");
+	M_VectorPrint(sim->z);
+}
 
 /* Solve Ax=z where A=[G,B;C,D], x=[v,j] and z=[i;e]. */
 static int
@@ -195,7 +208,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		if (com->dcStepBegin != NULL)
 			com->dcStepBegin(com, sim);
 	}
-
+	
 	/* DC biasing */
 	if (SolveMNA(sim, ckt) == -1)
 		goto halt;
@@ -203,7 +216,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	/* NR control loop : shrink timestep until a stable solution is found. */
 	while (NR_Iterations(ckt,sim) <= 0) {
 		/* NR_Iterations failed to converge : we reduce step size */
-		
+	
 		if (++retries > sim->retriesMax) {
 			AG_SetError(_("Could not find stable solution."));
 			goto halt;
@@ -369,6 +382,7 @@ Start(void *p)
 	if (SolveMNA(sim, ckt) == -1) {
 		goto halt;
 	}
+
 	sim->inputStep = 0;
 	if (NR_Iterations(ckt,sim) <= 0) {
 		AG_SetError("Failed to find initial bias point.");
