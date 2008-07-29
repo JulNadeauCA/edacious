@@ -87,9 +87,10 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 {
 	ES_Component *com;
 	M_Real diff;
-	Uint i = 0, j, loop;
+	Uint i = 0, j;
 
-	while(1) {
+	{
+	iter:
 		if (++i > sim->itersMax)
 			return -i; 
 
@@ -112,42 +113,27 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 		 * that the simulation may be damped
 		 */
 		if(sim->isDamped)
-			continue;
-		
+			goto iter;
 
 		/* check difference on voltages and currents */
 		/* voltages */
 
-		loop=0;
 		for (j = 0; j < ckt->n; j++)
 		{
 			M_Real prev = M_VecGet(sim->xPrevIter, j);
 			M_Real cur = M_VecGet(sim->x, j);
 			if(Fabs(cur - prev) > MAX_V_DIFF + Fabs(MAX_REL_DIFF * prev))
-			{
-				loop=1;
-				break;
-			}
+				goto iter;
 		}
-		if (loop)
-			continue;
 
 		/* currents */
-		loop=0;
 		for (j = ckt->n; j < ckt->m + ckt->n; j++)
 		{
 			M_Real prev = M_VecGet(sim->xPrevIter, j);
 			M_Real cur = M_VecGet(sim->x, j);
 			if(Fabs(cur - prev) > MAX_I_DIFF + Fabs(MAX_REL_DIFF * prev))
-			{
-				loop=1;
-				break;
-			}
+				goto iter;
 		}
-		if (loop)
-			continue;
-
-		break;
 	}
 
 	/* Update the statistics. */
