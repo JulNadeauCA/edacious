@@ -297,7 +297,7 @@ static void
 Init(void *p)
 {
 	ES_SimDC *sim = p;
-
+	mMatOps = &mMatOps_SP;
 	ES_SimInit(sim, &esSimDcOps);
 
 	sim->method = BE;
