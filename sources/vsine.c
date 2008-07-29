@@ -76,8 +76,6 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 {
 	ES_VSine *vs = obj;
 
-	VSOURCE(vs)->v = vs->vPeak*Sin(vs->f * dc->Telapsed);
-	
 	Stamp(vs,dc);
 }
 

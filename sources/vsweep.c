@@ -107,6 +107,7 @@ Init(void *p)
 	vsw->count = 1;
 	COMPONENT(vsw)->dcSimBegin = DC_SimBegin;
 	COMPONENT(vsw)->dcStepBegin = DC_StepBegin;
+	COMPONENT(vsw)->dcStepIter = DC_StepIter;
 }
 
 static int
