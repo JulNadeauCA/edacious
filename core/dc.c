@@ -378,6 +378,8 @@ Start(void *p)
 		}
 	}
 
+	M_MNAPreorder(sim->A);
+	
 	/* Find the initial bias point. */
 	if (SolveMNA(sim, ckt) == -1) {
 		goto halt;
