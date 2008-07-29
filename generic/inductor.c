@@ -47,9 +47,9 @@ const ES_Port esInductorPorts[] = {
  */
 
 static M_Real
-vPrevStep(ES_Inductor *i)
+vPrevStep(ES_Inductor *i, int n)
 {
-	return V_PREV_STEP(i,PORT_A, 1)-V_PREV_STEP(i,PORT_B, 1);
+	return V_PREV_STEP(i,PORT_A, n)-V_PREV_STEP(i,PORT_B, n);
 }
 static M_Real
 vThisStep(ES_Inductor *i)
@@ -137,7 +137,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Inductor *i = obj;
 	
-	UpdateModel(i, dc, vPrevStep(i));
+	UpdateModel(i, dc, vPrevStep(i, 1));
 	Stamp(i, dc);
 
 }
@@ -157,7 +157,7 @@ BranchCurrent(ES_Inductor *i, ES_SimDC *dc)
 	switch(dc->method) {
 	case BE:
 	case TR:
-		return i->Ieq + i->g * vPrevStep(i);
+		return i->Ieq + i->g * vPrevStep(i, 1);
 	case FE:
 		return i->Ieq;
 	default:
@@ -177,10 +177,24 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 	switch(dc->method) {
 	case BE:
 	case FE:
-		localErr = dc->deltaT / 2.0 / i->L * M_Fabs((vThisStep(i) - vPrevStep(i))
+		localErr = dc->deltaT / 2.0 / i->L * M_Fabs((vThisStep(i) - vPrevStep(i, 1))
 							  / I);
 		break;
 	case TR:
+	{
+		M_Real dtn = dc->deltaT;
+		M_Real dtnm1 = dc->deltaTPrevSteps[0];
+		
+		M_Real vnp1 = vThisStep(i);
+		M_Real vn = vPrevStep(i, 1);
+		M_Real vnm1 = vPrevStep(i, 2);
+		
+		M_Real thirdDerivative = (vnp1 - vn)/dtn - (vn - vnm1)/dtnm1;
+		thirdDerivative /= (dtn + dtnm1);
+		
+		localErr = dtn * dtn * dtn * Fabs(thirdDerivative / I) / 12.0 / i->L;
+		break;
+	}
 	default:
 		printf("Method %d not implemented\n", dc->method);
 		break;
