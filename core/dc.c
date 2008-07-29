@@ -87,7 +87,7 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 {
 	ES_Component *com;
 	M_Real diff;
-	Uint i = 0, j;
+	Uint i = 0, j, loop;
 
 	while(1) {
 		if (++i > sim->itersMax)
@@ -114,24 +114,39 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 		if(sim->isDamped)
 			continue;
 		
+
 		/* check difference on voltages and currents */
 		/* voltages */
+
+		loop=0;
 		for (j = 0; j < ckt->n; j++)
 		{
 			M_Real prev = M_VecGet(sim->xPrevIter, j);
 			M_Real cur = M_VecGet(sim->x, j);
 			if(Fabs(cur - prev) > MAX_V_DIFF + Fabs(MAX_REL_DIFF * prev))
-				continue;
+			{
+				loop=1;
+				break;
+			}
 		}
+		if (loop)
+			continue;
 
 		/* currents */
+		loop=0;
 		for (j = ckt->n; j < ckt->m + ckt->n; j++)
 		{
 			M_Real prev = M_VecGet(sim->xPrevIter, j);
 			M_Real cur = M_VecGet(sim->x, j);
 			if(Fabs(cur - prev) > MAX_I_DIFF + Fabs(MAX_REL_DIFF * prev))
-				continue;
+			{
+				loop=1;
+				break;
+			}
 		}
+		if (loop)
+			continue;
+
 		break;
 	}
 
@@ -385,7 +400,6 @@ Start(void *p)
 		goto halt;
 	}
 
-	sim->inputStep = 0;
 	if (NR_Iterations(ckt,sim) <= 0) {
 		AG_SetError("Failed to find initial bias point.");
 		goto halt;
