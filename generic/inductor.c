@@ -152,7 +152,7 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 
 /* Returns current flowing through the linearized model at previous step */
 static M_Real
-BranchCurrent(ES_Inductor *i, ES_SimDC *dc)
+InductorBranchCurrent(ES_Inductor *i, ES_SimDC *dc)
 {
 	switch(dc->method) {
 	case BE:
@@ -167,21 +167,25 @@ BranchCurrent(ES_Inductor *i, ES_SimDC *dc)
 
 }
 
-/* LTE for capacitor, estimated via divided differences */
+/* LTE for capacitor, estimated via divided differences
+ * We use the LTE formula relevant to the integration method, and compute
+ * it by approximating the derivative with divided differences */
 static void
 DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 {
 	ES_Inductor *i = obj;
 	M_Real localErr;
-	M_Real I = BranchCurrent(i, dc);
+	M_Real I = InductorBranchCurrent(i, dc);
 	switch(dc->method) {
 	case BE:
 	case FE:
-		localErr = dc->deltaT / 2.0 / i->L * M_Fabs((vThisStep(i) - vPrevStep(i, 1))
+		/* Error = dt*dt/2 * i''(e) = dt/2/L * v'(e) */
+		localErr = dc->deltaT / 2.0 / i->L * Fabs((vThisStep(i) - vPrevStep(i, 1))
 							  / I);
 		break;
 	case TR:
 	{
+		/* Error = (dt^3)/12 i'''(e) = (dt^3)/12/L v''(e) */
 		M_Real dtn = dc->deltaT;
 		M_Real dtnm1 = dc->deltaTPrevSteps[0];
 		
@@ -189,10 +193,13 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 		M_Real vn = vPrevStep(i, 1);
 		M_Real vnm1 = vPrevStep(i, 2);
 		
-		M_Real thirdDerivative = (vnp1 - vn)/dtn - (vn - vnm1)/dtnm1;
-		thirdDerivative /= (dtn + dtnm1);
+		M_Real secondDerivative = ((vnp1 - vn)/dtn - (vn - vnm1)/dtnm1);
+		secondDerivative /= (dtn + dtnm1);
 		
-		localErr = dtn * dtn * dtn * Fabs(thirdDerivative / I) / 12.0 / i->L;
+		localErr = dtn * dtn * dtn * secondDerivative
+			/ (12.0 * i->L * I);
+
+		localErr = Fabs(localErr);
 		break;
 	}
 	default:

@@ -158,7 +158,9 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 	Stamp(c, dc);
 }
 
-/* LTE for capacitor, estimated via divided differences */
+/* LTE for capacitor, estimated via divided differences
+ * We use the LTE formula relevant to the integration method, and compute
+ * it by approximating the derivative with divided differences */
 static void
 DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 {
@@ -167,11 +169,13 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 	switch(dc->method) {
 	case BE:
 	case FE:
-		localErr = dc->deltaT / 2.0 / c->C * M_Fabs((iThisStep(c) - iPrevStep(c, 1))
+		/* Error = dt*dt/2 * v''(e) = dt/2/C * i'(e) */
+		localErr = dc->deltaT / 2.0 / c->C * Fabs((iThisStep(c) - iPrevStep(c, 1))
 							    / vPrevStep(c, 1));
 		break;
 	case TR:
 	{
+		/* Error = (dt^3)/12 v'''(e) */
 		M_Real dtn = dc->deltaT;
 		M_Real dtnm1 = dc->deltaTPrevSteps[0];
 		M_Real dtnm2 = dc->deltaTPrevSteps[1];
