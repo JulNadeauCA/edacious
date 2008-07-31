@@ -169,46 +169,49 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 	Stamp(c, dc);
 }
 
-/* LTE for capacitor, estimated via divided differences
- * We use the LTE formula relevant to the integration method, and compute
- * it by approximating the derivative with divided differences */
+
+/* Computes third derivative at current point via divided differences */
+static M_Real
+ThirdDerivative(ES_Capacitor *c, ES_SimDC *dc)
+{
+	M_Real dtn = dc->deltaT;
+	M_Real dtnm1 = dc->deltaTPrevSteps[0];
+	M_Real dtnm2 = dc->deltaTPrevSteps[1];
+		
+	M_Real vnp1 = vThisStep(c);
+	M_Real vn = vPrevStep(c, 1);
+	M_Real vnm1 = vPrevStep(c, 2);
+	M_Real vnm2 = vPrevStep(c, 3);
+		
+	M_Real term1 = (vnp1 - vn)/dtn - (vn - vnm1)/dtnm1;
+	M_Real term2 = (vn - vnm1)/dtnm1 - (vnm1 - vnm2)/dtnm2;
+
+	M_Real thirdDerivative = term1 / (dtn + dtnm1) - term2/ (dtnm1 + dtnm2);
+	thirdDerivative /= (dtn + dtnm1 + dtnm2);
+
+	return Fabs(thirdDerivative);
+}
+
+/* LTE for capacitor, estimated via divided differences */
 static void
 DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 {
 	ES_Capacitor *c = obj;
 	M_Real localErr;
+	M_Real dtn = dc->deltaT;
 	switch(dc->method) {
 	case BE:
 	case FE:
 		/* Error = dt*dt/2 * v''(e) = dt/2/C * i'(e) */
-		localErr = dc->deltaT / 2.0 / c->C * Fabs((iThisStep(c) - iPrevStep(c, 1))
+		localErr = dtn / 2.0 / c->C * Fabs((iThisStep(c) - iPrevStep(c, 1))
 							    / vPrevStep(c, 1));
 		break;
 	case TR:
-	{
-		/* Error = (dt^3)/12 v'''(e) */
-		M_Real dtn = dc->deltaT;
-		M_Real dtnm1 = dc->deltaTPrevSteps[0];
-		M_Real dtnm2 = dc->deltaTPrevSteps[1];
-		
-		M_Real vnp1 = vThisStep(c);
-		M_Real vn = vPrevStep(c, 1);
-		M_Real vnm1 = vPrevStep(c, 2);
-		M_Real vnm2 = vPrevStep(c, 3);
-		
-		M_Real term1 = (vnp1 - vn)/dtn - (vn - vnm1)/dtnm1;
-		M_Real term2 = (vn - vnm1)/dtnm1 - (vnm1 - vnm2)/dtnm2;
-
-		M_Real thirdDerivative = term1 / (dtn + dtnm1) - term2/ (dtnm1 + dtnm2);
-		thirdDerivative /= (dtn + dtnm1 + dtnm2);
-
-		localErr = dtn * dtn * dtn * Fabs(thirdDerivative) / 12.0 / vPrevStep(c, 1);
-
+		localErr = dtn * dtn * dtn * ThirdDerivative(c, dc) / 12.0 / Fabs(vPrevStep(c, 1));
 		break;
-	}
 	case G2:
-		/* TODO */
-		return;
+		localErr = dtn * dtn * dtn * ThirdDerivative(c, dc) * 2.0/9.0 / Fabs(vPrevStep(c, 1));
+		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
 		return;
