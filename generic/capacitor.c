@@ -72,8 +72,9 @@ iThisStep(ES_Capacitor *c)
 
 /* Updates the small- and large-signal models, saving the previous values. */
 static void
-UpdateModel(ES_Capacitor *c, M_Real v, ES_SimDC *dc)
+UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
 {
+	M_Real v = dc->currStep == 0 ? c->V0 : vPrevStep(c, 1);
 	switch(dc->method) {
 	case BE:
 		/* Thevenin companion model : better suited
@@ -135,7 +136,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 		break;
 	}
 	c->v = c->V0;
-	UpdateModel(c, c->V0, dc);
+	UpdateModel(c, dc);
 	Stamp(c, dc);
 
 	return (0);
@@ -146,7 +147,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Capacitor *c = obj;
 	
-	UpdateModel(c, vPrevStep(c, 1), dc);
+	UpdateModel(c, dc);
 	Stamp(c, dc);
 }
 

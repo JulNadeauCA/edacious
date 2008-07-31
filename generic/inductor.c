@@ -60,8 +60,9 @@ vThisStep(ES_Inductor *i)
 
 /* Updates the small- and large-signal models, saving the previous values. */
 static void
-UpdateModel(ES_Inductor *i, ES_SimDC *dc, M_Real v)
+UpdateModel(ES_Inductor *i, ES_SimDC *dc)
 {
+	M_Real v = vPrevStep(i, 1);
 	switch(dc->method) {
 	case BE:
 		i->Ieq += v*i->g;
@@ -137,7 +138,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Inductor *i = obj;
 	
-	UpdateModel(i, dc, vPrevStep(i, 1));
+	UpdateModel(i, dc);
 	Stamp(i, dc);
 
 }

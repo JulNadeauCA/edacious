@@ -65,7 +65,7 @@ SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 	/* Find LU factorization and solve by backsubstitution. */
 	M_FactorizeLU(sim->A);
 	M_VecCopy(sim->x, sim->z);
-	M_BacksubstLU(sim->A, sim->x);
+	M_BacksubstLU(sim->A, sim->x); 
 	return (0);
 }
 
@@ -198,6 +198,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	sim->Telapsed += sim->deltaT;
 	sim->ticksLastStep = ticks;
 
+	sim->currStep++;
+
 	/* Notify the simulation objects of the beginning timestep. */
 	for (i = 0; i < ckt->nExtObjs; i++)
 		AG_PostEvent(ckt, ckt->extObjs[i], "circuit-step-begin", NULL);
@@ -304,6 +306,7 @@ Init(void *p)
 	sim->itersMax = 1000;
 	sim->retriesMax = 25;
 	sim->ticksDelay = 16;
+	sim->currStep = 0;
 	sim->T0 = 290.0;
 	sim->A = M_New(0,0);
 	sim->z = M_VecNew(0);
