@@ -489,6 +489,7 @@ Edit(void *p, ES_Circuit *ckt)
 			N_("Backward Euler"),
 			N_("Forward Euler"),
 			N_("Trapezoidal"),
+			N_("Gear-2"),
 			NULL
 		};
 

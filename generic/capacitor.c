@@ -89,6 +89,18 @@ UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
 		c->v = v + dc->deltaT / (2 * c->C) * iPrevStep(c, 1);
 		c->r = dc->deltaT / (2 * c->C);
 		break;
+	case G2:
+		if(dc->currStep == 0)
+		{
+			/* Fall back to BE for first step */
+			dc->method = BE;
+			UpdateModel(c, dc);
+			dc->method = G2;
+			return;
+		}
+		
+		c->v = 4.0/3.0 * vPrevStep(c, 1) - 1.0/3.0 * vPrevStep(c, 2);
+		c->r = 2.0/3.0 * dc->deltaT / c->C;
 	default:
 		printf("Method %d not implemented\n", dc->method);
 		break;
@@ -100,13 +112,12 @@ Stamp(ES_Capacitor *c, ES_SimDC *dc)
 {
 	switch(dc->method) {
 	case BE:
+	case TR:
+	case G2:
 		StampThevenin(c->v, c->r, c->s);
 		break;
 	case FE:
 		StampVoltageSource(c->v, c->s);
-		break;
-	case TR:
-		StampThevenin(c->v, c->r, c->s);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -123,13 +134,12 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	
 	switch(dc->method) {
 	case BE:
+	case TR:
+	case G2:
 		InitStampThevenin(k, l, c->vIdx, c->s, dc);
 		break;
 	case FE:
 		InitStampVoltageSource(k, l, c->vIdx, c->s, dc);
-		break;
-	case TR:
-		InitStampThevenin(k, l, c->vIdx, c->s, dc);
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -196,9 +206,12 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 
 		break;
 	}
+	case G2:
+		/* TODO */
+		return;
 	default:
 		printf("Method %d not implemented\n", dc->method);
-		break;
+		return;
 	}
 
 	if(localErr < *err)

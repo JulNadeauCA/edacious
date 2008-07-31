@@ -4,7 +4,8 @@
 enum es_integration_method {
 	BE,                     /* Backwards Euler */
 	FE,                     /* Forward Euler */
-	TR                      /* Trapezoidal rule */
+	TR,                     /* Trapezoidal rule */
+	G2                      /* Second order gear */
 };
 
 typedef struct es_sim_dc {
