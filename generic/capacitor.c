@@ -175,6 +175,17 @@ ThirdDerivative(ES_Capacitor *c, ES_SimDC *dc)
 	return thirdDerivative;
 }
 
+static M_Real
+Derivative(ES_Capacitor *c, ES_SimDC *dc, int n)
+{
+	if(n == 3)
+		return ThirdDerivative(c, dc);
+	else if(n == 2)
+		return (iThisStep(c) - iPrevStep(c, 1)) / c->C / dc->deltaT;
+	else
+		return 0.0; /* Not implemented yet */
+}
+
 /* LTE for capacitor, estimated via divided differences */
 static void
 DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
@@ -182,24 +193,13 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 	ES_Capacitor *c = obj;
 	M_Real localErr;
 	M_Real dtn = dc->deltaT;
-	switch(dc->method) {
-	case BE:
-	case FE:
-		/* Error = dt*dt/2 * v''(e) = dt/2/C * i'(e) */
-		localErr = dtn / 2.0 / c->C * Fabs((iThisStep(c) - iPrevStep(c, 1))
-							    / vPrevStep(c, 1));
-		break;
-	case TR:
-		localErr = dtn * dtn * dtn * Fabs(ThirdDerivative(c, dc) / vPrevStep(c, 1)) / 12.0;
-		break;
-	case G2:	
-		localErr = dtn * dtn * dtn * Fabs(ThirdDerivative(c, dc) / vPrevStep(c, 1)) * 2.0/ 9.0;
-		break;
-	default:
-		printf("Method %d not implemented\n", dc->method);
-		return;
-	}
 
+	localErr= Fabs(
+		pow(dtn, methodOrder[dc->method] + 1)
+		* methodErrorConstant[dc->method]
+		* Derivative(c, dc, methodOrder[dc->method] + 1)
+		/ vThisStep(c));
+	
 	if(localErr < *err)
 		*err = localErr;
 }
