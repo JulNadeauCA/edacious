@@ -1,13 +1,5 @@
 /*	Public domain	*/
 
-/* Available integration methods */
-enum es_integration_method {
-	BE,                     /* Backwards Euler */
-	FE,                     /* Forward Euler */
-	TR,                     /* Trapezoidal rule */
-	G2                      /* Second order gear */
-};
-
 typedef struct es_sim_dc {
 	struct es_sim _inherit;
 

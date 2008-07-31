@@ -75,6 +75,16 @@ UpdateModel(ES_Inductor *i, ES_SimDC *dc)
 		i->Ieq += v*i->g + dc->deltaT / (2 * i->L) * v;
 		i->g = dc->deltaT / (2 * i->L);
 		break;
+	case G2:
+		if(dc->currStep == 0)
+		{
+			/* Fall back to BE for first step */
+			dc->method = BE;
+			UpdateModel(i, dc);
+			dc->method = G2;
+			return;
+		}
+		i->Ieq = 4.0/3.0; /* TODO */
 	default:
 		printf("Method %d not implemented\n", dc->method);
 		break;
@@ -84,22 +94,12 @@ UpdateModel(ES_Inductor *i, ES_SimDC *dc)
 static void
 Stamp(ES_Inductor *i, ES_SimDC *dc)
 {
-	switch(dc->method) {
-	case BE:
+	if(isImplicit[dc->method]) {
 		StampConductance(i->g, i->s_conductance);
 		StampCurrentSource(i->Ieq, i->s_current_source);
-		break;
-	case FE:
-		StampCurrentSource(i->Ieq,i->s_current_source);
-		break;
-	case TR:
-		StampConductance(i->g, i->s_conductance);
-		StampCurrentSource(i->Ieq, i->s_current_source);
-		break;
-	default:
-		printf("Method %d not implemented\n", dc->method);
-		break;
 	}
+	else
+		StampCurrentSource(i->Ieq,i->s_current_source);
 }
 
 static int
@@ -108,23 +108,13 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
         ES_Inductor *i = obj;
 	Uint k = PNODE(i,PORT_A);
 	Uint l = PNODE(i,PORT_B);
-
-		switch(dc->method) {
-	case BE:
+	
+	if(isImplicit[dc->method]) {
 		InitStampConductance(k, l, i->s_conductance, dc);
 		InitStampCurrentSource(l, k, i->s_current_source, dc);
-		break;
-	case FE:
-		InitStampCurrentSource(l, k, i->s_current_source, dc);
-		break;
-	case TR:
-		InitStampConductance(k, l, i->s_conductance, dc);
-		InitStampCurrentSource(l, k, i->s_current_source, dc);
-		break;
-	default:
-		printf("Method %d not implemented\n", dc->method);
-		break;
 	}
+	else
+		InitStampCurrentSource(l, k, i->s_current_source, dc);
 	
 	i->g = 0.0;
 	i->Ieq = 0.0;
@@ -155,17 +145,10 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 static M_Real
 InductorBranchCurrent(ES_Inductor *i, ES_SimDC *dc)
 {
-	switch(dc->method) {
-	case BE:
-	case TR:
+	if(isImplicit[dc->method])
 		return i->Ieq + i->g * vPrevStep(i, 1);
-	case FE:
+	else
 		return i->Ieq;
-	default:
-		printf("Method %d not implemented\n", dc->method);
-		break;
-	}
-
 }
 
 /* LTE for capacitor, estimated via divided differences
@@ -205,7 +188,7 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 	}
 	default:
 		printf("Method %d not implemented\n", dc->method);
-		break;
+		return;
 	}
 
 	if(localErr < *err)

@@ -25,7 +25,8 @@ SRCS=	core.c \
 	schem_port.c \
 	schem_port_tool.c \
 	schem_select_tool.c \
-	schem_wire.c
+	schem_wire.c \
+	integration.c
 
 CFLAGS+=${FREESG_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 

@@ -14,6 +14,7 @@
 #include <edacious/core/schem.h>
 #include <edacious/core/component.h>
 #include <edacious/core/sim.h>
+#include <edacious/core/integration.h>
 #include <edacious/core/dc.h>
 #include <edacious/core/circuit.h>
 #include <edacious/core/icons.h>

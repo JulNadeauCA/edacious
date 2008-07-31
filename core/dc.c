@@ -312,6 +312,7 @@ Init(void *p)
 	sim->z = M_VecNew(0);
 	sim->x = M_VecNew(0);
 	sim->xPrevSteps = NULL;
+	sim->deltaTPrevSteps = NULL;
 	sim->stepsToKeep = 0;
 	sim->xPrevIter = M_VecNew(0);
 	sim->groundNode = NULL;
@@ -485,14 +486,6 @@ Edit(void *p, ES_Circuit *ckt)
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
 	ntab = AG_NotebookAddTab(nb, _("Continuous mode"), AG_BOX_VERT);
 	{
-		const char *methodNames[] = {
-			N_("Backward Euler"),
-			N_("Forward Euler"),
-			N_("Trapezoidal"),
-			N_("Gear-2"),
-			NULL
-		};
-
 		AG_ButtonAct(ntab, AG_BUTTON_HFILL|AG_BUTTON_STICKY,
 		    _("Run simulation"),
 		    RunSimulation, "%p", sim);
