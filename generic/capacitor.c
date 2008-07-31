@@ -46,35 +46,22 @@ const ES_Port esCapacitorPorts[] = {
  * iteration.
  */
 static M_Real
-vPrevStep(ES_Capacitor *c, int n)
+GetVoltage(ES_Capacitor *c, int n)
 {
 	return V_PREV_STEP(c,PORT_A, n)-V_PREV_STEP(c,PORT_B, n);
 }
 
 static M_Real
-vThisStep(ES_Capacitor *c)
-{
-	return VPORT(c,PORT_A)-VPORT(c,PORT_B);
-}
-
-static M_Real
-iPrevStep(ES_Capacitor *c, int n)
+GetCurrent(ES_Capacitor *c, int n)
 {
 	return I_PREV_STEP(c, c->vIdx, n);
 }
-
-static M_Real
-iThisStep(ES_Capacitor *c)
-{
-	return IBRANCH(c, c->vIdx);
-}
-
 
 /* Updates the small- and large-signal models, saving the previous values. */
 static void
 UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
 {
-	M_Real v = dc->currStep == 0 ? c->V0 : vPrevStep(c, 1);
+	M_Real v = dc->currStep == 0 ? c->V0 : GetVoltage(c, 1);
 	switch(dc->method) {
 	case BE:
 		/* Thevenin companion model : better suited
@@ -83,10 +70,10 @@ UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
 		c->r = dc->deltaT / c->C;
 		break;
 	case FE:
-		c->v += dc->deltaT / c->C * iPrevStep(c, 1);
+		c->v += dc->deltaT / c->C * GetCurrent(c, 1);
 		break;
 	case TR:
-		c->v = v + dc->deltaT / (2 * c->C) * iPrevStep(c, 1);
+		c->v = v + dc->deltaT / (2 * c->C) * GetCurrent(c, 1);
 		c->r = dc->deltaT / (2 * c->C);
 		break;
 	case G2:
@@ -99,7 +86,7 @@ UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
 			return;
 		}
 		
-		c->v = 4.0/3.0 * vPrevStep(c, 1) - 1.0/3.0 * vPrevStep(c, 2);
+		c->v = 4.0/3.0 * GetVoltage(c, 1) - 1.0/3.0 * GetVoltage(c, 2);
 		c->r = 2.0/3.0 * dc->deltaT / c->C;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -161,10 +148,10 @@ ThirdDerivative(ES_Capacitor *c, ES_SimDC *dc)
 	M_Real dtnm1 = dc->deltaTPrevSteps[0];
 	M_Real dtnm2 = dc->deltaTPrevSteps[1];
 		
-	M_Real vnp1 = vThisStep(c);
-	M_Real vn = vPrevStep(c, 1);
-	M_Real vnm1 = vPrevStep(c, 2);
-	M_Real vnm2 = vPrevStep(c, 3);
+	M_Real vnp1 = GetVoltage(c, 0);
+	M_Real vn = GetVoltage(c, 1);
+	M_Real vnm1 = GetVoltage(c, 2);
+	M_Real vnm2 = GetVoltage(c, 3);
 		
 	M_Real term1 = (vnp1 - vn)/dtn - (vn - vnm1)/dtnm1;
 	M_Real term2 = (vn - vnm1)/dtnm1 - (vnm1 - vnm2)/dtnm2;
@@ -181,7 +168,7 @@ Derivative(ES_Capacitor *c, ES_SimDC *dc, int n)
 	if(n == 3)
 		return ThirdDerivative(c, dc);
 	else if(n == 2)
-		return (iThisStep(c) - iPrevStep(c, 1)) / c->C / dc->deltaT;
+		return (GetCurrent(c, 0) - GetCurrent(c, 1)) / c->C / dc->deltaT;
 	else
 		return 0.0; /* Not implemented yet */
 }
@@ -198,7 +185,7 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 		pow(dtn, methodOrder[dc->method] + 1)
 		* methodErrorConstant[dc->method]
 		* Derivative(c, dc, methodOrder[dc->method] + 1)
-		/ vThisStep(c));
+		/ GetVoltage(c, 0));
 	
 	if(localErr < *err)
 		*err = localErr;

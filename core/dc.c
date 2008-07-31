@@ -545,7 +545,9 @@ static M_Real
 NodeVoltagePrevStep(void *p, int j, int n)
 {
 	ES_SimDC *sim = p;
-
+	if(n == 0)
+		return NodeVoltage(p, j);
+	
 	return (j>=0)&&(sim->xPrevSteps[n-1]->m > j) ? M_VecGet(sim->xPrevSteps[n-1], j) : 0.0;
 }
 
@@ -565,6 +567,8 @@ BranchCurrentPrevStep(void *p, int k, int n)
 	ES_SimDC *sim = p;
 	ES_Circuit *ckt = SIM(sim)->ckt;
 	int i = ckt->n + k;
+	if(n == 0)
+		return BranchCurrent(p, k);
 
 	return (i>=0)&&(sim->xPrevSteps[n-1]->m > i) ? M_VecGet(sim->xPrevSteps[n-1], i) : 0.0;
 }
