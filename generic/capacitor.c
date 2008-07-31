@@ -172,7 +172,7 @@ ThirdDerivative(ES_Capacitor *c, ES_SimDC *dc)
 	M_Real thirdDerivative = term1 / (dtn + dtnm1) - term2/ (dtnm1 + dtnm2);
 	thirdDerivative /= (dtn + dtnm1 + dtnm2);
 
-	return Fabs(thirdDerivative);
+	return thirdDerivative;
 }
 
 /* LTE for capacitor, estimated via divided differences */
@@ -190,10 +190,10 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 							    / vPrevStep(c, 1));
 		break;
 	case TR:
-		localErr = dtn * dtn * dtn * ThirdDerivative(c, dc) / 12.0 / Fabs(vPrevStep(c, 1));
+		localErr = dtn * dtn * dtn * Fabs(ThirdDerivative(c, dc) / vPrevStep(c, 1)) / 12.0;
 		break;
-	case G2:
-		localErr = dtn * dtn * dtn * ThirdDerivative(c, dc) * 2.0/9.0 / Fabs(vPrevStep(c, 1));
+	case G2:	
+		localErr = dtn * dtn * dtn * Fabs(ThirdDerivative(c, dc) / vPrevStep(c, 1)) * 2.0/ 9.0;
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);

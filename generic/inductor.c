@@ -41,10 +41,6 @@ const ES_Port esInductorPorts[] = {
 	{ -1 },
 };
 
-/*
- * Returns the voltage across the diode calculated in the last Newton-Raphson
- * iteration.
- */
 
 static M_Real
 vPrevStep(ES_Inductor *i, int n)
@@ -58,21 +54,56 @@ vThisStep(ES_Inductor *i)
 }
 
 
-/* Updates the small- and large-signal models, saving the previous values. */
+/* Returns current flowing through the linearized model at this step */
+static M_Real
+InductorBranchCurrent(ES_Inductor *i, ES_SimDC *dc)
+{
+	if(isImplicit[dc->method])
+		return i->Ieq + i->g * vThisStep(i);
+	else
+		return i->Ieq;
+}
+
+static M_Real
+iPrevStep(ES_Inductor *i, int n)
+{
+	return i->I[n];
+}
+static M_Real
+iThisStep(ES_Inductor *i)
+{
+	return i->I[0];
+}
+
+static void
+CyclePreviousI(ES_Inductor *i, ES_SimDC *dc)
+{
+	int index;
+	if(dc->stepsToKeep == 1)
+	{
+		i->I[0] = 0.0;
+		return;
+	}
+	
+	for(index = dc->stepsToKeep - 2 ; index >= 0 ; index--)
+		i->I[index+1] = i->I[index];
+	
+	i->I[0] = 0.0;
+}
+
 static void
 UpdateModel(ES_Inductor *i, ES_SimDC *dc)
 {
-	M_Real v = vPrevStep(i, 1);
 	switch(dc->method) {
 	case BE:
-		i->Ieq += v*i->g;
+		i->Ieq = iPrevStep(i, 1);
 		i->g = dc->deltaT / i->L;
 		break;
 	case FE:
-		i->Ieq += dc->deltaT / i->L * v;
+		i->Ieq = iPrevStep(i, 1) + dc->deltaT / i->L * vPrevStep(i, 1);
 		break;
 	case TR:
-		i->Ieq += v*i->g + dc->deltaT / (2 * i->L) * v;
+		i->Ieq = iPrevStep(i, 1) + dc->deltaT / (2 * i->L) * vPrevStep(i, 1);
 		i->g = dc->deltaT / (2 * i->L);
 		break;
 	case G2:
@@ -84,11 +115,15 @@ UpdateModel(ES_Inductor *i, ES_SimDC *dc)
 			dc->method = G2;
 			return;
 		}
-		i->Ieq = 4.0/3.0; /* TODO */
+		i->Ieq = 4.0/3.0 * iPrevStep(i, 1) - 1.0/3.0 * iPrevStep(i, 2);
+		i->g = 2.0/3.0 * dc->deltaT / i->L;
+		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
 		break;
 	}
+
+	i->I[0] = InductorBranchCurrent(i, dc);
 }
 
 static void
@@ -108,6 +143,7 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
         ES_Inductor *i = obj;
 	Uint k = PNODE(i,PORT_A);
 	Uint l = PNODE(i,PORT_B);
+	int index;
 	
 	if(isImplicit[dc->method]) {
 		InitStampConductance(k, l, i->s_conductance, dc);
@@ -115,6 +151,10 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	}
 	else
 		InitStampCurrentSource(l, k, i->s_current_source, dc);
+
+	i->I = malloc(sizeof(M_Real) * dc->stepsToKeep);
+	for(index = 0; index < dc->stepsToKeep; index++)
+		i->I[index] = 0.0;
 	
 	i->g = 0.0;
 	i->Ieq = 0.0;
@@ -128,6 +168,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Inductor *i = obj;
 	
+	CyclePreviousI(i, dc);
 	UpdateModel(i, dc);
 	Stamp(i, dc);
 
@@ -141,14 +182,23 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 	Stamp(i, dc);
 }
 
-/* Returns current flowing through the linearized model at previous step */
+
+/* Computes third derivative at current point via divided differences */
 static M_Real
-InductorBranchCurrent(ES_Inductor *i, ES_SimDC *dc)
+ThirdDerivative(ES_Inductor *i, ES_SimDC *dc)
 {
-	if(isImplicit[dc->method])
-		return i->Ieq + i->g * vPrevStep(i, 1);
-	else
-		return i->Ieq;
+	/* Actually compute second derivative of v, and use i = L dv/dt */
+	M_Real dtn = dc->deltaT;
+	M_Real dtnm1 = dc->deltaTPrevSteps[0];
+		
+	M_Real vnp1 = vThisStep(i);
+	M_Real vn = vPrevStep(i, 1);
+	M_Real vnm1 = vPrevStep(i, 2);
+		
+	M_Real secondDerivative = ((vnp1 - vn)/dtn - (vn - vnm1)/dtnm1);
+	secondDerivative /= (dtn + dtnm1);
+	secondDerivative /= i->L;
+	return secondDerivative;
 }
 
 /* LTE for capacitor, estimated via divided differences
@@ -159,33 +209,20 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 {
 	ES_Inductor *i = obj;
 	M_Real localErr;
-	M_Real I = InductorBranchCurrent(i, dc);
+	M_Real I = iThisStep(i);
+	M_Real dtn = dc->deltaT;
 	switch(dc->method) {
 	case BE:
 	case FE:
 		/* Error = dt*dt/2 * i''(e) = dt/2/L * v'(e) */
-		localErr = dc->deltaT / 2.0 / i->L * Fabs((vThisStep(i) - vPrevStep(i, 1))
-							  / I);
+		localErr = dtn * dtn / 2.0 / i->L * Fabs((vThisStep(i) - vPrevStep(i, 1)) / I);
 		break;
 	case TR:
-	{
-		/* Error = (dt^3)/12 i'''(e) = (dt^3)/12/L v''(e) */
-		M_Real dtn = dc->deltaT;
-		M_Real dtnm1 = dc->deltaTPrevSteps[0];
-		
-		M_Real vnp1 = vThisStep(i);
-		M_Real vn = vPrevStep(i, 1);
-		M_Real vnm1 = vPrevStep(i, 2);
-		
-		M_Real secondDerivative = ((vnp1 - vn)/dtn - (vn - vnm1)/dtnm1);
-		secondDerivative /= (dtn + dtnm1);
-		
-		localErr = dtn * dtn * dtn * secondDerivative
-			/ (12.0 * i->L * I);
-
-		localErr = Fabs(localErr);
+		localErr = dtn * dtn * dtn * Fabs(ThirdDerivative(i, dc) / 12.0 / I);
 		break;
-	}
+	case G2:
+		localErr = dtn * dtn * dtn * Fabs(ThirdDerivative(i, dc) * 2.0 / 9.0 / I);
+		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
 		return;
@@ -203,6 +240,7 @@ Init(void *p)
 
 	ES_InitPorts(i, esInductorPorts);
 	i->L = 1.0;
+	i->I = NULL;
 	
 	COMPONENT(i)->dcSimBegin = DC_SimBegin;
 	COMPONENT(i)->dcStepBegin = DC_StepBegin;
@@ -242,6 +280,14 @@ Edit(void *p)
 	return (box);
 }
 
+static void
+Destroy(void *p)
+{
+	ES_Inductor *i = p;
+	if(i->I)
+		free(i->I);
+}
+
 ES_ComponentClass esInductorClass = {
 	{
 		"ES_Component:ES_Inductor",
@@ -249,7 +295,7 @@ ES_ComponentClass esInductorClass = {
 		{ 0,0 },
 		Init,
 		NULL,		/* reinit */
-		NULL,		/* destroy */
+		Destroy,	/* destroy */
 		Load,		/* load */
 		Save,		/* save */
 		Edit

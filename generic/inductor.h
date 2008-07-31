@@ -6,6 +6,8 @@ typedef struct es_inductor {
 	M_Real L;			/* Inductance (H) */
 	M_Real g, Ieq;			/* Companion model parameters */
 
+	M_Real *I;                      /* Past and present currents */
+
 	StampConductanceData s_conductance;
 	StampCurrentSourceData s_current_source;
 } ES_Inductor;
