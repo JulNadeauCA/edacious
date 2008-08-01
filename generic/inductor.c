@@ -215,11 +215,13 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 	M_Real localErr;
 	M_Real I = GetCurrent(i, 0);
 	M_Real dtn = dc->deltaT;
+	enum es_integration_method actualMethod;
+	actualMethod = ((dc->method == G2) && (dc->currStep == 0)) ? BE : dc->method;
 
 	localErr= Fabs(
-		pow(dtn, methodOrder[dc->method] + 1)
-		* methodErrorConstant[dc->method]
-		* Derivative(i, dc, methodOrder[dc->method] + 1)
+		pow(dtn, methodOrder[actualMethod] + 1)
+		* methodErrorConstant[actualMethod]
+		* Derivative(i, dc, methodOrder[actualMethod] + 1)
 		/ GetCurrent(i, 0));
 
 	if(localErr > *err)

@@ -53,7 +53,8 @@ GetCurrent(ES_Capacitor *c, int n)
 	return I_PREV_STEP(c, c->vIdx, n);
 }
 
-static M_Real GetDeltaT(ES_SimDC *dc, int n)
+static M_Real
+GetDeltaT(ES_SimDC *dc, int n)
 {
 	if(n == 0) return dc->deltaT;
 	else return dc->deltaTPrevSteps[n - 1];
@@ -71,7 +72,7 @@ UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
 		c->r = dc->deltaT / c->C;
 		break;
 	case FE:
-		c->v += dc->deltaT / c->C * GetCurrent(c, 1);
+		c->v = v + dc->deltaT / c->C * GetCurrent(c, 1);
 		break;
 	case TR:
 		c->v = v + dc->deltaT / (2 * c->C) * GetCurrent(c, 1);
@@ -173,11 +174,13 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 	ES_Capacitor *c = obj;
 	M_Real localErr;
 	M_Real dtn = dc->deltaT;
+	enum es_integration_method actualMethod;
+	actualMethod = ((dc->method == G2) && (dc->currStep == 0)) ? BE : dc->method;
 
 	localErr= Fabs(
-		pow(dtn, methodOrder[dc->method] + 1)
-		* methodErrorConstant[dc->method]
-		* Derivative(c, dc, methodOrder[dc->method] + 1)
+		pow(dtn, methodOrder[actualMethod] + 1)
+		* methodErrorConstant[actualMethod]
+		* Derivative(c, dc, methodOrder[actualMethod] + 1)
 		/ GetVoltage(c, 0));
 	
 	if(localErr > *err)
