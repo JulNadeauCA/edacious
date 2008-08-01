@@ -55,6 +55,13 @@ GetCurrent(ES_Inductor *i, int n)
 	return i->I[n];
 }
 
+static M_Real GetDeltaT(ES_SimDC *dc, int n)
+{
+	if(n == 0) return dc->deltaT;
+	else return dc->deltaTPrevSteps[n - 1];
+}
+
+
 /* Returns current flowing through the linearized model at this step */
 static M_Real
 InductorBranchCurrent(ES_Inductor *i, ES_SimDC *dc)
@@ -172,34 +179,30 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 	Stamp(i, dc);
 }
 
-
-/* Computes third derivative at current point via divided differences */
+/* Computes the approximation of the derivative of v of order
+ * (end - start) by divided difference */
 static M_Real
-ThirdDerivative(ES_Inductor *i, ES_SimDC *dc)
+DividedDifference(ES_Inductor *i, ES_SimDC *dc, int start, int end)
 {
-	/* Actually compute second derivative of v, and use i = L dv/dt */
-	M_Real dtn = dc->deltaT;
-	M_Real dtnm1 = dc->deltaTPrevSteps[0];
-		
-	M_Real vnp1 = GetVoltage(i, 0);
-	M_Real vn = GetVoltage(i, 1);
-	M_Real vnm1 = GetVoltage(i, 2);
-		
-	M_Real thirdDerivative = ((vnp1 - vn)/dtn - (vn - vnm1)/dtnm1);
-	thirdDerivative /= (dtn + dtnm1);
-	thirdDerivative /= i->L;
-	return thirdDerivative;
+	M_Real num;
+	M_Real denom = 0;
+	int index;
+	if(start == end)
+		return GetVoltage(i, start);
+
+	num = (DividedDifference(i, dc, start + 1, end) - DividedDifference(i, dc, start, end - 1)) / (end - start) ;
+	for(index = start; index < end; index++)
+	{
+		denom += GetDeltaT(dc, index);
+	}
+	return num/denom;
 }
 
 static M_Real
 Derivative(ES_Inductor *i, ES_SimDC *dc, int n)
 {
-	if(n == 3)
-		return ThirdDerivative(i, dc);
-	else if(n == 2)
-		return (GetVoltage(i, 0) - GetVoltage(i, 1)) / i->L / dc->deltaT;
-	else
-		return 0.0; /* Not implemented yet */
+	/* the minus sign is due to the fact that we stock values from newest to oldest */
+	return - DividedDifference(i, dc, 0, n);
 }
 
 /* LTE for capacitor, estimated via divided differences
@@ -219,7 +222,7 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 		* Derivative(i, dc, methodOrder[dc->method] + 1)
 		/ GetCurrent(i, 0));
 
-	if(localErr < *err)
+	if(localErr > *err)
 		*err = localErr;
 }
 

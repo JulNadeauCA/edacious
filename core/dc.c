@@ -242,13 +242,13 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	}
 
 	/* Get error from components */
-	error = HUGE_VAL;
+	error = -1.0;
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		if (com->dcUpdateError != NULL)
 			com->dcUpdateError(com, sim, &error);
 	}
 	/* No energy storage components : no error */
-	if(error == HUGE_VAL)
+	if(error < 0.0)
 		error = 0;
 	M_SetReal(ckt, "%err", error*100);
 

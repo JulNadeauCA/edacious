@@ -41,10 +41,6 @@ const ES_Port esCapacitorPorts[] = {
 	{ -1 },
 };
 
-/*
- * Returns the voltage across the diode calculated in the last Newton-Raphson
- * iteration.
- */
 static M_Real
 GetVoltage(ES_Capacitor *c, int n)
 {
@@ -57,7 +53,12 @@ GetCurrent(ES_Capacitor *c, int n)
 	return I_PREV_STEP(c, c->vIdx, n);
 }
 
-/* Updates the small- and large-signal models, saving the previous values. */
+static M_Real GetDeltaT(ES_SimDC *dc, int n)
+{
+	if(n == 0) return dc->deltaT;
+	else return dc->deltaTPrevSteps[n - 1];
+}
+
 static void
 UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
 {
@@ -88,6 +89,7 @@ UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
 		
 		c->v = 4.0/3.0 * GetVoltage(c, 1) - 1.0/3.0 * GetVoltage(c, 2);
 		c->r = 2.0/3.0 * dc->deltaT / c->C;
+		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
 		break;
@@ -115,7 +117,6 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	else
 		InitStampVoltageSource(k, l, c->vIdx, c->s, dc);
 
-	c->v = c->V0;
 	UpdateModel(c, dc);
 	Stamp(c, dc);
 
@@ -139,38 +140,30 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 	Stamp(c, dc);
 }
 
-
-/* Computes third derivative at current point via divided differences */
+/* Computes the approximation of the derivative of v of order
+ * (end - start) by divided difference */
 static M_Real
-ThirdDerivative(ES_Capacitor *c, ES_SimDC *dc)
+DividedDifference(ES_Capacitor *c, ES_SimDC *dc, int start, int end)
 {
-	M_Real dtn = dc->deltaT;
-	M_Real dtnm1 = dc->deltaTPrevSteps[0];
-	M_Real dtnm2 = dc->deltaTPrevSteps[1];
-		
-	M_Real vnp1 = GetVoltage(c, 0);
-	M_Real vn = GetVoltage(c, 1);
-	M_Real vnm1 = GetVoltage(c, 2);
-	M_Real vnm2 = GetVoltage(c, 3);
-		
-	M_Real term1 = (vnp1 - vn)/dtn - (vn - vnm1)/dtnm1;
-	M_Real term2 = (vn - vnm1)/dtnm1 - (vnm1 - vnm2)/dtnm2;
+	M_Real num;
+	M_Real denom = 0;
+	int i;
+	if(start == end)
+		return GetVoltage(c, start);
 
-	M_Real thirdDerivative = term1 / (dtn + dtnm1) - term2/ (dtnm1 + dtnm2);
-	thirdDerivative /= (dtn + dtnm1 + dtnm2);
-
-	return thirdDerivative;
+	num = (DividedDifference(c, dc, start + 1, end) - DividedDifference(c, dc, start, end - 1)) / (end - start);
+	for(i = start; i < end; i++)
+	{
+		denom += GetDeltaT(dc, i);
+	}
+	return num/denom;
 }
 
 static M_Real
 Derivative(ES_Capacitor *c, ES_SimDC *dc, int n)
 {
-	if(n == 3)
-		return ThirdDerivative(c, dc);
-	else if(n == 2)
-		return (GetCurrent(c, 0) - GetCurrent(c, 1)) / c->C / dc->deltaT;
-	else
-		return 0.0; /* Not implemented yet */
+	/* the minus sign is due to the fact that we stock values from newest to oldest */
+	return - DividedDifference(c, dc, 0, n);
 }
 
 /* LTE for capacitor, estimated via divided differences */
@@ -187,7 +180,7 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 		* Derivative(c, dc, methodOrder[dc->method] + 1)
 		/ GetVoltage(c, 0));
 	
-	if(localErr < *err)
+	if(localErr > *err)
 		*err = localErr;
 }
 
