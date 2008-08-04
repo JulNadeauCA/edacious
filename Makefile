@@ -17,27 +17,15 @@ SUBDIR=		core \
 INCPUB=		core generic macro sources
 INCDIRS=	core generic macro sources
 
-LIB=		edacious
-LIB_INSTALL=	Yes
-LIB_SHARED=	Yes
-LIB_GUID=	"49370965-fa94-4c11-b0e2-edcf46034884"
-LIB_LINKS=	freesg_m ag_core ag_gui ag_sc ag_dev ag_vg \
-		pthreads SDL SDLmain opengl freetype
-
-LIBS=	generic/libes_generic.la \
-	macro/libes_macro.la \
-	sources/libes_sources.la \
-	core/libes_core.la
-
 CFLAGS+=${FREESG_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 
-all: all-subdir lib${LIB}.a lib${LIB}.la
+all: all-subdir
 clean: clean-subdir
 cleandir: cleandir-subdir
 depend: depend-subdir
 regress: regress-subdir
-install: install-lib install-includes install-subdir
-deinstall: deinstall-lib deinstall-includes deinstall-subdir
+install: install-includes install-subdir
+deinstall: deinstall-includes deinstall-subdir
 
 configure: configure.in
 	cat configure.in | mkconfigure > configure
