@@ -60,8 +60,6 @@ tryname:
 
 	ES_LockCircuit(ckt);
 	AG_ObjectAttach(ckt, wire);
-	AG_ObjectUnlinkDatafiles(wire);
-	AG_ObjectPageIn(wire);
 	AG_PostEvent(ckt, wire, "circuit-shown", NULL);
 	ES_UnlockCircuit(ckt);
 

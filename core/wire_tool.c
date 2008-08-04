@@ -30,12 +30,20 @@
 
 #include "core.h"
 
-static ES_Wire *esCurWire;
+typedef struct es_wire_tool {
+	VG_Tool _inherit;
+	Uint flags;
+#define CREATE_NEW_NODES 0x01	/* Allow creation of new nodes */
+	ES_Wire *curWire;	/* Wire being created */
+} ES_WireTool;
 
 static void
 Init(void *p)
 {
-	esCurWire = NULL;
+	ES_WireTool *t = p;
+
+	t->flags = 0;
+	t->curWire = NULL;
 }
 
 /*
@@ -43,8 +51,8 @@ Init(void *p)
  * points in the schematic.
  */
 static int
-ConnectWire(VG_View *vv, ES_Circuit *ckt, ES_Wire *wire, VG_Vector p1,
-    VG_Vector p2)
+ConnectWire(ES_WireTool *t, VG_View *vv, ES_Circuit *ckt, ES_Wire *wire,
+    VG_Vector p1, VG_Vector p2)
 {
 	ES_SchemPort *sp1, *sp2;
 	int N1, N2, N3;
@@ -52,13 +60,30 @@ ConnectWire(VG_View *vv, ES_Circuit *ckt, ES_Wire *wire, VG_Vector p1,
 
 	ES_LockCircuit(ckt);
 
-	sp1 = VG_PointProximity(vv, "SchemPort", &p1, NULL, NULL);
-	sp2 = VG_PointProximity(vv, "SchemPort", &p2, NULL, NULL);
+	sp1 = VG_PointProximityMax(vv, "SchemPort", &p1, NULL, NULL,
+	    vv->pointSelRadius);
+	sp2 = VG_PointProximityMax(vv, "SchemPort", &p2, NULL, NULL,
+	    vv->pointSelRadius);
 	if ((sp1 != NULL && sp1->port->node != -1) &&
 	    (sp2 != NULL && sp2->port->node != -1) &&
 	    (sp1->port->node == sp2->port->node)) {
 		AG_SetError(_("Redundant connection"));
 		goto fail;
+	}
+
+	Debug(ckt, "WIRE: Port1=n%d, Port2=n%d\n",
+	    (sp1->port != NULL) ? sp1->port->node : -2,
+	    (sp2->port != NULL) ? sp2->port->node : -2);
+
+	if ((t->flags & CREATE_NEW_NODES) == 0) {
+		if (sp1->port != NULL && sp1->port->node == -1) {
+			AG_SetError(_("Cannot find port1"));
+			goto fail;
+		}
+		if (sp2->port != NULL && sp2->port->node == -1) {
+			AG_SetError(_("Cannot find port2"));
+			goto fail;
+		}
 	}
 
 	N1 = (sp1->port != NULL && sp1->port->node != -1) ?
@@ -110,10 +135,10 @@ UpdateStatus(VG_View *vv, ES_SchemPort *sp)
 static int
 MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
-	VG_Tool *t = p;
-	VG_View *vv = t->vgv;
+	ES_WireTool *t = p;
+	VG_View *vv = VGTOOL(t)->vgv;
+	ES_Circuit *ckt = VGTOOL(t)->p;
 	VG *vg = vv->vg;
-	ES_Circuit *ckt = t->p;
 	ES_Component *com;
 	ES_Port *port1, *port2;
 	ES_SchemPort *sp;
@@ -122,17 +147,17 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	
 	switch (button) {
 	case SDL_BUTTON_LEFT:
-		if (esCurWire == NULL) {
+		if (t->curWire == NULL) {
 			/* Create the Circuit Wire object */
-			esCurWire = ES_WireNew(ckt);
-			port1 = &COMPONENT(esCurWire)->ports[1];
-			port2 = &COMPONENT(esCurWire)->ports[2];
+			t->curWire = ES_WireNew(ckt);
+			port1 = &COMPONENT(t->curWire)->ports[1];
+			port2 = &COMPONENT(t->curWire)->ports[2];
 
 			/* Create the schematic Port entities. */
 			port1->sp = ES_SchemPortNew(vg->root);
 			port2->sp = ES_SchemPortNew(vg->root);
-			port1->sp->com = COMPONENT(esCurWire);
-			port2->sp->com = COMPONENT(esCurWire);
+			port1->sp->com = COMPONENT(t->curWire);
+			port2->sp->com = COMPONENT(t->curWire);
 			port1->sp->port = port1;
 			port2->sp->port = port2;
 			VG_Translate(port1->sp, vPos);
@@ -140,30 +165,29 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 
 			/* Create the schematic Wire entity. */
 			sw = ES_SchemWireNew(vg->root, port1->sp, port2->sp);
-			sw->wire = esCurWire;
-			esCurWire->schemWire = sw;
-			ES_AttachSchemEntity(esCurWire, VGNODE(sw));
+			sw->wire = t->curWire;
+			t->curWire->schemWire = sw;
+			ES_AttachSchemEntity(t->curWire, VGNODE(sw));
 		} else {
-			port1 = &COMPONENT(esCurWire)->ports[1];
-			port2 = &COMPONENT(esCurWire)->ports[2];
+			port1 = &COMPONENT(t->curWire)->ports[1];
+			port2 = &COMPONENT(t->curWire)->ports[2];
 			ES_UnselectPort(port1);
 			ES_UnselectPort(port2);
-			if (ConnectWire(vv, ckt, esCurWire, VG_Pos(port1->sp),
+			if (ConnectWire(t, vv, ckt, t->curWire,
+			    VG_Pos(port1->sp),
 			    VG_Pos(port2->sp)) == -1) {
-				AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
-				VG_Status(vv, _("Could not connect: %s"),
-				    AG_GetError());
+				VG_Status(vv, "%s", AG_GetError());
 			} else {
-				esCurWire = NULL;
+				t->curWire = NULL;
 			}
 		}
 		ES_UnselectAllPorts(ckt);
 		return (1);
 	case SDL_BUTTON_RIGHT:
-		if (esCurWire != NULL) {
-			AG_ObjectDetach(esCurWire);
-			AG_ObjectDestroy(esCurWire);
-			esCurWire = NULL;
+		if (t->curWire != NULL) {
+			AG_ObjectDetach(t->curWire);
+			AG_ObjectDestroy(t->curWire);
+			t->curWire = NULL;
 			ES_UnselectAllPorts(ckt);
 			return (1);
 		}
@@ -176,16 +200,16 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 static int
 MouseButtonUp(void *p, VG_Vector vPos, int button)
 {
-	VG_Tool *t = p;
-	VG_View *vv = t->vgv;
-	ES_Circuit *ckt = t->p;
+	ES_WireTool *t = p;
+	VG_View *vv = VGTOOL(t)->vgv;
+	ES_Circuit *ckt = VGTOOL(t)->p;
 	ES_SchemPort *spNear;
 
 	switch (button) {
 	case SDL_BUTTON_LEFT:
 		ES_UnselectAllPorts(ckt);
 		spNear = VG_PointProximityMax(vv, "SchemPort", &vPos, NULL,
-		    esCurWire, vv->pointSelRadius);
+		    t->curWire, vv->pointSelRadius);
 		if (spNear != NULL) {
 			ES_SelectPort(spNear->port);
 		}
@@ -202,46 +226,60 @@ PostDraw(void *p, VG_View *vv)
 	VG_Tool *t = p;
 	int x, y;
 
-	VG_GetViewCoords(vv, VGTOOL(t)->vCursor, &x,&y);
+	VG_GetViewCoords(vv, t->vCursor, &x,&y);
 	AG_DrawCircle(vv, x,y, 3, VG_MapColorRGB(vv->vg->selectionColor));
 }
 
 static int
 MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 {
-	VG_Tool *t = p;
-	VG_View *vv = t->vgv;
-	ES_Circuit *ckt = t->p;
+	ES_WireTool *t = p;
+	VG_View *vv = VGTOOL(t)->vgv;
+	ES_Circuit *ckt = VGTOOL(t)->p;
 	ES_Component *com;
 	ES_SchemPort *spNear;
 	int i;
 
 	ES_UnselectAllPorts(ckt);
 	spNear = VG_PointProximityMax(vv, "SchemPort", &vPos, NULL,
-	    (esCurWire != NULL) ? COMPONENT(esCurWire)->ports[1].sp : NULL,
+	    (t->curWire != NULL) ? COMPONENT(t->curWire)->ports[1].sp : NULL,
 	    vv->pointSelRadius);
 	if (spNear != NULL) {
 		ES_SelectPort(spNear->port);
 	}
-	if (esCurWire != NULL) {
-		VG_SetPosition(COMPONENT(esCurWire)->ports[1].sp,
+	if (t->curWire != NULL) {
+		VG_SetPosition(COMPONENT(t->curWire)->ports[1].sp,
 		    (spNear != NULL) ? VG_Pos(spNear) : vPos);
 	}
 	UpdateStatus(vv, spNear);
 	return (0);
 }
 
+static void *
+Edit(void *p, VG_View *vv)
+{
+	ES_WireTool *t = p;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+
+	AG_CheckboxNewFlag(box, &t->flags, CREATE_NEW_NODES,
+	    _("Create new nodes"));
+
+	return (box);
+}
+
 VG_ToolOps esWireTool = {
 	N_("Wire"),
 	N_("Merge two nodes."),
 	&esIconInsertWire,
-	sizeof(VG_Tool),
+	sizeof(ES_WireTool),
 	0,
 	Init,
 	NULL,			/* destroy */
-	NULL,			/* edit */
+	Edit,
 	NULL,			/* predraw */
 	PostDraw,
+	NULL,			/* selected */
+	NULL,			/* deselected */
 	MouseMotion,
 	MouseButtonDown,
 	MouseButtonUp,
