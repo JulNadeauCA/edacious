@@ -31,6 +31,8 @@
 
 typedef struct es_insert_tool {
 	VG_Tool _inherit;
+	Uint flags;
+#define INSERT_MULTIPLE	0x01		/* Insert multiple instances */
 	ES_Component *floatingCom;
 } ES_InsertTool;
 
@@ -206,10 +208,8 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			SDLMod mod = SDL_GetModState();
 
 			TAILQ_FOREACH(vn, &t->floatingCom->schemEnts, user) {
-				if (mod & KMOD_ALT) {
-					VG_FlipVert(vn);
-				} else if (mod & KMOD_CTRL) {
-					VG_FlipHoriz(vn);
+				if (mod & KMOD_CTRL) {
+					VG_Rotate(vn, VG_PI/4.0f);
 				} else {
 					VG_Rotate(vn, VG_PI/2.0f);
 				}
@@ -218,7 +218,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 		break;
 	case SDL_BUTTON_RIGHT:
 		RemoveFloatingComponent(t);
-		VG_ViewSelectTool(vv, NULL, NULL);
+		VG_ViewSelectTool(vv, NULL, ckt);
 		return (1);
 	default:
 		return (0);
@@ -261,8 +261,21 @@ Init(void *p)
 	ES_InsertTool *t = p;
 
 	t->floatingCom = NULL;
+	t->flags = INSERT_MULTIPLE;
 	VG_ToolBindKey(t, KMOD_NONE, SDLK_ESCAPE, Abort, NULL);
 	VG_ToolBindKey(t, KMOD_NONE, SDLK_DELETE, Abort, NULL);
+}
+
+static void *
+Edit(void *p, VG_View *vv)
+{
+	ES_InsertTool *t = p;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+
+	AG_CheckboxNewFlag(box, &t->flags, INSERT_MULTIPLE,
+	    _("Insert multiple instances"));
+
+	return (box);
 }
 
 VG_ToolOps esInsertTool = {
@@ -273,9 +286,11 @@ VG_ToolOps esInsertTool = {
 	0,
 	Init,
 	NULL,			/* destroy */
-	NULL,			/* edit */
+	Edit,
 	NULL,			/* predraw */
 	NULL,			/* postdraw */
+	NULL,			/* selected */
+	NULL,			/* deselected */
 	MouseMotion,
 	MouseButtonDown,
 	NULL,			/* mousebuttonup */
