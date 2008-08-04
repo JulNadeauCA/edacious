@@ -32,8 +32,9 @@
 
 typedef struct es_schem_select_tool {
 	VG_Tool _inherit;
-	int moving;
-	VG_Vector vLast;
+	Uint flags;
+#define MOVING_ENTITIES	0x01	/* Translation is in progress */
+	VG_Vector vLast;	/* For grid snapping */
 } ES_SchemSelectTool;
 
 /* Return the entity nearest to vPos. */
@@ -126,7 +127,7 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 			VG_UnselectAll(vv->vg);
 			vn->flags |= VG_NODE_SELECTED;
 		}
-		t->moving = 1;
+		t->flags |= MOVING_ENTITIES;
 		return (1);
 	default:
 		return (0);
@@ -141,7 +142,7 @@ MouseButtonUp(void *p, VG_Vector v, int b)
 	if (b != SDL_BUTTON_LEFT) {
 		return (0);
 	}
-	t->moving = 0;
+	t->flags &= ~(MOVING_ENTITIES);
 	return (1);
 }
 
@@ -153,7 +154,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	VG_Node *vn;
 	VG_Vector v;
 
-	if (!t->moving) {
+	if ((t->flags & MOVING_ENTITIES) == 0) {
 		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
 			vn->flags &= ~(VG_NODE_MOUSEOVER);
 		}
@@ -250,7 +251,7 @@ Init(void *p)
 {
 	ES_SchemSelectTool *t = p;
 
-	t->moving = 0;
+	t->flags = 0;
 }
 
 VG_ToolOps esSchemSelectTool = {
@@ -258,12 +259,14 @@ VG_ToolOps esSchemSelectTool = {
 	N_("Select and move graphical elements."),
 	&esIconSelectArrow,
 	sizeof(ES_SchemSelectTool),
-	VG_NOSNAP,
+	VG_NOSNAP|VG_NOEDITCLEAR,
 	Init,
 	NULL,			/* destroy */
 	NULL,			/* edit */
 	NULL,			/* predraw */
 	NULL,			/* postdraw */
+	NULL,			/* selected */
+	NULL,			/* deselected */
 	MouseMotion,
 	MouseButtonDown,
 	MouseButtonUp,

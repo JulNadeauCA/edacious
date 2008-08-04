@@ -122,6 +122,8 @@ VG_ToolOps esSchemPortTool = {
 	NULL,			/* edit */
 	NULL,			/* predraw */
 	NULL,			/* postdraw */
+	NULL,			/* selected */
+	NULL,			/* deselected */
 	MouseMotion,
 	MouseButtonDown,
 	NULL,			/* mousebuttonup */
