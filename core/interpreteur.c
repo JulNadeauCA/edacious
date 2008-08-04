@@ -574,7 +574,7 @@ int EmpilerParam(char * lpszParam, LPPARAM lpParams, size_t nbParams)
 	{
 		size_t i;
 		BOOL found = FALSE;
-		M_Real x;
+		M_Real x = 0.0;			/* make compiler happy */
 
         /* On recherche lpszParam dans lpParams */
 		for(i = 0; i < nbParams; i++)
