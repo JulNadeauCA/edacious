@@ -55,7 +55,8 @@ static void
 SaveAndClose(AG_Object *obj, AG_Window *win)
 {
 	AG_ViewDetach(win);
-	AG_ObjectPageOut(obj);
+	AG_ObjectDetach(obj);
+	AG_ObjectDestroy(obj);
 }
 
 static void
