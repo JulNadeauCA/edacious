@@ -150,8 +150,7 @@ OnAttach(AG_Event *event)
 		return;
 
 	ES_LockCircuit(ckt);
-	Debug(ckt, "Attaching component: %s\n", OBJECT(com)->name);
-	Debug(com, "Attaching to circuit: %s\n", OBJECT(ckt)->name);
+	Debug(ckt, "Attach %s\n", OBJECT(com)->name);
 	com->ckt = ckt;
 
 	if (COMCLASS(com)->schemFile != NULL) {
@@ -196,16 +195,15 @@ OnDetach(AG_Event *event)
 		return;
 
 	ES_LockCircuit(ckt);
-	Debug(ckt, "Detaching component: %s\n", OBJECT(com)->name);
-	Debug(com, "Detaching from circuit: %s\n", OBJECT(ckt)->name);
+	Debug(ckt, "Detach %s\n", OBJECT(com)->name);
 	AG_PostEvent(ckt, com, "circuit-disconnected", NULL);
 
 	while ((vn = TAILQ_FIRST(&com->schemEnts)) != NULL) {
 		Debug(com, "Removing schematic entity: %s%u\n",
 		    vn->ops->name, vn->handle);
 		ES_DetachSchemEntity(com, vn);
-		VG_NodeDetach(vn);
-		VG_NodeDestroy(vn);
+		if (VG_Delete(vn) == -1)
+			AG_FatalError("Deleting node: %s", AG_GetError());
 	}
 
 del_branches:
@@ -305,7 +303,7 @@ ES_InitPorts(void *p, const ES_Port *ports)
 		port->flags = 0;
 		port->sp = NULL;
 		com->nports++;
-		Debug(com, "Added port #%d (%s)\n", i, port->name);
+/*		Debug(com, "Added port #%d (%s)\n", i, port->name); */
 	}
 
 	/* Find all non-redundant port pairs. */
@@ -335,9 +333,6 @@ ES_InitPorts(void *p, const ES_Port *ports)
 			pair->loops = Malloc(sizeof(ES_Loop *));
 			pair->lpols = Malloc(sizeof(int));
 			pair->nloops = 0;
-			Debug(com, "Found pair: %s<->%s\n",
-			    pair->p1->name,
-			    pair->p2->name);
 		}
 	}
 }
@@ -463,39 +458,31 @@ static void
 Rotate(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
+	float theta = AG_FLOAT(2);
 	VG_Node *vn;
 	
-	TAILQ_FOREACH(vn, &com->schemEnts, user) {
-		VG_Rotate(vn, VG_PI/2.0f);
-	}
-	VG_Status(vv, _("Rotated %s 90\xc2\xb0"), OBJECT(com)->name);
+	TAILQ_FOREACH(vn, &com->schemEnts, user)
+		VG_Rotate(vn, theta);
 }
 
 static void
 FlipHoriz(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
 	VG_Node *vn;
 	
-	TAILQ_FOREACH(vn, &com->schemEnts, user) {
+	TAILQ_FOREACH(vn, &com->schemEnts, user)
 		VG_FlipHoriz(vn);
-	}
-	VG_Status(vv, _("Flipped %s horizontally"), OBJECT(com)->name);
 }
 
 static void
 FlipVert(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
 	VG_Node *vn;
 	
-	TAILQ_FOREACH(vn, &com->schemEnts, user) {
+	TAILQ_FOREACH(vn, &com->schemEnts, user)
 		VG_FlipVert(vn);
-	}
-	VG_Status(vv, _("Flipped %s vertically"), OBJECT(com)->name);
 }
 
 static void
@@ -702,7 +689,7 @@ void
 ES_ComponentMenu(ES_Component *com, VG_View *vgv)
 {
 	AG_PopupMenu *pm;
-	AG_MenuItem *mi;
+	AG_MenuItem *mi, *mi2;
 	Uint nsel = 0;
 	ES_Component *com2;
 	int common_class = 1;
@@ -722,13 +709,13 @@ ES_ComponentMenu(ES_Component *com, VG_View *vgv)
 		extern VG_ToolOps esCircuitSelectTool;
 		extern VG_ToolOps esWireTool;
 
-		AG_MenuState(mi, (vgv->curtool != NULL) &&
+		AG_MenuState(mi, (vgv->curtool == NULL) ||
 		                 (vgv->curtool->ops != &esSchemSelectTool));
 		AG_MenuAction(mi, _("Select tool"), esIconSelectArrow.s,
 		    SelectTool, "%p,%p,%p", vgv, com->ckt,
 		    &esSchemSelectTool);
 
-		AG_MenuState(mi, (vgv->curtool != NULL) &&
+		AG_MenuState(mi, (vgv->curtool == NULL) ||
 		                 (vgv->curtool->ops != &esWireTool));
 		AG_MenuAction(mi, _("Wire tool"), esIconInsertWire.s,
 		    SelectTool, "%p,%p,%p", vgv, com->ckt,
@@ -738,19 +725,32 @@ ES_ComponentMenu(ES_Component *com, VG_View *vgv)
 		AG_MenuSeparator(mi);
 	}
 
-	AG_MenuSection(mi, "[Component: %s]", OBJECT(com)->name);
+	AG_MenuSection(mi, _("[Component: %s]"), OBJECT(com)->name);
 
+	mi2 = AG_MenuNode(mi, _("Transform"), esIconRotate.s);
+	{
+		AG_MenuAction(mi2, _("Rotate 90\xc2\xb0 CW"),
+		    esIconRotate.s,
+		    Rotate, "%p,%f", com, M_PI/2.0f);
+		AG_MenuAction(mi2, _("Rotate 90\xc2\xb0 CCW"),
+		    esIconRotate.s,
+		    Rotate, "%p,%f", com, -M_PI/2.0f);
+		AG_MenuSeparator(mi2);
+		AG_MenuAction(mi2, _("Rotate 45\xc2\xb0 CW"),
+		    esIconRotate.s,
+		    Rotate, "%p,%f", com, M_PI/4.0f);
+		AG_MenuAction(mi2, _("Rotate 45\xc2\xb0 CCW"),
+		    esIconRotate.s,
+		    Rotate, "%p,%f", com, -M_PI/4.0f);
+		AG_MenuSeparator(mi2);
+		AG_MenuAction(mi2, _("Flip horizontally"), esIconFlipHoriz.s,
+		    FlipHoriz, "%p", com);
+		AG_MenuAction(mi2, _("Flip vertically"), esIconFlipVert.s,
+		    FlipVert, "%p", com);
+	}
+	
 	AG_MenuAction(mi, _("Delete"), agIconTrash.s,
 	    Delete, "%p,%p", com, vgv);
-	AG_MenuAction(mi, _("Rotate 90\xc2\xb0"), esIconRotate.s,
-	    Rotate, "%p,%p", com, vgv);
-	AG_MenuAction(mi, _("Flip horizontally"), esIconFlipHoriz.s,
-	    FlipHoriz, "%p,%p", com, vgv);
-	AG_MenuAction(mi, _("Flip vertically"), esIconFlipVert.s,
-	    FlipVert, "%p,%p", com, vgv);
-	AG_MenuAction(mi, _("Ports..."), esIconPortEditor.s,
-	    PortInfo, "%p,%p", com, vgv);
-
 	if (com->flags & ES_COMPONENT_SUPPRESSED) {
 		AG_MenuState(mi, 1);
 		AG_MenuAction(mi, _("Unsuppress"), esIconStartSim.s,
@@ -760,6 +760,10 @@ ES_ComponentMenu(ES_Component *com, VG_View *vgv)
 		AG_MenuAction(mi, _("Suppress"), esIconStopSim.s,
 		    SuppressComponent, "%p,%p", com, vgv);
 	}
+
+	AG_MenuSeparator(mi);
+	AG_MenuAction(mi, _("Port information..."), esIconPortEditor.s,
+	    PortInfo, "%p,%p", com, vgv);
 
 	if (COMCLASS(com)->instance_menu != NULL) {
 		AG_MenuSeparator(mi);
