@@ -42,8 +42,8 @@
  * I_n - I_{n-1} < MAX_I_DIFF + MAX_REL_DIFF * I_{n-1}
  * */
 #define MAX_REL_DIFF	1e-3	/* 0.1% */
-#define MAX_V_DIFF	1e-9	/* 1 uV */
-#define MAX_I_DIFF	1e-9	/* 1 pA */
+#define MAX_V_DIFF	1e-6	/* 1 uV */
+#define MAX_I_DIFF	1e-6	/* 1 pA */
 
 static void
 MatrixDebug(ES_SimDC *sim, ES_Circuit *ckt, char *str)
@@ -425,8 +425,8 @@ Start(void *p)
 	ES_SimLog(sim, _("Simulation started"));
 	return;
 halt:
-	SIM(sim)->running = 0;
-	ES_SimLog(sim, "%s", AG_GetError());
+	AG_TextMsg(AG_MSG_ERROR, _("%s; simulation stopped"), AG_GetError());
+	StopSimulation(sim);
 }
 
 static void
