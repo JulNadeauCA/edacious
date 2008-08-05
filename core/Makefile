@@ -17,7 +17,6 @@ SRCS=	core.c \
 	scope.c \
 	sim.c \
 	spice.c \
-	stamp.c \
 	wire.c \
 	wire_tool.c \
 	schem.c \

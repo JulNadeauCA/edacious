@@ -10,25 +10,24 @@
  * passes the StampData and the values to write each time it wants to stamp.
  */
 
-
-/* Dummy variable to write everything related to ground to */
-extern M_Real dummy;
-
-
 /* smallest and largest acceptable conductances */
 #define G_TINY 1e-6
 #define G_HUGE 1e6
 
 /* Macros to simplify function bodies */
-#define N SIM(dc)->ckt->n
+#define SIM_N SIM(dc)->ckt->n
 
-#define GetElemG(k, l) (((k) == 0 || (l) == 0) ? &dummy : M_GetElement(dc->A, (k), (l)))
-#define GetElemB(k, l) GetElemG(k, N+l)
-#define GetElemC(k, l) GetElemG(N+k, l)
-#define GetElemD(k, l) GetElemG(N+k, N+l)
+#define GetElemG(k, l) (((k) == 0 || (l) == 0) ? &esDummy : M_GetElement(dc->A, (k), (l)))
+#define GetElemB(k, l) GetElemG(k, SIM_N+l)
+#define GetElemC(k, l) GetElemG(SIM_N+k, l)
+#define GetElemD(k, l) GetElemG(SIM_N+k, SIM_N+l)
 
-#define GetElemI(k) ((k) == 0 ? &dummy : M_VecGetElement(dc->z, (k)))
-#define GetElemV(k) GetElemI(k+N)
+#define GetElemI(k) ((k) == 0 ? &esDummy : M_VecGetElement(dc->z, (k)))
+#define GetElemV(k) GetElemI(k+SIM_N)
+
+__BEGIN_DECLS
+
+extern M_Real esDummy;
 
 /* Conductance */
 typedef M_Real *StampConductanceData[4];
@@ -130,4 +129,6 @@ StampThevenin(M_Real voltage, M_Real resistance, StampTheveninData s)
 	*s[5] = -resistance;
 }
 
-#undef N
+__END_DECLS
+
+#undef SIM_N

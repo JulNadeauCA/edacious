@@ -55,6 +55,9 @@ const char *esEditableClasses[] = {
 void **esComponentClasses = NULL;		/* Component model classes */
 Uint   esComponentClassCount = 0;
 
+/* Dummy variable to write everything related to ground to */
+M_Real esDummy = 0.0;
+
 #ifdef FP_DEBUG
 #include <fenv.h>
 #endif
