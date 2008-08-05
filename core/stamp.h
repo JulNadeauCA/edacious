@@ -11,8 +11,8 @@
  */
 
 /* smallest and largest acceptable conductances */
-#define G_TINY 1e-6
-#define G_HUGE 1e6
+#define G_TINY 1e-9
+#define G_HUGE 1e9
 
 /* Macros to simplify function bodies */
 #define SIM_N SIM(dc)->ckt->n

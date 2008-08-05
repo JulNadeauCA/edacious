@@ -42,8 +42,8 @@
  * I_n - I_{n-1} < MAX_I_DIFF + MAX_REL_DIFF * I_{n-1}
  * */
 #define MAX_REL_DIFF	1e-3	/* 0.1% */
-#define MAX_V_DIFF	1e-3	/* 1 uV */
-#define MAX_I_DIFF	1e-6	/* 1 pA */
+#define MAX_V_DIFF	1e-9	/* 1 uV */
+#define MAX_I_DIFF	1e-9	/* 1 pA */
 
 static void
 MatrixDebug(ES_SimDC *sim, ES_Circuit *ckt, char *str)
@@ -115,6 +115,14 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 		if(sim->isDamped)
 			goto iter;
 
+		/* check for undefined voltages or current, which are a sign that the timestep is too large */
+		for (j=0; j < (ckt->m+ckt->n); j++)
+		{
+			M_Real cur = M_VecGet(sim->x, j);
+			if (M_IsNaN(cur) || M_IsInf(cur))
+				return 0;
+		}
+
 		/* check difference on voltages and currents */
 		/* voltages */
 
@@ -140,7 +148,7 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 	M_SetReal(ckt, "nrIters", i);
 	if (i > sim->itersHigh) { sim->itersHigh = i; }
 	if (i < sim->itersLow) { sim->itersLow = i; }
-
+	
 	return (i);
 }
 
