@@ -42,8 +42,8 @@
  * I_n - I_{n-1} < MAX_I_DIFF + MAX_REL_DIFF * I_{n-1}
  * */
 #define MAX_REL_DIFF	1e-3	/* 0.1% */
-#define MAX_V_DIFF	1e-6	/* 1 uV */
-#define MAX_I_DIFF	1e-12	/* 1 pA */
+#define MAX_V_DIFF	1e-3	/* 1 uV */
+#define MAX_I_DIFF	1e-6	/* 1 pA */
 
 static void
 MatrixDebug(ES_SimDC *sim, ES_Circuit *ckt, char *str)
@@ -224,6 +224,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 			AG_SetError(_("Could not find stable solution."));
 			goto halt;
 		}
+
+		Debug(ckt,"Retry #%d\n",retries);
 
 		/* Undo last time step and and decimate deltaT. */
 		sim->Telapsed -= sim->deltaT;
