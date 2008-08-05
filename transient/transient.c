@@ -61,15 +61,25 @@ PrintHeader(void)
 {
 	int i;
 
-	printf(" TIMESTEP ");
-	for (i = 0; i < nVars; i++) {
-		printf(" %11s", vars[i]);
-	}
-	printf("\n");
-	printf(" -------- ");
-	for (i = 0; i < nVars; i++) {
-		printf(" ------------");
-	}
+	printf("#Time\t");
+
+	for (i = 0; i < nVars; i++)
+		if (strlen(vars[i]) > 0)
+		{
+			if (vars[i][0] == 'v')
+			{
+				vars[i]++;
+				printf("v(%s)\t", vars[i]);
+				vars[i]--;
+			}
+			else if (vars[i][0] == 'i')
+			{
+				vars[i]++;
+				printf("i(%s)\t", vars[i]);
+				vars[i]--;
+			}
+		}
+	
 	printf("\n");
 }
 
@@ -81,18 +91,17 @@ Step(AG_Event *event)
 	M_Real v;
 	int i;
 
-	printf("[%.06f] ", sim->Telapsed);
+	printf("%.06f\t", sim->Telapsed);
 	if (nVars == 0) {
 		printf("OK");
 	}
 	for (i = 0; i < nVars; i++) {
 		v = M_GetReal(ckt, vars[i]);
-		if (v > 0.0) { printf(" "); }
 		if (plotDerivative) {
 			printf(fmtString, v-vPrev[i]);
 			vPrev[i] = v;
 		} else {
-			printf("%.08f ", v);
+			printf("%.08f\t", v);
 		}
 	}
 	printf("\n");
@@ -159,7 +168,7 @@ main(int argc, char *argv[])
 	}
 
 	file = argv[optind];
-	printf("%s:\n", file);
+
 	ckt = AG_ObjectNew(NULL, NULL, &esCircuitClass);
 	if (AG_ObjectLoadFromFile(ckt, file) == -1) {
 		fprintf(stderr, "%s: %s\n", file, AG_GetError());
