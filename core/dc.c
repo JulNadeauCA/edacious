@@ -45,6 +45,20 @@
 #define MAX_V_DIFF	1e-6	/* 1 uV */
 #define MAX_I_DIFF	1e-6	/* 1 pA */
 
+/*
+ * A relative LTE over MAX_REL_LTE will cause the step to
+ * be rejected, and a LTE under MIN_REL_LTE will cause the
+ * timestep to be increased
+ * */
+#define MAX_REL_LTE     0.01    /* 1% */
+#define MIN_REL_LTE     0.0001  /* 0.01% */
+
+/*
+ * Maximum and minimum step size to be taken, in seconds */
+#define MAX_TIMESTEP    1
+#define MIN_TIMESTEP    1e-6
+
+
 static void
 MatrixDebug(ES_SimDC *sim, ES_Circuit *ckt, char *str)
 {
@@ -156,6 +170,11 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 static void
 SetTimestep(ES_SimDC *sim, M_Real deltaT)
 {
+	if(deltaT > MAX_TIMESTEP)
+		deltaT = MAX_TIMESTEP;
+	if(deltaT < MIN_TIMESTEP)
+		deltaT = MIN_TIMESTEP;
+	
 	sim->deltaT = deltaT;
 
 	/* Update the timestep statistics. */
@@ -193,21 +212,20 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	ES_Circuit *ckt = obj;
 	ES_SimDC *sim = arg;
 	ES_Component *com;
-	Uint retries=0;
+	Uint retries;
 	Uint32 ticks;
 	Uint32 ticksSinceLast;
 	int i;
 	M_Real error;
 
-	SetTimestep(sim, (M_Real)(sim->ticksDelay/1000.0));
 	sim->Telapsed += sim->deltaT;
-
 	sim->currStep++;
 
 	/* Notify the simulation objects of the beginning timestep. */
 	for (i = 0; i < ckt->nExtObjs; i++)
 		AG_PostEvent(ckt, ckt->extObjs[i], "circuit-step-begin", NULL);
 
+stepbegin:
 	sim->inputStep = 0;
 	M_SetZero(sim->A);
 	M_VecSetZero(sim->z);
@@ -220,6 +238,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	if (SolveMNA(sim, ckt) == -1)
 		goto halt;
 
+	retries = 0;
 	/* NR control loop : shrink timestep until a stable solution is found. */
 	while (NR_Iterations(ckt,sim) <= 0) {
 		/* NR_Iterations failed to converge : we reduce step size */
@@ -228,7 +247,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 			goto halt;
 		}
 
-		Debug(ckt,"Retry #%d\n",retries);
+		Debug(ckt,"NR failed to converge, decimating stepsize to %g, retry #%d\n", sim->deltaT / 10, retries);
 
 		/* Undo last time step and and decimate deltaT. */
 		sim->Telapsed -= sim->deltaT;
@@ -263,6 +282,16 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 		error = 0;
 	M_SetReal(ckt, "%err", error*100);
 
+	/* Do we accept this step ? */
+	if(error > MAX_REL_LTE) {
+		/* Reject */
+		Debug(ckt,"LTE of %g, rejecting step and decreasing timestep from %g to %g\n", error, sim->deltaT, sim->deltaT / 2);
+		sim->Telapsed -= sim->deltaT;
+		SetTimestep(sim, sim->deltaT / 2);
+		sim->Telapsed += sim->deltaT;
+		goto stepbegin;
+	}
+	
 	/* Notify the simulation objects of the completed timestep. */
 	for (i = 0; i < ckt->nExtObjs; i++)
 		AG_PostEvent(ckt, ckt->extObjs[i], "circuit-step-end", NULL);
@@ -272,6 +301,12 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	M_VecCopy(sim->xPrevSteps[0], sim->x);
 	sim->deltaTPrevSteps[0] = sim->deltaT;
 
+	/* Adjust timestep according to LTE */
+	if(error < MIN_REL_LTE) {
+		Debug(ckt,"LTE of %g, accepting step and increasing timestep from %g to %g\n", error, sim->deltaT, sim->deltaT * 2);
+		SetTimestep(sim, sim->deltaT * 2);
+	}
+	
 	/* Schedule next step */
 	if (SIM(sim)->running) {
 		return sim->ticksDelay;
