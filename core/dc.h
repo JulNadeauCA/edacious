@@ -9,7 +9,6 @@ typedef struct es_sim_dc {
 	M_Real Telapsed;        /* Simulated elapsed time (s) */
 	M_Real deltaT;          /* Simulated time since last iteration (s) */
 	Uint   ticksDelay;	/* Simulation speed (delay ms) */
-	Uint32 ticksLastStep;	/* Processing time of last step (ticks) */
 	Uint currStep;          /* Number of current step */
 	
 	Uint isDamped;		/* 1 if any components had to damp voltage

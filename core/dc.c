@@ -199,12 +199,8 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	int i;
 	M_Real error;
 
-	/* Get time since last step and set that to be our deltaT */
-	ticks = SDL_GetTicks();
-	ticksSinceLast = ticks - sim->ticksLastStep;
-	SetTimestep(sim, (M_Real)(ticksSinceLast/1000.0));
+	SetTimestep(sim, (M_Real)(sim->ticksDelay/1000.0));
 	sim->Telapsed += sim->deltaT;
-	sim->ticksLastStep = ticks;
 
 	sim->currStep++;
 
@@ -227,7 +223,6 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	/* NR control loop : shrink timestep until a stable solution is found. */
 	while (NR_Iterations(ckt,sim) <= 0) {
 		/* NR_Iterations failed to converge : we reduce step size */
-	
 		if (++retries > sim->retriesMax) {
 			AG_SetError(_("Could not find stable solution."));
 			goto halt;
@@ -279,9 +274,7 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 
 	/* Schedule next step */
 	if (SIM(sim)->running) {
-		Uint32 nextStep = sim->ticksLastStep + sim->ticksDelay;
-		Uint32 newTicks = SDL_GetTicks();
-		return nextStep > newTicks ? nextStep - newTicks : 1;
+		return sim->ticksDelay;
 	} else {
 		AG_LockTimeouts(ckt);
 		AG_DelTimeout(ckt, &sim->toUpdate);
@@ -302,7 +295,6 @@ ClearStats(ES_SimDC *sim)
 	sim->stepLow = HUGE_VAL;
 	sim->stepHigh = 0;
 	sim->Telapsed = 0.0;
-	sim->ticksLastStep = 0.0;
 }
 
 static void
@@ -379,7 +371,6 @@ Start(void *p)
 
 	/* Set the initial timing parameters and clear the statistics. */
 	ClearStats(sim);
-	sim->ticksLastStep = SDL_GetTicks();
 	sim->deltaT = ((M_Real) sim->ticksDelay)/1000.0;
 
 	/* Invoke the DC-specific simulation start callback. */
