@@ -52,7 +52,7 @@ GetVoltage(ES_Inductor *i, int n)
 static M_Real
 GetCurrent(ES_Inductor *i, int n)
 {
-	return i->I[n];
+	return i->I[n-1];
 }
 
 static M_Real GetDeltaT(ES_SimDC *dc, int n)
@@ -163,12 +163,17 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_Inductor *i = obj;
 	
-	CyclePreviousI(i, dc);
 	UpdateModel(i, dc);
-	i->I[0] = InductorBranchCurrent(i, dc);
-
 	Stamp(i, dc);
 
+}
+
+static void
+DC_StepEnd(void *obj, ES_SimDC *dc)
+{
+	ES_Inductor *i = obj;
+	CyclePreviousI(i, dc);
+	i->I[0] = InductorBranchCurrent(i, dc);
 }
 
 static void
@@ -188,7 +193,7 @@ DividedDifference(ES_Inductor *i, ES_SimDC *dc, int start, int end)
 	M_Real denom = 0;
 	int index;
 	if(start == end)
-		return GetVoltage(i, start);
+		return GetCurrent(i, start);
 
 	num = (DividedDifference(i, dc, start + 1, end) - DividedDifference(i, dc, start, end - 1)) / (end - start) ;
 	for(index = start; index < end; index++)
@@ -202,7 +207,7 @@ static M_Real
 Derivative(ES_Inductor *i, ES_SimDC *dc, int n)
 {
 	/* the minus sign is due to the fact that we stock values from newest to oldest */
-	return - DividedDifference(i, dc, 0, n);
+	return - DividedDifference(i, dc, 1, n+1);
 }
 
 /* LTE for capacitor, estimated via divided differences
@@ -213,7 +218,6 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 {
 	ES_Inductor *i = obj;
 	M_Real localErr;
-	M_Real I = GetCurrent(i, 0);
 	M_Real dtn = dc->deltaT;
 	enum es_integration_method actualMethod;
 	actualMethod = ((dc->method == G2) && (dc->currStep == 0)) ? BE : dc->method;
@@ -222,7 +226,7 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 		pow(dtn, methodOrder[actualMethod] + 1)
 		* methodErrorConstant[actualMethod]
 		* Derivative(i, dc, methodOrder[actualMethod] + 1)
-		/ GetCurrent(i, 0));
+		/ GetCurrent(i, 1));
 
 	if(localErr > *err)
 		*err = localErr;
@@ -240,6 +244,7 @@ Init(void *p)
 	
 	COMPONENT(i)->dcSimBegin = DC_SimBegin;
 	COMPONENT(i)->dcStepBegin = DC_StepBegin;
+	COMPONENT(i)->dcStepEnd = DC_StepEnd;
 	COMPONENT(i)->dcStepIter = DC_StepIter;
 	COMPONENT(i)->dcUpdateError = DC_UpdateError;
 }

@@ -251,6 +251,12 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 			goto halt;
 	}
 
+	/* Invoke the Component DC specific post-timestep callbacks. */
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (com->dcStepEnd != NULL)
+			com->dcStepEnd(com, sim);
+	}
+
 	/* Get error from components */
 	error = -1.0;
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
@@ -261,12 +267,6 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	if(error < 0.0)
 		error = 0;
 	M_SetReal(ckt, "%err", error*100);
-
-	/* Invoke the Component DC specific post-timestep callbacks. */
-	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		if (com->dcStepEnd != NULL)
-			com->dcStepEnd(com, sim);
-	}
 
 	/* Notify the simulation objects of the completed timestep. */
 	for (i = 0; i < ckt->nExtObjs; i++)
