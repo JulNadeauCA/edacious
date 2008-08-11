@@ -1438,7 +1438,7 @@ Edit(void *p)
 	
 	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
 	VG_ViewSetSnapMode(vv, VG_GRID);
-	VG_ViewSetScale(vv, 1);
+	VG_ViewSetScale(vv, 0);
 	
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 

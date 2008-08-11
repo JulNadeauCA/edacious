@@ -182,7 +182,7 @@ Edit(void *obj)
 	                          VG_VIEW_CONSTRUCTION);
 	VG_ViewSetSnapMode(vv, VG_GRID);
 	VG_ViewSetScale(vv, 2);
-	VG_ViewSetGrid(vv, 0, VG_GRID_POINTS, 4, VG_GetColorRGB(100,100,100));
+	VG_ViewSetGrid(vv, 0, VG_GRID_POINTS, 2, VG_GetColorRGB(100,100,100));
 	VG_ViewSetGrid(vv, 1, VG_GRID_POINTS, 8, VG_GetColorRGB(200,200,0));
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
