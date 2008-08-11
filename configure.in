@@ -113,7 +113,7 @@ if [ "${HAVE_AGAR}" != "yes" ]; then
 	exit 1
 fi
 if [ "${HAVE_AGAR_VG}" != "yes" ]; then
-	echo "This application requires the Agar library"
+	echo "This application requires the Agar-VG library"
 	echo "(http://libagar.org/)"
 	exit 1
 fi
