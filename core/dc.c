@@ -1,5 +1,11 @@
 /*
- * Copyright (c) 2006-2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008 
+ *
+ * Antoine Levitt (smeuuh@gmail.com)
+ * Steven Herbst (herbst@mit.edu)
+ *
+ * Hypertriton, Inc. <http://hypertriton.com/>
+ *
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +49,7 @@
  * */
 #define MAX_REL_DIFF	1e-3	/* 0.1% */
 #define MAX_V_DIFF	1e-6	/* 1 uV */
-#define MAX_I_DIFF	1e-6	/* 1 pA */
+#define MAX_I_DIFF	1e-9	/* 1 pA */
 
 /*
  * A relative LTE over MAX_REL_LTE will cause the step to
