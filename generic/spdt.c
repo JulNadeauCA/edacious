@@ -1,5 +1,11 @@
 /*
- * Copyright (c) 2004-2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008 
+ *
+ * Antoine Levitt (smeuuh@gmail.com)
+ * Steven Herbst (herbst@mit.edu)
+ *
+ * Hypertriton, Inc. <http://hypertriton.com/>
+ *
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
