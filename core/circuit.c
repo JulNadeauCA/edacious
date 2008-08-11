@@ -1433,6 +1433,9 @@ Edit(void *p)
 
 	tbTop = AG_ToolbarNew(NULL, AG_TOOLBAR_HORIZ, 1, 0);
 	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
+	AG_ExpandHoriz(tbTop);
+	AG_ExpandVert(tbRight);
+	
 	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
 	VG_ViewSetSnapMode(vv, VG_GRID);
 	VG_ViewSetScale(vv, 1);
@@ -1553,11 +1556,9 @@ Edit(void *p)
 			box2 = AG_BoxNewHoriz(box, AG_BOX_EXPAND);
 			AG_BoxSetSpacing(box2, 0);
 			AG_BoxSetPadding(box2, 0);
-			{
-				AG_ObjectAttach(box2, vv);
-				AG_ObjectAttach(box2, tbRight);
-				AG_WidgetFocus(vv);
-			}
+			AG_ObjectAttach(box2, vv);
+			AG_ObjectAttach(box2, tbRight);
+			AG_WidgetFocus(vv);
 		}
 	}
 

@@ -167,7 +167,7 @@ Edit(void *obj)
 	VG *vg = scm->vg;
 	VG_View *vv;
 	AG_Window *win;
-	AG_Toolbar *tbRight, *tbSnap;
+	AG_Toolbar *tbRight;
 	AG_Menu *menu;
 	AG_MenuItem *mi, *miSub;
 	AG_Box *tlBox, *tbBox;
@@ -184,12 +184,11 @@ Edit(void *obj)
 	VG_ViewSetScale(vv, 2);
 	VG_ViewSetGrid(vv, 0, VG_GRID_POINTS, 4, VG_GetColorRGB(100,100,100));
 	VG_ViewSetGrid(vv, 1, VG_GRID_POINTS, 8, VG_GetColorRGB(200,200,0));
-	vv->nGrids = 2;
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
-	tbSnap = VG_SnapToolbar(NULL, vv, AG_TOOLBAR_VERT);
-	
+	AG_ExpandVert(tbRight);
+
 	mi = AG_MenuAddItem(menu, _("File"));
 	{
 		AG_MenuActionKb(mi, _("Close document"), agIconClose.s,
@@ -233,12 +232,9 @@ Edit(void *obj)
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, scm->vg);
 		}
 		AG_MenuToolbar(mi, NULL);
-		AG_ToolbarSeparator(tbRight);
 	}
 	mi = AG_MenuAddItem(menu, _("View"));
 	{
-		AG_MenuToolbar(miSub, tbRight);
-		
 		AG_MenuActionKb(mi, _("New view..."), esIconComponent.s,
 		    SDLK_v, KMOD_CTRL,
 		    CreateView, "%p,%p", win, scm);
@@ -274,12 +270,9 @@ Edit(void *obj)
 		AG_WidgetFocus(vv);
 
 		tbBox = AG_BoxNewVert(hPane->div[1], AG_BOX_VFILL);
+		AG_BoxSetSpacing(tbBox, 0);
 		AG_BoxSetPadding(tbBox, 0);
-		{
-			AG_ObjectAttach(tbBox, tbRight);
-			AG_SpacerNewHoriz(tbBox);
-			AG_ObjectAttach(tbBox, tbSnap);
-		}
+		AG_ObjectAttach(tbBox, tbRight);
 	}
 
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 70, 65);
