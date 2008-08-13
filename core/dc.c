@@ -83,10 +83,11 @@ SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 {
 	*sim->groundNode = 1.0;
 	/* Find LU factorization and solve by backsubstitution. */
-	M_FactorizeLU(sim->A);
+	if(M_FactorizeLU(sim->A) == -1)
+		return -1;
 	M_VecCopy(sim->x, sim->z);
 	M_BacksubstLU(sim->A, sim->x); 
-	return (0);
+	return 0;
 }
 
 static void
@@ -344,6 +345,7 @@ Init(void *p)
 	ES_SimDC *sim = p;
 
 	ES_SimInit(sim, &esSimDcOps);
+	//mMatOps = &mMatOps_FPU;
 
 	sim->method = BE;
 	sim->itersMax = 1000;
@@ -426,7 +428,7 @@ Start(void *p)
 	}
 
 	M_MNAPreorder(sim->A);
-	
+
 	/* Find the initial bias point. */
 	if (SolveMNA(sim, ckt) == -1) {
 		goto halt;
