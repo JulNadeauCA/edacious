@@ -41,6 +41,7 @@ static VG_ToolOps *ToolsVG[] = {
 	&vgLineTool,
 	&vgCircleTool,
 	&vgTextTool,
+	&vgPolygonTool,
 #ifdef DEBUG
 	&vgProximityTool,
 #endif
