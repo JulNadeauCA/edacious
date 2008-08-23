@@ -32,8 +32,7 @@
 #include <core/core.h>
 #include "generic.h"
 
-/* Components implemented by libgeneric. */
-void *esGenericClasses[] = {
+ES_ComponentClass *esGenericClasses[] = {
 	&esGroundClass,
 	&esResistorClass,
 	&esSemiResistorClass,
@@ -50,17 +49,12 @@ void *esGenericClasses[] = {
 	NULL
 };
 
-/* Initialize libgeneric. */
-void
-ES_GenericInit(void)
-{
-	void **cls;
-
-	for (cls = &esGenericClasses[0]; *cls != NULL; cls++)
-		ES_RegisterClass(*cls);
-}
-
-void
-ES_GenericDestroy(void)
-{
-}
+ES_Module esGenericModule = {
+	EDACIOUS_VERSION,
+	N_("Standard generic components"),
+	"http://edacious.hypertriton.com/",
+	NULL, /* init */
+	NULL, /* destroy */
+	esGenericClasses,
+	NULL /* vgClasses */
+};

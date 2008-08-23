@@ -155,7 +155,8 @@ Edit(void *p)
 
 ES_ComponentClass esVSweepClass = {
 	{
-		"ES_Component:ES_Vsource:ES_VSweep",
+		"Edacious(Circuit:Component:Vsource:VSweep)"
+		"@sources",
 		sizeof(ES_VSweep),
 		{ 0,0 },
 		Init,

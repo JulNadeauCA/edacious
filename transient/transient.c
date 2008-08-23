@@ -122,12 +122,8 @@ main(int argc, char *argv[])
 	char pfmt = 'f';
 
 	AG_InitCore("transient", 0);
+	ES_CoreInit(0);
 	agDebugLvl = 0;
-
-	ES_CoreInit();
-	ES_GenericInit();
-	ES_MacroInit();
-	ES_SourcesInit();
 
 	while ((c = getopt(argc, argv, "?hHdgs:p:")) != -1) {
 		extern char *optarg;

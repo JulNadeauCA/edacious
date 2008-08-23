@@ -6,15 +6,16 @@ REGISTER("--enable-edition",	"Enable graphical editor [default: yes]")
 REGISTER("--enable-threads",	"Thread safety [default: check]")
 REGISTER("--enable-fpdebug",	"Catch floating point exceptions [default: no]")
 
-HDEFINE(VERSION, "04052008")
+HDEFINE(VERSION, "0.1")
+HDEFINE(EDACIOUS_VERSION, "$VERSION")
 HDEFINE(RELEASE, "")
 
 MDEFINE(SHAREDIR, "$PREFIX/share/edacious")
 HDEFINE(SHAREDIR, "$PREFIX/share/edacious")
-MDEFINE(TTFDIR, "$PREFIX/share/edacious/fonts")
-HDEFINE(TTFDIR, "$PREFIX/share/edacious/fonts")
 MDEFINE(LIBDIR, "$PREFIX/lib")
 HDEFINE(LIBDIR, "$PREFIX/lib")
+MDEFINE(MODULEDIR, "$PREFIX/lib/edacious")
+HDEFINE(MODULEDIR, "$PREFIX/lib/edacious")
 MDEFINE(INCLDIR, "$PREFIX/include/edacious")
 HDEFINE(INCLDIR, "$PREFIX/include/edacious")
 
@@ -41,15 +42,6 @@ C_DEFINE(_USE_SG_MATH)
 
 # We use #include <edacious/foo> throughout the code.
 C_INCDIR($SRC)
-if [ "${srcdir}" != "" ]; then
-	pwd=`pwd`
-	C_INCDIR($pwd)
-	ln -s "$SRC" edacious
-else
-	if [ ! -e "edacious" ]; then
-		ln -s . edacious
-	fi
-fi
 
 # Disable improper warnings.
 C_NO_SECURE_WARNINGS();
@@ -137,3 +129,8 @@ fi
 if [ "${enable_fpdebug}" = "yes" ]; then
 	MDEFINE(CFLAGS, "$CFLAGS -DFP_DEBUG")
 fi
+
+# To avoid obstructing user code, we always use includes of the
+# form <edacious/foo/foo.h>.
+if [ ! -e "$SRC/edacious" ]; then (cd $SRC && ln -s . edacious); fi
+if [ ! -e "edacious" ]; then ln -s . edacious; fi

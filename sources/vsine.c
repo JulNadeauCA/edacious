@@ -134,7 +134,8 @@ Edit(void *p)
 
 ES_ComponentClass esVSineClass = {
 	{
-		"ES_Component:ES_Vsource:ES_VSine",
+		"Edacious(Circuit:Component:Vsource:VSine)"
+		"@sources",
 		sizeof(ES_VSine),
 		{ 0,0 },
 		Init,

@@ -233,7 +233,8 @@ Edit(void *p)
 
 ES_ComponentClass esDigitalClass = {
 	{
-		"ES_Component:ES_Digital",
+		"Edacious(Circuit:Component:Digital)"
+		"@macro",
 		sizeof(ES_Digital),
 		{ 0,0 },
 		Init,

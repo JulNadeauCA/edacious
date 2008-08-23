@@ -73,7 +73,8 @@ Init(void *p)
 
 ES_ComponentClass esOrClass = {
 	{
-		"ES_Component:ES_Digital:ES_Or",
+		"Edacious(Circuit:Component:Digital:Or)"
+		"@macro",
 		sizeof(ES_Or),
 		{ 0,0 },
 		Init,

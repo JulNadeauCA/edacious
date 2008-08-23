@@ -46,9 +46,8 @@
 #include <edacious/generic/spdt.h>
 
 __BEGIN_DECLS
-extern void *esGenericClasses[];
-void ES_GenericInit(void);
-void ES_GenericDestroy(void);
+extern ES_ComponentClass *esGenericClasses[];
+extern ES_Module esGenericModule;
 __END_DECLS
 
 #include <edacious/core/core_close.h>

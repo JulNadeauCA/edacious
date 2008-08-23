@@ -2,11 +2,7 @@
 
 /* Internal header definitions */
 #undef _MK_HAVE_UNSIGNED_TYPEDEFS
-#ifdef _ES_INTERNAL
-# include <config/_mk_have_unsigned_typedefs.h>
-#else
-# include <edacious/config/_mk_have_unsigned_typedefs.h>
-#endif
+#include <edacious/config/_mk_have_unsigned_typedefs.h>
 #ifndef _MK_HAVE_UNSIGNED_TYPEDEFS
 # define _MK_HAVE_UNSIGNED_TYPEDEFS
 # define Uint unsigned int

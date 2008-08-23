@@ -120,7 +120,8 @@ Edit(void *p)
 
 ES_ComponentClass esLedClass = {
 	{
-		"ES_Component:ES_Led",
+		"Edacious(Circuit:Component:Led)"
+		"@generic",
 		sizeof(ES_Led),
 		{ 0,0 },
 		Init,

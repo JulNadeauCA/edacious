@@ -23,8 +23,11 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <config/moduledir.h>
+
 #include "core.h"
 #include <string.h>
+#include <ctype.h>
 
 /* Built-in schematic entity (VG) classes. */
 const void *esSchematicClasses[] = {
@@ -52,9 +55,6 @@ const char *esEditableClasses[] = {
 	NULL
 };
 
-void **esComponentClasses = NULL;		/* Component model classes */
-Uint   esComponentClassCount = 0;
-
 /* Dummy variable to write everything related to ground to */
 M_Real esDummy = 0.0;
 
@@ -69,16 +69,75 @@ AG_Object esVfsRoot;			/* General-purpose VFS */
 static AG_Window *(*ObjectOpenFn)(void *) = NULL;
 static void       (*ObjectCloseFn)(void *) = NULL;
 
+/* Load an Edacious module and register all of its defined classes. */
+static int
+LoadModule(const char *dsoName)
+{
+	char sym[AG_DSONAME_MAX+10], c;
+	AG_DSO *dso;
+	ES_Module *mod;
+	void *p;
+	ES_ComponentClass **comClass;
+	VG_NodeOps **vgClass;
+
+	if ((dso = AG_LoadDSO(dsoName, 0)) == NULL)
+		return (-1);
+
+	/*
+	 * Look for an 'esFooModule' description, possibly defining multiple
+	 * component and VG schematic classes.
+	 */
+	sym[0] = 'e';
+	sym[1] = 's';
+	sym[2] = toupper(dsoName[0]);
+	Strlcpy(&sym[3], &dsoName[1], sizeof(sym)-3);
+	Strlcat(&sym[3], "Module", sizeof(sym)-3);
+	if (AG_SymDSO(dso, sym, &p) == -1) {
+		/*
+		 * Alternatively, Look for a single 'esFooClass' component
+		 * class.
+		 */
+		sym[0] = 'e';
+		sym[1] = 's';
+		sym[2] = toupper(dsoName[0]);
+		Strlcpy(&sym[3], &dsoName[1], sizeof(sym)-3);
+		Strlcat(&sym[3], "Class", sizeof(sym)-3);
+		if (AG_SymDSO(dso, sym, &p) == -1) {
+			return (-1);
+		}
+		AG_RegisterClass(*(AG_ObjectClass **)p);
+		AG_Verbose("%s.so: implements %s\n", dsoName,
+		    (*(AG_ObjectClass **)p)->name);
+		return (0);
+	}
+	
+	mod = p;
+	AG_Verbose("%s.so: v%s (%s)\n", dsoName, mod->version, mod->descr);
+	if (mod->init != NULL) {
+		mod->init(EDACIOUS_VERSION);
+	}
+	for (comClass = mod->comClasses; *comClass != NULL; comClass++) {
+		AG_RegisterClass(*comClass);
+		AG_Verbose("%s.so: implements %s\n", dsoName,
+		    ((AG_ObjectClass *)(*comClass))->name);
+	}
+	return (0);
+}
+
 /* Initialize the Edacious library. */
 void
-ES_CoreInit(void)
+ES_CoreInit(Uint flags)
 {
 	const void **clsSchem;
 	void **cls;
+	char **dsoList;
+	Uint i, dsoCount;
 
-	/* Initialize the VG and M libraries. */
 	VG_InitSubsystem();
 	M_InitSubsystem();
+
+	AG_RegisterNamespace("Edacious", "ES_",
+	    "http://edacious.hypertriton.com/");
 
 	/* Register the base Agar object and VG entity classes. */
 	for (cls = &esCoreClasses[0]; *cls != NULL; cls++)
@@ -86,55 +145,38 @@ ES_CoreInit(void)
 	for (clsSchem = &esSchematicClasses[0]; *clsSchem != NULL; clsSchem++)
 		VG_RegisterClass(*clsSchem);
 	
-	/* Allocate Edacious's component class array. */
-	esComponentClasses = Malloc(sizeof(void *));
-	esComponentClassCount = 0;
-
 #ifdef FP_DEBUG
 	/* Handle division by zero and overflow. */
 	feenableexcept(FE_DIVBYZERO | FE_OVERFLOW);
 #endif
-	/* Load libcore's built-in GUI icons. */
-	esIcon_Init();
-
-	/* Initialize libcore's general-purpose VFS. */
+	/* Initialize our general-purpose VFS. */
 	AG_ObjectInitStatic(&esVfsRoot, NULL);
 	AG_ObjectSetName(&esVfsRoot, "Edacious VFS");
+
+	/* Register libcore's icons if a GUI is in use. */
+	if (agGUI) {
+		esIcon_Init();
+	}
+
+	/*
+	 * Register our module directory and preload modules if requested.
+	 * Look for an ES_Module definition under "esFooModule".
+	 */
+	AG_RegisterModuleDirectory(MODULEDIR);
+	if (flags & ES_INIT_PRELOAD_ALL &&
+	   (dsoList = AG_GetDSOList(&dsoCount)) != NULL) {
+		for (i = 0; i < dsoCount; i++) {
+			if (LoadModule(dsoList[i]) == -1)
+				AG_Verbose("%s: %s; skipping\n", dsoList[i],
+				    AG_GetError());
+		}
+		AG_FreeDSOList(dsoList, dsoCount);
+	}
 }
 
 void
 ES_CoreDestroy(void)
 {
-}
-
-void
-ES_RegisterClass(void *cls)
-{
-	esComponentClasses = Realloc(esComponentClasses,
-	    (esComponentClassCount+1)*sizeof(void *));
-	esComponentClasses[esComponentClassCount++] = cls;
-	AG_RegisterClass(cls);
-}
-
-void
-ES_UnregisterClass(void *p)
-{
-	AG_ObjectClass *cls = p;
-	int i;
-
-	for (i = 0; i < esComponentClassCount; i++) {
-		if (esComponentClasses[i] == cls)
-			break;
-	}
-	if (i == esComponentClassCount) {
-		return;
-	}
-	if (i < esComponentClassCount-1) {
-		memmove(&esComponentClasses[i], &esComponentClasses[i+1],
-		    (esComponentClassCount-1)*sizeof(void *));
-	}
-	esComponentClassCount--;
-	AG_UnregisterClass(cls);
 }
 
 /*

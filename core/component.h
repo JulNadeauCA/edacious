@@ -107,7 +107,7 @@ typedef struct es_component_class {
 } ES_ComponentClass;
 
 typedef struct es_component {
-	struct ag_object obj;
+	struct es_circuit _inherit;
 	struct es_circuit *ckt;			/* Back pointer to circuit */
 	Uint flags;
 #define ES_COMPONENT_FLOATING	 0x01		/* Not yet connected */
@@ -162,7 +162,7 @@ typedef struct es_component {
 	    ((i) < (com)->npairs) && ((pair) = &(com)->pairs[i]); \
 	    (i)++)
 #define ESCOMPONENT_IS_FLOATING(com) \
-	(AG_ObjectIsClass((com),"ES_Component:*") && \
+	(AG_OfClass((com),"ES_Circuit:ES_Component:*") && \
 	 ESCOMPONENT(com)->flags & ES_COMPONENT_FLOATING)
 
 #if defined(_ES_INTERNAL) || defined(_USE_EDACIOUS_CORE)
@@ -182,7 +182,7 @@ typedef struct es_component {
 #endif /* _ES_INTERNAL or _USE_EDACIOUS_CORE */
 
 __BEGIN_DECLS
-extern AG_ObjectClass esComponentClass;
+extern ES_ComponentClass esComponentClass;
 
 void	 ES_ComponentLog(void *, const char *, ...);
 void	 ES_ComponentMenu(ES_Component *, VG_View *);
@@ -196,4 +196,78 @@ ES_SchemBlock *ES_LoadSchemFromFile(void *, const char *);
 Uint	 ES_PortNode(ES_Component *, int);
 int	 ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
 ES_Port	*ES_FindPort(void *, const char *);
+
+/* Select/unselect components. */
+static __inline__ void
+ES_SelectComponent(ES_Component *com, VG_View *vv)
+{
+	com->flags |= ES_COMPONENT_SELECTED;
+
+	if (vv->nEditAreas > 0) {
+		AG_ObjectFreeChildren(vv->editAreas[0]);
+		AG_ObjectAttach(vv->editAreas[0],
+		    ((AG_ObjectClass *)&esComponentClass)->edit(com));
+		AG_WindowUpdate(AG_ParentWindow(vv->editAreas[0]));
+		AG_WidgetShownRecursive(vv->editAreas[0]);
+	}
+}
+static __inline__ void
+ES_UnselectComponent(ES_Component *com, VG_View *vv)
+{
+	com->flags &= ~(ES_COMPONENT_SELECTED);
+}
+static __inline__ void
+ES_SelectAllComponents(ES_Circuit *ckt, VG_View *vv)
+{
+	ES_Component *com;
+
+	ESCIRCUIT_FOREACH_COMPONENT(com, ckt)
+		com->flags |= ES_COMPONENT_SELECTED;
+}
+static __inline__ void
+ES_UnselectAllComponents(ES_Circuit *ckt, VG_View *vv)
+{
+	ES_Component *com;
+
+	ESCIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		com->flags &= ~(ES_COMPONENT_SELECTED);
+	}
+	ES_ClearEditAreas(vv);
+}
+/* Highlight component for selection. */
+static __inline__ void
+ES_HighlightComponent(ES_Component *hCom)
+{
+	ES_Circuit *ckt = ESCOMPONENT_CIRCUIT(hCom);
+	ES_Component *com;
+
+	ESCIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		com->flags &= ~(ES_COMPONENT_HIGHLIGHTED);
+	}
+	hCom->flags |= ES_COMPONENT_HIGHLIGHTED;
+}
+
+/* Select/unselect component ports. */
+static __inline__ void
+ES_SelectPort(ES_Port *port)
+{
+	port->flags |= ES_PORT_SELECTED;
+}
+static __inline__ void
+ES_UnselectPort(ES_Port *port)
+{
+	port->flags &= ~(ES_PORT_SELECTED);
+}
+static __inline__ void
+ES_UnselectAllPorts(struct es_circuit *ckt)
+{
+	ES_Component *com;
+	ES_Port *port;
+	int i;
+
+	ESCIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		ESCOMPONENT_FOREACH_PORT(port, i, com)
+			ES_UnselectPort(port);
+	}
+}
 __END_DECLS

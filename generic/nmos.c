@@ -210,7 +210,8 @@ Edit(void *p)
 
 ES_ComponentClass esNMOSClass = {
 	{
-		"ES_Component:ES_NMOS",
+		"Edacious(Circuit:Component:NMOS)"
+		"@generic",
 		sizeof(ES_NMOS),
 		{ 0,0 },
 		Init,
@@ -220,7 +221,7 @@ ES_ComponentClass esNMOSClass = {
 		Save,		/* save */
 		Edit		/* edit */
 	},
-	N_("NMOS"),
+	N_("Transistor (NMOS)"),
 	"U",
 	"NMOS.eschem",
 	"Generic|Nonlinear",

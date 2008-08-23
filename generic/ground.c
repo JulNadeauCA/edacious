@@ -87,7 +87,8 @@ Init(void *p)
 
 ES_ComponentClass esGroundClass = {
 	{
-		"ES_Component:ES_Ground",
+		"Edacious(Circuit:Component:Ground)"
+		"@generic",
 		sizeof(ES_Ground),
 		{ 0,0 },
 		Init,

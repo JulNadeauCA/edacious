@@ -188,7 +188,8 @@ Edit(void *p)
 
 ES_ComponentClass esSemiResistorClass = {
 	{
-		"ES_Component:ES_SemiResistor",
+		"Edacious(Circuit:Component:SemiResistor)"
+		"@generic",
 		sizeof(ES_SemiResistor),
 		{ 0,0 },
 		Init,

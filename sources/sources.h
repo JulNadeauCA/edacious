@@ -41,9 +41,8 @@
 #include <edacious/sources/vnoise.h>
 
 __BEGIN_DECLS
-extern void *esSourcesClasses[];
-void ES_SourcesInit(void);
-void ES_SourcesDestroy(void);
+extern ES_Module esSourcesModule;
+extern ES_ComponentClass *esSourcesClasses[];
 __END_DECLS
 
 #include <edacious/core/core_close.h>

@@ -195,7 +195,8 @@ Edit(void *p)
 
 ES_ComponentClass esDiodeClass = {
 	{
-		"ES_Component:ES_Diode",
+		"Edacious(Circuit:Component:Diode)"
+		"@generic",
 		sizeof(ES_Diode),
 		{ 0,0 },
 		Init,

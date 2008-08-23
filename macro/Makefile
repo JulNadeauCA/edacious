@@ -1,7 +1,8 @@
 TOP=..
 include ${TOP}/Makefile.config
 
-LIB=		es_macro
+LIBDIR=		${MODULEDIR}
+LIB=		macro
 LIB_INSTALL=	Yes
 LIB_SHARED=	Yes
 LIB_GUID=	"2ae2fd4c-0377-4bc3-aac5-3db97644fc6d"

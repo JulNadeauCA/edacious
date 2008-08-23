@@ -103,7 +103,8 @@ Init(void *p)
 
 ES_ComponentClass esInverterClass = {
 	{
-		"ES_Component:ES_Digital:ES_Inverter",
+		"Edacious(Circuit:Component:Digital:Inverter)"
+		"@macro",
 		sizeof(ES_Inverter),
 		{ 0,0 },
 		Init,

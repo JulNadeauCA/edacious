@@ -206,7 +206,7 @@ Edit(void *obj)
 }
 
 AG_ObjectClass esScopeClass = {
-	"ES_Scope",
+	"Edacious(Scope)",
 	sizeof(ES_Scope),
 	{ 0,0 },
 	Init,

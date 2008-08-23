@@ -109,7 +109,7 @@ Edit(void *p)
 
 ES_ComponentClass esWireClass = {
 	{
-		"ES_Component:ES_Wire",
+		"Edacious(Circuit:Component:Wire)",
 		sizeof(ES_Wire),
 		{ 0,0 },
 		Init,

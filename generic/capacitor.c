@@ -269,7 +269,8 @@ Edit(void *p)
 
 ES_ComponentClass esCapacitorClass = {
 	{
-		"ES_Component:ES_Capacitor",
+		"Edacious(Circuit:Component:Capacitor)"
+		"@generic",
 		sizeof(ES_Capacitor),
 		{ 0,0 },
 		Init,

@@ -267,7 +267,8 @@ Edit(void *p)
 
 ES_ComponentClass esNPNClass = {
 	{
-		"ES_Component:ES_NPN",
+		"Edacious(Circuit:Component:NPN)"
+		"@generic",
 		sizeof(ES_NPN),
 		{ 0,0 },
 		Init,
@@ -277,7 +278,7 @@ ES_ComponentClass esNPNClass = {
 		Save,		/* save */
 		Edit		/* edit */
 	},
-	N_("NPN"),
+	N_("Transistor (NPN)"),
 	"U",
 	"NPN.eschem",
 	"Generic|Nonlinear",

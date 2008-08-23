@@ -153,7 +153,8 @@ Edit(void *p)
 
 ES_ComponentClass esVSquareClass = {
 	{
-		"ES_Component:ES_Vsource:ES_VSquare",
+		"Edacious(Circuit:Component:Vsource:VSquare)"
+		"@sources",
 		sizeof(ES_VSquare),
 		{ 0,0 },
 		Init,

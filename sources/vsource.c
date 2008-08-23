@@ -394,7 +394,8 @@ Edit(void *p)
 
 ES_ComponentClass esVsourceClass = {
 	{
-		"ES_Component:ES_Vsource",
+		"Edacious(Circuit:Component:Vsource)"
+		"@sources",
 		sizeof(ES_Vsource),
 		{ 0,0 },
 		Init,

@@ -54,12 +54,8 @@ main(int argc, char *argv[])
 	int i;
 
 	AG_InitCore("ecminfo", 0);
+	ES_CoreInit(0);
 	agDebugLvl = 0;
-
-	ES_CoreInit();
-	ES_GenericInit();
-	ES_MacroInit();
-	ES_SourcesInit();
 	
 	while ((c = getopt(argc, argv, "?hp")) != -1) {
 		extern char *optarg;

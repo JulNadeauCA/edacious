@@ -9,9 +9,14 @@
 #define ESCIRCUIT_SYM_MAX	24
 #define ESCIRCUIT_SYM_DESCR_MAX	128
 
+struct es_port;
+struct es_pair;
+struct es_sim;
+struct es_sim_ops;
+
 /* Connection to one component. */
 typedef struct es_branch {
-	ES_Port *port;
+	struct es_port *port;
 	TAILQ_ENTRY(es_branch) branches;
 } ES_Branch;
 
@@ -30,8 +35,8 @@ typedef struct es_node {
 typedef struct es_loop {
 	Uint name;
 	void *origin;			/* Origin component (ie. vsource) */
-	ES_Pair **pairs;		/* Port pairs in loop */
-	Uint	 npairs;
+	struct es_pair **pairs;		/* Port pairs in loop */
+	Uint npairs;
 	TAILQ_ENTRY(es_loop) loops;
 } ES_Loop;
 
@@ -63,7 +68,7 @@ typedef struct es_circuit {
 	char keywords[ESCIRCUIT_KEYWORDS_MAX];	/* Keywords */
 	VG *vg;					/* Schematics */
 	
-	ES_Sim *sim;				/* Current simulation mode */
+	struct es_sim *sim;			/* Current simulation mode */
 	Uint flags;
 #define ES_CIRCUIT_SHOW_NODES		0x01
 #define ES_CIRCUIT_SHOW_NODENAMES	0x02
@@ -135,13 +140,13 @@ void        ES_DelVoltageSource(ES_Circuit *, int);
 void        ES_ClearVoltageSources(ES_Circuit *);
 void        ES_DelNode(ES_Circuit *, int);
 int         ES_MergeNodes(ES_Circuit *, int, int);
-ES_Branch  *ES_AddBranch(ES_Circuit *, int, ES_Port *);
+ES_Branch  *ES_AddBranch(ES_Circuit *, int, struct es_port *);
 void        ES_DelBranch(ES_Circuit *, int, ES_Branch *);
 
 ES_Node	   *ES_GetNode(ES_Circuit *, int);
 void        ES_CopyNodeSymbol(ES_Circuit *, int, char *, size_t);
 ES_Node	   *ES_GetNodeBySymbol(ES_Circuit *, const char *);
-ES_Branch  *ES_LookupBranch(ES_Circuit *, int, ES_Port *);
+ES_Branch  *ES_LookupBranch(ES_Circuit *, int, struct es_port *);
 
 M_Real      ES_NodeVoltage(ES_Circuit *, int);
 M_Real      ES_NodeVoltagePrevStep(ES_Circuit *, int, int);
@@ -151,7 +156,7 @@ M_Real      ES_BranchCurrentPrevStep(ES_Circuit *, int, int);
 
 void        ES_ResumeSimulation(ES_Circuit *);
 void        ES_SuspendSimulation(ES_Circuit *);
-ES_Sim     *ES_SetSimulationMode(ES_Circuit *, const ES_SimOps *);
+struct es_sim *ES_SetSimulationMode(ES_Circuit *, const struct es_sim_ops *);
 void        ES_AddSimulationObj(ES_Circuit *, void *);
 void        ES_CircuitModified(ES_Circuit *);
 void        ES_DestroySimulation(ES_Circuit *);
@@ -198,78 +203,5 @@ ES_ClearEditAreas(VG_View *vv)
 		AG_WidgetHiddenRecursive(vv->editAreas[i]);
 	}
 	AG_ObjectUnlock(vv);
-}
-
-/* Select/unselect components. */
-static __inline__ void
-ES_SelectComponent(ES_Component *com, VG_View *vv)
-{
-	com->flags |= ES_COMPONENT_SELECTED;
-
-	if (vv->nEditAreas > 0) {
-		AG_ObjectFreeChildren(vv->editAreas[0]);
-		AG_ObjectAttach(vv->editAreas[0], esComponentClass.edit(com));
-		AG_WindowUpdate(AG_ParentWindow(vv->editAreas[0]));
-		AG_WidgetShownRecursive(vv->editAreas[0]);
-	}
-}
-static __inline__ void
-ES_UnselectComponent(ES_Component *com, VG_View *vv)
-{
-	com->flags &= ~(ES_COMPONENT_SELECTED);
-}
-static __inline__ void
-ES_SelectAllComponents(ES_Circuit *ckt, VG_View *vv)
-{
-	ES_Component *com;
-
-	ESCIRCUIT_FOREACH_COMPONENT(com, ckt)
-		com->flags |= ES_COMPONENT_SELECTED;
-}
-static __inline__ void
-ES_UnselectAllComponents(ES_Circuit *ckt, VG_View *vv)
-{
-	ES_Component *com;
-
-	ESCIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		com->flags &= ~(ES_COMPONENT_SELECTED);
-	}
-	ES_ClearEditAreas(vv);
-}
-/* Highlight component for selection. */
-static __inline__ void
-ES_HighlightComponent(ES_Component *hCom)
-{
-	ES_Circuit *ckt = ESCOMPONENT_CIRCUIT(hCom);
-	ES_Component *com;
-
-	ESCIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		com->flags &= ~(ES_COMPONENT_HIGHLIGHTED);
-	}
-	hCom->flags |= ES_COMPONENT_HIGHLIGHTED;
-}
-
-/* Select/unselect component ports. */
-static __inline__ void
-ES_SelectPort(ES_Port *port)
-{
-	port->flags |= ES_PORT_SELECTED;
-}
-static __inline__ void
-ES_UnselectPort(ES_Port *port)
-{
-	port->flags &= ~(ES_PORT_SELECTED);
-}
-static __inline__ void
-ES_UnselectAllPorts(struct es_circuit *ckt)
-{
-	ES_Component *com;
-	ES_Port *port;
-	int i;
-
-	ESCIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		ESCOMPONENT_FOREACH_PORT(port, i, com)
-			ES_UnselectPort(port);
-	}
 }
 __END_DECLS

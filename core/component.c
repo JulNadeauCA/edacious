@@ -152,7 +152,7 @@ OnAttach(AG_Event *event)
 	ES_Component *com = AG_SELF();
 	ES_Circuit *ckt = AG_SENDER();
 	
-	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*"))
+	if (!AG_OfClass(ckt, "ES_Circuit:*"))
 		return;
 
 	ES_LockCircuit(ckt);
@@ -161,7 +161,7 @@ OnAttach(AG_Event *event)
 
 	if (COMCLASS(com)->schemFile != NULL) {
 		ES_SchemBlock *sb;
-		char path[FILENAME_MAX];
+		char path[AG_FILENAME_MAX];
 
 #ifdef _WIN32
 		Strlcpy(path, "Schematics\\", sizeof(path));
@@ -197,7 +197,7 @@ OnDetach(AG_Event *event)
 	ES_Pair *pair;
 	Uint i;
 
-	if (!AG_ObjectIsClass(ckt, "ES_Circuit:*"))
+	if (!AG_OfClass(ckt, "ES_Circuit:*"))
 		return;
 
 	ES_LockCircuit(ckt);
@@ -344,22 +344,22 @@ ES_InitPorts(void *p, const ES_Port *ports)
 }
 
 static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
+Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_Component *com = p;
 
-	com->flags = (Uint)AG_ReadUint32(buf);
-	com->Tspec = M_ReadReal(buf);
+	com->flags = (Uint)AG_ReadUint32(ds);
+	com->Tspec = M_ReadReal(ds);
 	return (0);
 }
 
 static int
-Save(void *p, AG_DataSource *buf)
+Save(void *p, AG_DataSource *ds)
 {
 	ES_Component *com = p;
 
-	AG_WriteUint32(buf, com->flags & ES_COMPONENT_SAVED_FLAGS);
-	M_WriteReal(buf, com->Tspec);
+	AG_WriteUint32(ds, com->flags & ES_COMPONENT_SAVED_FLAGS);
+	M_WriteReal(ds, com->Tspec);
 	return (0);
 }
 
@@ -804,14 +804,26 @@ Edit(void *obj)
 	return (box);
 }
 
-AG_ObjectClass esComponentClass = {
-	"ES_Component",
-	sizeof(ES_Component),
-	{ 0,0 },
-	Init,
-	FreeDataset,
-	Destroy,
-	Load,
-	Save,
-	Edit
+ES_ComponentClass esComponentClass = {
+	{
+		"Edacious(Circuit:Component)",
+		sizeof(ES_Component),
+		{ 0,0 },
+		Init,
+		FreeDataset,
+		Destroy,
+		Load,
+		Save,
+		Edit
+	},
+	N_("Component"),
+	"U",
+	NULL,			/* schemFile */
+	"Generic",
+	&esIconComponent,
+	NULL,			/* draw */
+	NULL,			/* instance_menu */
+	NULL,			/* class_menu */
+	NULL,			/* export */
+	NULL			/* connect */
 };

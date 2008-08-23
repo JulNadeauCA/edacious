@@ -173,7 +173,8 @@ Edit(void *p)
 
 ES_ComponentClass esResistorClass = {
 	{
-		"ES_Component:ES_Resistor",
+		"Edacious(Circuit:Component:Resistor)"
+		"@generic",
 		sizeof(ES_Resistor),
 		{ 0,0 },
 		Init,

@@ -30,6 +30,8 @@
 #include <config/incldir.h>
 #include <config/libdir.h>
 #include <config/sharedir.h>
+#include <config/moduledir.h>
+
 #include <config/enable_nls.h>
 #ifdef ENABLE_NLS
 #include <config/gettext_libs.h>
@@ -59,6 +61,8 @@ main(int argc, char *argv[])
 			printf("%s\n", LIBDIR);
 		} else if (strcmp(argv[i], "--sharedir") == 0) {
 			printf("%s\n", SHAREDIR);
+		} else if (strcmp(argv[i], "--moduledir") == 0) {
+			printf("%s\n", MODULEDIR);
 		} else if (strcmp(argv[i], "--cflags") == 0) {
 			printf("-I%s ", INCLDIR);
 #ifdef ENABLE_NLS
@@ -66,11 +70,9 @@ main(int argc, char *argv[])
 #endif
 			printf("\n");
 		} else if (strcmp(argv[i], "--libs") == 0) {
-			printf("-L%s ", LIBDIR);
-			printf("-les_generic -les_macro -les_sources "
-			       "-les_core");
+			printf("-L%s -les_core", LIBDIR);
 #ifdef ENABLE_NLS
-			printf("%s ", GETTEXT_LIBS);
+			printf(" %s", GETTEXT_LIBS);
 #endif
 			printf("\n");
 		}
@@ -79,7 +81,7 @@ main(int argc, char *argv[])
 		fprintf(stderr,
 		    "Usage: %s [--version] [--release] [--prefix] "
 		    "[--sysconfdir] "
-		    "[--incldir] [--libdir] [--sharedir] "
+		    "[--incldir] [--libdir] [--sharedir] [--moduledir] "
 		    "[--cflags] [--libs]\n", argv[0]);
 		return (1);
 	}

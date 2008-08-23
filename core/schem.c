@@ -281,7 +281,7 @@ Edit(void *obj)
 }
 
 AG_ObjectClass esSchemClass = {
-	"ES_Schem",
+	"Edacious(Schem)",
 	sizeof(ES_Schem),
 	{ 0,0 },
 	Init,

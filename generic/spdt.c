@@ -202,7 +202,8 @@ Edit(void *p)
 
 ES_ComponentClass esSpdtClass = {
 	{
-		"ES_Component:ES_Spdt",
+		"Edacious(Circuit:Component:Spdt)"
+		"@generic",
 		sizeof(ES_Spdt),
 		{ 0,0 },
 		Init,

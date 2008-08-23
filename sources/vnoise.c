@@ -196,7 +196,8 @@ Edit(void *p)
 
 ES_ComponentClass esVNoiseClass = {
 	{
-		"ES_Component:ES_Vsource:ES_VNoise",
+		"Edacious(Circuit:Component:Vsource:VNoise)"
+		"@sources",
 		sizeof(ES_VNoise),
 		{ 0,0 },
 		Init,

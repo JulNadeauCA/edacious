@@ -371,11 +371,16 @@ echo "#ifndef SYSCONFDIR" > config/sysconfdir.h
 echo "#define SYSCONFDIR \"${SYSCONFDIR}\"" >> config/sysconfdir.h
 echo "#endif /* SYSCONFDIR */" >> config/sysconfdir.h
 
-VERSION="04052008"
+VERSION="0.1"
 echo "#ifndef VERSION" > config/version.h
 echo "#define VERSION \"$VERSION\"" >> config/version.h
 echo "#endif" >> config/version.h
 echo "hdefs[\"VERSION\"] = \"$VERSION\"" >>configure.lua
+EDACIOUS_VERSION="$VERSION"
+echo "#ifndef EDACIOUS_VERSION" > config/edacious_version.h
+echo "#define EDACIOUS_VERSION \"$EDACIOUS_VERSION\"" >> config/edacious_version.h
+echo "#endif" >> config/edacious_version.h
+echo "hdefs[\"EDACIOUS_VERSION\"] = \"$EDACIOUS_VERSION\"" >>configure.lua
 RELEASE=""""
 echo "#ifndef RELEASE" > config/release.h
 echo "#define RELEASE \"$RELEASE\"" >> config/release.h
@@ -389,14 +394,6 @@ echo "#ifndef SHAREDIR" > config/sharedir.h
 echo "#define SHAREDIR \"$SHAREDIR\"" >> config/sharedir.h
 echo "#endif" >> config/sharedir.h
 echo "hdefs[\"SHAREDIR\"] = \"$SHAREDIR\"" >>configure.lua
-TTFDIR="$PREFIX/share/edacious/fonts"
-echo "TTFDIR=$TTFDIR" >>Makefile.config
-echo "mdefs[\"TTFDIR\"] = \"$TTFDIR\"" >>configure.lua
-TTFDIR="$PREFIX/share/edacious/fonts"
-echo "#ifndef TTFDIR" > config/ttfdir.h
-echo "#define TTFDIR \"$TTFDIR\"" >> config/ttfdir.h
-echo "#endif" >> config/ttfdir.h
-echo "hdefs[\"TTFDIR\"] = \"$TTFDIR\"" >>configure.lua
 LIBDIR="$PREFIX/lib"
 echo "LIBDIR=$LIBDIR" >>Makefile.config
 echo "mdefs[\"LIBDIR\"] = \"$LIBDIR\"" >>configure.lua
@@ -405,6 +402,14 @@ echo "#ifndef LIBDIR" > config/libdir.h
 echo "#define LIBDIR \"$LIBDIR\"" >> config/libdir.h
 echo "#endif" >> config/libdir.h
 echo "hdefs[\"LIBDIR\"] = \"$LIBDIR\"" >>configure.lua
+MODULEDIR="$PREFIX/lib/edacious"
+echo "MODULEDIR=$MODULEDIR" >>Makefile.config
+echo "mdefs[\"MODULEDIR\"] = \"$MODULEDIR\"" >>configure.lua
+MODULEDIR="$PREFIX/lib/edacious"
+echo "#ifndef MODULEDIR" > config/moduledir.h
+echo "#define MODULEDIR \"$MODULEDIR\"" >> config/moduledir.h
+echo "#endif" >> config/moduledir.h
+echo "hdefs[\"MODULEDIR\"] = \"$MODULEDIR\"" >>configure.lua
 INCLDIR="$PREFIX/include/edacious"
 echo "INCLDIR=$INCLDIR" >>Makefile.config
 echo "mdefs[\"INCLDIR\"] = \"$INCLDIR\"" >>configure.lua
@@ -1491,22 +1496,6 @@ echo "CFLAGS=$CFLAGS" >>Makefile.config
 echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
 echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
 echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
-if [ "${srcdir}" != "" ]
- then
-	pwd=`pwd`
-CFLAGS="$CFLAGS -I$pwd"
-CXXFLAGS="$CXXFLAGS -I$pwd"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
-	ln -s "$SRC" edacious
-else
-	if [ ! -e "edacious" ]
- then
-		ln -s . edacious
-	fi
-fi
 if [ "${enable_threads}" != "no" ]
  then
 $ECHO_N "checking for POSIX threads..."
@@ -1952,7 +1941,7 @@ if [ "${HAVE_AGAR}" != "yes" ]
 fi
 if [ "${HAVE_AGAR_VG}" != "yes" ]
  then
-	echo "This application requires the Agar library"
+	echo "This application requires the Agar-VG library"
 	echo "(http://libagar.org/)"
 	exit 1
 fi
@@ -1989,5 +1978,11 @@ CFLAGS="$CFLAGS -DFP_DEBUG"
 echo "CFLAGS=$CFLAGS" >>Makefile.config
 echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
 fi
+if [ ! -e "$SRC/edacious" ]
+ then (cd $SRC && ln -s . edacious)
+ fi
+if [ ! -e "edacious" ]
+ then ln -s . edacious
+ fi
 echo "Don't forget to run \"make depend\"."
 echo "Don't forget to run \"make depend\"." >> config.log

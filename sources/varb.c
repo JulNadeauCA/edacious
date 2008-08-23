@@ -202,7 +202,8 @@ Edit(void *p)
 
 ES_ComponentClass esVArbClass = {
 	{
-		"ES_Component:ES_Vsource:ES_VArb",
+		"Edacious(Circuit:Component:Vsource:VArb)"
+		"@sources",
 		sizeof(ES_VArb),
 		{ 0,0 },
 		Init,

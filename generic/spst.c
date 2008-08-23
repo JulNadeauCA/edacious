@@ -160,7 +160,8 @@ SwitchAll(AG_Event *event)
 	int nstate = AG_INT(2);
 	ES_Spst *spst;
 
-	OBJECT_FOREACH_CLASS(spst, ckt, es_spst, "ES_Component:ES_Spst:*") {
+	OBJECT_FOREACH_CLASS(spst, ckt, es_spst,
+	    "ES_Circuit:ES_Component:ES_Spst:*") {
 		spst->state = (nstate == -1) ? !spst->state : nstate;
 	}
 }
@@ -207,7 +208,8 @@ Edit(void *p)
 
 ES_ComponentClass esSpstClass = {
 	{
-		"ES_Component:ES_Spst",
+		"Edacious(Circuit:Component:Spst)"
+		"@generic",
 		sizeof(ES_Spst),
 		{ 0,0 },
 		Init,

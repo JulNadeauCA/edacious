@@ -3,8 +3,7 @@
 #include <core/core.h>
 #include "macro.h"
 
-/* Components implemented by libmacro. */
-void *esMacroClasses[] = {
+ES_ComponentClass *esMacroClasses[] = {
 	&esAndClass,
 	&esDigitalClass,
 	&esInverterClass,
@@ -13,17 +12,12 @@ void *esMacroClasses[] = {
 	NULL
 };
 
-/* Initialize libmacro. */
-void
-ES_MacroInit(void)
-{
-	void **cls;
-
-	for (cls = &esMacroClasses[0]; *cls != NULL; cls++)
-		ES_RegisterClass(*cls);
-}
-
-void
-ES_MacroDestroy(void)
-{
-}
+ES_Module esMacroModule = {
+	EDACIOUS_VERSION,
+	N_("Standard component macromodels"),
+	"http://edacious.hypertriton.com/",
+	NULL, /* init */
+	NULL, /* destroy */
+	esMacroClasses,
+	NULL /* vgClasses */
+};

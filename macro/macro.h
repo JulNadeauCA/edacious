@@ -9,9 +9,8 @@
 #include <edacious/macro/logic_probe.h>
 
 __BEGIN_DECLS
-extern void *esMacroClasses[];
-void ES_MacroInit(void);
-void ES_MacroDestroy(void);
+extern ES_ComponentClass *esMacroClasses[];
+extern ES_Module esMacroModule;
 __END_DECLS
 
 #include <edacious/core/core_close.h>

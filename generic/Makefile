@@ -1,7 +1,8 @@
 TOP=..
 include ${TOP}/Makefile.config
 
-LIB=		es_generic
+LIBDIR=		${MODULEDIR}
+LIB=		generic
 LIB_INSTALL=	Yes
 LIB_SHARED=	Yes
 LIB_GUID=	"368455fb-0b23-4ab6-ba37-6d17c8f33a81"

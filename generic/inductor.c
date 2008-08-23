@@ -297,7 +297,8 @@ Destroy(void *p)
 
 ES_ComponentClass esInductorClass = {
 	{
-		"ES_Component:ES_Inductor",
+		"Edacious(Circuit:Component:Inductor)"
+		"@generic",
 		sizeof(ES_Inductor),
 		{ 0,0 },
 		Init,

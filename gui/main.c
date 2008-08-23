@@ -112,7 +112,7 @@ WindowGainedFocus(AG_Event *event)
 	AG_MutexLock(&objLock);
 	objFocus = NULL;
 	for (s = &esEditableClasses[0]; *s != NULL; s++) {
-		if (AG_ObjectIsClass(obj, *s)) {
+		if (AG_OfClass(obj, *s)) {
 			objFocus = obj;
 			break;
 		}
@@ -176,6 +176,7 @@ ObjectCloseHandler(void *p)
 	}
 }
 
+/* Create a new instance of a particular object class. */
 static void
 NewObject(AG_Event *event)
 {
@@ -185,6 +186,80 @@ NewObject(AG_Event *event)
 	obj = AG_ObjectNew(&esVfsRoot, NULL, cls);
 	ES_OpenObject(obj);
 	AG_PostEvent(NULL, obj, "edit-open", NULL);
+}
+
+/* Create a new component class. */
+static void
+NewComponentOK(AG_Event *event)
+{
+	char className[AG_OBJECT_TYPE_MAX];
+	AG_Window *win = AG_PTR(1);
+	AG_Textbox *tbName = AG_PTR(2);
+	AG_Tlist *tlClasses = AG_PTR(3);
+	AG_TlistItem *itClass;
+	char *name;
+
+	if ((itClass = AG_TlistSelectedItem(tlClasses)) == NULL) {
+		AG_TextMsg(AG_MSG_ERROR, _("Please select a parent class"));
+		return;
+	}
+	name = AG_TextboxDupString(tbName);
+	if (name[0] == '\0') {
+		AG_TextMsg(AG_MSG_ERROR, _("Please enter a class name"));
+		free(name);
+		return;
+	}
+	Strlcpy(className, itClass->text, sizeof(className));
+	Strlcat(className, ":", sizeof(className));
+	Strlcat(className, name, sizeof(className));
+	AG_TextMsg(AG_MSG_INFO, "Created new class: %s", className);
+
+//	obj = AG_ObjectNew(&esVfsRoot, NULL, cls);
+//	ES_OpenObject(obj);
+//	AG_PostEvent(NULL, obj, "edit-open", NULL);
+
+	free(name);
+	AG_ViewDetach(win);
+}
+
+/* Display the "File / New component" dialog. */
+static void
+NewComponentDlg(AG_Event *event)
+{
+	AG_Window *win;
+	AG_Textbox *tbName;
+	AG_Tlist *tlClasses;
+	char *nameMax;
+	int i, nMax = 0;
+	AG_Box *hBox;
+	ES_ComponentClass *comClass;
+
+	win = AG_WindowNew(0);
+	AG_WindowSetCaption(win, _("New component..."));
+	
+	tbName = AG_TextboxNew(win, 0, _("Class name: "));
+	AG_WidgetFocus(tbName);
+	AG_SeparatorNewHoriz(win);
+
+	AG_LabelNew(win, 0, _("Parent class: "));
+	tlClasses = AG_TlistNew(win, AG_TLIST_EXPAND);
+
+	AG_FOREACH_CLASS(comClass, i, es_component_class,
+	    "ES_Circuit:ES_Component:*") {
+		AG_TlistAdd(tlClasses,
+		    (comClass->icon != NULL) ? comClass->icon->s : NULL,
+		    &((AG_ObjectClass *)comClass)->name[sizeof("ES_Circuit")]);
+	}
+	AG_TlistSizeHintLargest(tlClasses, 20);
+
+	hBox = AG_BoxNewHoriz(win, AG_BOX_HOMOGENOUS|AG_BOX_FRAME|AG_BOX_HFILL);
+	{
+		AG_ButtonNewFn(hBox, 0, _("OK"), NewComponentOK, "%p,%p,%p",
+		    win, tbName, tlClasses);
+		AG_ButtonNewFn(hBox, 0, _("Cancel"), AGWINDETACH(win));
+	}
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 60, 60);
+	AG_WindowShow(win);
 }
 
 #if 0
@@ -347,7 +422,7 @@ SaveAsDlg(AG_Event *event)
 	    AG_FILEDLG_SAVE|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 
-	if (AG_ObjectIsClass(obj, "ES_Circuit:*")) {
+	if (AG_OfClass(obj, "ES_Circuit:*")) {
 		AG_FileDlgAddType(fd, _("Edacious Circuit Model"),
 		    "*.ecm",
 		    SaveNativeObject, "%p", obj);
@@ -358,7 +433,7 @@ SaveAsDlg(AG_Event *event)
 		    "*.pdf",
 		    SaveCircuitToPDF, "%p", obj);
 		/* ... */
-	} else if (AG_ObjectIsClass(obj, "ES_Layout:*")) {
+	} else if (AG_OfClass(obj, "ES_Layout:*")) {
 		AG_FileDlgAddType(fd, _("Edacious Circuit Layout"),
 		    "*.ecl",
 		    SaveNativeObject, "%p", obj);
@@ -368,7 +443,7 @@ SaveAsDlg(AG_Event *event)
 		AG_FileDlgAddType(fd, _("Extended Gerber (RS-274X)"),
 		    "*.gbl,*.gtl,*.gbs,*.gts,*.gbo,*.gto",
 		    SaveCircuitToXGerber, "%p", obj);
-	} else if (AG_ObjectIsClass(obj, "ES_Schem:*")) {
+	} else if (AG_OfClass(obj, "ES_Schem:*")) {
 		AG_FileDlgAddType(fd, _("Edacious Component Schematic"),
 		    "*.eschem",
 		    SaveNativeObject, "%p", obj);
@@ -460,10 +535,13 @@ FileMenu(AG_Event *event)
 {
 	AG_MenuItem *m = AG_SENDER();
 	AG_MenuItem *node, *node2;
+	int i;
 
 	AG_MenuActionKb(m, _("New circuit..."), esIconCircuit.s,
 	    SDLK_n, KMOD_CTRL,
 	    NewObject, "%p", &esCircuitClass);
+	AG_MenuAction(m, _("New component..."), esIconComponent.s,
+	    NewComponentDlg, NULL);
 	AG_MenuAction(m, _("New component schematic..."), esIconComponent.s,
 	    NewObject, "%p", &esSchemClass);
 
@@ -559,7 +637,7 @@ main(int argc, char *argv[])
 	bind_textdomain_codeset("edacious", "UTF-8");
 	textdomain("edacious");
 #endif
-	if (AG_InitCore("edacious", 0) == -1) {
+	if (AG_InitCore("edacious", AG_CORE_VERBOSE) == -1) {
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (1);
 	}
@@ -616,11 +694,12 @@ main(int argc, char *argv[])
 	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, AG_Quit);
 	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
 
-	/* Initialize the Edacious libraries. */
-	ES_CoreInit();
-	ES_GenericInit();
-	ES_MacroInit();
-	ES_SourcesInit();
+	/*
+	 * Initialize the Edacious library. We request that all dynamic
+	 * modules be loaded at this point (for the GUI component insert
+	 * function.
+	 */
+	ES_CoreInit(ES_INIT_PRELOAD_ALL);
 	
 	/* Configure our editor handlers. */
 	ES_SetObjectOpenHandler(ObjectOpenHandler);

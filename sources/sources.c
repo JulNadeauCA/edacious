@@ -32,8 +32,7 @@
 #include <core/core.h>
 #include "sources.h"
 
-/* Components implemented by libsources. */
-void *esSourcesClasses[] = {
+ES_ComponentClass *esSourcesClasses[] = {
 	&esIsourceClass,
 	&esVsourceClass,
 	&esVArbClass,
@@ -44,17 +43,12 @@ void *esSourcesClasses[] = {
 	NULL
 };
 
-/* Initialize libsources. */
-void
-ES_SourcesInit(void)
-{
-	void **cls;
-
-	for (cls = &esSourcesClasses[0]; *cls != NULL; cls++)
-		ES_RegisterClass(*cls);
-}
-
-void
-ES_SourcesDestroy(void)
-{
-}
+ES_Module esSourcesModule = {
+	EDACIOUS_VERSION,
+	N_("Voltage and current sources"),
+	"http://edacious.hypertriton.com/",
+	NULL, /* init */
+	NULL, /* destroy */
+	esSourcesClasses,
+	NULL /* vgClasses */
+};

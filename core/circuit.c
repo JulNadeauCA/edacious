@@ -302,26 +302,29 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	Debug(ckt, "Loading components (%u)\n", count);
 	for (i = 0; i < count; i++) {
 		char comName[AG_OBJECT_NAME_MAX];
-		char clsID[AG_OBJECT_TYPE_MAX];
-		AG_ObjectClass *cls;
+		char className[AG_OBJECT_TYPE_MAX];
+		AG_ObjectClass *comClass;
 		Uint32 skipSize;
 	
 		AG_CopyString(comName, ds, sizeof(comName));
-		AG_CopyString(clsID, ds, sizeof(clsID));
+		AG_CopyString(className, ds, sizeof(className));
 		skipSize = AG_ReadUint32(ds);
-		
+	
 		Debug(ckt, "Loading component: %s (%s), %u bytes\n",
-		    comName, clsID, (Uint)skipSize);
+		    comName, className, (Uint)skipSize);
 
-		if ((cls = AG_FindClass(clsID)) == NULL) {
-			/* TODO skip? */
-			AG_SetError("%s: Unimplemented class \"%s\"",
-			    comName, clsID);
+		/*
+		 * Lookup the component class. If a "@libs" specification
+		 * was given, attempt to load the specified libraries.
+		 */
+		if ((comClass = AG_LoadClass(className)) == NULL) {
+			/* XXX TODO skip here? */
 			return (-1);
 		}
 
-		com = Malloc(cls->size);
-		AG_ObjectInit(com, cls);
+		/* Load the component instance. */
+		com = Malloc(comClass->size);
+		AG_ObjectInit(com, comClass);
 		AG_ObjectSetName(com, "%s", comName);
 		if (AG_ObjectUnserialize(com, ds) == -1) {
 			AG_ObjectDestroy(com);
@@ -531,10 +534,21 @@ Save(void *p, AG_DataSource *ds)
 	count = 0;
 	AG_WriteUint32(ds, 0);
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		printf("Saving component: %s (%s)\n", OBJECT(com)->name,
-		    OBJECT_CLASS(com)->name);
+		printf("Saving component: %s (%s@%s)\n", OBJECT(com)->name,
+		    OBJECT_CLASS(com)->name, OBJECT_CLASS(com)->libs);
+
 		AG_WriteString(ds, OBJECT(com)->name);
-		AG_WriteString(ds, OBJECT_CLASS(com)->name);
+	
+		if (OBJECT_CLASS(com)->libs[0] != '\0') {   /* Append "@libs" */
+			char s[AG_OBJECT_TYPE_MAX];
+			Strlcpy(s, OBJECT_CLASS(com)->name, sizeof(s));
+			Strlcat(s, "@", sizeof(s));
+			Strlcat(s, OBJECT_CLASS(com)->libs, sizeof(s));
+			AG_WriteString(ds, s);
+		} else {
+			AG_WriteString(ds, OBJECT_CLASS(com)->name);
+		}
+		
 		skipSizeOffs = AG_Tell(ds);
 		AG_WriteUint32(ds, 0);
 
@@ -720,7 +734,7 @@ int
 ES_AddVoltageSource(ES_Circuit *ckt, void *obj)
 {
 #ifdef DEBUG
-	if (!AG_ObjectIsClass(obj, "ES_Component:*"))
+	if (!AG_OfClass(obj, "ES_Circuit:ES_Component:*"))
 		AG_FatalError("Not a component");
 #endif
 	ckt->vSrcs = Realloc(ckt->vSrcs, (ckt->m+1)*sizeof(ES_Component *));
@@ -1207,7 +1221,7 @@ ShowProperties(AG_Event *event)
 static void
 ExportToSPICE(AG_Event *event)
 {
-	char name[FILENAME_MAX];
+	char name[AG_FILENAME_MAX];
 	ES_Circuit *ckt = AG_PTR(1);
 
 	Strlcpy(name, OBJECT(ckt)->name, sizeof(name));
@@ -1280,7 +1294,7 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 	AG_TlistItem *it;
 	int selected = 0;
 
-	if (AG_ObjectIsClass(pob, "ES_Component:*")) {
+	if (AG_OfClass(pob, "ES_Circuit:ES_Component:*")) {
 		if (ESCOMPONENT(pob)->flags & ES_COMPONENT_SUPPRESSED) {
 			it = AG_TlistAdd(tl, esIconComponent.s,
 			    _("%s (suppressed)"),
@@ -1334,7 +1348,7 @@ SelectedObject(AG_Event *event)
 	int state = AG_INT(3);
 	AG_Object *obj = it->p1;
 
-	if (AG_ObjectIsClass(obj, "ES_Component:*")) {
+	if (AG_OfClass(obj, "ES_Circuit:ES_Component:*")) {
 		if (state) {
 			ES_SelectComponent(COMPONENT(obj), vv);
 		} else {
@@ -1521,20 +1535,21 @@ Edit(void *p)
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
 		ntab = AG_NotebookAddTab(nb, _("Models"), AG_BOX_VERT);
 		{
+			ES_ComponentClass *cls;
 			int i;
 
 			tl = AG_TlistNew(ntab, AG_TLIST_EXPAND);
-			AG_TlistSizeHint(tl, _("Voltage source (square)"), 20);
 			AG_WidgetSetFocusable(tl, 0);
 			AG_SetEvent(tl, "tlist-dblclick", InsertComponent,
 			    "%p,%p,%p", vv, tl, ckt);
-
-			for (i = 0; i < esComponentClassCount; i++) {
-				ES_ComponentClass *cls = esComponentClasses[i];
+			    
+			AG_FOREACH_CLASS(cls, i, es_component_class,
+			    "ES_Circuit:ES_Component:*") {
 				AG_TlistAddPtr(tl,
 				    cls->icon != NULL ? cls->icon->s : NULL,
 				    cls->name, cls);
 			}
+			AG_TlistSizeHintLargest(tl, 20);
 		}
 		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
 		{
@@ -1615,9 +1630,9 @@ Edit(void *p)
 }
 
 AG_ObjectClass esCircuitClass = {
-	"ES_Circuit",
+	"Edacious(Circuit)",
 	sizeof(ES_Circuit),
-	{ 0,0 },
+	{ 1,0 },
 	Init,
 	FreeDataset,
 	Destroy,

@@ -105,7 +105,8 @@ Edit(void *p)
 
 ES_ComponentClass esLogicProbeClass = {
 	{
-		"ES_Component:ES_LogicProbe",
+		"Edacious(Circuit:Component:LogicProbe)"
+		"@macro",
 		sizeof(ES_LogicProbe),
 		{ 0,0 },
 		Init,
