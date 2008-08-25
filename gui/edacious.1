@@ -1,0 +1,79 @@
+.\"
+.\" Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+.\" WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+.\" INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+.\" (INCLUDING BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+.\" SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+.\" STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+.\" IN ANY WAY OUT OF THE USE OF THIS SOFTWARE EVEN IF ADVISED OF THE
+.\" POSSIBILITY OF SUCH DAMAGE.
+.\"
+.Dd JUNE 19, 2003
+.Dt EDACIOUS 1
+.Os
+.ds vT Edacious API Reference
+.ds oS Edacious 1.0
+.Sh NAME
+.Nm edacious
+.Nd Graphical interface to Edacious
+.Sh SYNOPSIS
+.Nm edacious
+.Op Fl PgG
+.Op Fl d Ar debugLvl
+.Op Fl r Ar framesPerSecond
+.Op Fl T Ar fontPath
+.Op Fl t Ar fontSpec
+.Op Ar circuit.ecm component.em diagram.eschem ...
+.Sh DESCRIPTION
+.Nm
+is a graphical user interface to the Edacious electronics design system.
+It provides circuit/component edition, circuit simulation and visualisation
+facilities.
+.Pp
+If one or more filenames are specified on the command-line, the specified
+circuit/component models or schematic files are loaded on startup.
+.Bl -tag -width Ds
+.It Fl P
+Avoid preloading the installed component modules on startup.
+This will make component models unavailable to the editor for new circuits.
+.It Fl g
+Use OpenGL mode (default unless GL was guessed to be non-accelerated).
+.It Fl G
+Use a framebuffer display method such as SDL or X11 depending on what is
+available (default if accelerated GL is not available).
+.It Fl d
+If debugging is enabled, set the debug level (default is 2).
+.It Fl r
+Set the display refresh rate in frames per second (is f relevant to the
+underlying video interface in use).
+.It Fl T
+Specify path to an alternate fonts directory.
+.It Fl t
+Specify the default font to use and the number of points (e.g.,
+.Sq _agFontVera:10 ,
+.Sq foo.ttf:12 ) .
+.El
+.Sh ENVIRONMENT
+.Bl -tag -width "LANG "
+.It Dv LANG
+ISO language code determining which translation should be used.
+.\" .Sh FILES
+.Sh SEE ALSO
+.Xr transient 1 ,
+.Xr ecminfo 1 ,
+.Xr ES_Intro 3 ,
+.Xr AG_Intro 3 ,
