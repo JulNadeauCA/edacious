@@ -106,19 +106,19 @@ LoadModule(const char *dsoName)
 			return (-1);
 		}
 		AG_RegisterClass(*(AG_ObjectClass **)p);
-		AG_Verbose("%s.so: implements %s\n", dsoName,
+		Debug(NULL, "%s.so: implements %s\n", dsoName,
 		    (*(AG_ObjectClass **)p)->name);
 		return (0);
 	}
 	
 	mod = p;
-	AG_Verbose("%s.so: v%s (%s)\n", dsoName, mod->version, mod->descr);
+	Debug(NULL, "%s.so: v%s (%s)\n", dsoName, mod->version, mod->descr);
 	if (mod->init != NULL) {
 		mod->init(EDACIOUS_VERSION);
 	}
 	for (comClass = mod->comClasses; *comClass != NULL; comClass++) {
 		AG_RegisterClass(*comClass);
-		AG_Verbose("%s.so: implements %s\n", dsoName,
+		Debug(NULL, "%s.so: implements %s\n", dsoName,
 		    ((AG_ObjectClass *)(*comClass))->name);
 	}
 	return (0);
@@ -167,7 +167,7 @@ ES_CoreInit(Uint flags)
 	   (dsoList = AG_GetDSOList(&dsoCount)) != NULL) {
 		for (i = 0; i < dsoCount; i++) {
 			if (LoadModule(dsoList[i]) == -1)
-				AG_Verbose("%s: %s; skipping\n", dsoList[i],
+				Debug(NULL, "%s: %s; skipping\n", dsoList[i],
 				    AG_GetError());
 		}
 		AG_FreeDSOList(dsoList, dsoCount);
@@ -177,6 +177,16 @@ ES_CoreInit(Uint flags)
 void
 ES_CoreDestroy(void)
 {
+	AG_DSO *dso;
+
+	AG_LockDSO();
+	while ((dso = AG_TAILQ_FIRST(&agLoadedDSOs)) != NULL) {
+		Debug(NULL, "Unloading: %s\n", dso->name);
+		if (AG_UnloadDSO(dso) == -1)
+			Verbose("Unloading: %s; ignored\n", AG_GetError());
+	}
+	AG_UnregisterModuleDirectory(MODULEDIR);
+	AG_UnlockDSO();
 }
 
 /*
