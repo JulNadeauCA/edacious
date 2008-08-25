@@ -140,9 +140,9 @@ ShortFilename(char *name)
 	}
 }
 
-/* Invoked by libcore to set up an edition window for an object. */
+/* Set up an edition window for a given object. */
 static AG_Window *
-ObjectOpenHandler(void *p)
+OpenObject(void *p)
 {
 	AG_Object *obj = p;
 	AG_Window *win;
@@ -162,9 +162,9 @@ ObjectOpenHandler(void *p)
 	return (win);
 }
 
-/* Invoked by libcore to close edition windows associated with an object. */
+/* Close edition window associated with an object. */
 static void
-ObjectCloseHandler(void *p)
+CloseObject(void *p)
 {
 	AG_Window *win;
 	void *wObj;
@@ -184,7 +184,7 @@ NewObject(AG_Event *event)
 	AG_Object *obj;
 
 	obj = AG_ObjectNew(&esVfsRoot, NULL, cls);
-	ES_OpenObject(obj);
+	OpenObject(obj);
 	AG_PostEvent(NULL, obj, "edit-open", NULL);
 }
 
@@ -215,7 +215,7 @@ NewComponentOK(AG_Event *event)
 	AG_TextMsg(AG_MSG_INFO, "Created new class: %s", className);
 
 //	obj = AG_ObjectNew(&esVfsRoot, NULL, cls);
-//	ES_OpenObject(obj);
+//	OpenObject(obj);
 //	AG_PostEvent(NULL, obj, "edit-open", NULL);
 
 	free(name);
@@ -268,7 +268,7 @@ EditDevice(AG_Event *event)
 {
 	AG_Object *dev = AG_PTR(1);
 
-	ES_OpenObject(dev);
+	OpenObject(dev);
 }
 #endif
 
@@ -305,7 +305,7 @@ OpenNativeObject(AG_Event *event)
 		return;
 	}
 	SetArchivePath(obj, path);
-	ES_OpenObject(obj);
+	OpenObject(obj);
 }
 
 static void
@@ -629,6 +629,7 @@ int
 main(int argc, char *argv[])
 {
 	Uint videoFlags = AG_VIDEO_OPENGL_OR_SDL|AG_VIDEO_RESIZABLE;
+	Uint coreFlags = ES_INIT_PRELOAD_ALL;
 	int c, i, fps = -1;
 	char *s;
 
@@ -643,7 +644,7 @@ main(int argc, char *argv[])
 	}
 	AG_TextParseFontSpec("_agFontVera:10");
 #ifdef HAVE_GETOPT
-	while ((c = getopt(argc, argv, "?vdt:r:T:t:gG")) != -1) {
+	while ((c = getopt(argc, argv, "?vdt:r:T:t:gGP")) != -1) {
 		extern char *optarg;
 
 		switch (c) {
@@ -672,9 +673,13 @@ main(int argc, char *argv[])
 			videoFlags &= ~(AG_VIDEO_OPENGL_OR_SDL);
 			break;
 #endif
+		case 'P':
+			Verbose("Not preloading modules\n");
+			coreFlags &= ~(ES_INIT_PRELOAD_ALL);
+			break;
 		case '?':
 		default:
-			printf("Usage: %s [-vd] [-r fps] "
+			printf("Usage: %s [-vdP] [-r fps] "
 			       "[-T font-path] [-t fontspec]", agProgName);
 #ifdef HAVE_OPENGL
 			printf(" [-gG]");
@@ -699,11 +704,11 @@ main(int argc, char *argv[])
 	 * modules be loaded at this point (for the GUI component insert
 	 * function.
 	 */
-	ES_CoreInit(ES_INIT_PRELOAD_ALL);
+	ES_CoreInit(coreFlags);
 	
 	/* Configure our editor handlers. */
-	ES_SetObjectOpenHandler(ObjectOpenHandler);
-	ES_SetObjectCloseHandler(ObjectCloseHandler);
+	ES_SetObjectOpenHandler(OpenObject);
+	ES_SetObjectCloseHandler(CloseObject);
 
 	/* Initialize our object management lock. */
 	AG_MutexInit(&objLock);
@@ -738,7 +743,7 @@ main(int argc, char *argv[])
 		ckt = AG_ObjectNew(&esVfsRoot, NULL, cls);
 		if (AG_ObjectLoadFromFile(ckt, argv[i]) == 0) {
 			AG_ObjectSetArchivePath(ckt, argv[i]);
-			ES_OpenObject(ckt);
+			OpenObject(ckt);
 		} else {
 			AG_TextMsgFromError();
 			AG_ObjectDetach(ckt);
