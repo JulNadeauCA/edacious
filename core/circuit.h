@@ -130,9 +130,11 @@ extern AG_ObjectClass esCircuitClass;
 extern VG_ToolOps esSelectTool;
 extern VG_ToolOps esInsertTool;
 extern VG_ToolOps esWireTool;
+extern VG_ToolOps *esCircuitTools[];
+extern VG_ToolOps *esSchemTools[];
 
 ES_Circuit *ES_CircuitNew(void *, const char *);
-void	    ES_CircuitLog(void *, const char *, ...);
+void        ES_CircuitLog(void *, const char *, ...);
 
 int         ES_AddNode(ES_Circuit *);
 int         ES_AddVoltageSource(ES_Circuit *, void *);

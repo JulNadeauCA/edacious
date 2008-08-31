@@ -184,10 +184,11 @@ typedef struct es_component {
 __BEGIN_DECLS
 extern ES_ComponentClass esComponentClass;
 
-void	 ES_ComponentLog(void *, const char *, ...);
-void	 ES_ComponentMenu(ES_Component *, VG_View *);
-void	 ES_InitPorts(void *, const ES_Port *);
-void	 ES_FreePorts(ES_Component *);
+void   ES_ComponentLog(void *, const char *, ...);
+void   ES_ComponentMenu(ES_Component *, VG_View *);
+void  *ES_ComponentEdit(ES_Component *, AG_Window *);
+void   ES_InitPorts(void *, const ES_Port *);
+void   ES_FreePorts(ES_Component *);
 
 void           ES_AttachSchemEntity(void *, VG_Node *);
 void           ES_DetachSchemEntity(void *, VG_Node *);
@@ -206,7 +207,7 @@ ES_SelectComponent(ES_Component *com, VG_View *vv)
 	if (vv->nEditAreas > 0) {
 		AG_ObjectFreeChildren(vv->editAreas[0]);
 		AG_ObjectAttach(vv->editAreas[0],
-		    ((AG_ObjectClass *)&esComponentClass)->edit(com));
+		    AGOBJECT_CLASS(com)->edit(com));
 		AG_WindowUpdate(AG_ParentWindow(vv->editAreas[0]));
 		AG_WidgetShownRecursive(vv->editAreas[0]);
 	}

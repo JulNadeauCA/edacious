@@ -140,24 +140,45 @@ ShortFilename(char *name)
 	}
 }
 
-/* Set up an edition window for a given object. */
+/* Open a given object for edition. */
 static AG_Window *
 OpenObject(void *p)
 {
 	AG_Object *obj = p;
-	AG_Window *win;
+	AG_Window *win = NULL;
+	AG_Widget *wEdit;
 
-	win = obj->cls->edit(obj);
+	/* Invoke edit(), which may return a Window or some other Widget. */
+	if (AG_OfClass(obj, "ES_Circuit:ES_Component:*")) {
+		win = AGCLASS(&esComponentClass)->edit(obj);
+		AG_WindowSetCaption(win, _("Component model: %s"),
+		    (obj->archivePath != NULL) ?
+		    ShortFilename(obj->archivePath) : obj->name);
+	} else {
+		if ((wEdit = obj->cls->edit(obj)) == NULL) {
+			AG_TextError("Class %s has no edit() operation",
+			    obj->cls->name);
+			return (NULL);
+		}
+		if (AG_OfClass(wEdit, "AG_Widget:AG_Window:*")) {
+			win = (AG_Window *)wEdit;
+		} else if (AG_OfClass(wEdit, "AG_Widget:*")) {
+			win = AG_WindowNew(0);
+			AG_ObjectAttach(win, wEdit);
+		} else {
+			AG_FatalError("edit() returned illegal object");
+		}
+		AG_WindowSetCaption(win, "%s",
+		    (obj->archivePath != NULL) ?
+		    ShortFilename(obj->archivePath) : obj->name);
+	}
+
 	AG_SetEvent(win, "window-close", SaveChangesDlg, "%p", obj);
 	AG_AddEvent(win, "window-gainfocus", WindowGainedFocus, "%p", obj);
 	AG_AddEvent(win, "window-lostfocus", WindowLostFocus, "%p", obj);
 	AG_AddEvent(win, "window-hidden", WindowLostFocus, "%p", obj);
 	AG_SetPointer(win, "object", obj);
-	if (obj->archivePath != NULL) {
-		AG_WindowSetCaption(win, "%s", ShortFilename(obj->archivePath));
-	} else {
-		AG_WindowSetCaption(win, "%s", obj->name);
-	}
+
 	AG_WindowShow(win);
 	return (win);
 }
@@ -188,37 +209,44 @@ NewObject(AG_Event *event)
 	AG_PostEvent(NULL, obj, "edit-open", NULL);
 }
 
-/* Create a new component class. */
+/* Create a new class of component. */
 static void
-NewComponentOK(AG_Event *event)
+CreateNewComponent(AG_Event *event)
 {
-	char className[AG_OBJECT_TYPE_MAX];
 	AG_Window *win = AG_PTR(1);
 	AG_Textbox *tbName = AG_PTR(2);
 	AG_Tlist *tlClasses = AG_PTR(3);
 	AG_TlistItem *itClass;
+	ES_ComponentClass *cls;
+	AG_ObjectClass *clsParent;
+	ES_Component *com;
 	char *name;
 
 	if ((itClass = AG_TlistSelectedItem(tlClasses)) == NULL) {
 		AG_TextMsg(AG_MSG_ERROR, _("Please select a parent class"));
 		return;
 	}
-	name = AG_TextboxDupString(tbName);
-	if (name[0] == '\0') {
+	if (!(name = AG_TextboxDupString(tbName)) || name[0] == '\0') {
 		AG_TextMsg(AG_MSG_ERROR, _("Please enter a class name"));
 		free(name);
 		return;
 	}
-	Strlcpy(className, itClass->text, sizeof(className));
-	Strlcat(className, ":", sizeof(className));
-	Strlcat(className, name, sizeof(className));
-	AG_TextMsg(AG_MSG_INFO, "Created new class: %s", className);
 
-//	obj = AG_ObjectNew(&esVfsRoot, NULL, cls);
-//	OpenObject(obj);
-//	AG_PostEvent(NULL, obj, "edit-open", NULL);
-
+	clsParent = AGCLASS(itClass->p1);
+	cls = Malloc(clsParent->size);
+	memcpy(cls, clsParent, clsParent->size);
+	Strlcpy(AGCLASS(cls)->name, clsParent->name, AG_OBJECT_TYPE_MAX);
+	Strlcat(AGCLASS(cls)->name, ":ES_", AG_OBJECT_TYPE_MAX);
+	Strlcat(AGCLASS(cls)->name, name, AG_OBJECT_TYPE_MAX);
 	free(name);
+
+	AG_RegisterClass(cls);
+
+	if ((com = AG_ObjectNew(&esVfsRoot, NULL, AGCLASS(cls))) == NULL) {
+		AG_FatalError(NULL);
+	}
+	OpenObject(com);
+	AG_PostEvent(NULL, com, "edit-open", NULL);
 	AG_ViewDetach(win);
 }
 
@@ -232,29 +260,33 @@ NewComponentDlg(AG_Event *event)
 	char *nameMax;
 	int i, nMax = 0;
 	AG_Box *hBox;
-	ES_ComponentClass *comClass;
+	ES_ComponentClass *cls;
 
 	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, _("New component..."));
+	AG_WindowSetCaption(win, _("New component model..."));
 	
-	tbName = AG_TextboxNew(win, 0, _("Class name: "));
-	AG_WidgetFocus(tbName);
-	AG_SeparatorNewHoriz(win);
-
-	AG_LabelNew(win, 0, _("Parent class: "));
+	AG_LabelNew(win, 0, _("Inherit from: "));
 	tlClasses = AG_TlistNew(win, AG_TLIST_EXPAND);
 
-	AG_FOREACH_CLASS(comClass, i, es_component_class,
+	AG_FOREACH_CLASS(cls, i, es_component_class,
 	    "ES_Circuit:ES_Component:*") {
-		AG_TlistAdd(tlClasses,
-		    (comClass->icon != NULL) ? comClass->icon->s : NULL,
-		    &((AG_ObjectClass *)comClass)->name[sizeof("ES_Circuit")]);
+		AG_ObjectClass *clsObj = (AG_ObjectClass *)cls;
+		char *s;
+
+		AG_TlistAddPtr(tlClasses,
+		    (cls->icon != NULL) ? cls->icon->s : NULL,
+		    &(clsObj->name[sizeof("ES_Circuit")]),
+		    cls);
 	}
 	AG_TlistSizeHintLargest(tlClasses, 20);
+	
+	tbName = AG_TextboxNew(win, 0, _("Name: "));
+	AG_TextboxSetString(tbName, _("MyClass"));
+	AG_WidgetFocus(tbName);
 
 	hBox = AG_BoxNewHoriz(win, AG_BOX_HOMOGENOUS|AG_BOX_FRAME|AG_BOX_HFILL);
 	{
-		AG_ButtonNewFn(hBox, 0, _("OK"), NewComponentOK, "%p,%p,%p",
+		AG_ButtonNewFn(hBox, 0, _("OK"), CreateNewComponent, "%p,%p,%p",
 		    win, tbName, tlClasses);
 		AG_ButtonNewFn(hBox, 0, _("Cancel"), AGWINDETACH(win));
 	}
@@ -314,7 +346,6 @@ OpenDlg(AG_Event *event)
 	AG_Window *win;
 	AG_FileDlg *fd;
 	AG_FileType *ft;
-	AG_Pane *hPane;
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Open..."));
@@ -540,7 +571,7 @@ FileMenu(AG_Event *event)
 	AG_MenuActionKb(m, _("New circuit..."), esIconCircuit.s,
 	    SDLK_n, KMOD_CTRL,
 	    NewObject, "%p", &esCircuitClass);
-	AG_MenuAction(m, _("New component..."), esIconComponent.s,
+	AG_MenuAction(m, _("New component model..."), esIconComponent.s,
 	    NewComponentDlg, NULL);
 	AG_MenuAction(m, _("New component schematic..."), esIconComponent.s,
 	    NewObject, "%p", &esSchemClass);

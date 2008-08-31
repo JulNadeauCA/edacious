@@ -30,14 +30,14 @@
 #include "core.h"
 
 /* Circuit edition tools */
-static VG_ToolOps *ToolsCkt[] = {
+VG_ToolOps *esCircuitTools[] = {
 	&esSchemSelectTool,
 	&esWireTool,
 	NULL
 };
 
 /* Circuit schematic edition tools */
-static VG_ToolOps *ToolsSchem[] = {
+VG_ToolOps *esSchemTools[] = {
 	&vgPointTool,
 	&vgLineTool,
 	&vgCircleTool,
@@ -1259,13 +1259,6 @@ MouseButtonDown(AG_Event *event)
 }
 
 static void
-KeyDown(AG_Event *event)
-{
-	VG_View *vv =  AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
-}
-
-static void
 SelectSimulation(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
@@ -1437,13 +1430,12 @@ Edit(void *p)
 	ES_Circuit *ckt = p;
 	AG_Window *win;
 	AG_Toolbar *tbTop, *tbRight;
-	AG_Menu *menu;
-	AG_MenuItem *mi, *mi2;
 	AG_Pane *hPane, *vPane;
 	VG_View *vv;
+	AG_Menu *menu;
+	AG_MenuItem *mi, *mi2;
 
 	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, "%s", OBJECT(ckt)->name);
 
 	tbTop = AG_ToolbarNew(NULL, AG_TOOLBAR_HORIZ, 1, 0);
 	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
@@ -1453,18 +1445,13 @@ Edit(void *p)
 	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
 	VG_ViewSetSnapMode(vv, VG_GRID);
 	VG_ViewSetScale(vv, 0);
-	
-	menu = AG_MenuNew(win, AG_MENU_HFILL);
 
+	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	mi = AG_MenuAddItem(menu, _("File"));
 	{
 		AG_MenuAction(mi, _("Properties..."), agIconGear.s,
 		    ShowProperties, "%p,%p,%p", win, ckt, vv);
-		AG_MenuActionKb(mi, _("Close document"), agIconClose.s,
-		    SDLK_w, KMOD_CTRL,
-		    AGWINCLOSE(win));
 	}
-
 	mi = AG_MenuAddItem(menu, _("Edit"));
 	{
 		mi2 = AG_MenuNode(mi, _("Snapping mode"), NULL);
@@ -1529,7 +1516,7 @@ Edit(void *p)
 		AG_Notebook *nb;
 		AG_NotebookTab *ntab;
 		AG_Tlist *tl;
-		AG_Box *box, *box2;
+		AG_Box *vBox, *hBox;
 
 		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
@@ -1545,11 +1532,15 @@ Edit(void *p)
 			    
 			AG_FOREACH_CLASS(cls, i, es_component_class,
 			    "ES_Circuit:ES_Component:*") {
+				if (strcmp(AGCLASS(cls)->name,
+				    "ES_Circuit:ES_Component") == 0) {
+					continue;
+				}
 				AG_TlistAddPtr(tl,
 				    cls->icon != NULL ? cls->icon->s : NULL,
 				    cls->name, cls);
 			}
-			AG_TlistSizeHintLargest(tl, 20);
+			AG_TlistSizeHintLargest(tl, 10);
 		}
 		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
 		{
@@ -1563,16 +1554,16 @@ Edit(void *p)
 		}
 		VG_AddEditArea(vv, vPane->div[1]);
 
-		box = AG_BoxNewVert(hPane->div[1], AG_BOX_EXPAND);
-		AG_BoxSetSpacing(box, 0);
-		AG_BoxSetPadding(box, 0);
+		vBox = AG_BoxNewVert(hPane->div[1], AG_BOX_EXPAND);
+		AG_BoxSetSpacing(vBox, 0);
+		AG_BoxSetPadding(vBox, 0);
 		{
-			AG_ObjectAttach(box, tbTop);
-			box2 = AG_BoxNewHoriz(box, AG_BOX_EXPAND);
-			AG_BoxSetSpacing(box2, 0);
-			AG_BoxSetPadding(box2, 0);
-			AG_ObjectAttach(box2, vv);
-			AG_ObjectAttach(box2, tbRight);
+			AG_ObjectAttach(vBox, tbTop);
+			hBox = AG_BoxNewHoriz(vBox, AG_BOX_EXPAND);
+			AG_BoxSetSpacing(hBox, 0);
+			AG_BoxSetPadding(hBox, 0);
+			AG_ObjectAttach(hBox, vv);
+			AG_ObjectAttach(hBox, tbRight);
 			AG_WidgetFocus(vv);
 		}
 	}
@@ -1585,7 +1576,7 @@ Edit(void *p)
 
 		AG_MenuToolbar(mi, tbRight);
 
-		for (pOps = &ToolsCkt[0]; *pOps != NULL; pOps++) {
+		for (pOps = &esCircuitTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, ckt);
 			mAction = AG_MenuAction(mi, ops->name,
@@ -1599,7 +1590,7 @@ Edit(void *p)
 
 		AG_MenuSeparator(mi);
 		
-		for (pOps = &ToolsSchem[0]; *pOps != NULL; pOps++) {
+		for (pOps = &esSchemTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, ckt);
 			mAction = AG_MenuAction(mi, ops->name,
@@ -1611,7 +1602,6 @@ Edit(void *p)
 		
 		VG_ViewRegTool(vv, &esInsertTool, ckt);
 		VG_ViewButtondownFn(vv, MouseButtonDown, "%p", ckt);
-		VG_ViewKeydownFn(vv, KeyDown, "%p", ckt);
 		
 		AG_MenuToolbar(mi, NULL);
 	}
@@ -1623,9 +1613,8 @@ Edit(void *p)
 		    NewScope, "%p", ckt);
 		AG_MenuToolbar(mi, NULL);
 	}
-
+	
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);
-	AG_PaneMoveDivider(vPane, 40*agView->h/100);
 	return (win);
 }
 

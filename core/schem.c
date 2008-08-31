@@ -162,23 +162,22 @@ PollSchemNodes(AG_Event *event)
 }
 
 static void *
-Edit(void *obj)
+Edit(ES_Schem *scm)
 {
-	ES_Schem *scm = obj;
+	AG_Window *win;
 	VG *vg = scm->vg;
 	VG_View *vv;
-	AG_Window *win;
 	AG_Toolbar *tbRight;
 	AG_Menu *menu;
 	AG_MenuItem *mi, *miSub;
 	AG_Box *tlBox, *tbBox;
 	AG_Pane *hPane;
 	AG_Tlist *tlItems;
-
-	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, _("Component schematic: %s"),
-	    OBJECT(scm)->name);
 	
+	win = AG_WindowNew(0);
+	AG_WindowSetCaption(win, _("Schematic: %s"), OBJECT(scm)->name);
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);
+
 	vv = VG_ViewNew(NULL, vg, VG_VIEW_EXPAND|VG_VIEW_GRID|
 	                          VG_VIEW_CONSTRUCTION);
 	VG_ViewSetSnapMode(vv, VG_GRID);
@@ -275,8 +274,6 @@ Edit(void *obj)
 		AG_BoxSetPadding(tbBox, 0);
 		AG_ObjectAttach(tbBox, tbRight);
 	}
-
-	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 70, 65);
 	return (win);
 }
 
@@ -289,5 +286,5 @@ AG_ObjectClass esSchemClass = {
 	Destroy,
 	Load,
 	Save,
-	Edit
+	NULL		/* edit */
 };

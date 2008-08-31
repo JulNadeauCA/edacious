@@ -790,18 +790,320 @@ ES_ComponentMenu(ES_Component *com, VG_View *vgv)
 	AG_PopupShow(pm);
 }
 
+static void
+CreateView(AG_Event *event)
+{
+	AG_Window *pWin = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(2);
+	AG_Window *win;
+	VG_View *vv;
+
+	win = AG_WindowNew(0);
+	AG_WindowSetCaption(win, _("View of %s"), OBJECT(ckt)->name);
+	vv = VG_ViewNew(win, ckt->vg, VG_VIEW_EXPAND);
+	AG_WidgetFocus(vv);
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_TR, 60, 50);
+	AG_WindowAttach(pWin, win);
+	AG_WindowShow(win);
+}
+
+static void
+InsertComponent(AG_Event *event)
+{
+	VG_View *vv = AG_PTR(1);
+	AG_Tlist *tl = AG_PTR(2);
+	ES_Circuit *ckt = AG_PTR(3);
+	AG_TlistItem *it;
+	VG_Tool *insTool;
+
+	if ((it = AG_TlistSelectedItem(tl)) == NULL) {
+		AG_TextMsg(AG_MSG_ERROR, _("No component type is selected."));
+		return;
+	}
+	if ((insTool = VG_ViewFindTool(vv, "Insert component")) != NULL) {
+		VG_ViewSelectTool(vv, insTool, ckt);
+		ES_InsertComponent(ckt, insTool, it->p1);
+	}
+}
+
+static void
+FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
+{
+	AG_Object *cob;
+	AG_TlistItem *it;
+	int selected = 0;
+
+	if (AG_OfClass(pob, "ES_Circuit:ES_Component:*")) {
+		if (ESCOMPONENT(pob)->flags & ES_COMPONENT_SUPPRESSED) {
+			it = AG_TlistAdd(tl, esIconComponent.s,
+			    _("%s (suppressed)"),
+			    pob->name);
+		} else {
+			it = AG_TlistAdd(tl, esIconComponent.s,
+			    "%s", pob->name);
+		}
+		it->selected = (ESCOMPONENT(pob)->flags &
+		                ES_COMPONENT_SELECTED);
+	} else {
+		it = AG_TlistAdd(tl, NULL, "%s", pob->name);
+	}
+
+	it->depth = depth;
+	it->cat = "object";
+	it->p1 = pob;
+
+	if (!TAILQ_EMPTY(&pob->children)) {
+		it->flags |= AG_TLIST_HAS_CHILDREN;
+		if (pob == OBJECT(ckt))
+			it->flags |= AG_TLIST_VISIBLE_CHILDREN;
+	}
+	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
+	    AG_TlistVisibleChildren(tl, it)) {
+		TAILQ_FOREACH(cob, &pob->children, cobjs)
+			FindObjects(tl, cob, depth+1, ckt);
+	}
+}
+
+static void
+PollObjects(AG_Event *event)
+{
+	AG_Tlist *tl = AG_SELF();
+	AG_Object *ckt = AG_PTR(1);
+	AG_TlistItem *it;
+
+	AG_TlistClear(tl);
+	AG_LockVFS(ckt);
+	FindObjects(tl, ckt, 0, ckt);
+	AG_UnlockVFS(ckt);
+	AG_TlistRestore(tl);
+}
+
+static void
+SelectedObject(AG_Event *event)
+{
+	AG_Tlist *tl = AG_SELF();
+	VG_View *vv = AG_PTR(1);
+	AG_TlistItem *it = AG_PTR(2);
+	int state = AG_INT(3);
+	AG_Object *obj = it->p1;
+
+	if (AG_OfClass(obj, "ES_Circuit:ES_Component:*")) {
+		if (state) {
+			ES_SelectComponent(COMPONENT(obj), vv);
+		} else {
+			ES_UnselectComponent(COMPONENT(obj), vv);
+		}
+	}
+}
+
+static void
+MouseButtonDown(AG_Event *event)
+{
+	VG_View *vv =  AG_SELF();
+	ES_Circuit *ckt = AG_PTR(1);
+	int button = AG_INT(2);
+	float x = AG_FLOAT(3);
+	float y = AG_FLOAT(4);
+	VG_Node *vn;
+
+	if (button != SDL_BUTTON_RIGHT) {
+		return;
+	}
+	if ((vn = ES_SchemNearest(vv, VGVECTOR(x,y))) != NULL) {
+		if (VG_NodeIsClass(vn, "SchemBlock")) {
+			ES_SchemBlock *sb = (ES_SchemBlock *)vn;
+			ES_SelectComponent(sb->com, vv);
+			ES_ComponentMenu(sb->com, vv);
+		} else if (VG_NodeIsClass(vn, "SchemWire")) {
+			ES_SchemWire *sw = (ES_SchemWire *)vn;
+			ES_SelectComponent(sw->wire, vv);
+			ES_ComponentMenu(sw->wire, vv);
+		}
+	}
+}
+
 static void *
 Edit(void *obj)
 {
 	ES_Component *com = obj;
-	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
-	AG_Widget *w;
+	ES_Circuit *ckt = obj;
+	AG_Toolbar *tbTop, *tbRight;
+	AG_Pane *hPane, *vPane;
+	VG_View *vv;
+	AG_Window *win;
+	AG_Menu *menu;
+	AG_MenuItem *mi, *mi2;
+	AG_Notebook *nb;
+	AG_NotebookTab *nt;
+	AG_Widget *wEdit;
+	AG_Box *box;
 
-	if (com->ckt != NULL && OBJECT_CLASS(com)->edit != NULL) {
-		w = OBJECT_CLASS(com)->edit(com);
-		AG_ObjectAttach(box, w);
+	win = AG_WindowNew(0);
+
+	/*
+	 * Equivalent circuit editor
+	 */
+	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
+	VG_ViewSetSnapMode(vv, VG_GRID);
+	VG_ViewSetScale(vv, 0);
+	tbTop = AG_ToolbarNew(NULL, AG_TOOLBAR_HORIZ, 1, 0);
+	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
+	AG_ExpandHoriz(tbTop);
+	AG_ExpandVert(tbRight);
+
+	/*
+	 * Menu
+	 */
+	menu = AG_MenuNew(win, AG_MENU_HFILL);
+	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
+	mi = AG_MenuAddItem(menu, _("Edit"));
+	{
+		mi2 = AG_MenuNode(mi, _("Snapping mode"), NULL);
+		VG_SnapMenu(menu, mi2, vv);
 	}
-	return (box);
+	mi = AG_MenuAddItem(menu, _("View"));
+	{
+		AG_MenuActionKb(mi, _("New view..."), esIconCircuit.s,
+		    SDLK_v, KMOD_CTRL,
+		    CreateView, "%p,%p", win, ckt);
+		AG_MenuSeparator(mi);
+		mi2 = AG_MenuNode(mi, _("Schematic"), esIconCircuit.s);
+		{
+			AG_MenuToolbar(mi2, tbTop);
+			AG_MenuFlags(mi2, _("Nodes annotations"),
+			    esIconShowNodes.s,
+			    &ckt->flags, ES_CIRCUIT_SHOW_NODES, 0);
+			AG_MenuFlags(mi2, _("Node names/numbers"),
+			    esIconShowNodeNames.s,
+			    &ckt->flags, ES_CIRCUIT_SHOW_NODENAMES, 0);
+			AG_MenuToolbar(mi2, NULL);
+
+			AG_MenuSeparator(mi2);
+
+			AG_MenuFlags(mi2, _("Grid"), vgIconSnapGrid.s,
+			    &vv->flags, VG_VIEW_GRID, 0);
+			AG_MenuFlags(mi2, _("Construction geometry"),
+			    esIconConstructionGeometry.s,
+			    &vv->flags, VG_VIEW_CONSTRUCTION, 0);
+		}
+	}
+	
+	nt = AG_NotebookAddTab(nb, _("Schematic"), AG_BOX_VERT);
+	{
+	}
+	
+	/*
+	 * Equivalent circuit editor
+	 */
+	nt = AG_NotebookAddTab(nb, _("Equivalent Circuit"), AG_BOX_VERT);
+	hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
+	{
+		AG_Notebook *nb;
+		AG_NotebookTab *ntab;
+		AG_Tlist *tl;
+		AG_Box *vBox, *hBox;
+
+		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
+		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
+		ntab = AG_NotebookAddTab(nb, _("Models"), AG_BOX_VERT);
+		{
+			ES_ComponentClass *cls;
+			int i;
+
+			tl = AG_TlistNew(ntab, AG_TLIST_EXPAND);
+			AG_WidgetSetFocusable(tl, 0);
+			AG_SetEvent(tl, "tlist-dblclick", InsertComponent,
+			    "%p,%p,%p", vv, tl, ckt);
+			    
+			AG_FOREACH_CLASS(cls, i, es_component_class,
+			    "ES_Circuit:ES_Component:*") {
+				if (strcmp(AGCLASS(cls)->name,
+				    "ES_Circuit:ES_Component") == 0) {
+					continue;
+				}
+				AG_TlistAddPtr(tl,
+				    cls->icon != NULL ? cls->icon->s : NULL,
+				    cls->name, cls);
+			}
+			AG_TlistSizeHintLargest(tl, 10);
+		}
+		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
+		{
+			tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE|
+			                       AG_TLIST_EXPAND|
+					       AG_TLIST_NOSELSTATE);
+			AG_SetEvent(tl, "tlist-poll", PollObjects, "%p", ckt);
+			AG_SetEvent(tl, "tlist-changed", SelectedObject,
+			    "%p", vv);
+			AG_WidgetSetFocusable(tl, 0);
+		}
+		VG_AddEditArea(vv, vPane->div[1]);
+
+		vBox = AG_BoxNewVert(hPane->div[1], AG_BOX_EXPAND);
+		AG_BoxSetSpacing(vBox, 0);
+		AG_BoxSetPadding(vBox, 0);
+		{
+			AG_ObjectAttach(vBox, tbTop);
+			hBox = AG_BoxNewHoriz(vBox, AG_BOX_EXPAND);
+			AG_BoxSetSpacing(hBox, 0);
+			AG_BoxSetPadding(hBox, 0);
+			AG_ObjectAttach(hBox, vv);
+			AG_ObjectAttach(hBox, tbRight);
+			AG_WidgetFocus(vv);
+		}
+	}
+	mi = AG_MenuAddItem(menu, _("Tools"));
+	{
+		AG_MenuItem *mAction;
+		VG_ToolOps **pOps, *ops;
+		VG_Tool *tool;
+
+		AG_MenuToolbar(mi, tbRight);
+		for (pOps = &esCircuitTools[0]; *pOps != NULL; pOps++) {
+			ops = *pOps;
+			tool = VG_ViewRegTool(vv, ops, ckt);
+			mAction = AG_MenuAction(mi, ops->name,
+			    ops->icon ? ops->icon->s : NULL,
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
+			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
+			    &OBJECT(vv)->lock);
+			if (ops == &esSchemSelectTool)
+				VG_ViewSetDefaultTool(vv, tool);
+		}
+		AG_MenuSeparator(mi);
+		for (pOps = &esSchemTools[0]; *pOps != NULL; pOps++) {
+			ops = *pOps;
+			tool = VG_ViewRegTool(vv, ops, ckt);
+			mAction = AG_MenuAction(mi, ops->name,
+			    ops->icon ? ops->icon->s : NULL,
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
+			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
+			    &OBJECT(vv)->lock);
+		}
+		VG_ViewRegTool(vv, &esInsertTool, ckt);
+		VG_ViewButtondownFn(vv, MouseButtonDown, "%p", ckt);
+		AG_MenuToolbar(mi, NULL);
+	}
+
+	/*
+	 * Component Parameters Editor
+	 */
+	nt = AG_NotebookAddTab(nb, _("Model Parameters"), AG_BOX_VERT);
+	{
+		AG_Textbox *tb;
+
+		hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
+		if (OBJECT_CLASS(com)->edit != NULL) {
+			wEdit = OBJECT_CLASS(com)->edit(com);
+			AG_ObjectAttach(hPane->div[0], wEdit);
+		}
+		AG_LabelNewStatic(hPane->div[1], 0, _("Notes:"));
+		tb = AG_TextboxNew(hPane->div[1],
+		    AG_TEXTBOX_EXPAND|AG_TEXTBOX_MULTILINE, NULL);
+	}
+
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);
+	return (win);
 }
 
 ES_ComponentClass esComponentClass = {
