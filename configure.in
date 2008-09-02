@@ -21,10 +21,10 @@ HDEFINE(INCLDIR, "$PREFIX/include/edacious")
 
 CHECK(cc)
 CHECK(sys_types)
-CHECK(agar, 1.0)
-CHECK(agar-vg, 1.0)
-CHECK(agar-dev, 1.0)
-CHECK(freesg, 1.0)
+CHECK(agar, 1.3.3)
+CHECK(agar-vg)
+CHECK(agar-dev)
+CHECK(agar-math)
 CHECK(getopt)
 
 # For internal header definitions.
@@ -36,9 +36,9 @@ C_DEFINE(_USE_AGAR_CORE)
 C_DEFINE(_USE_AGAR_QUEUE)
 C_DEFINE(_USE_AGAR_GUI)
 
-# Import standard math functions (e.g., Sin()) provided by FreeSG's
-# math library (without the "M_" prefix).
-C_DEFINE(_USE_SG_MATH)
+# Import standard math functions (e.g., Sin()) provided by the
+# Agar-MATH library (without the "M_" prefix).
+C_DEFINE(_USE_AGAR_MATH)
 
 # We use #include <edacious/foo> throughout the code.
 C_INCDIR($SRC)
@@ -98,7 +98,7 @@ else
 	fi
 fi
 
-# Require Agar and FreeSG.
+# Require Agar, VG and Math libraries.
 if [ "${HAVE_AGAR}" != "yes" ]; then
 	echo "This application requires the Agar library"
 	echo "(http://libagar.org/)"
@@ -109,9 +109,9 @@ if [ "${HAVE_AGAR_VG}" != "yes" ]; then
 	echo "(http://libagar.org/)"
 	exit 1
 fi
-if [ "${HAVE_FREESG}" != "yes" ]; then
-	echo "This application requires the FreeSG library"
-	echo "(http://freesg.org/)"
+if [ "${HAVE_AGAR_MATH}" != "yes" ]; then
+	echo "This application requires the Agar-Math library"
+	echo "(http://libagar.org/)"
 	exit 1
 fi
 

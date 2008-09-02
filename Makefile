@@ -17,7 +17,7 @@ SUBDIR=		core \
 INCPUB=		core generic macro sources
 INCDIRS=	core generic macro sources
 
-CFLAGS+=${FREESG_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
+CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 
 all: all-subdir
 clean: clean-subdir

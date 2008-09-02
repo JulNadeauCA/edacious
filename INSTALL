@@ -1,11 +1,8 @@
 
 Prerequisites
 -------------
-Edacious requires the Agar and FreeSG libraries. You can compile them from
-source or download one of the many precompiled packages at:
-
-	http://libagar.org/download.html
-	http://freesg.org/download.html
+Edacious requires only the Agar library. Download it from:
+http://libagar.org/download.html
 
 Installation under Unix
 -----------------------

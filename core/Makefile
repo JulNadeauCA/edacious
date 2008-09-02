@@ -27,7 +27,7 @@ SRCS=	core.c \
 	schem_wire.c \
 	integration.c
 
-CFLAGS+=${FREESG_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
+CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 
 include ${TOP}/mk/build.lib.mk
 include ${TOP}/mk/build.man.mk

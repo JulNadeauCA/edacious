@@ -13,9 +13,9 @@ PROG_LINKS=	es_core freesg_m ag_core ag_gui ag_dev ag_vg \
 SRCS=	main.c
 MAN1=	edacious.1
 LIBS=	-L${TOP}/core/.libs -les_core \
-	${FREESG_LIBS} ${AGAR_DEV_LIBS} ${AGAR_VG_LIBS} ${AGAR_LIBS}
+	${AGAR_MATH_LIBS} ${AGAR_DEV_LIBS} ${AGAR_VG_LIBS} ${AGAR_LIBS}
 
-CFLAGS+=${FREESG_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
+CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 
 include ${TOP}/mk/build.prog.mk
 include ${TOP}/mk/build.man.mk

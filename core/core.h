@@ -6,8 +6,8 @@
 #include <agar/core.h>
 #include <agar/gui.h>
 #include <agar/vg.h>
-#include <freesg/m/m.h>
-#include <freesg/m/m_gui.h>
+#include <agar/math/m.h>
+#include <agar/math/m_gui.h>
 
 #include <edacious/config/edacious_version.h>
 

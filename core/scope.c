@@ -29,7 +29,7 @@
  */
 
 #include "core.h"
-#include <freesg/m/m_plotter.h>
+#include <agar/math/m_plotter.h>
 
 ES_Scope *
 ES_ScopeNew(void *parent, const char *name, ES_Circuit *ckt)

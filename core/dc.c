@@ -40,7 +40,7 @@
 
 #include "core.h"
 #include <unistd.h>
-#include <freesg/m/m_matview.h>
+#include <agar/math/m_matview.h>
 
 /*
  * N-R iterations stop when :
