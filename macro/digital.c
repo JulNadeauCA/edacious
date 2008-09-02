@@ -38,8 +38,10 @@ ES_DigitalInitPorts(void *obj, const ES_Port *ports)
 
 	ES_InitPorts(dig, ports);
 	Debug(dig, "Device has %d pairs\n", COMPONENT(dig)->npairs);
-	if ((dig->G = M_NewZero(COMPONENT(dig)->npairs,1)) == NULL)
+	if ((dig->G = M_New(COMPONENT(dig)->npairs,1)) == NULL) {
 		AG_FatalError(NULL);
+	}
+	M_SetZero(dig->G);
 }
 
 static int
