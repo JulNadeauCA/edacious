@@ -132,7 +132,8 @@ typedef struct es_component {
 	void (*dcSimEnd)(void *, struct es_sim_dc *);
 	void (*dcUpdateError)(void *, struct es_sim_dc *, M_Real *);
 	
-	TAILQ_HEAD(,vg_node) schemEnts;		/* Schematic entities */
+	TAILQ_HEAD(,vg) schems;			/* Schematic blocks */
+	TAILQ_HEAD(,vg_node) schemEnts;		/* Entities in circuit schem */
 	TAILQ_ENTRY(es_component) components;
 } ES_Component;
 
@@ -185,8 +186,11 @@ __BEGIN_DECLS
 extern ES_ComponentClass esComponentClass;
 
 void   ES_ComponentLog(void *, const char *, ...);
+
 void   ES_ComponentMenu(ES_Component *, VG_View *);
-void  *ES_ComponentEdit(ES_Component *, AG_Window *);
+void  *ES_ComponentEdit(void *);
+void   ES_ComponentListModels(AG_Event *);
+
 void   ES_InitPorts(void *, const ES_Port *);
 void   ES_FreePorts(ES_Component *);
 

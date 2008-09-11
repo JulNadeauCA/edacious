@@ -55,8 +55,7 @@ static void
 SaveAndClose(AG_Object *obj, AG_Window *win)
 {
 	AG_ViewDetach(win);
-	AG_ObjectDetach(obj);
-	AG_ObjectDestroy(obj);
+	AG_ObjectDelete(obj);
 }
 
 static void
@@ -156,8 +155,7 @@ OpenObject(void *p)
 		    ShortFilename(obj->archivePath) : obj->name);
 	} else {
 		if ((wEdit = obj->cls->edit(obj)) == NULL) {
-			AG_TextError("Class %s has no edit() operation",
-			    obj->cls->name);
+			AG_SetError("%s no edit()", obj->cls->name);
 			return (NULL);
 		}
 		if (AG_OfClass(wEdit, "AG_Widget:AG_Window:*")) {
@@ -166,7 +164,9 @@ OpenObject(void *p)
 			win = AG_WindowNew(0);
 			AG_ObjectAttach(win, wEdit);
 		} else {
-			AG_FatalError("edit() returned illegal object");
+			AG_SetError("%s: edit() returned illegal object",
+			    obj->cls->name);
+			return (NULL);
 		}
 		AG_WindowSetCaption(win, "%s",
 		    (obj->archivePath != NULL) ?
@@ -204,14 +204,22 @@ NewObject(AG_Event *event)
 	AG_ObjectClass *cls = AG_PTR(1);
 	AG_Object *obj;
 
-	obj = AG_ObjectNew(&esVfsRoot, NULL, cls);
-	OpenObject(obj);
+	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cls)) == NULL) {
+		goto fail;
+	}
+	if (OpenObject(obj) == NULL) {
+		AG_ObjectDelete(obj);
+		goto fail;
+	}
 	AG_PostEvent(NULL, obj, "edit-open", NULL);
+	return;
+fail:
+	AG_TextError(_("Failed to create object: %s"), AG_GetError());
 }
 
-/* Create a new class of component. */
+/* Create a new component model. */
 static void
-CreateNewComponent(AG_Event *event)
+NewComponent(AG_Event *event)
 {
 	AG_Window *win = AG_PTR(1);
 	AG_Textbox *tbName = AG_PTR(2);
@@ -223,17 +231,21 @@ CreateNewComponent(AG_Event *event)
 	char *name;
 
 	if ((itClass = AG_TlistSelectedItem(tlClasses)) == NULL) {
-		AG_TextMsg(AG_MSG_ERROR, _("Please select a parent class"));
+		AG_TextError(_("Please select a parent class"));
 		return;
 	}
-	if (!(name = AG_TextboxDupString(tbName)) || name[0] == '\0') {
-		AG_TextMsg(AG_MSG_ERROR, _("Please enter a class name"));
-		free(name);
+	if ((name = AG_TextboxDupString(tbName)) == NULL ||
+	    name[0] == '\0') {
+		AG_TextError(_("Please enter a class name"));
+		Free(name);
 		return;
 	}
 
 	clsParent = AGCLASS(itClass->p1);
-	cls = Malloc(clsParent->size);
+	if ((cls = malloc(clsParent->size)) == NULL) {
+		AG_SetError(_("Out of memory for %s"), clsParent->name);
+		goto fail;
+	}
 	memcpy(cls, clsParent, clsParent->size);
 	Strlcpy(AGCLASS(cls)->name, clsParent->name, AG_OBJECT_TYPE_MAX);
 	Strlcat(AGCLASS(cls)->name, ":ES_", AG_OBJECT_TYPE_MAX);
@@ -243,11 +255,17 @@ CreateNewComponent(AG_Event *event)
 	AG_RegisterClass(cls);
 
 	if ((com = AG_ObjectNew(&esVfsRoot, NULL, AGCLASS(cls))) == NULL) {
-		AG_FatalError(NULL);
+		goto fail;
 	}
-	OpenObject(com);
+	if (OpenObject(com) == NULL) {
+		AG_ObjectDelete(com);
+		goto fail;
+	}
 	AG_PostEvent(NULL, com, "edit-open", NULL);
 	AG_ViewDetach(win);
+	return;
+fail:
+	AG_TextError(_("Could not create component: %s"), AG_GetError());
 }
 
 /* Display the "File / New component" dialog. */
@@ -256,29 +274,15 @@ NewComponentDlg(AG_Event *event)
 {
 	AG_Window *win;
 	AG_Textbox *tbName;
-	AG_Tlist *tlClasses;
-	char *nameMax;
-	int i, nMax = 0;
+	AG_Tlist *tlHier;
 	AG_Box *hBox;
-	ES_ComponentClass *cls;
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("New component model..."));
 	
 	AG_LabelNew(win, 0, _("Inherit from: "));
-	tlClasses = AG_TlistNew(win, AG_TLIST_EXPAND);
-
-	AG_FOREACH_CLASS(cls, i, es_component_class,
-	    "ES_Circuit:ES_Component:*") {
-		AG_ObjectClass *clsObj = (AG_ObjectClass *)cls;
-		char *s;
-
-		AG_TlistAddPtr(tlClasses,
-		    (cls->icon != NULL) ? cls->icon->s : NULL,
-		    &(clsObj->name[sizeof("ES_Circuit")]),
-		    cls);
-	}
-	AG_TlistSizeHintLargest(tlClasses, 20);
+	tlHier = AG_TlistNewPolled(win, AG_TLIST_TREE|AG_TLIST_EXPAND,
+	    ES_ComponentListModels, NULL);
 	
 	tbName = AG_TextboxNew(win, 0, _("Name: "));
 	AG_TextboxSetString(tbName, _("MyClass"));
@@ -286,8 +290,11 @@ NewComponentDlg(AG_Event *event)
 
 	hBox = AG_BoxNewHoriz(win, AG_BOX_HOMOGENOUS|AG_BOX_FRAME|AG_BOX_HFILL);
 	{
-		AG_ButtonNewFn(hBox, 0, _("OK"), CreateNewComponent, "%p,%p,%p",
-		    win, tbName, tlClasses);
+		AG_ButtonNewFn(hBox, 0, _("OK"),
+		    NewComponent, "%p,%p,%p", win, tbName, tlHier);
+		AG_SetEvent(tbName, "textbox-return",
+		    NewComponent, "%p,%p,%p", win, tbName, tlHier);
+	
 		AG_ButtonNewFn(hBox, 0, _("Cancel"), AGWINDETACH(win));
 	}
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 60, 60);
@@ -326,18 +333,22 @@ OpenNativeObject(AG_Event *event)
 	char *path = AG_STRING(2);
 	AG_Object *obj;
 
-	obj = AG_ObjectNew(&esVfsRoot, NULL, cls);
+	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cls)) == NULL) {
+		goto fail;
+	}
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
-		AG_TextMsg(AG_MSG_ERROR, "%s: %s", ShortFilename(path),
-		    AG_GetError());
-#if 0
-		AG_ObjectDetach(obj);		/* XXX */
-		AG_ObjectDestroy(obj);
-#endif
-		return;
+		AG_SetError("%s: %s", ShortFilename(path), AG_GetError());
+		AG_ObjectDelete(obj);
+		goto fail;
 	}
 	SetArchivePath(obj, path);
-	OpenObject(obj);
+	if (OpenObject(obj) == NULL) {
+		AG_ObjectDelete(obj);
+		goto fail;
+	}
+	return;
+fail:
+	AG_TextError(_("Could not open object: %s"), AG_GetError());
 }
 
 static void
@@ -371,7 +382,7 @@ SaveNativeObject(AG_Event *event)
 	AG_Window *wEdit;
 
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
-		AG_TextMsgFromError();
+		AG_TextError("%s: %s", ShortFilename(path), AG_GetError());
 	}
 	SetArchivePath(obj, path);
 
@@ -385,7 +396,7 @@ SaveCircuitToGerber(AG_Event *event)
 //	ES_Circuit *ckt = AG_PTR(1);
 //	char *path = AG_STRING(2);
 
-	AG_TextMsg(AG_MSG_ERROR, "Export to Gerber not implemented yet");
+	AG_TextError("Export to Gerber not implemented yet");
 }
 
 static void
@@ -394,7 +405,7 @@ SaveCircuitToXGerber(AG_Event *event)
 //	ES_Circuit *ckt = AG_PTR(1);
 //	char *path = AG_STRING(2);
 
-	AG_TextMsg(AG_MSG_ERROR, "Export to XGerber not implemented yet");
+	AG_TextError("Export to XGerber not implemented yet");
 }
 
 static void
@@ -404,8 +415,7 @@ SaveCircuitToSPICE3(AG_Event *event)
 	char *path = AG_STRING(2);
 	
 	if (ES_CircuitExportSPICE3(ckt, path) == -1)
-		AG_TextMsg(AG_MSG_ERROR, "%s: %s", OBJECT(ckt)->name,
-		    AG_GetError());
+		AG_TextMsgFromError();
 }
 
 static void
@@ -415,7 +425,7 @@ SaveCircuitToPDF(AG_Event *event)
 //	char *path = AG_STRING(2);
 
 	/* TODO */
-	AG_TextMsg(AG_MSG_ERROR, "Export to PDF not implemented yet");
+	AG_TextError("Export to PDF not implemented yet");
 }
 
 static void
@@ -425,7 +435,7 @@ SaveSchem(AG_Event *event)
 //	char *path = AG_STRING(2);
 
 	/* TODO */
-	AG_TextMsg(AG_MSG_ERROR, "Export to PDF not implemented yet");
+	AG_TextError("Export to PDF not implemented yet");
 }
 
 static void
@@ -435,7 +445,7 @@ SaveSchemToPDF(AG_Event *event)
 //	char *path = AG_STRING(2);
 
 	/* TODO */
-	AG_TextMsg(AG_MSG_ERROR, "Export to PDF not implemented yet");
+	AG_TextError("Export to PDF not implemented yet");
 }
 
 static void
@@ -495,8 +505,7 @@ Save(AG_Event *event)
 		return;
 	}
 	if (AG_ObjectSave(obj) == -1) {
-		AG_TextMsg(AG_MSG_ERROR, _("Error saving object: %s"),
-		    AG_GetError());
+		AG_TextError(_("Error saving object: %s"), AG_GetError());
 	} else {
 		AG_TextInfo(_("Saved %s successfully"),
 		    OBJECT(obj)->archivePath);
@@ -573,8 +582,6 @@ FileMenu(AG_Event *event)
 	    NewObject, "%p", &esCircuitClass);
 	AG_MenuAction(m, _("New component model..."), esIconComponent.s,
 	    NewComponentDlg, NULL);
-	AG_MenuAction(m, _("New component schematic..."), esIconComponent.s,
-	    NewObject, "%p", &esSchemClass);
 
 	AG_MenuActionKb(m, _("Open..."), agIconLoad.s,
 	    SDLK_o, KMOD_CTRL,
@@ -670,7 +677,7 @@ main(int argc, char *argv[])
 	textdomain("edacious");
 #endif
 	if (AG_InitCore("edacious", AG_CORE_VERBOSE) == -1) {
-		fprintf(stderr, "%s\n", AG_GetError());
+		fprintf(stderr, "InitCore: %s\n", AG_GetError());
 		return (1);
 	}
 	AG_TextParseFontSpec("_agFontVera:10");
@@ -731,9 +738,8 @@ main(int argc, char *argv[])
 	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
 
 	/*
-	 * Initialize the Edacious library. We request that all dynamic
-	 * modules be loaded at this point (for the GUI component insert
-	 * function.
+	 * Initialize the Edacious library. Unless -P was given, we preload
+	 * all modules at this point.
 	 */
 	ES_CoreInit(coreFlags);
 	
@@ -771,14 +777,19 @@ main(int argc, char *argv[])
 			}
 		}
 
-		ckt = AG_ObjectNew(&esVfsRoot, NULL, cls);
-		if (AG_ObjectLoadFromFile(ckt, argv[i]) == 0) {
-			AG_ObjectSetArchivePath(ckt, argv[i]);
-			OpenObject(ckt);
-		} else {
+		if ((ckt = AG_ObjectNew(&esVfsRoot, NULL, cls)) == NULL) {
 			AG_TextMsgFromError();
-			AG_ObjectDetach(ckt);
-			AG_ObjectDestroy(ckt);
+			continue;
+		}
+		if (AG_ObjectLoadFromFile(ckt, argv[i]) == -1) {
+			AG_TextMsgFromError();
+			AG_ObjectDelete(ckt);
+			continue;
+		}
+		AG_ObjectSetArchivePath(ckt, argv[i]);
+		if (OpenObject(ckt) == NULL) {
+			AG_TextMsgFromError();
+			AG_ObjectDelete(ckt);
 		}
 	}
 

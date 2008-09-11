@@ -39,9 +39,9 @@ const void *esSchematicClasses[] = {
 
 /* Agar object classes for core Edacious functionality. */
 void *esCoreClasses[] = {
+	&esCircuitClass,
 	&esComponentClass,
 	&esWireClass,
-	&esCircuitClass,
 	&esScopeClass,
 	&esSchemClass,
 	NULL

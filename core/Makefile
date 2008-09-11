@@ -10,7 +10,9 @@ LIB_LINKS=	ag_gui ag_core_static \
 
 SRCS=	core.c \
 	circuit.c \
+	circuit_edit.c \
 	component.c \
+	component_edit.c \
 	dc.c \
 	insert_tool.c \
 	interpreteur.c \
@@ -25,7 +27,8 @@ SRCS=	core.c \
 	schem_port_tool.c \
 	schem_select_tool.c \
 	schem_wire.c \
-	integration.c
+	integration.c \
+	tools.c
 
 CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 

@@ -121,7 +121,8 @@ AddPlotFromSrc(AG_Event *event)
 	char prop_path[AG_PROP_PATH_MAX];
 	ES_Circuit *ckt = AG_PTR(1);
 	M_Plotter *ptr = AG_PTR(2);
-	AG_Prop *prop = AG_PTR(3);
+	AG_TlistItem *ti = AG_PTR(3);
+	AG_Prop *prop = ti->p1;
 	M_Plot *pl;
 
 	AG_PropCopyPath(prop_path, sizeof(prop_path), ckt, prop->key);

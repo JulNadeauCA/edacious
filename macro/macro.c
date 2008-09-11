@@ -4,11 +4,11 @@
 #include "macro.h"
 
 ES_ComponentClass *esMacroClasses[] = {
-	&esAndClass,
 	&esDigitalClass,
-	&esInverterClass,
-	&esOrClass,
 	&esLogicProbeClass,
+	&esAndClass,
+	&esOrClass,
+	&esInverterClass,
 	NULL
 };
 
