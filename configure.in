@@ -132,5 +132,7 @@ fi
 
 # To avoid obstructing user code, we always use includes of the
 # form <edacious/foo/foo.h>.
-if [ ! -e "$SRC/edacious" ]; then (cd $SRC && ln -s . edacious); fi
-if [ ! -e "edacious" ]; then ln -s . edacious; fi
+if [ "${with_proj_generation}" != "yes" ]; then
+	if [ ! -e "$SRC/edacious" ]; then (cd $SRC && ln -s . edacious); fi
+	if [ ! -e "edacious" ]; then ln -s . edacious; fi
+fi

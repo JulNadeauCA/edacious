@@ -1491,8 +1491,8 @@ echo "CFLAGS=$CFLAGS" >>Makefile.config
 echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
 echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
 echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
-CFLAGS="$CFLAGS -I\"$SRC\""
-CXXFLAGS="$CXXFLAGS -I\"$SRC\""
+CFLAGS="$CFLAGS -I$SRC"
+CXXFLAGS="$CXXFLAGS -I$SRC"
 echo "CFLAGS=$CFLAGS" >>Makefile.config
 echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
 echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
@@ -1979,11 +1979,14 @@ CFLAGS="$CFLAGS -DFP_DEBUG"
 echo "CFLAGS=$CFLAGS" >>Makefile.config
 echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
 fi
-if [ ! -e "$SRC/edacious" ]
+if [ "${with_proj_generation}" != "yes" ]
+ then
+	if [ ! -e "$SRC/edacious" ]
  then (cd $SRC && ln -s . edacious)
  fi
-if [ ! -e "edacious" ]
+	if [ ! -e "edacious" ]
  then ln -s . edacious
  fi
+fi
 echo "Don't forget to run \"make depend\"."
 echo "Don't forget to run \"make depend\"." >> config.log
