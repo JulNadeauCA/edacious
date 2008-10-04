@@ -166,7 +166,6 @@ ES_ComponentClass esVSquareClass = {
 	},
 	N_("Voltage source (square)"),
 	"Vsq",
-	"Sources/Vsquare.eschem",
 	"Generic|Sources",
 	&esIconVsquare,
 	NULL,			/* draw */

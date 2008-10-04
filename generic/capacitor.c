@@ -282,7 +282,6 @@ ES_ComponentClass esCapacitorClass = {
 	},
 	N_("Capacitor"),
 	"C",
-	"Capacitor.eschem",
 	"Generic|Nonlinear",
 	&esIconCapacitor,
 	NULL,			/* draw */

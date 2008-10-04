@@ -407,7 +407,6 @@ ES_ComponentClass esVsourceClass = {
 	},
 	N_("Voltage source"),
 	"V",
-	"Sources/Vsource.eschem",
 	"Generic|Sources",
 	&esIconVsource,
 	NULL,			/* draw */

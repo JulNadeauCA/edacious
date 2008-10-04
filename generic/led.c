@@ -133,7 +133,6 @@ ES_ComponentClass esLedClass = {
 	},
 	N_("Led"),
 	"LED",
-	NULL,			/* schem */
 	"Generic|Nonlinear|Optical",
 	&esIconLED,
 	Draw,

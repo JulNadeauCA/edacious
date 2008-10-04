@@ -277,7 +277,6 @@ ES_ComponentClass esPNPClass = {
 	},
 	N_("Transistor (PNP)"),
 	"U",
-	"PNP.eschem",
 	"Generic|Nonlinear",
 	NULL,
 	NULL,			/* draw */

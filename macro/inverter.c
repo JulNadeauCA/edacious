@@ -116,7 +116,6 @@ ES_ComponentClass esInverterClass = {
 	},
 	N_("Inverter"),
 	"Inv",
-	"Digital/Inverter.eschem",
 	"Generic|Digital|Digital/Gates",
 	&esIconInverter,
 	NULL,			/* draw */

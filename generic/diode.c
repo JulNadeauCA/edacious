@@ -208,7 +208,6 @@ ES_ComponentClass esDiodeClass = {
 	},
 	N_("Diode"),
 	"D",
-	"Diode.eschem",
 	"Generic|Nonlinear",
 	&esIconDiode,
 	NULL,			/* draw */

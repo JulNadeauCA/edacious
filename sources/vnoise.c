@@ -209,7 +209,6 @@ ES_ComponentClass esVNoiseClass = {
 	},
 	N_("Voltage source (noise)"),
 	"Vnoise",
-	"Sources/Vnoise.eschem",
 	"Generic|Sources",
 	&esIconVsine,
 	NULL,			/* draw */

@@ -86,7 +86,6 @@ ES_ComponentClass esAndClass = {
 	},
 	N_("AND Gate"),
 	"And",
-	"Digital/AndGate.eschem",
 	"Generic|Digital|Digital/Gates",
 	&esIconANDGate,
 	NULL,		/* draw */

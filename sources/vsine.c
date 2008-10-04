@@ -147,7 +147,6 @@ ES_ComponentClass esVSineClass = {
 	},
 	N_("Voltage source (sine)"),
 	"Vsin",
-	"Sources/Vsine.eschem",
 	"Generic|Sources",
 	&esIconVsine,
 	NULL,			/* draw */

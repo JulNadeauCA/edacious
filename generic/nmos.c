@@ -223,7 +223,6 @@ ES_ComponentClass esNMOSClass = {
 	},
 	N_("Transistor (NMOS)"),
 	"U",
-	"NMOS.eschem",
 	"Generic|Nonlinear",
 	&esIconNMOS,
 	NULL,			/* draw */

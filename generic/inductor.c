@@ -310,7 +310,6 @@ ES_ComponentClass esInductorClass = {
 	},
 	N_("Inductor"),
 	"L",
-	"Inductor.eschem",
 	"Generic|Nonlinear",
 	&esIconInductor,
 	NULL,			/* draw */

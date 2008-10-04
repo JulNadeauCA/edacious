@@ -221,7 +221,6 @@ ES_ComponentClass esSpstClass = {
 	},
 	N_("Switch (SPST)"),
 	"Sw",
-	"SPST.eschem",		/* schem */
 	"Generic|Switches|User Interface",
 	&esIconSPST,
 	NULL,			/* draw */

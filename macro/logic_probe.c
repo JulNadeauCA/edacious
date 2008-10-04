@@ -118,7 +118,6 @@ ES_ComponentClass esLogicProbeClass = {
 	},
 	N_("Logic Probe"),
 	"LPROBE",
-	NULL,			/* schem */
 	"Generic|Digital|Probes",
 	&esIconLogicProbe,
 	Draw,

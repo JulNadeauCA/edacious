@@ -215,7 +215,6 @@ ES_ComponentClass esVArbClass = {
 	},
 	N_("Voltage source (expression)"),
 	"Varb",
-	"Sources/Varb.eschem",
 	"Generic|Sources",
 	&esIconVarb,
 	NULL,			/* draw */

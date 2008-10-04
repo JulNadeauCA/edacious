@@ -100,7 +100,6 @@ ES_ComponentClass esGroundClass = {
 	},
 	N_("Ground"),
 	"Gnd",
-	"Ground.eschem",
 	"Generic|Sources",
 	&esIconGround,
 	NULL,			/* draw */

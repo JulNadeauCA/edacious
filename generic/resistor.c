@@ -186,7 +186,6 @@ ES_ComponentClass esResistorClass = {
 	},
 	N_("Resistor"),
 	"R",
-	"Resistor.eschem",
 	"Generic|Resistances",
 	&esIconResistor,
 	NULL,			/* draw */

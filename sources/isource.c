@@ -140,7 +140,6 @@ ES_ComponentClass esIsourceClass = {
 	},
 	N_("Current source"),
 	"I",
-	"Sources/Isource.eschem",
 	"Generic|Sources",
 	&esIconISource,
 	NULL,			/* draw */

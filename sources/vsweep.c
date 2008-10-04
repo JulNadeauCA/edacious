@@ -168,7 +168,6 @@ ES_ComponentClass esVSweepClass = {
 	},
 	N_("Voltage source (sweep)"),
 	"Vsw",
-	"Sources/Vsweep.eschem",
 	"Generic|Sources",
 	&esIconComponent,
 	NULL,			/* draw */

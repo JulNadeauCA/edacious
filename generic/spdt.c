@@ -215,7 +215,6 @@ ES_ComponentClass esSpdtClass = {
 	},
 	N_("Switch (SPDT)"),
 	"Sw",
-	NULL,			/* schem */
 	"Generic|Switches|User Interface",
 	&esIconSPDT,
 	NULL,			/* draw */

@@ -248,7 +248,6 @@ ES_ComponentClass esDigitalClass = {
 	},
 	N_("Digital component"),
 	"Digital",
-	"Digital.eschem",
 	"Generic|Digital",
 	&esIconANDGate,
 	NULL,			/* draw */

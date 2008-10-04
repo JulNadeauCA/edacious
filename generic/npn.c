@@ -280,7 +280,6 @@ ES_ComponentClass esNPNClass = {
 	},
 	N_("Transistor (NPN)"),
 	"U",
-	"NPN.eschem",
 	"Generic|Nonlinear",
 	&esIconNPN,
 	NULL,			/* draw */

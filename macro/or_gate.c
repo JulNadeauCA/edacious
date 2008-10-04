@@ -86,7 +86,6 @@ ES_ComponentClass esOrClass = {
 	},
 	N_("OR Gate"),
 	"Or",
-	"Digital/OrGate.eschem",
 	"Generic|Digital|Digital/Gates",
 	&esIconORGate,
 	NULL,			/* draw */
