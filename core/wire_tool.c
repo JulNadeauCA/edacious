@@ -261,9 +261,8 @@ Edit(void *p, VG_View *vv)
 	ES_WireTool *t = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	AG_CheckboxNewFlag(box, &t->flags, CREATE_NEW_NODES,
-	    _("Create new nodes"));
-
+	AG_CheckboxNewFlag(box, 0, _("Create new nodes"),
+	    &t->flags, CREATE_NEW_NODES);
 	return (box);
 }
 

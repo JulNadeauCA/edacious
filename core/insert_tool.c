@@ -272,9 +272,8 @@ Edit(void *p, VG_View *vv)
 	ES_InsertTool *t = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	AG_CheckboxNewFlag(box, &t->flags, INSERT_MULTIPLE,
-	    _("Insert multiple instances"));
-
+	AG_CheckboxNewFlag(box, 0, _("Insert multiple instances"),
+	    &t->flags, INSERT_MULTIPLE);
 	return (box);
 }
 
