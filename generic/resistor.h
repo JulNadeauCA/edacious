@@ -35,7 +35,7 @@ typedef struct es_resistor {
 	M_Real Rnom;		/* Resistance at Tnom */
 	M_Real Pmax;		/* Power rating in watts */
 	int tolerance;		/* Tolerance in % */
-	float Tc1, Tc2;		/* Resistance/temperature coefficients */
+	M_Real Tc1, Tc2;	/* Resistance/temperature coefficients */
 
 	M_Real g;
 
