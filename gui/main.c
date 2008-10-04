@@ -201,102 +201,68 @@ CloseObject(void *p)
 static void
 NewObject(AG_Event *event)
 {
-	AG_ObjectClass *cls = AG_PTR(1);
+	AG_ObjectClass *cl = AG_PTR(1);
 	AG_Object *obj;
 
-	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cls)) == NULL) {
+	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cl)) == NULL) {
 		goto fail;
 	}
 	if (OpenObject(obj) == NULL) {
-		AG_ObjectDelete(obj);
 		goto fail;
 	}
 	AG_PostEvent(NULL, obj, "edit-open", NULL);
 	return;
 fail:
 	AG_TextError(_("Failed to create object: %s"), AG_GetError());
+	if (obj != NULL) { AG_ObjectDelete(obj); }
 }
 
 /* Create a new component model. */
 static void
-NewComponent(AG_Event *event)
+CreateComponentModel(AG_Event *event)
 {
-	AG_Window *win = AG_PTR(1);
-	AG_Textbox *tbName = AG_PTR(2);
-	AG_Tlist *tlClasses = AG_PTR(3);
+	AG_Tlist *tlClasses = AG_PTR(1);
 	AG_TlistItem *itClass;
-	ES_ComponentClass *cls;
-	AG_ObjectClass *clsParent;
 	ES_Component *com;
-	char *name;
 
 	if ((itClass = AG_TlistSelectedItem(tlClasses)) == NULL) {
 		AG_TextError(_("Please select a parent class"));
 		return;
 	}
-	if ((name = AG_TextboxDupString(tbName)) == NULL ||
-	    name[0] == '\0') {
-		AG_TextError(_("Please enter a class name"));
-		Free(name);
-		return;
-	}
-
-	clsParent = AGCLASS(itClass->p1);
-	if ((cls = malloc(clsParent->size)) == NULL) {
-		AG_SetError(_("Out of memory for %s"), clsParent->name);
-		goto fail;
-	}
-	memcpy(cls, clsParent, clsParent->size);
-	Strlcpy(AGCLASS(cls)->name, clsParent->name, AG_OBJECT_TYPE_MAX);
-	Strlcat(AGCLASS(cls)->name, ":ES_", AG_OBJECT_TYPE_MAX);
-	Strlcat(AGCLASS(cls)->name, name, AG_OBJECT_TYPE_MAX);
-	free(name);
-
-	AG_RegisterClass(cls);
-
-	if ((com = AG_ObjectNew(&esVfsRoot, NULL, AGCLASS(cls))) == NULL) {
+	if ((com = AG_ObjectNew(&esVfsRoot, NULL, AGCLASS(itClass->p1)))
+	    == NULL) {
 		goto fail;
 	}
 	if (OpenObject(com) == NULL) {
-		AG_ObjectDelete(com);
 		goto fail;
 	}
 	AG_PostEvent(NULL, com, "edit-open", NULL);
-	AG_ViewDetach(win);
 	return;
 fail:
 	AG_TextError(_("Could not create component: %s"), AG_GetError());
+	if (com != NULL) { AG_ObjectDelete(com); }
 }
 
 /* Display the "File / New component" dialog. */
 static void
-NewComponentDlg(AG_Event *event)
+NewComponentModelDlg(AG_Event *event)
 {
 	AG_Window *win;
-	AG_Textbox *tbName;
 	AG_Tlist *tlHier;
 	AG_Box *hBox;
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("New component model..."));
 	
-	AG_LabelNew(win, 0, _("Inherit from: "));
+	AG_LabelNew(win, 0, _("Class: "));
 	tlHier = AG_TlistNewPolled(win, AG_TLIST_TREE|AG_TLIST_EXPAND,
-	    ES_ComponentListModels, NULL);
-	
-	tbName = AG_TextboxNew(win, 0, _("Name: "));
-	AG_TextboxSetString(tbName, _("MyClass"));
-	AG_WidgetFocus(tbName);
+	    ES_ComponentListClasses, NULL);
 
 	hBox = AG_BoxNewHoriz(win, AG_BOX_HOMOGENOUS|AG_BOX_FRAME|AG_BOX_HFILL);
-	{
-		AG_ButtonNewFn(hBox, 0, _("OK"),
-		    NewComponent, "%p,%p,%p", win, tbName, tlHier);
-		AG_SetEvent(tbName, "textbox-return",
-		    NewComponent, "%p,%p,%p", win, tbName, tlHier);
-	
-		AG_ButtonNewFn(hBox, 0, _("Cancel"), AGWINDETACH(win));
-	}
+	AG_ButtonNewFn(hBox, 0, _("Create model"),
+	    CreateComponentModel, "%p", tlHier);
+	AG_ButtonNewFn(hBox, 0, _("Close"), AGWINDETACH(win));
+
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 60, 60);
 	AG_WindowShow(win);
 }
@@ -312,7 +278,7 @@ EditDevice(AG_Event *event)
 #endif
 
 static void
-SetArchivePath(void *obj, const char *path)
+SetObjectName(void *obj, const char *path)
 {
 	const char *c;
 
@@ -327,28 +293,68 @@ SetArchivePath(void *obj, const char *path)
 
 /* Load an object file from native Edacious format. */
 static void
-OpenNativeObject(AG_Event *event)
+LoadObject(AG_Event *event)
 {
-	AG_ObjectClass *cls = AG_PTR(1);
+	AG_ObjectClass *cl = AG_PTR(1);
 	char *path = AG_STRING(2);
 	AG_Object *obj;
 
-	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cls)) == NULL) {
+	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cl)) == NULL) {
 		goto fail;
 	}
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
 		AG_SetError("%s: %s", ShortFilename(path), AG_GetError());
-		AG_ObjectDelete(obj);
 		goto fail;
 	}
-	SetArchivePath(obj, path);
+	SetObjectName(obj, path);
 	if (OpenObject(obj) == NULL) {
-		AG_ObjectDelete(obj);
 		goto fail;
 	}
 	return;
 fail:
 	AG_TextError(_("Could not open object: %s"), AG_GetError());
+/*	if (obj != NULL) { AG_ObjectDelete(obj); } */
+}
+
+/* Load a component model file. */
+static void
+LoadComponentModel(AG_Event *event)
+{
+	AG_ObjectHeader oh;
+	AG_DataSource *ds;
+	char *path = AG_STRING(1);
+	AG_Object *obj = NULL;
+	AG_ObjectClass *cl;
+
+	if ((ds = AG_OpenFile(path, "rb")) == NULL) {
+		AG_TextMsgFromError();
+		return;
+	}
+	if (AG_ObjectReadHeader(ds, &oh) == -1) {
+		AG_CloseFile(ds);
+		goto fail;
+	}
+	AG_CloseFile(ds);
+
+	if ((cl = AG_LoadClass(oh.cs.hier)) == NULL) {
+		goto fail;
+	}
+	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cl)) == NULL) {
+		goto fail;
+	}
+	if (AG_ObjectLoadFromFile(obj, path) == -1) {
+		AG_SetError("%s: %s", ShortFilename(path), AG_GetError());
+		goto fail;
+	}
+	SetObjectName(obj, path);
+	if (OpenObject(obj) == NULL) {
+		goto fail;
+	}
+	AG_CloseFile(ds);
+	return;
+fail:
+/*	if (obj != NULL) { AG_ObjectDelete(obj); } */
+	AG_TextMsgFromError();
 }
 
 static void
@@ -362,13 +368,15 @@ OpenDlg(AG_Event *event)
 	AG_WindowSetCaption(win, _("Open..."));
 
 	fd = AG_FileDlgNewMRU(win, "edacious.mru.circuits",
-	    AG_FILEDLG_LOAD|AG_FILEDLG_EXPAND|AG_FILEDLG_CLOSEWIN);
+	    AG_FILEDLG_LOAD|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 
 	AG_FileDlgAddType(fd, _("Edacious circuit model"), "*.ecm",
-	    OpenNativeObject, "%p", &esCircuitClass);
-	AG_FileDlgAddType(fd, _("Edacious component schematic"), "*.eschem",
-	    OpenNativeObject, "%p", &esSchemClass);
+	    LoadObject, "%p", &esCircuitClass);
+	AG_FileDlgAddType(fd, _("Edacious component model"), "*.em",
+	    LoadComponentModel, NULL);
+	AG_FileDlgAddType(fd, _("Edacious technical drawing"), "*.edwg",
+	    LoadObject, "%p", &esSchemClass);
 
 	AG_WindowShow(win);
 }
@@ -384,7 +392,7 @@ SaveNativeObject(AG_Event *event)
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
 		AG_TextError("%s: %s", ShortFilename(path), AG_GetError());
 	}
-	SetArchivePath(obj, path);
+	SetObjectName(obj, path);
 
 	if ((wEdit = AG_WindowFindFocused()) != NULL)
 		AG_WindowSetCaption(wEdit, "%s", ShortFilename(path));
@@ -463,7 +471,11 @@ SaveAsDlg(AG_Event *event)
 	    AG_FILEDLG_SAVE|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 
-	if (AG_OfClass(obj, "ES_Circuit:*")) {
+	if (AG_OfClass(obj, "ES_Circuit:ES_Component:*")) {
+		AG_FileDlgAddType(fd, _("Edacious Component Model"),
+		    "*.em",
+		    SaveNativeObject, "%p", obj);
+	} else if (AG_OfClass(obj, "ES_Circuit:*")) {
 		AG_FileDlgAddType(fd, _("Edacious Circuit Model"),
 		    "*.ecm",
 		    SaveNativeObject, "%p", obj);
@@ -485,8 +497,8 @@ SaveAsDlg(AG_Event *event)
 		    "*.gbl,*.gtl,*.gbs,*.gts,*.gbo,*.gto",
 		    SaveCircuitToXGerber, "%p", obj);
 	} else if (AG_OfClass(obj, "ES_Schem:*")) {
-		AG_FileDlgAddType(fd, _("Edacious Component Schematic"),
-		    "*.eschem",
+		AG_FileDlgAddType(fd, _("Edacious Technical Drawing"),
+		    "*.edwg",
 		    SaveNativeObject, "%p", obj);
 		AG_FileDlgAddType(fd, _("Portable Document Format"),
 		    "*.pdf",
@@ -507,7 +519,8 @@ Save(AG_Event *event)
 	if (AG_ObjectSave(obj) == -1) {
 		AG_TextError(_("Error saving object: %s"), AG_GetError());
 	} else {
-		AG_TextInfo(_("Saved %s successfully"),
+		AG_TextInfo("saved-object",
+		    _("Saved %s successfully"),
 		    OBJECT(obj)->archivePath);
 	}
 }
@@ -556,7 +569,7 @@ Quit(AG_Event *event)
 		AG_WindowSetCaption(win, _("Exit application?"));
 		AG_WindowSetPosition(win, AG_WINDOW_CENTER, 0);
 		AG_WindowSetSpacing(win, 8);
-		AG_LabelNewStaticString(win, 0,
+		AG_LabelNewString(win, 0,
 		    _("There is at least one object with unsaved changes.  "
 	              "Exit application?"));
 		box = AG_BoxNewHoriz(win, AG_BOX_HOMOGENOUS|AG_VBOX_HFILL);
@@ -581,7 +594,9 @@ FileMenu(AG_Event *event)
 	    SDLK_n, KMOD_CTRL,
 	    NewObject, "%p", &esCircuitClass);
 	AG_MenuAction(m, _("New component model..."), esIconComponent.s,
-	    NewComponentDlg, NULL);
+	    NewComponentModelDlg, NULL);
+	AG_MenuAction(m, _("New technical drawing..."), vgIconDrawing.s,
+	    NewObject, "%p", &esSchemClass);
 
 	AG_MenuActionKb(m, _("Open..."), agIconLoad.s,
 	    SDLK_o, KMOD_CTRL,
@@ -649,6 +664,12 @@ Redo(AG_Event *event)
 }
 
 static void
+EditPreferences(AG_Event *event)
+{
+	DEV_ConfigShow();
+}
+
+static void
 EditMenu(AG_Event *event)
 {
 	AG_MenuItem *m = AG_SENDER();
@@ -660,6 +681,11 @@ EditMenu(AG_Event *event)
 	AG_MenuActionKb(m, _("Redo"), NULL, SDLK_r, KMOD_CTRL,
 	    Redo, "%p", objFocus);
 	if (objFocus == NULL) { AG_MenuEnable(m); }
+
+	AG_MenuSeparator(m);
+
+	AG_MenuAction(m, _("Preferences..."), NULL, EditPreferences, NULL);
+
 	AG_MutexUnlock(&objLock);
 }
 
@@ -765,32 +791,26 @@ main(int argc, char *argv[])
 #else
 	for (i = 1; i < argc; i++) {
 #endif
-		AG_ObjectClass *cls = &esCircuitClass;
-		ES_Circuit *ckt;
+		AG_Event ev;
 		char *ext;
 
-		if ((ext = strrchr(argv[i], '.')) != NULL) {
-			if (strcasecmp(ext, ".ecm") == 0) {
-				cls = &esCircuitClass;
-			} else if (strcasecmp(ext, ".eschem") == 0) {
-				cls = &esSchemClass;
-			}
-		}
+		Verbose("Loading: %s\n", argv[i]);
+		if ((ext = strrchr(argv[i], '.')) == NULL)
+			continue;
 
-		if ((ckt = AG_ObjectNew(&esVfsRoot, NULL, cls)) == NULL) {
-			AG_TextMsgFromError();
+		AG_EventInit(&ev);
+		if (strcasecmp(ext, ".ecm") == 0) {
+			AG_EventPushPointer(&ev, "", &esCircuitClass);
+		} else if (strcasecmp(ext, ".eschem") == 0) {
+			AG_EventPushPointer(&ev, "", &esSchemClass);
+		} else if (strcasecmp(ext, ".em") == 0) {
+			AG_EventPushPointer(&ev, "", &esComponentClass);
+		} else {
+			Verbose("Ignoring argument: %s\n", argv[i]);
 			continue;
 		}
-		if (AG_ObjectLoadFromFile(ckt, argv[i]) == -1) {
-			AG_TextMsgFromError();
-			AG_ObjectDelete(ckt);
-			continue;
-		}
-		AG_ObjectSetArchivePath(ckt, argv[i]);
-		if (OpenObject(ckt) == NULL) {
-			AG_TextMsgFromError();
-			AG_ObjectDelete(ckt);
-		}
+		AG_EventPushString(&ev, "", argv[i]);
+		LoadObject(&ev);
 	}
 
 	AG_EventLoop();
