@@ -162,10 +162,10 @@ ShowProperties(AG_Event *event)
 	    OBJECT(ckt)->name);
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 40, 30);
 	
-	tb = AG_TextboxNew(win, AG_TEXTBOX_HFILL, _("Author: "));
+	tb = AG_TextboxNew(win, 0, _("Author: "));
 	AG_TextboxBindUTF8(tb, ckt->authors, sizeof(ckt->authors));
 
-	tb = AG_TextboxNew(win, AG_TEXTBOX_HFILL, _("Keywords: "));
+	tb = AG_TextboxNew(win, 0, _("Keywords: "));
 	AG_TextboxBindUTF8(tb, ckt->keywords, sizeof(ckt->keywords));
 
 	AG_LabelNew(win, 0, _("Description: "));

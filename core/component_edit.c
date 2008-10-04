@@ -29,45 +29,92 @@
 
 #include "core.h"
 
-static void
-FindModels(AG_Tlist *tl, AG_ObjectClass *cls, int depth)
-{
-	ES_ComponentClass *clsCom = (ES_ComponentClass *)cls;
-	AG_ObjectClass *subcls;
-	AG_TlistItem *it;
+#define DEFAULT_SCHEM_SCALE	2
+#define DEFAULT_CIRCUIT_SCALE	0
 
-	if (!AG_ClassIsNamed(cls, "ES_Circuit:ES_Component:*")) {
+/*
+ * Generate Tlist tree for the component model library.
+ */
+static AG_TlistItem *
+FindModels(AG_Tlist *tl, AG_Object *pob, int depth)
+{
+	AG_Object *chld;
+	AG_TlistItem *it;
+	int selected = 0;
+
+	it = AG_TlistAddPtr(tl, esIconComponent.s, pob->name, pob);
+	it->depth = depth;
+
+	if (!TAILQ_EMPTY(&pob->children)) {
+		it->flags |= AG_TLIST_HAS_CHILDREN;
+	}
+	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
+	    AG_TlistVisibleChildren(tl, it)) {
+		TAILQ_FOREACH(chld, &pob->children, cobjs)
+			FindModels(tl, chld, depth+1);
+	}
+	return (it);
+}
+void
+ES_ComponentListModels(AG_Event *event)
+{
+	AG_Tlist *tl = AG_SELF();
+	AG_TlistItem *ti;
+
+	AG_TlistClear(tl);
+	AG_LockVFS(esModelVFS);
+
+	ti = FindModels(tl, OBJECT(esModelVFS), 0);
+	ti->flags |= AG_TLIST_EXPANDED;
+
+	AG_UnlockVFS(esModelVFS);
+	AG_TlistRestore(tl);
+}
+
+/*
+ * Generate Tlist tree for Component subclasses.
+ */
+static AG_TlistItem *
+FindClasses(AG_Tlist *tl, AG_ObjectClass *cl, int depth)
+{
+	ES_ComponentClass *clCom = (ES_ComponentClass *)cl;
+	AG_ObjectClass *clSub;
+	AG_TlistItem *it = NULL;
+
+	if (!AG_ClassIsNamed(cl, "ES_Circuit:ES_Component:*")) {
 		depth--;
 		goto recurse;
 	}
 	it = AG_TlistAdd(tl,
-	    (clsCom->icon != NULL) ? clsCom->icon->s : NULL,
-	    "%s", clsCom->name);
+	    (clCom->icon != NULL) ? clCom->icon->s : NULL,
+	    "%s", clCom->name);
 	it->depth = depth;
-	it->p1 = cls;
-	if (strcmp(cls->name, "ES_Circuit:ES_Component") == 0) {
+	it->p1 = cl;
+
+	if (AG_ClassIsNamed(cl, "ES_Circuit:ES_Component")) {
 		it->flags |= AG_TLIST_EXPANDED;
 	}
-	if (!TAILQ_EMPTY(&cls->sub)) {
+	if (!TAILQ_EMPTY(&cl->sub)) {
 		it->flags |= AG_TLIST_HAS_CHILDREN;
 	}
 	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
 	    AG_TlistVisibleChildren(tl, it)) {
 		goto recurse;
 	}
-	return;
+	return (it);
 recurse:
-	TAILQ_FOREACH(subcls, &cls->sub, subclasses)
-		FindModels(tl, subcls, depth+1);
+	TAILQ_FOREACH(clSub, &cl->sub, subclasses) {
+		(void)FindClasses(tl, clSub, depth+1);
+	}
+	return (it);
 }
-
 void
-ES_ComponentListModels(AG_Event *event)
+ES_ComponentListClasses(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 
 	AG_TlistClear(tl);
-	FindModels(tl, agClassTree, 0);
+	FindClasses(tl, agClassTree, 0);
 	AG_TlistRestore(tl);
 }
 
@@ -268,13 +315,13 @@ ES_ComponentMenu(ES_Component *com, VG_View *vv)
 	Uint nsel = 0;
 	ES_Component *com2;
 	int common_class = 1;
-	ES_ComponentClass *comCls = NULL;
+	ES_ComponentClass *clCom = NULL;
 
 	CIRCUIT_FOREACH_COMPONENT_SELECTED(com2, com->ckt) {
-		if (comCls != NULL && comCls != COMCLASS(com2)) {
+		if (clCom != NULL && clCom != COMCLASS(com2)) {
 			common_class = 0;
 		}
-		comCls = COMCLASS(com2);
+		clCom = COMCLASS(com2);
 		nsel++;
 	}
 
@@ -347,7 +394,7 @@ ES_ComponentMenu(ES_Component *com, VG_View *vv)
 	if (nsel > 1) {
 		if (common_class && COMCLASS(com)->class_menu != NULL) {
 			AG_MenuSeparator(mi);
-			AG_MenuSection(mi, _("[Class: %s]"), comCls->name);
+			AG_MenuSection(mi, _("[Class: %s]"), clCom->name);
 			COMCLASS(com)->class_menu(com->ckt, mi);
 		}
 		AG_MenuSeparator(mi);
@@ -383,12 +430,12 @@ InsertComponent(AG_Event *event)
 	AG_Tlist *tl = AG_PTR(2);
 	ES_Circuit *ckt = AG_PTR(3);
 	AG_TlistItem *ti = AG_PTR(4);
-	ES_ComponentClass *comCls = ti->p1;
+	ES_ComponentClass *clCom = ti->p1;
 	VG_Tool *insTool;
 
 	if ((insTool = VG_ViewFindTool(vv, "Insert component")) != NULL) {
 		VG_ViewSelectTool(vv, insTool, ckt);
-		ES_InsertComponent(ckt, insTool, comCls);
+		ES_InsertComponent(ckt, insTool, clCom);
 	}
 }
 
@@ -522,7 +569,7 @@ InsertSchem(AG_Event *event)
 	vg = VG_New(0);
 	TAILQ_INSERT_TAIL(&com->schems, vg, user);
 	VG_ViewSetVG(vv, vg);
-	VG_ViewSetScale(vv, 10);
+	VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 }
 
 static void
@@ -555,7 +602,7 @@ SelectSchem(AG_Event *event)
 	VG *vg = ti->p1;
 	
 	VG_ViewSetVG(vv, vg);
-	VG_ViewSetScale(vv, 10);
+	VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 	VG_Status(vv, _("Selected: %s"), ti->text);
 }
 
@@ -644,7 +691,7 @@ ES_ComponentEdit(void *obj)
 		vv = VG_ViewNew(NULL, NULL, VG_VIEW_EXPAND|VG_VIEW_GRID|
 		                            VG_VIEW_CONSTRUCTION);
 		VG_ViewSetSnapMode(vv, VG_GRID);
-		VG_ViewSetScale(vv, 10);
+		VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 		VG_ViewSetGrid(vv, 0, VG_GRID_POINTS, 2,
 		    VG_GetColorRGB(100,100,100));
 		VG_ViewSetGrid(vv, 1, VG_GRID_POINTS, 8,
@@ -717,7 +764,7 @@ ES_ComponentEdit(void *obj)
 	
 		vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
 		VG_ViewSetSnapMode(vv, VG_GRID);
-		VG_ViewSetScale(vv, 0);
+		VG_ViewSetScale(vv, DEFAULT_CIRCUIT_SCALE);
 
 		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
@@ -782,21 +829,23 @@ ES_ComponentEdit(void *obj)
 		}
 	}
 
-	/*
-	 * Model parameters editor
-	 */
-	nt = AG_NotebookAddTab(nb, _("Model Parameters"), AG_BOX_VERT);
-	{
-		AG_Textbox *tb;
-
-		hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
-		if (OBJECT_CLASS(com)->edit != NULL) {
-			AG_Widget *wEdit = OBJECT_CLASS(com)->edit(com);
-			AG_ObjectAttach(hPane->div[0], wEdit);
+	if (strcmp(OBJECT_CLASS(com)->hier, "ES_Circuit:ES_Component") != 0) {
+		/*
+		 * Model parameters editor
+		 */
+		nt = AG_NotebookAddTab(nb, _("Model Parameters"), AG_BOX_VERT);
+		{
+			AG_Textbox *tb;
+	
+			hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
+			if (OBJECT_CLASS(com)->edit != NULL) {
+				AG_Widget *wEdit = OBJECT_CLASS(com)->edit(com);
+				AG_ObjectAttach(hPane->div[0], wEdit);
+			}
+			AG_LabelNewString(hPane->div[1], 0, _("Notes:"));
+			tb = AG_TextboxNew(hPane->div[1],
+			    AG_TEXTBOX_EXPAND|AG_TEXTBOX_MULTILINE, NULL);
 		}
-		AG_LabelNewStatic(hPane->div[1], 0, _("Notes:"));
-		tb = AG_TextboxNew(hPane->div[1],
-		    AG_TEXTBOX_EXPAND|AG_TEXTBOX_MULTILINE, NULL);
 	}
 
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);

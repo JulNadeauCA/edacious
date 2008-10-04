@@ -29,6 +29,8 @@
 #include <string.h>
 #include <ctype.h>
 
+/* #define CLASSDEBUG */
+
 /* Built-in schematic entity (VG) classes. */
 const void *esSchematicClasses[] = {
 	&esSchemBlockOps,
@@ -65,6 +67,7 @@ M_Real esDummy = 0.0;
 #include "icons_data.h"
 
 AG_Object esVfsRoot;			/* General-purpose VFS */
+ES_Component *esModelVFS = NULL;	/* Model library VFS */
 
 static AG_Window *(*ObjectOpenFn)(void *) = NULL;
 static void       (*ObjectCloseFn)(void *) = NULL;
@@ -106,8 +109,10 @@ LoadModule(const char *dsoName)
 			return (-1);
 		}
 		AG_RegisterClass(*(AG_ObjectClass **)p);
+#ifdef CLASSDEBUG
 		Debug(NULL, "%s.so: implements %s\n", dsoName,
 		    (*(AG_ObjectClass **)p)->name);
+#endif
 		return (0);
 	}
 	
@@ -118,8 +123,10 @@ LoadModule(const char *dsoName)
 	}
 	for (comClass = mod->comClasses; *comClass != NULL; comClass++) {
 		AG_RegisterClass(*comClass);
+#ifdef CLASSDEBUG
 		Debug(NULL, "%s.so: implements %s\n", dsoName,
 		    ((AG_ObjectClass *)(*comClass))->name);
+#endif
 	}
 	return (0);
 }
@@ -172,6 +179,9 @@ ES_CoreInit(Uint flags)
 		}
 		AG_FreeDSOList(dsoList, dsoCount);
 	}
+
+	esModelVFS = AG_ObjectNew(NULL, "Component",
+	    AGCLASS(&esComponentClass));
 }
 
 void

@@ -186,42 +186,20 @@ Move(void *p, VG_Vector vPos, VG_Vector vRel)
 	VG_MultMatrix(&VGNODE(sb)->T, &T);
 }
 
-static void
-AttachSubnodesToVG(VG *vg, VG_Node *vn)
-{
-	VG_Node *vnChld;
-	
-	VG_FOREACH_CHLD(vnChld, vn, vg_node) {
-		AttachSubnodesToVG(vg, vnChld);
-	}
-	vn->handle = VG_GenNodeName(vg, vn->ops->name);
-	TAILQ_REMOVE(&vn->vg->nodes, vn, list);
-	vn->vg = vg;
-	TAILQ_INSERT_TAIL(&vg->nodes, vn, list);
-}
-
+/* Load the contents of the specified VG file into a SchemBlock. */
 int
 ES_SchemBlockLoad(ES_SchemBlock *sb, const char *path)
 {
 	ES_Schem *scm;
-	VG *vgSchem;
 	VG *vg = VGNODE(sb)->vg;
-	VG_Node *vnRoot;
+	VG_Node *vn;
 
 	scm = ES_SchemNew(NULL);
 	if (AG_ObjectLoadFromFile(scm, path) == -1) {
 		return (-1);
 	}
-	vgSchem = scm->vg;
-	vnRoot = vgSchem->root;
-	vnRoot->vg = vg;
-	vnRoot->parent = VGNODE(sb);
-	TAILQ_INSERT_TAIL(&vg->nodes, vnRoot, list);
-	TAILQ_INSERT_TAIL(&VGNODE(sb)->cNodes, vnRoot, tree);
-	AttachSubnodesToVG(vg, vnRoot);
-	scm->vg->root = NULL;
-
-//	AG_ObjectDestroy(scm);
+	VG_Merge(sb, scm->vg);
+	AG_ObjectDestroy(scm);
 	return (0);
 }
 

@@ -95,7 +95,6 @@ typedef struct es_component_class {
 	AG_ObjectClass obj;
 	const char *name;	/* Name (e.g., "Resistor") */
 	const char *pfx;	/* Prefix (e.g., "R") */
-	const char *schemFile;	/* Schematic filename (or NULL if generated) */
 	const char *categories;	/* Classes */
 	struct ag_static_icon *icon;
 
@@ -189,6 +188,7 @@ void   ES_ComponentLog(void *, const char *, ...);
 
 void   ES_ComponentMenu(ES_Component *, VG_View *);
 void  *ES_ComponentEdit(void *);
+void   ES_ComponentListClasses(AG_Event *);
 void   ES_ComponentListModels(AG_Event *);
 
 void   ES_InitPorts(void *, const ES_Port *);
@@ -196,7 +196,6 @@ void   ES_FreePorts(ES_Component *);
 
 void           ES_AttachSchemEntity(void *, VG_Node *);
 void           ES_DetachSchemEntity(void *, VG_Node *);
-ES_SchemBlock *ES_LoadSchemFromFile(void *, const char *);
 
 Uint	 ES_PortNode(ES_Component *, int);
 int	 ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);

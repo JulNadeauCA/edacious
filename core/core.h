@@ -48,6 +48,7 @@ extern AG_Object   esVfsRoot;		 /* General-purpose VFS */
 extern void       *esCoreClasses[];	 /* Base object classes */
 extern const void *esSchematicClasses[]; /* Base schematic VG classes */
 extern const char *esEditableClasses[];	 /* User-editable object classes */
+extern ES_Component *esModelVFS;	 /* Model library VFS */
 
 void	ES_CoreInit(Uint);
 void	ES_CoreDestroy(void);

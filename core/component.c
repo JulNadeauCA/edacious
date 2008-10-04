@@ -128,22 +128,6 @@ ES_DetachSchemEntity(void *pCom, VG_Node *vn)
 	TAILQ_REMOVE(&com->schemEnts, vn, user);
 }
 
-/* Load a component schematic block from a file. */
-ES_SchemBlock *
-ES_LoadSchemFromFile(void *pCom, const char *path)
-{
-	ES_Component *com = pCom;
-	ES_SchemBlock *sb;
-
-	sb = ES_SchemBlockNew(com->ckt->vg->root, OBJECT(com)->name);
-	if (ES_SchemBlockLoad(sb, path) == -1) {
-		VG_NodeDetach(sb);
-		VG_NodeDestroy(sb);
-		return (NULL);
-	}
-	return (sb);
-}
-
 /*
  * Circuit<-Component attach callback. If a schematic file is specified in
  * the Component's class information, merge its contents into the Circuit's
@@ -154,6 +138,7 @@ OnAttach(AG_Event *event)
 {
 	ES_Component *com = AG_SELF();
 	ES_Circuit *ckt = AG_SENDER();
+	VG *vg;
 	
 	if (!AG_OfClass(ckt, "ES_Circuit:*"))
 		return;
@@ -162,23 +147,28 @@ OnAttach(AG_Event *event)
 	Debug(ckt, "Attach %s\n", OBJECT(com)->name);
 	com->ckt = ckt;
 
-	if (COMCLASS(com)->schemFile != NULL) {
+	/*
+	 * Instantiate the model schematics (schems), into a set of SchemBlock
+	 * entities in the Circuit VG. For efficiency reasons, the schems list
+	 * must be discarded in the process.
+	 */
+	TAILQ_FOREACH(vg, &com->schems, user) {
 		ES_SchemBlock *sb;
-		char path[AG_FILENAME_MAX];
 
-#ifdef _WIN32
-		Strlcpy(path, "Schematics\\", sizeof(path));
-#else
-		Strlcpy(path, SHAREDIR, sizeof(path));
-		Strlcat(path, "/Schematics/", sizeof(path));
-#endif
-		Strlcat(path, COMCLASS(com)->schemFile, sizeof(path));
-		if ((sb = ES_LoadSchemFromFile(com, path)) != NULL) {
-			ES_AttachSchemEntity(com, VGNODE(sb));
-		} else {
-			AG_TextMsgFromError();
-		}
+		Debug(com, "Instantiating model schematic: %p\n", vg);
+		sb = ES_SchemBlockNew(ckt->vg->root, OBJECT(com)->name);
+		VG_Merge(sb, vg);
+		ES_AttachSchemEntity(com, VGNODE(sb));
 	}
+	while ((vg = TAILQ_FIRST(&com->schems)) != NULL) {
+		VG_Destroy(vg);
+	}
+	TAILQ_INIT(&com->schems);
+
+	/*
+	 * Invoke the Component draw() operation, which may generate one or
+	 * more SchemBlock entities in the Circuit VG.
+	 */
 	if (COMCLASS(com)->draw != NULL) {
 		COMCLASS(com)->draw(com, ckt->vg);
 	}
@@ -207,6 +197,7 @@ OnDetach(AG_Event *event)
 	Debug(ckt, "Detach %s\n", OBJECT(com)->name);
 	AG_PostEvent(ckt, com, "circuit-disconnected", NULL);
 
+	/* Remove all related entities from the circuit schematic. */
 	while ((vn = TAILQ_FIRST(&com->schemEnts)) != NULL) {
 		Debug(com, "Removing schematic entity: %s%u\n",
 		    vn->ops->name, vn->handle);
@@ -360,6 +351,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	/* Load the schematic blocks. */
 	count = (Uint)AG_ReadUint32(ds);
 	for (i = 0; i < count; i++) {
+		Debug(com, "Loading schematic block %u/%u\n", i, count);
 		if ((vg = VG_New(0)) == NULL) {
 			return (-1);
 		}
@@ -368,6 +360,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		}
 		TAILQ_INSERT_TAIL(&com->schems, vg, user);
 	}
+	Debug(com, "Loaded %u schematic blocks\n", count);
 
 	return (0);
 }
@@ -378,7 +371,6 @@ Save(void *p, AG_DataSource *ds)
 	ES_Component *com = p;
 	off_t countOffs;
 	Uint32 count;
-	Uint i;
 	VG *vg;
 
 	AG_WriteUint32(ds, com->flags & ES_COMPONENT_SAVED_FLAGS);
@@ -486,7 +478,6 @@ ES_ComponentClass esComponentClass = {
 	},
 	N_("Component"),
 	"U",
-	NULL,			/* schemFile */
 	"Generic",
 	&esIconComponent,
 	NULL,			/* draw */

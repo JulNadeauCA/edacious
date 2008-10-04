@@ -172,6 +172,8 @@ Init(void *p)
 {
 	ES_Circuit *ckt = p;
 
+	OBJECT(ckt)->flags |= AG_OBJECT_DEBUG_DATA;
+
 	ckt->flags = ES_CIRCUIT_SHOW_NODES|ES_CIRCUIT_SHOW_NODESYMS|
 	             ES_CIRCUIT_SHOW_NODENAMES;
 	ckt->descr[0] = '\0';
@@ -278,22 +280,22 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	Debug(ckt, "Loading components (%u)\n", count);
 	for (i = 0; i < count; i++) {
 		char comName[AG_OBJECT_NAME_MAX];
-		char className[AG_OBJECT_TYPE_MAX];
+		char classSpec[AG_OBJECT_TYPE_MAX];
 		AG_ObjectClass *comClass;
 		Uint32 skipSize;
 	
 		AG_CopyString(comName, ds, sizeof(comName));
-		AG_CopyString(className, ds, sizeof(className));
+		AG_CopyString(classSpec, ds, sizeof(classSpec));
 		skipSize = AG_ReadUint32(ds);
 	
 		Debug(ckt, "Loading component: %s (%s), %u bytes\n",
-		    comName, className, (Uint)skipSize);
+		    comName, classSpec, (Uint)skipSize);
 
 		/*
 		 * Lookup the component class. If a "@libs" specification
 		 * was given, attempt to load the specified libraries.
 		 */
-		if ((comClass = AG_LoadClass(className)) == NULL) {
+		if ((comClass = AG_LoadClass(classSpec)) == NULL) {
 			/* XXX TODO skip here? */
 			return (-1);
 		}
@@ -479,7 +481,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		}
 	}
 
-	/* Send circuit-connected event to components. */
+	/* Notify components */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		AG_PostEvent(ckt, com, "circuit-connected", NULL);
 		AG_PostEvent(ckt, com, "circuit-shown", NULL);
@@ -517,12 +519,12 @@ Save(void *p, AG_DataSource *ds)
 	
 		if (OBJECT_CLASS(com)->libs[0] != '\0') {   /* Append "@libs" */
 			char s[AG_OBJECT_TYPE_MAX];
-			Strlcpy(s, OBJECT_CLASS(com)->name, sizeof(s));
+			Strlcpy(s, OBJECT_CLASS(com)->hier, sizeof(s));
 			Strlcat(s, "@", sizeof(s));
 			Strlcat(s, OBJECT_CLASS(com)->libs, sizeof(s));
 			AG_WriteString(ds, s);
 		} else {
-			AG_WriteString(ds, OBJECT_CLASS(com)->name);
+			AG_WriteString(ds, OBJECT_CLASS(com)->hier);
 		}
 		
 		skipSizeOffs = AG_Tell(ds);

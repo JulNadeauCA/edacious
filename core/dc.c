@@ -520,7 +520,6 @@ Edit(void *p, ES_Circuit *ckt)
 {
 	ES_SimDC *sim = p;
 	AG_Window *win;
-	AG_Radio *r;
 	AG_Notebook *nb;
 	AG_NotebookTab *ntab;
 	M_Matview *mv;
@@ -536,13 +535,12 @@ Edit(void *p, ES_Circuit *ckt)
 	
 		AG_SeparatorNew(ntab, AG_SEPARATOR_HORIZ);
 	
-		AG_NumericalNewUint(ntab, 0, NULL, _("Refresh rate (delay): "),
-		    &sim->ticksDelay);
-		AG_NumericalNewUint(ntab, 0, NULL, _("Max. iterations/step: "),
-		    &sim->itersMax);
+		AG_NumericalNewUint(ntab, 0, NULL,
+		    _("Refresh rate (delay): "), &sim->ticksDelay);
+		AG_NumericalNewUint(ntab, 0, NULL,
+		    _("Max. iterations/step: "), &sim->itersMax);
 
-		r = AG_RadioNew(ntab, 0, methodNames);
-		AG_WidgetBind(r, "value", AG_WIDGET_UINT, &sim->method);
+		AG_RadioNewUint(ntab, 0, methodNames, &sim->method);
 
 		AG_SeparatorNewHoriz(ntab);
 
