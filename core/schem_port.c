@@ -117,8 +117,8 @@ Draw(void *p, VG_View *vv)
 #ifdef HAVE_OPENGL
 		if (agView->opengl) {
 			glPushMatrix();
-			glTranslatef((float)(AGWIDGET(vv)->cx + x + 10.0f),
-			             (float)(AGWIDGET(vv)->cy + y + 10.0f),
+			glTranslatef((float)(AGWIDGET(vv)->rView.x1+x + 10.0f),
+			             (float)(AGWIDGET(vv)->rView.y1+y + 10.0f),
 				     0.0f);
 			glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
 			if (agTextCache) {
