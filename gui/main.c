@@ -702,7 +702,7 @@ main(int argc, char *argv[])
 	bind_textdomain_codeset("edacious", "UTF-8");
 	textdomain("edacious");
 #endif
-	if (AG_InitCore("edacious", AG_CORE_VERBOSE) == -1) {
+	if (AG_InitCore("edacious", AG_VERBOSE|AG_CREATE_DATADIR) == -1) {
 		fprintf(stderr, "InitCore: %s\n", AG_GetError());
 		return (1);
 	}
