@@ -13,7 +13,7 @@ typedef struct es_schem_block {
 #endif
 
 __BEGIN_DECLS
-extern const VG_NodeOps esSchemBlockOps;
+extern VG_NodeOps esSchemBlockOps;
 
 static __inline__ ES_SchemBlock *
 ES_SchemBlockNew(void *pNode, const char *name)

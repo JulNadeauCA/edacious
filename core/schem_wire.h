@@ -14,7 +14,7 @@ typedef struct es_schem_wire {
 #endif
 
 __BEGIN_DECLS
-extern const VG_NodeOps esSchemWireOps;
+extern VG_NodeOps esSchemWireOps;
 
 ES_SchemWire *ES_SchemWireNew(void *, void *, void *);
 __END_DECLS

@@ -203,7 +203,7 @@ ES_SchemBlockLoad(ES_SchemBlock *sb, const char *path)
 	return (0);
 }
 
-const VG_NodeOps esSchemBlockOps = {
+VG_NodeOps esSchemBlockOps = {
 	N_("SchemBlock"),
 	&esIconComponent,
 	sizeof(ES_SchemBlock),

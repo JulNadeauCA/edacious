@@ -147,7 +147,7 @@ Move(void *p, VG_Vector vCurs, VG_Vector vRel)
 	VG_MultMatrix(&sw->p2->T, &T2);
 }
 
-const VG_NodeOps esSchemWireOps = {
+VG_NodeOps esSchemWireOps = {
 	N_("SchemWire"),
 	&esIconInsertWire,
 	sizeof(ES_SchemWire),
