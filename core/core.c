@@ -32,7 +32,7 @@
 /* #define CLASSDEBUG */
 
 /* Built-in schematic entity (VG) classes. */
-const void *esSchematicClasses[] = {
+void *esSchematicClasses[] = {
 	&esSchemBlockOps,
 	&esSchemPortOps,
 	&esSchemWireOps,
@@ -135,7 +135,7 @@ LoadModule(const char *dsoName)
 void
 ES_CoreInit(Uint flags)
 {
-	const void **clsSchem;
+	void **clsSchem;
 	void **cls;
 	char **dsoList;
 	Uint i, dsoCount;

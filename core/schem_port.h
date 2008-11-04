@@ -19,7 +19,7 @@ typedef struct es_schem_port {
 #endif
 
 __BEGIN_DECLS
-extern const VG_NodeOps esSchemPortOps;
+extern VG_NodeOps esSchemPortOps;
 
 ES_SchemPort *ES_SchemPortNew(void *);
 __END_DECLS

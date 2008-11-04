@@ -178,7 +178,7 @@ Move(void *p, VG_Vector vCurs, VG_Vector vRel)
 	VG_Translate(sp, vRel);
 }
 
-const VG_NodeOps esSchemPortOps = {
+VG_NodeOps esSchemPortOps = {
 	N_("SchemPort"),
 	&esIconPortEditor,
 	sizeof(ES_SchemPort),
