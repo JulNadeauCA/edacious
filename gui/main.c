@@ -350,7 +350,6 @@ LoadComponentModel(AG_Event *event)
 	if (OpenObject(obj) == NULL) {
 		goto fail;
 	}
-	AG_CloseFile(ds);
 	return;
 fail:
 /*	if (obj != NULL) { AG_ObjectDelete(obj); } */
