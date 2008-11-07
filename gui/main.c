@@ -705,7 +705,7 @@ main(int argc, char *argv[])
 		fprintf(stderr, "InitCore: %s\n", AG_GetError());
 		return (1);
 	}
-	AG_TextParseFontSpec("_agFontVera:10");
+	AG_TextParseFontSpec("_agFontVera:14");
 #ifdef HAVE_GETOPT
 	while ((c = getopt(argc, argv, "?vdt:r:T:t:gGP")) != -1) {
 		extern char *optarg;

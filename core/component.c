@@ -60,7 +60,9 @@ FreeDataset(void *p)
 	VG_Node *vn;
 	
 	while ((vg = TAILQ_FIRST(&com->schems)) != NULL) {
+		TAILQ_REMOVE(&com->schems, vg, user);
 		VG_Destroy(vg);
+		Free(vg);
 	}
 	TAILQ_INIT(&com->schems);
 
@@ -161,7 +163,9 @@ OnAttach(AG_Event *event)
 		ES_AttachSchemEntity(com, VGNODE(sb));
 	}
 	while ((vg = TAILQ_FIRST(&com->schems)) != NULL) {
+		TAILQ_REMOVE(&com->schems, vg, user);
 		VG_Destroy(vg);
+		Free(vg);
 	}
 	TAILQ_INIT(&com->schems);
 
