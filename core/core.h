@@ -56,6 +56,9 @@ void	ES_SetObjectOpenHandler(AG_Window *(*fn)(void *));
 void	ES_SetObjectCloseHandler(void (*fn)(void *));
 void	ES_InsertComponent(ES_Circuit *, VG_Tool *, ES_ComponentClass *);
 
+int	ES_LoadModule(const char *);
+int	ES_UnloadModule(const char *);
+
 AG_Window *ES_OpenObject(void *);
 void       ES_CloseObject(void *);
 __END_DECLS

@@ -73,62 +73,115 @@ static AG_Window *(*ObjectOpenFn)(void *) = NULL;
 static void       (*ObjectCloseFn)(void *) = NULL;
 
 /* Load an Edacious module and register all of its defined classes. */
-static int
-LoadModule(const char *dsoName)
+int
+ES_LoadModule(const char *dsoName)
 {
 	char sym[AG_DSONAME_MAX+10], c;
-	AG_DSO *dso;
-	ES_Module *mod;
 	void *p;
+	AG_DSO *dso;
 	ES_ComponentClass **comClass;
 	VG_NodeOps **vgClass;
 
-	if ((dso = AG_LoadDSO(dsoName, 0)) == NULL)
-		return (-1);
+	AG_LockDSO();
 
-	/*
-	 * Look for an 'esFooModule' description, possibly defining multiple
-	 * component and VG schematic classes.
-	 */
+	if ((dso = AG_LoadDSO(dsoName, 0)) == NULL)
+		goto fail;
+
 	sym[0] = 'e';
 	sym[1] = 's';
 	sym[2] = toupper(dsoName[0]);
 	Strlcpy(&sym[3], &dsoName[1], sizeof(sym)-3);
 	Strlcat(&sym[3], "Module", sizeof(sym)-3);
-	if (AG_SymDSO(dso, sym, &p) == -1) {
-		/*
-		 * Alternatively, Look for a single 'esFooClass' component
-		 * class.
-		 */
+	if (AG_SymDSO(dso, sym, &p) == -1) {		/* Single component? */
 		sym[0] = 'e';
 		sym[1] = 's';
 		sym[2] = toupper(dsoName[0]);
 		Strlcpy(&sym[3], &dsoName[1], sizeof(sym)-3);
 		Strlcat(&sym[3], "Class", sizeof(sym)-3);
 		if (AG_SymDSO(dso, sym, &p) == -1) {
-			return (-1);
+			goto fail;
 		}
 		AG_RegisterClass(*(AG_ObjectClass **)p);
 #ifdef CLASSDEBUG
-		Debug(NULL, "%s.so: implements %s\n", dsoName,
+		Debug(NULL, "%s: implements %s\n", dsoName,
 		    (*(AG_ObjectClass **)p)->name);
 #endif
-		return (0);
-	}
-	
-	mod = p;
-	Debug(NULL, "%s.so: v%s (%s)\n", dsoName, mod->version, mod->descr);
-	if (mod->init != NULL) {
-		mod->init(EDACIOUS_VERSION);
-	}
-	for (comClass = mod->comClasses; *comClass != NULL; comClass++) {
-		AG_RegisterClass(*comClass);
+	} else {					/* Complete module */
+		ES_Module *mod = p;
+
+		Debug(NULL, "%s: v%s (%s)\n", dsoName, mod->version,
+		    mod->descr);
+		if (mod->init != NULL) {
+			mod->init(EDACIOUS_VERSION);
+		}
+		for (comClass = mod->comClasses;
+		     *comClass != NULL;
+		     comClass++) {
+			AG_RegisterClass(*comClass);
 #ifdef CLASSDEBUG
-		Debug(NULL, "%s.so: implements %s\n", dsoName,
-		    ((AG_ObjectClass *)(*comClass))->name);
+			Debug(NULL, "%s: implements %s\n", dsoName,
+			    ((AG_ObjectClass *)(*comClass))->name);
 #endif
+		}
 	}
+
+	AG_UnlockDSO();
 	return (0);
+fail:
+	AG_UnlockDSO();
+	return (-1);
+}
+
+/* Unload an Edacious module assuming none of its classes are in use. */
+int
+ES_UnloadModule(const char *dsoName)
+{
+	char sym[AG_DSONAME_MAX+10], c;
+	AG_DSO *dso;
+	ES_ComponentClass **comClass;
+	void *p;
+
+	AG_LockDSO();
+
+	if ((dso = AG_LookupDSO(dsoName)) == NULL)
+		goto fail;
+
+	sym[0] = 'e';
+	sym[1] = 's';
+	sym[2] = toupper(dsoName[0]);
+	Strlcpy(&sym[3], &dsoName[1], sizeof(sym)-3);
+	Strlcat(&sym[3], "Module", sizeof(sym)-3);
+	if (AG_SymDSO(dso, sym, &p) == -1) {		/* Single component? */
+		sym[0] = 'e';
+		sym[1] = 's';
+		sym[2] = toupper(dsoName[0]);
+		Strlcpy(&sym[3], &dsoName[1], sizeof(sym)-3);
+		Strlcat(&sym[3], "Class", sizeof(sym)-3);
+		if (AG_SymDSO(dso, sym, &p) == -1) {
+			goto fail;
+		}
+		AG_UnregisterClass(*(AG_ObjectClass **)p);
+	} else {					/* Complete module */
+		ES_Module *mod = p;
+
+		Debug(NULL, "%s: v%s (%s)\n", dsoName, mod->version,
+		    mod->descr);
+
+		if (mod->destroy != NULL) {
+			mod->destroy();
+		}
+		for (comClass = mod->comClasses; *comClass != NULL; comClass++)
+			AG_UnregisterClass(*comClass);
+	}
+
+	if (AG_UnloadDSO(dso) == -1)
+		goto fail;
+
+	AG_UnlockDSO();
+	return (0);
+fail:
+	AG_UnlockDSO();
+	return (-1);
 }
 
 /* Initialize the Edacious library. */
@@ -160,10 +213,9 @@ ES_CoreInit(Uint flags)
 	AG_ObjectInitStatic(&esVfsRoot, NULL);
 	AG_ObjectSetName(&esVfsRoot, "Edacious VFS");
 
-	/* Register libcore's icons if a GUI is in use. */
-	if (agGUI) {
+	/* Register es_core's icons if a GUI is in use. */
+	if (agGUI)
 		esIcon_Init();
-	}
 
 	/*
 	 * Register our module directory and preload modules if requested.
@@ -173,7 +225,7 @@ ES_CoreInit(Uint flags)
 	if (flags & ES_INIT_PRELOAD_ALL &&
 	   (dsoList = AG_GetDSOList(&dsoCount)) != NULL) {
 		for (i = 0; i < dsoCount; i++) {
-			if (LoadModule(dsoList[i]) == -1)
+			if (ES_LoadModule(dsoList[i]) == -1)
 				Debug(NULL, "%s: %s; skipping\n", dsoList[i],
 				    AG_GetError());
 		}
@@ -187,14 +239,22 @@ ES_CoreInit(Uint flags)
 void
 ES_CoreDestroy(void)
 {
-	AG_DSO *dso;
+	AG_DSO *dso, *dsoNext;
 
 	AG_LockDSO();
-	while ((dso = AG_TAILQ_FIRST(&agLoadedDSOs)) != NULL) {
+	AG_ObjectDestroy(esModelVFS);
+	Free(esModelVFS);
+
+	for (dso = TAILQ_FIRST(&agLoadedDSOs);
+	     dso != TAILQ_END(&agLoadedDSOs);
+	     dso = dsoNext) {
+		dsoNext = TAILQ_NEXT(dso, dsos);
 		Debug(NULL, "Unloading: %s\n", dso->name);
-		if (AG_UnloadDSO(dso) == -1)
-			Verbose("Unloading: %s; ignored\n", AG_GetError());
+		if (ES_UnloadModule(dso->name) == -1)
+			Verbose("Unloading %s: %s\n", dso->name, AG_GetError());
 	}
+	TAILQ_INIT(&agLoadedDSOs);
+
 	AG_UnregisterModuleDirectory(MODULEDIR);
 	AG_UnlockDSO();
 }
