@@ -41,10 +41,12 @@ void
 ES_FreePorts(ES_Component *com)
 {
 	int i;
-	
+
+	Debug(com, "Freeing ports\n");
 	for (i = 0; i < com->npairs; i++) {
 		ES_Pair *pair = &com->pairs[i];
-
+	
+		Debug(com, "Freeing port %d\n", i);
 		Free(pair->loops);
 		Free(pair->lpols);
 	}

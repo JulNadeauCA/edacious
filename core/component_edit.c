@@ -33,45 +33,6 @@
 #define DEFAULT_CIRCUIT_SCALE	0
 
 /*
- * Generate Tlist tree for the component model library.
- */
-static AG_TlistItem *
-FindModels(AG_Tlist *tl, AG_Object *pob, int depth)
-{
-	AG_Object *chld;
-	AG_TlistItem *it;
-	int selected = 0;
-
-	it = AG_TlistAddPtr(tl, esIconComponent.s, pob->name, pob);
-	it->depth = depth;
-
-	if (!TAILQ_EMPTY(&pob->children)) {
-		it->flags |= AG_TLIST_HAS_CHILDREN;
-	}
-	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
-	    AG_TlistVisibleChildren(tl, it)) {
-		TAILQ_FOREACH(chld, &pob->children, cobjs)
-			FindModels(tl, chld, depth+1);
-	}
-	return (it);
-}
-void
-ES_ComponentListModels(AG_Event *event)
-{
-	AG_Tlist *tl = AG_SELF();
-	AG_TlistItem *ti;
-
-	AG_TlistClear(tl);
-	AG_LockVFS(esModelVFS);
-
-	ti = FindModels(tl, OBJECT(esModelVFS), 0);
-	ti->flags |= AG_TLIST_EXPANDED;
-
-	AG_UnlockVFS(esModelVFS);
-	AG_TlistRestore(tl);
-}
-
-/*
  * Generate Tlist tree for Component subclasses.
  */
 static AG_TlistItem *
@@ -424,22 +385,6 @@ CreateView(AG_Event *event)
 }
 
 static void
-InsertComponent(AG_Event *event)
-{
-	VG_View *vv = AG_PTR(1);
-	AG_Tlist *tl = AG_PTR(2);
-	ES_Circuit *ckt = AG_PTR(3);
-	AG_TlistItem *ti = AG_PTR(4);
-	ES_ComponentClass *clCom = ti->p1;
-	VG_Tool *insTool;
-
-	if ((insTool = VG_ViewFindTool(vv, "Insert component")) != NULL) {
-		VG_ViewSelectTool(vv, insTool, ckt);
-		ES_InsertComponent(ckt, insTool, clCom);
-	}
-}
-
-static void
 FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 {
 	AG_Object *cob;
@@ -536,12 +481,25 @@ MouseButtonDown(AG_Event *event)
 }
 
 static void
+SelectSchem(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	VG_View *vv = AG_PTR(2);
+	AG_TlistItem *ti = AG_PTR(3);
+	VG *vg = ti->p1;
+	
+	VG_ViewSetVG(vv, vg);
+	VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
+	VG_Status(vv, _("Selected: %s"), ti->text);
+}
+
+static void
 PollSchems(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	ES_Component *com = AG_PTR(1);
 	VG_View *vv = AG_PTR(2);
-	AG_TlistItem *ti;
+	AG_TlistItem *ti = NULL;
 	VG *vg;
 	int i = 0;
 
@@ -591,19 +549,6 @@ RemoveSchem(AG_Event *event)
 	TAILQ_REMOVE(&com->schems, vg, user);
 	VG_Destroy(vg);
 	Free(vg);
-}
-
-static void
-SelectSchem(AG_Event *event)
-{
-	ES_Component *com = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
-	AG_TlistItem *ti = AG_PTR(3);
-	VG *vg = ti->p1;
-	
-	VG_ViewSetVG(vv, vg);
-	VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
-	VG_Status(vv, _("Selected: %s"), ti->text);
 }
 
 #if 0
@@ -699,9 +644,12 @@ ES_ComponentEdit(void *obj)
 	
 		hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
 		{
+			AG_Event ev;
+
 			tlSchems = AG_TlistNewPolled(hPane->div[0],
 			    AG_TLIST_EXPAND,
 			    PollSchems, "%p,%p", com, vv);
+			AG_TlistSizeHint(tlSchems, "Schematic #0000", 5);
 			AG_SetEvent(tlSchems, "tlist-dblclick",
 			    SelectSchem, "%p,%p", com, vv);
 
@@ -757,6 +705,7 @@ ES_ComponentEdit(void *obj)
 		VG_View *vv;
 		AG_Notebook *nb;
 		AG_NotebookTab *ntab;
+		ES_LibraryEditor *led;
 		AG_Tlist *tl;
 		AG_Box *vBox, *hBox;
 		AG_Pane *vPane;
@@ -770,14 +719,8 @@ ES_ComponentEdit(void *obj)
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
 		ntab = AG_NotebookAddTab(nb, _("Models"), AG_BOX_VERT);
 		{
-			tl = AG_TlistNewPolled(ntab,
-			    AG_TLIST_EXPAND|AG_TLIST_TREE,
-			    ES_ComponentListModels, NULL);
-			AG_TlistSizeHint(tl, "XXXXXXXXXXXXXXXXXXX", 10);
-		
-			AG_WidgetSetFocusable(tl, 0);
-			AG_SetEvent(tl, "tlist-dblclick",
-			    InsertComponent, "%p,%p,%p", vv, tl, ckt);
+			led = ES_LibraryEditorNew(ntab, vv, ckt, 0);
+			AG_WidgetSetFocusable(led, 0);
 		}
 		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
 		{

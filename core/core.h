@@ -24,6 +24,7 @@
 #include <edacious/core/stamp.h>
 #include <edacious/core/spice.h>
 #include <edacious/core/wire.h>
+#include <edacious/core/library.h>
 
 #ifdef _ES_INTERNAL
 # include <edacious/core/core_internal.h>
@@ -48,19 +49,20 @@ extern AG_Object   esVfsRoot;		 /* General-purpose VFS */
 extern void       *esCoreClasses[];	 /* Base object classes */
 extern void       *esSchematicClasses[]; /* Base schematic VG classes */
 extern const char *esEditableClasses[];	 /* User-editable object classes */
-extern ES_Component *esModelVFS;	 /* Model library VFS */
 
 void	ES_CoreInit(Uint);
 void	ES_CoreDestroy(void);
 void	ES_SetObjectOpenHandler(AG_Window *(*fn)(void *));
 void	ES_SetObjectCloseHandler(void (*fn)(void *));
-void	ES_InsertComponent(ES_Circuit *, VG_Tool *, ES_ComponentClass *);
+int	ES_InsertComponent(ES_Circuit *, VG_Tool *, ES_Component *);
 
 int	ES_LoadModule(const char *);
 int	ES_UnloadModule(const char *);
 
 AG_Window *ES_OpenObject(void *);
 void       ES_CloseObject(void *);
+const char *ES_ShortFilename(const char *);
+void       ES_SetObjectNameFromPath(void *, const char *);
 __END_DECLS
 
 #include <edacious/core/core_close.h>

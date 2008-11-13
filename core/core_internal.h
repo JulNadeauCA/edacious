@@ -21,10 +21,13 @@
 #endif
 
 #ifdef _WIN32
-# define PATHSEP '\\'
+# define PATHSEP "\\"
+# define PATHSEPCHAR '\\'
 #else
-# define PATHSEP '/'
+# define PATHSEP "/"
+# define PATHSEPCHAR '/'
 #endif
+
 #ifndef MIN
 # define MIN(a,b) (((a)<(b))?(a):(b))
 #endif

@@ -127,18 +127,6 @@ WindowLostFocus(AG_Event *event)
 	AG_MutexUnlock(&objLock);
 }
 
-static __inline__ char *
-ShortFilename(char *name)
-{
-	char *s;
-
-	if ((s = strrchr(name, PATHSEP)) != NULL && s[1] != '\0') {
-		return (&s[1]);
-	} else {
-		return (name);
-	}
-}
-
 /* Open a given object for edition. */
 static AG_Window *
 OpenObject(void *p)
@@ -152,7 +140,7 @@ OpenObject(void *p)
 		win = AGCLASS(&esComponentClass)->edit(obj);
 		AG_WindowSetCaption(win, _("Component model: %s"),
 		    (obj->archivePath != NULL) ?
-		    ShortFilename(obj->archivePath) : obj->name);
+		    ES_ShortFilename(obj->archivePath) : obj->name);
 	} else {
 		if ((wEdit = obj->cls->edit(obj)) == NULL) {
 			AG_SetError("%s no edit()", obj->cls->name);
@@ -170,7 +158,7 @@ OpenObject(void *p)
 		}
 		AG_WindowSetCaption(win, "%s",
 		    (obj->archivePath != NULL) ?
-		    ShortFilename(obj->archivePath) : obj->name);
+		    ES_ShortFilename(obj->archivePath) : obj->name);
 	}
 
 	AG_SetEvent(win, "window-close", SaveChangesDlg, "%p", obj);
@@ -277,20 +265,6 @@ EditDevice(AG_Event *event)
 }
 #endif
 
-static void
-SetObjectName(void *obj, const char *path)
-{
-	const char *c;
-
-	AG_ObjectSetArchivePath(obj, path);
-
-	if ((c = strrchr(path, PATHSEP)) != NULL && c[1] != '\0') {
-		AG_ObjectSetName(obj, "%s", &c[1]);
-	} else {
-		AG_ObjectSetName(obj, "%s", path);
-	}
-}
-
 /* Load an object file from native Edacious format. */
 static void
 LoadObject(AG_Event *event)
@@ -303,10 +277,11 @@ LoadObject(AG_Event *event)
 		goto fail;
 	}
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
-		AG_SetError("%s: %s", ShortFilename(path), AG_GetError());
+		AG_SetError("%s: %s", ES_ShortFilename(path), AG_GetError());
 		goto fail;
 	}
-	SetObjectName(obj, path);
+	ES_SetObjectNameFromPath(obj, path);
+
 	if (OpenObject(obj) == NULL) {
 		goto fail;
 	}
@@ -323,7 +298,7 @@ LoadComponentModel(AG_Event *event)
 	AG_ObjectHeader oh;
 	AG_DataSource *ds;
 	char *path = AG_STRING(1);
-	AG_Object *obj = NULL;
+	AG_Object *obj;
 	AG_ObjectClass *cl;
 
 	if ((ds = AG_OpenFile(path, "rb")) == NULL) {
@@ -343,10 +318,11 @@ LoadComponentModel(AG_Event *event)
 		goto fail;
 	}
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
-		AG_SetError("%s: %s", ShortFilename(path), AG_GetError());
+		AG_SetError("%s: %s", ES_ShortFilename(path), AG_GetError());
 		goto fail;
 	}
-	SetObjectName(obj, path);
+	ES_SetObjectNameFromPath(obj, path);
+
 	if (OpenObject(obj) == NULL) {
 		goto fail;
 	}
@@ -389,12 +365,12 @@ SaveNativeObject(AG_Event *event)
 	AG_Window *wEdit;
 
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
-		AG_TextError("%s: %s", ShortFilename(path), AG_GetError());
+		AG_TextError("%s: %s", ES_ShortFilename(path), AG_GetError());
 	}
-	SetObjectName(obj, path);
+	ES_SetObjectNameFromPath(obj, path);
 
 	if ((wEdit = AG_WindowFindFocused()) != NULL)
-		AG_WindowSetCaption(wEdit, "%s", ShortFilename(path));
+		AG_WindowSetCaption(wEdit, "%s", ES_ShortFilename(path));
 }
 
 static void
@@ -545,7 +521,7 @@ AbortQuit(AG_Event *event)
 static void
 Quit(AG_Event *event)
 {
-	AG_Object *obj;
+	AG_Object *vfsObj = NULL, *modelObj = NULL;
 	AG_Window *win;
 	AG_Box *box;
 
@@ -554,11 +530,16 @@ Quit(AG_Event *event)
 	}
 	agTerminating = 1;
 
-	OBJECT_FOREACH_CHILD(obj, &esVfsRoot, ag_object) {
-		if (AG_ObjectChanged(obj))
+	OBJECT_FOREACH_CHILD(vfsObj, &esVfsRoot, ag_object) {
+		if (AG_ObjectChanged(vfsObj))
 			break;
 	}
-	if (obj == NULL) {
+	OBJECT_FOREACH_CHILD(modelObj, &esModelLibrary, ag_object) {
+		if (AG_ObjectChanged(modelObj))
+			break;
+	}
+
+	if (vfsObj == NULL && modelObj == NULL) {
 		ConfirmQuit(NULL);
 	} else {
 		if ((win = AG_WindowNewNamed(AG_WINDOW_MODAL|AG_WINDOW_NOTITLE|

@@ -67,7 +67,6 @@ M_Real esDummy = 0.0;
 #include "icons_data.h"
 
 AG_Object esVfsRoot;			/* General-purpose VFS */
-ES_Component *esModelVFS = NULL;	/* Model library VFS */
 
 static AG_Window *(*ObjectOpenFn)(void *) = NULL;
 static void       (*ObjectCloseFn)(void *) = NULL;
@@ -232,8 +231,7 @@ ES_CoreInit(Uint flags)
 		AG_FreeDSOList(dsoList, dsoCount);
 	}
 
-	esModelVFS = AG_ObjectNew(NULL, "Component",
-	    AGCLASS(&esComponentClass));
+	ES_LibraryInit();
 }
 
 void
@@ -242,8 +240,7 @@ ES_CoreDestroy(void)
 	AG_DSO *dso, *dsoNext;
 
 	AG_LockDSO();
-	AG_ObjectDestroy(esModelVFS);
-	Free(esModelVFS);
+	ES_LibraryDestroy();
 
 	for (dso = TAILQ_FIRST(&agLoadedDSOs);
 	     dso != TAILQ_END(&agLoadedDSOs);
@@ -291,3 +288,30 @@ ES_CloseObject(void *obj)
 	if (ObjectCloseFn != NULL)
 		ObjectCloseFn(obj);
 }
+
+const char *
+ES_ShortFilename(const char *name)
+{
+	char *s;
+
+	if ((s = strrchr(name, PATHSEPCHAR)) != NULL && s[1] != '\0') {
+		return (&s[1]);
+	} else {
+		return (name);
+	}
+}
+
+void
+ES_SetObjectNameFromPath(void *obj, const char *path)
+{
+	const char *c;
+
+	AG_ObjectSetArchivePath(obj, path);
+
+	if ((c = strrchr(path, PATHSEPCHAR)) != NULL && c[1] != '\0') {
+		AG_ObjectSetName(obj, "%s", &c[1]);
+	} else {
+		AG_ObjectSetName(obj, "%s", path);
+	}
+}
+

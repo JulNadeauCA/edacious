@@ -189,7 +189,6 @@ void   ES_ComponentLog(void *, const char *, ...);
 void   ES_ComponentMenu(ES_Component *, VG_View *);
 void  *ES_ComponentEdit(void *);
 void   ES_ComponentListClasses(AG_Event *);
-void   ES_ComponentListModels(AG_Event *);
 
 void   ES_InitPorts(void *, const ES_Port *);
 void   ES_FreePorts(ES_Component *);

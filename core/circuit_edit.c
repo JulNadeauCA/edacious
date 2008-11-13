@@ -366,22 +366,6 @@ tryname:
 	ES_OpenObject(scope);
 }
 
-static void
-InsertComponent(AG_Event *event)
-{
-	VG_View *vv = AG_PTR(1);
-	AG_Tlist *tl = AG_PTR(2);
-	ES_Circuit *ckt = AG_PTR(3);
-	AG_TlistItem *ti = AG_PTR(4);
-	ES_ComponentClass *comCls = ti->p1;
-	VG_Tool *insTool;
-
-	if ((insTool = VG_ViewFindTool(vv, "Insert component")) != NULL) {
-		VG_ViewSelectTool(vv, insTool, ckt);
-		ES_InsertComponent(ckt, insTool, comCls);
-	}
-}
-
 void *
 ES_CircuitEdit(void *p)
 {
@@ -474,23 +458,15 @@ ES_CircuitEdit(void *p)
 		AG_Notebook *nb;
 		AG_NotebookTab *ntab;
 		AG_Tlist *tl;
+		ES_LibraryEditor *led;
 		AG_Box *vBox, *hBox;
 
 		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
-		ntab = AG_NotebookAddTab(nb, _("Models"), AG_BOX_VERT);
+		ntab = AG_NotebookAddTab(nb, _("Library"), AG_BOX_VERT);
 		{
-			ES_ComponentClass *cls;
-			int i;
-
-			tl = AG_TlistNewPolled(ntab,
-			    AG_TLIST_EXPAND|AG_TLIST_TREE,
-			    ES_ComponentListModels, NULL);
-			AG_TlistSizeHint(tl, "XXXXXXXXXXXXXXXXXXX", 10);
-
-			AG_WidgetSetFocusable(tl, 0);
-			AG_SetEvent(tl, "tlist-dblclick",
-			    InsertComponent, "%p,%p,%p", vv, tl, ckt);
+			led = ES_LibraryEditorNew(ntab, vv, ckt, 0);
+			AG_WidgetSetFocusable(led, 0);
 		}
 		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
 		{
@@ -538,18 +514,6 @@ ES_CircuitEdit(void *p)
 				VG_ViewSetDefaultTool(vv, tool);
 		}
 
-		AG_MenuSeparator(mi);
-		
-		for (pOps = &esSchemTools[0]; *pOps != NULL; pOps++) {
-			ops = *pOps;
-			tool = VG_ViewRegTool(vv, ops, ckt);
-			mAction = AG_MenuAction(mi, ops->name,
-			    ops->icon ? ops->icon->s : NULL,
-			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
-			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
-			    &OBJECT(vv)->lock);
-		}
-		
 		VG_ViewRegTool(vv, &esInsertTool, ckt);
 		VG_ViewButtondownFn(vv, MouseButtonDown, "%p", ckt);
 		

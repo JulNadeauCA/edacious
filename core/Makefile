@@ -28,7 +28,8 @@ SRCS=	core.c \
 	schem_select_tool.c \
 	schem_wire.c \
 	integration.c \
-	tools.c
+	tools.c \
+	library.c
 
 CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 

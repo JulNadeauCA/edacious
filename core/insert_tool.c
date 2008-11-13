@@ -37,10 +37,11 @@ typedef struct es_insert_tool {
 } ES_InsertTool;
 
 /* Insert a new floating component instance in the circuit. */
-void
-ES_InsertComponent(ES_Circuit *ckt, VG_Tool *pt, ES_ComponentClass *cls)
+int
+ES_InsertComponent(ES_Circuit *ckt, VG_Tool *pt, ES_Component *model)
 {
 	ES_InsertTool *t = (ES_InsertTool *)pt;
+	ES_ComponentClass *cls = COMCLASS(model);
 	char name[AG_OBJECT_NAME_MAX];
 	VG_View *vv = VGTOOL(t)->vgv;
 	AG_TlistItem *it;
@@ -48,7 +49,9 @@ ES_InsertComponent(ES_Circuit *ckt, VG_Tool *pt, ES_ComponentClass *cls)
 	int n = 1;
 
 	ES_LockCircuit(ckt);
+
 tryname:
+	/* Generate a unique name for the component instance. */
 	Snprintf(name, sizeof(name), "%s%d", cls->pfx, n++);
 	CIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) {
 		if (strcmp(OBJECT(com)->name, name) == 0)
@@ -57,19 +60,27 @@ tryname:
 	if (com != NULL)
 		goto tryname;
 
+	/* Allocate the instance and initialize from the model file. */
 	com = Malloc(cls->obj.size);
 	AG_ObjectInit(com, cls);
+	if (AG_ObjectLoadFromFile(com, OBJECT(model)->archivePath) == -1) {
+		AG_ObjectDestroy(com);
+		goto fail;
+	}
 	AG_ObjectSetName(com, "%s", name);
-	OBJECT(com)->flags |= AG_OBJECT_RESIDENT;
 
+	/* Attach to the circuit as a floating component. */
 	com->flags |= ES_COMPONENT_FLOATING;
 	t->floatingCom = com;
-
 	AG_ObjectAttach(ckt, com);
 	ES_SelectComponent(com, vv);
 	AG_PostEvent(ckt, com, "circuit-shown", NULL);
 
 	ES_UnlockCircuit(ckt);
+	return (0);
+fail:
+	ES_UnlockCircuit(ckt);
+	return (-1);
 }
 
 /* Highlight the component connections that would be made to existing nodes. */
@@ -158,8 +169,11 @@ ConnectComponent(ES_InsertTool *t, ES_Circuit *ckt, ES_Component *com)
 	ES_SelectComponent(t->floatingCom, vv);
 	t->floatingCom = NULL;
 
-	/* Insert another one. */
-	ES_InsertComponent(ckt, VGTOOL(t), COMCLASS(com));
+#if 0
+	if (ES_InsertComponent(ckt, VGTOOL(t), model) == -1) {
+		AG_TextError("Inserting additional instance: %s", AG_GetError());
+	}
+#endif
 	return (0);
 }
 
@@ -187,7 +201,8 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	case SDL_BUTTON_LEFT:
 		if (t->floatingCom != NULL) {
 			if (ConnectComponent(t, ckt, t->floatingCom) == -1){
-				AG_TextMsgFromError();
+				AG_TextError("Connecting component: %s",
+				    AG_GetError());
 				break;
 			}
 			if (t->floatingCom != NULL) {
