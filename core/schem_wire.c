@@ -76,7 +76,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 static void
 Save(void *p, AG_DataSource *ds)
 {
-	char name[AG_OBJECT_NAME_MAX];
 	ES_SchemWire *sw = p;
 
 	AG_WriteString(ds, OBJECT(sw->wire)->name);

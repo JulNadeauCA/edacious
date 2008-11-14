@@ -36,19 +36,41 @@
 #include "core.h"
 #include <config/sharedir.h>
 
-/* Free all Port information in the given Component. */
-void
-ES_FreePorts(ES_Component *com)
+static void
+FreeSchems(ES_Component *com)
+{
+	VG *vg;
+
+	while ((vg = TAILQ_FIRST(&com->schems)) != NULL) {
+		TAILQ_REMOVE(&com->schems, vg, user);
+		VG_Destroy(vg);
+		Free(vg);
+	}
+	TAILQ_INIT(&com->schems);
+}
+
+static void
+FreeSchemEnts(ES_Component *com)
+{
+	VG_Node *vn;
+
+	while ((vn = TAILQ_FIRST(&com->schemEnts)) != NULL) {
+		VG_NodeDetach(vn);
+		VG_NodeDestroy(vn);
+	}
+	TAILQ_INIT(&com->schemEnts);
+}
+
+static void
+FreePairs(ES_Component *com)
 {
 	int i;
 
-	Debug(com, "Freeing ports\n");
 	for (i = 0; i < com->npairs; i++) {
 		ES_Pair *pair = &com->pairs[i];
 	
-		Debug(com, "Freeing port %d\n", i);
 		Free(pair->loops);
-		Free(pair->lpols);
+		Free(pair->loopPolarity);
 	}
 	Free(com->pairs);
 	com->pairs = NULL;
@@ -58,28 +80,17 @@ static void
 FreeDataset(void *p)
 {
 	ES_Component *com = p;
-	VG *vg;
-	VG_Node *vn;
-	
-	while ((vg = TAILQ_FIRST(&com->schems)) != NULL) {
-		TAILQ_REMOVE(&com->schems, vg, user);
-		VG_Destroy(vg);
-		Free(vg);
-	}
-	TAILQ_INIT(&com->schems);
 
-	while ((vn = TAILQ_FIRST(&com->schemEnts)) != NULL) {
-		VG_NodeDetach(vn);
-		VG_NodeDestroy(vn);
-	}
-	TAILQ_INIT(&com->schemEnts);
-
-	ES_FreePorts(com);
+	FreeSchems(com);
+	FreeSchemEnts(com);
 }
 
 static void
 Destroy(void *p)
 {
+	ES_Component *com = p;
+
+	FreePairs(com);
 }
 
 static void
@@ -200,10 +211,12 @@ OnDetach(AG_Event *event)
 		return;
 
 	ES_LockCircuit(ckt);
+
+	/* Notify the component model. */
 	Debug(ckt, "Detach %s\n", OBJECT(com)->name);
 	AG_PostEvent(ckt, com, "circuit-disconnected", NULL);
 
-	/* Remove all related entities from the circuit schematic. */
+	/* Remove related entities in the circuit schematic. */
 	while ((vn = TAILQ_FIRST(&com->schemEnts)) != NULL) {
 		Debug(com, "Removing schematic entity: %s%u\n",
 		    vn->ops->name, vn->handle);
@@ -213,6 +226,7 @@ OnDetach(AG_Event *event)
 	}
 
 del_branches:
+	/* Remove the associated branches. XXX */
 	for (i = 0; i < ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
 		ES_Branch *br, *nbr;
@@ -230,10 +244,9 @@ del_branches:
 	}
 
 del_nodes:
-	/* XXX hack */
+	/* Remove node structures no longer needed. XXX */
 	for (i = 1; i < ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
-		ES_Branch *br;
 
 		if (node->nBranches == 0) {
 			Debug(com, "n%u has no more branches; removing\n", i);
@@ -242,14 +255,20 @@ del_nodes:
 		}
 	}
 
-	COMPONENT_FOREACH_PORT(port, i, com) {
-		port->branch = NULL;
-		port->node = -1;
-		port->flags = 0;
-		port->sp = NULL;
-	}
+	/* Free computed loop information from the Pair structures. */
 	COMPONENT_FOREACH_PAIR(pair, i, com) {
-		pair->nloops = 0;
+		Free(pair->loops);
+		Free(pair->loopPolarity);
+		pair->nLoops = 0;
+	}
+
+	/* Remove all references to the circuit. */
+	COMPONENT_FOREACH_PORT(port, i, com) {
+		port->com = NULL;
+		port->node = -1;
+		port->branch = NULL;
+		port->flags = (port->flags & ES_PORT_SAVED_FLAGS);
+		port->sp = NULL;
 	}
 	com->ckt = NULL;
 
@@ -294,8 +313,10 @@ ES_InitPorts(void *p, const ES_Port *ports)
 	ES_Port *iPort, *jPort;
 	int i, j, k;
 
-	/* Instantiate the port array. */
-	ES_FreePorts(com);
+	/* Instantiate the array of Ports. */
+	if (com->npairs > 0) {
+		FreePairs(com);
+	}
 	com->nports = 0;
 	for (i = 1, modelPort = &ports[1];
 	     i < COMPONENT_MAX_PORTS && modelPort->n >= 0;
@@ -313,7 +334,7 @@ ES_InitPorts(void *p, const ES_Port *ports)
 /*		Debug(com, "Added port #%d (%s)\n", i, port->name); */
 	}
 
-	/* Find all non-redundant port pairs. */
+	/* Compute all non-redundant pairs of Ports. */
 	com->pairs = Malloc(sizeof(ES_Pair));
 	com->npairs = 0;
 	COMPONENT_FOREACH_PORT(iPort, i, com) {
@@ -338,8 +359,8 @@ ES_InitPorts(void *p, const ES_Port *ports)
 			pair->p1 = iPort;
 			pair->p2 = jPort;
 			pair->loops = Malloc(sizeof(ES_Loop *));
-			pair->lpols = Malloc(sizeof(int));
-			pair->nloops = 0;
+			pair->loopPolarity = Malloc(sizeof(int));
+			pair->nLoops = 0;
 		}
 	}
 }
@@ -404,9 +425,9 @@ ES_PairIsInLoop(ES_Pair *pair, ES_Loop *loop, int *sign)
 {
 	unsigned int i;
 
-	for (i = 0; i < pair->nloops; i++) {
+	for (i = 0; i < pair->nLoops; i++) {
 		if (pair->loops[i] == loop) {
-			*sign = pair->lpols[i];
+			*sign = pair->loopPolarity[i];
 			return (1);
 		}
 	}
@@ -424,7 +445,7 @@ ES_ComponentLog(void *p, const char *fmt, ...)
 	va_list args;
 
 	va_start(args, fmt);
-#ifdef DEBUG
+#ifdef ES_DEBUG
 	fprintf(stderr, "%s: ", OBJECT(com)->name);
 	vfprintf(stderr, fmt, args);
 	fputc('\n', stderr);

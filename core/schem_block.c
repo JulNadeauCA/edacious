@@ -191,8 +191,6 @@ int
 ES_SchemBlockLoad(ES_SchemBlock *sb, const char *path)
 {
 	ES_Schem *scm;
-	VG *vg = VGNODE(sb)->vg;
-	VG_Node *vn;
 
 	scm = ES_SchemNew(NULL);
 	if (AG_ObjectLoadFromFile(scm, path) == -1) {

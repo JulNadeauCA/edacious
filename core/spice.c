@@ -36,7 +36,6 @@
 int
 ES_CircuitExportSPICE3(ES_Circuit *ckt, const char *path)
 {
-	char spice_name[8];
 	ES_Component *com;
 	unsigned int ncards = 0;
 	FILE *f;

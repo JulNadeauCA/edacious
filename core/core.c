@@ -23,11 +23,12 @@
  * USE OF THIS SOFTWARE EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <config/moduledir.h>
-
 #include "core.h"
 #include <string.h>
 #include <ctype.h>
+
+#include <config/moduledir.h>
+#include <config/fp_debug.h>
 
 /* #define CLASSDEBUG */
 
@@ -75,11 +76,10 @@ static void       (*ObjectCloseFn)(void *) = NULL;
 int
 ES_LoadModule(const char *dsoName)
 {
-	char sym[AG_DSONAME_MAX+10], c;
+	char sym[AG_DSONAME_MAX+10];
 	void *p;
 	AG_DSO *dso;
 	ES_ComponentClass **comClass;
-	VG_NodeOps **vgClass;
 
 	AG_LockDSO();
 
@@ -135,7 +135,7 @@ fail:
 int
 ES_UnloadModule(const char *dsoName)
 {
-	char sym[AG_DSONAME_MAX+10], c;
+	char sym[AG_DSONAME_MAX+10];
 	AG_DSO *dso;
 	ES_ComponentClass **comClass;
 	void *p;

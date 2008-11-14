@@ -107,7 +107,7 @@ Edit(void *p)
 	ES_Schem *scm = p;
 	AG_Window *win;
 	AG_Toolbar *tbRight;
-	AG_Pane *hPane, *vPane;
+	AG_Pane *hPane;
 	VG_View *vv;
 	AG_Menu *menu;
 	AG_MenuItem *mi, *mi2;

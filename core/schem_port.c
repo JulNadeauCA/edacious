@@ -83,8 +83,8 @@ Save(void *p, AG_DataSource *ds)
 static void
 Draw(void *p, VG_View *vv)
 {
+	char text[16];
 	ES_SchemPort *sp = p;
-	ES_Circuit *ckt;
 	int x, y;
 	float r;
 
@@ -101,18 +101,17 @@ Draw(void *p, VG_View *vv)
 	}
 	if (sp->port != NULL && sp->port->node != -1 &&
 	    sp->port->com->ckt->flags & ES_CIRCUIT_SHOW_NODENAMES) {
-		char caption[16];
 		SDL_Surface *suTmp = NULL;
 		int su = -1;
 	
 		AG_PushTextState();
 		AG_TextColorVideo32(VG_MapColorRGB(VGNODE(sp)->color));
-		Snprintf(caption, sizeof(caption), "n%d", sp->port->node);
+		Snprintf(text, sizeof(text), "n%d", sp->port->node);
 
 		if (agTextCache) {
-			su = AG_TextCacheInsLookup(vv->tCache, caption);
+			su = AG_TextCacheInsLookup(vv->tCache, text);
 		} else {
-			suTmp = AG_TextRender(caption);
+			suTmp = AG_TextRender(text);
 		}
 #ifdef HAVE_OPENGL
 		if (agView->opengl) {

@@ -56,7 +56,6 @@ ConnectWire(ES_WireTool *t, VG_View *vv, ES_Circuit *ckt, ES_Wire *wire,
 {
 	ES_SchemPort *sp1, *sp2;
 	int N1, N2, N3;
-	int i;
 
 	ES_LockCircuit(ckt);
 
@@ -139,11 +138,8 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	VG_View *vv = VGTOOL(t)->vgv;
 	ES_Circuit *ckt = VGTOOL(t)->p;
 	VG *vg = vv->vg;
-	ES_Component *com;
 	ES_Port *port1, *port2;
-	ES_SchemPort *sp;
 	ES_SchemWire *sw;
-	int i;
 	
 	switch (button) {
 	case SDL_BUTTON_LEFT:
@@ -236,9 +232,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	ES_WireTool *t = p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	ES_Circuit *ckt = VGTOOL(t)->p;
-	ES_Component *com;
 	ES_SchemPort *spNear;
-	int i;
 
 	ES_UnselectAllPorts(ckt);
 	spNear = VG_PointProximityMax(vv, "SchemPort", &vPos, NULL,

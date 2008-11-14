@@ -100,7 +100,6 @@ ES_CircuitModified(ES_Circuit *ckt)
 	char key[32];
 	ES_Component *com;
 /*	ES_Vsource *vs; */
-	ES_Loop *loop;
 	Uint i;
 	AG_Prop *pr;
 
@@ -646,7 +645,7 @@ ES_DelNode(ES_Circuit *ckt, int n)
 	int i;
 
 	Debug(ckt, _("Deleting node n%d\n"), n);
-#ifdef DEBUG
+#ifdef ES_DEBUG
 	if (n == 0 || n >= ckt->n)
 		Fatal("Cannot delete n%d (max %u)", n, ckt->n);
 #endif
@@ -711,7 +710,7 @@ rescan:
 int
 ES_AddVoltageSource(ES_Circuit *ckt, void *obj)
 {
-#ifdef DEBUG
+#ifdef ES_DEBUG
 	if (!AG_OfClass(obj, "ES_Circuit:ES_Component:*"))
 		AG_FatalError("Not a component");
 #endif
@@ -961,7 +960,7 @@ ES_DelBranch(ES_Circuit *ckt, int n, ES_Branch *br)
 
 	TAILQ_REMOVE(&node->branches, br, branches);
 	Free(br);
-#ifdef DEBUG
+#ifdef ES_DEBUG
 	if ((node->nBranches - 1) < 0) { Fatal("--nBranches < 0"); }
 #endif
 	node->nBranches--;
@@ -1023,7 +1022,7 @@ ES_CircuitLog(void *p, const char *fmt, ...)
 	va_list args;
 
 	va_start(args, fmt);
-#ifdef DEBUG
+#ifdef ES_DEBUG
 	fprintf(stderr, "%s: ", OBJECT(ckt)->name);
 	vfprintf(stderr, fmt, args);
 	fputc('\n', stderr);

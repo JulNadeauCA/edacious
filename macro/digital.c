@@ -92,7 +92,6 @@ void
 ES_DigitalStepIter(void *p, ES_SimDC *dc)
 {
 	ES_Digital *dig = p;
-	ES_Node *n;
 	Uint i;
 
 	for (i = 0; i < COMPONENT(dig)->npairs; i++) {

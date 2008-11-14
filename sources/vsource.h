@@ -37,7 +37,7 @@ typedef struct es_vsource {
 	StampVoltageSourceData s;
 
 	TAILQ_HEAD(,es_loop) loops;		/* Forward loops */
-	Uint nloops;
+	Uint nLoops;
 	ES_Port	**lstack;			/* For loop computation */
 	Uint nlstack;
 } ES_Vsource;

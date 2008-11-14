@@ -118,7 +118,6 @@ Edit(void *p)
 {
 	ES_Isource *i = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
-	AG_Numerical *num;
 
 	M_NumericalNewRealPNZ(box, 0, "A", _("Current: "), &i->I);
 

@@ -91,9 +91,6 @@ static int
 LoadModelsFromDisk(const char *modelDir, AG_Object *objParent)
 {
 	char path[AG_PATHNAME_MAX];
-	AG_ObjectHeader oh;
-	AG_DataSource *ds;
-	AG_ObjectClass *cl;
 	AG_Object *objFolder;
 	AG_Dir *dir;
 	int j;
@@ -149,9 +146,6 @@ static int
 LoadFoldersFromDisk(const char *modelDir, AG_Object *objParent)
 {
 	char path[AG_PATHNAME_MAX];
-	AG_ObjectHeader oh;
-	AG_DataSource *ds;
-	AG_ObjectClass *cl;
 	AG_Dir *dir;
 	AG_Object *objFolder;
 	int j;
@@ -199,7 +193,6 @@ LoadFoldersFromDisk(const char *modelDir, AG_Object *objParent)
 int
 ES_LibraryLoad(void)
 {
-	AG_Object *objFolder;
 	int i;
 
 	if (esModelLibrary != NULL) {
@@ -351,9 +344,8 @@ static void
 InsertComponent(AG_Event *event)
 {
 	VG_View *vv = AG_PTR(1);
-	AG_Tlist *tl = AG_PTR(2);
-	ES_Circuit *ckt = AG_PTR(3);
-	AG_TlistItem *ti = AG_PTR(4);
+	ES_Circuit *ckt = AG_PTR(2);
+	AG_TlistItem *ti = AG_PTR(3);
 	ES_Component *model = ti->p1;
 	VG_Tool *insTool;
 	
@@ -389,7 +381,6 @@ SaveModel(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
 	char *path = AG_STRING(2);
-	AG_Window *wEdit;
 
 	if (path[0] == '\0') {
 		if (AG_ObjectSave(obj) == -1) {
@@ -417,7 +408,6 @@ SaveModelAsDlg(AG_Event *event)
 	AG_Object *obj = AG_PTR(1);
 	AG_Window *win;
 	AG_FileDlg *fd;
-	AG_FileType *ft;
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Save %s as..."), obj->name);
@@ -469,7 +459,7 @@ ES_LibraryEditorNew(void *parent, VG_View *vv, ES_Circuit *ckt, Uint flags)
 	AG_TlistSizeHint(tl, "XXXXXXXXXXXXXXXXXXX", 10);
 	AG_TlistSetPopupFn(tl, LibraryModelMenu, NULL);
 	AG_SetEvent(tl, "tlist-dblclick",
-	    InsertComponent, "%p,%p,%p", vv, tl, ckt);
+	    InsertComponent, "%p,%p", vv, ckt);
 
 	btn = AG_ButtonNewFn(box, AG_BUTTON_HFILL, _("Refresh list"),
 	    RefreshLibrary, NULL);

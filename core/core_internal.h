@@ -1,7 +1,7 @@
 /*	Public domain	*/
 
 /* Internal code definitions */
-#include <config/debug.h>
+#include <config/es_debug.h>
 #include <config/enable_nls.h>
 #ifdef ENABLE_NLS
 # include <libintl.h>

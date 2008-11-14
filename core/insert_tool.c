@@ -44,7 +44,6 @@ ES_InsertComponent(ES_Circuit *ckt, VG_Tool *pt, ES_Component *model)
 	ES_ComponentClass *cls = COMCLASS(model);
 	char name[AG_OBJECT_NAME_MAX];
 	VG_View *vv = VGTOOL(t)->vgv;
-	AG_TlistItem *it;
 	ES_Component *com;
 	int n = 1;
 
@@ -126,7 +125,6 @@ ConnectComponent(ES_InsertTool *t, ES_Circuit *ckt, ES_Component *com)
 	VG_Vector portPos;
 	ES_Port *port, *portNear;
 	ES_SchemPort *spNear;
-	ES_Branch *br;
 	int i;
 
 	ES_LockCircuit(ckt);
@@ -194,8 +192,6 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	ES_InsertTool *t = p;
 	ES_Circuit *ckt = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
-	VG *vg = ckt->vg;
-	int i;
 	
 	switch (button) {
 	case SDL_BUTTON_LEFT:

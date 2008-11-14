@@ -337,7 +337,6 @@ OpenDlg(AG_Event *event)
 {
 	AG_Window *win;
 	AG_FileDlg *fd;
-	AG_FileType *ft;
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Open..."));
@@ -376,18 +375,14 @@ SaveNativeObject(AG_Event *event)
 static void
 SaveCircuitToGerber(AG_Event *event)
 {
-//	ES_Circuit *ckt = AG_PTR(1);
-//	char *path = AG_STRING(2);
-
+	/* TODO */
 	AG_TextError("Export to Gerber not implemented yet");
 }
 
 static void
 SaveCircuitToXGerber(AG_Event *event)
 {
-//	ES_Circuit *ckt = AG_PTR(1);
-//	char *path = AG_STRING(2);
-
+	/* TODO */
 	AG_TextError("Export to XGerber not implemented yet");
 }
 
@@ -404,19 +399,6 @@ SaveCircuitToSPICE3(AG_Event *event)
 static void
 SaveCircuitToPDF(AG_Event *event)
 {
-//	ES_Circuit *ckt = AG_PTR(1);
-//	char *path = AG_STRING(2);
-
-	/* TODO */
-	AG_TextError("Export to PDF not implemented yet");
-}
-
-static void
-SaveSchem(AG_Event *event)
-{
-//	ES_Circuit *ckt = AG_PTR(1);
-//	char *path = AG_STRING(2);
-
 	/* TODO */
 	AG_TextError("Export to PDF not implemented yet");
 }
@@ -424,9 +406,6 @@ SaveSchem(AG_Event *event)
 static void
 SaveSchemToPDF(AG_Event *event)
 {
-//	ES_Schem *scm = AG_PTR(1);
-//	char *path = AG_STRING(2);
-
 	/* TODO */
 	AG_TextError("Export to PDF not implemented yet");
 }
@@ -567,8 +546,6 @@ static void
 FileMenu(AG_Event *event)
 {
 	AG_MenuItem *m = AG_SENDER();
-	AG_MenuItem *node, *node2;
-	int i;
 
 	AG_MenuActionKb(m, _("New circuit..."), esIconCircuit.s,
 	    SDLK_n, KMOD_CTRL,
@@ -675,7 +652,6 @@ main(int argc, char *argv[])
 	Uint videoFlags = AG_VIDEO_OPENGL_OR_SDL|AG_VIDEO_RESIZABLE;
 	Uint coreFlags = ES_INIT_PRELOAD_ALL;
 	int c, i, fps = -1;
-	char *s;
 
 #ifdef ENABLE_NLS
 	bindtextdomain("edacious", LOCALEDIR);
@@ -753,15 +729,15 @@ main(int argc, char *argv[])
 	ES_SetObjectOpenHandler(OpenObject);
 	ES_SetObjectCloseHandler(CloseObject);
 
-	/* Initialize our object management lock. */
-	AG_MutexInit(&objLock);
+	/* Initialize the editor's object list mutex. */
+	AG_MutexInitRecursive(&objLock);
 
 	/* Create the application menu. */ 
 	appMenu = AG_MenuNewGlobal(0);
 	AG_MenuDynamicItem(appMenu->root, _("File"), NULL, FileMenu, NULL);
 	AG_MenuDynamicItem(appMenu->root, _("Edit"), NULL, EditMenu, NULL);
 
-#if defined(HAVE_AGAR_DEV) && defined(DEBUG)
+#if defined(HAVE_AGAR_DEV) && defined(ES_DEBUG)
 	DEV_InitSubsystem(0);
 	DEV_ToolMenu(AG_MenuNode(appMenu->root, _("Debug"), NULL));
 #endif

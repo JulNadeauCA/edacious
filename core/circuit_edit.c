@@ -38,7 +38,6 @@ PollCircuitLoops(AG_Event *event)
 
 	AG_TlistClear(tl);
 	for (i = 0; i < ckt->l; i++) {
-		char txt[32];
 		ES_Loop *loop = ckt->loops[i];
 		ES_Component *vSrc = loop->origin;
 		AG_TlistItem *it;
@@ -61,7 +60,7 @@ PollCircuitNodes(AG_Event *event)
 	for (i = 0; i < ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
 		ES_Branch *br;
-		AG_TlistItem *it, *it2;
+		AG_TlistItem *it;
 
 		it = AG_TlistAdd(tl, NULL, "n%u (0x%x, %d branches)", i,
 		    node->flags, node->nBranches);
@@ -150,7 +149,6 @@ ShowProperties(AG_Event *event)
 	char path[AG_OBJECT_PATH_MAX];
 	AG_Window *pwin = AG_PTR(1);
 	ES_Circuit *ckt = AG_PTR(2);
-	VG_View *vv = AG_PTR(3);
 	AG_Window *win;
 	AG_Textbox *tb;
 	
@@ -180,27 +178,12 @@ ShowProperties(AG_Event *event)
 }
 
 static void
-ExportToSPICE(AG_Event *event)
-{
-	char name[AG_FILENAME_MAX];
-	ES_Circuit *ckt = AG_PTR(1);
-
-	Strlcpy(name, OBJECT(ckt)->name, sizeof(name));
-	Strlcat(name, ".cir", sizeof(name));
-
-	if (ES_CircuitExportSPICE3(ckt, name) == -1)
-		AG_TextMsg(AG_MSG_ERROR, "%s: %s", OBJECT(ckt)->name,
-		    AG_GetError());
-}
-
-static void
 MouseButtonDown(AG_Event *event)
 {
 	VG_View *vv =  AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
-	int button = AG_INT(2);
-	float x = AG_FLOAT(3);
-	float y = AG_FLOAT(4);
+	int button = AG_INT(1);
+	float x = AG_FLOAT(2);
+	float y = AG_FLOAT(3);
 	VG_Node *vn;
 
 	if (button != SDL_BUTTON_RIGHT) {
@@ -246,7 +229,6 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 {
 	AG_Object *cob;
 	AG_TlistItem *it;
-	int selected = 0;
 
 	if (AG_OfClass(pob, "ES_Circuit:ES_Component:*")) {
 		if (ESCOMPONENT(pob)->flags & ES_COMPONENT_SUPPRESSED) {
@@ -284,7 +266,6 @@ PollObjects(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	AG_Object *ckt = AG_PTR(1);
-	AG_TlistItem *it;
 
 	AG_TlistClear(tl);
 	AG_LockVFS(ckt);
@@ -296,7 +277,6 @@ PollObjects(AG_Event *event)
 static void
 SelectedObject(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
 	VG_View *vv = AG_PTR(1);
 	AG_TlistItem *it = AG_PTR(2);
 	int state = AG_INT(3);
@@ -430,7 +410,7 @@ ES_CircuitEdit(void *p)
 			AG_MenuFlags(mi2, _("Construction geometry"),
 			    esIconConstructionGeometry.s,
 			    &vv->flags, VG_VIEW_CONSTRUCTION, 0);
-#ifdef DEBUG
+#ifdef ES_DEBUG
 			AG_MenuFlags(mi2, _("Extents"), vgIconBlock.s,
 			    &vv->flags, VG_VIEW_EXTENTS, 0);
 #endif
@@ -515,7 +495,7 @@ ES_CircuitEdit(void *p)
 		}
 
 		VG_ViewRegTool(vv, &esInsertTool, ckt);
-		VG_ViewButtondownFn(vv, MouseButtonDown, "%p", ckt);
+		VG_ViewButtondownFn(vv, MouseButtonDown, NULL);
 		
 		AG_MenuToolbar(mi, NULL);
 	}

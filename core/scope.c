@@ -101,8 +101,7 @@ static void
 PollPlots(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
-	M_Plotter *ptr = AG_PTR(2);
+	M_Plotter *ptr = AG_PTR(1);
 	M_Plot *pl;
 	AG_TlistItem *it;
 
@@ -135,10 +134,8 @@ AddPlotFromSrc(AG_Event *event)
 static void
 AddPlotFromDerivative(AG_Event *event)
 {
-	char prop_path[AG_PROP_PATH_MAX];
 	AG_Tlist *tl = AG_PTR(1);
-	ES_Circuit *ckt = AG_PTR(2);
-	M_Plotter *ptr = AG_PTR(3);
+	M_Plotter *ptr = AG_PTR(2);
 	AG_TlistItem *it = AG_TlistSelectedItem(tl);
 	M_Plot *pl;
 
@@ -150,8 +147,7 @@ AddPlotFromDerivative(AG_Event *event)
 static void
 ShowPlotSettings(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
-	M_Plot *pl = AG_TLIST_ITEM(2);
+	M_Plot *pl = AG_TLIST_ITEM(1);
 
 	M_PlotSettings(pl);
 }
@@ -163,7 +159,6 @@ Edit(void *obj)
 	ES_Circuit *ckt = scope->ckt;
 	AG_Window *win;
 	M_Plotter *ptr;
-	AG_Tlist *tlSrcs, *tlPlots;
 	AG_Pane *hPane;
 	AG_Pane *vPane;
 
@@ -192,13 +187,12 @@ Edit(void *obj)
 	
 			tl = AG_TlistNew(vPane->div[1], AG_TLIST_EXPAND|
 			                                AG_TLIST_POLL);
-			AG_SetEvent(tl, "tlist-poll", PollPlots,
-			    "%p,%p", ckt, ptr);
+			AG_SetEvent(tl, "tlist-poll", PollPlots, "%p", ptr);
 			m = AG_TlistSetPopup(tl, "plot");
 			AG_MenuAction(m, _("Plot derivative"), NULL,
-			    AddPlotFromDerivative, "%p,%p,%p", tl, ckt, ptr);
+			    AddPlotFromDerivative, "%p,%p", tl, ptr);
 			AG_MenuAction(m, _("Plot settings"), NULL,
-			    ShowPlotSettings, "%p,%p", ckt, tl);
+			    ShowPlotSettings, "%p", tl);
 		}
 	}
 	

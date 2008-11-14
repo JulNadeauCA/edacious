@@ -64,19 +64,6 @@
 #define MAX_TIMESTEP    1
 #define MIN_TIMESTEP    1e-6
 
-
-static void
-MatrixDebug(ES_SimDC *sim, ES_Circuit *ckt, char *str)
-{
-	Debug(ckt, "%s\n", str);
-	Debug(ckt, "A:\n");
-	M_MatrixPrint(sim->A);
-	Debug(ckt, "x:\n");
-	M_VectorPrint(sim->x);
-	Debug(ckt, "z:\n");
-	M_VectorPrint(sim->z);
-}
-
 /* Solve Ax=z where A=[G,B;C,D], x=[v,j] and z=[i;e]. */
 static int
 SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
@@ -107,7 +94,6 @@ static int
 NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 {
 	ES_Component *com;
-	M_Real diff;
 	Uint i = 0, j;
 
 	{
@@ -220,8 +206,6 @@ StepMNA(void *obj, Uint32 ival, void *arg)
 	ES_SimDC *sim = arg;
 	ES_Component *com;
 	Uint retries;
-	Uint32 ticks;
-	Uint32 ticksSinceLast;
 	int i;
 	M_Real error;
 
@@ -502,7 +486,6 @@ Destroy(void *p)
 static void
 RunSimulation(AG_Event *event)
 {
-	AG_Button *bu = AG_SELF();
 	ES_Sim *sim = AG_PTR(1);
 	int state = AG_INT(2);
 

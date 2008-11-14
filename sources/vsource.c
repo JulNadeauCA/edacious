@@ -96,7 +96,7 @@ InsertVoltageLoop(ES_Vsource *vs)
 
 	/* Create a new voltage source loop entry. */
 	lnew = Malloc(sizeof(ES_Loop));
-	lnew->name = 1+vs->nloops++;
+	lnew->name = 1+vs->nLoops++;
 	lnew->pairs = Malloc((vs->nlstack-1)*sizeof(ES_Pair *));
 	lnew->npairs = 0;
 	lnew->origin = vs;
@@ -111,12 +111,12 @@ InsertVoltageLoop(ES_Vsource *vs)
 		lnew->pairs[lnew->npairs++] = pair;
 
 		pair->loops = Realloc(pair->loops,
-		    (pair->nloops+1)*sizeof(ES_Loop *));
-		pair->lpols = Realloc(pair->lpols,
-		    (pair->nloops+1)*sizeof(int));
-		pair->loops[pair->nloops] = lnew;
-		pair->lpols[pair->nloops] = pol;
-		pair->nloops++;
+		    (pair->nLoops+1)*sizeof(ES_Loop *));
+		pair->loopPolarity = Realloc(pair->loopPolarity,
+		    (pair->nLoops+1)*sizeof(int));
+		pair->loops[pair->nLoops] = lnew;
+		pair->loopPolarity[pair->nLoops] = pol;
+		pair->nLoops++;
 	}
 	TAILQ_INSERT_TAIL(&vs->loops, lnew, loops);
 }
@@ -181,8 +181,6 @@ FindLoops(ES_Vsource *vs, ES_Port *portCur)
 void
 ES_VsourceFindLoops(ES_Vsource *vs)
 {
-	Uint i;
-
 	vs->lstack = Malloc(sizeof(ES_Port *));
 	FindLoops(vs, PORT(vs,1));
 
@@ -255,7 +253,7 @@ Init(void *p)
 	vs->v = 5;
 	
 	TAILQ_INIT(&vs->loops);
-	vs->nloops = 0;
+	vs->nLoops = 0;
 	vs->lstack = NULL;
 	vs->nlstack = 0;
 
@@ -279,7 +277,6 @@ void
 ES_VsourceFreeLoops(ES_Vsource *vs)
 {
 	ES_Loop *loop, *nloop;
-	Uint i;
 
 	for (loop = TAILQ_FIRST(&vs->loops);
 	     loop != TAILQ_END(&vs->loops);
@@ -289,7 +286,7 @@ ES_VsourceFreeLoops(ES_Vsource *vs)
 		Free(loop);
 	}
 	TAILQ_INIT(&vs->loops);
-	vs->nloops = 0;
+	vs->nLoops = 0;
 
 	Free(vs->lstack);
 	vs->lstack = NULL;
@@ -348,7 +345,7 @@ PollLoops(AG_Event *event)
 	AG_Tlist *tl = AG_SELF();
 	AG_TlistItem *it;
 	ES_Loop *l;
-	Uint i, j;
+	Uint i;
 
 	AG_TlistClear(tl);
 

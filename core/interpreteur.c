@@ -11,20 +11,23 @@
 
 #include <stdlib.h>
 #include <string.h>
+# include <stdio.h>
 #include <ctype.h>
 #include <math.h>
 #include "interpreteur.h"
 
-/* Supprimez la ligne suivante pour entrer en mode debogage */
-#define EVALUER_NO_DEBUG
+#include <config/expr_debug.h>
 
-#ifdef  EVALUER_NO_DEBUG
-#	define EvaluerDebug Ignorer
+#if !defined(ES_EXPRDEBUG)
+# ifdef __GNUC__
+#  define EvaluerDebug(fmt, arg...) ((void)0)
+# else
+#  define EvaluerDebug DebugNoop
+static int DebugNoop(char const * s, ...) { return (int)strlen(s); }
+# endif
 #else
-#	include <stdio.h>
-#	define EvaluerDebug printf
+# define EvaluerDebug printf
 #endif
-
 
 typedef int    BOOL     ;
 #define        FALSE    0
@@ -104,8 +107,6 @@ M_Real  my_Log(M_Real x);
 M_Real  my_Log10(M_Real x);
 M_Real  my_Exp(M_Real x);
 M_Real  my_UnitStep(M_Real x);
-
-int     Ignorer(char const * s, ...);
 
 #define MAX_OPERATIONS    20
 #define MAX_OPERANDES     20
@@ -770,7 +771,3 @@ M_Real my_UnitStep(M_Real x)
 	return y;
 }
 
-int Ignorer(char const * s, ...)
-{
-    return (int)strlen(s);
-}

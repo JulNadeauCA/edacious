@@ -63,7 +63,8 @@ typedef struct es_port {
 	struct es_branch *branch;		/* Branch into node */
 	Uint flags;
 #define ES_PORT_SELECTED	0x01		/* Port is selected */
-	ES_SchemPort *sp;			/* Schematic port */
+#define ES_PORT_SAVED_FLAGS	0
+	ES_SchemPort *sp;			/* Associated schem entity */
 } ES_Port;
 
 /* Ordered pair of ports belonging to the same component. */
@@ -72,8 +73,8 @@ typedef struct es_pair {
 	ES_Port *p1;			/* + with respect to reference */
 	ES_Port *p2;			/* - with respect to reference */
 	struct es_loop **loops;		/* Loops this pair is part of */
-	int *lpols;			/* Polarities with respect to loops */
-	unsigned int nloops;
+	int             *loopPolarity;	/* Polarities with respect to loops */
+	unsigned int    nLoops;
 } ES_Pair;
 
 typedef struct es_spec_condition {
@@ -147,7 +148,7 @@ typedef struct es_component {
 						       ES_PNODE((p),(k)),(n))
 #define ES_IBRANCH(p,n)		ES_BranchCurrent(ESCOMPONENT_CIRCUIT(p), n)
 #define ES_I_PREV_STEP(p,k,n)	ES_BranchCurrentPrevStep(ESCOMPONENT_CIRCUIT(p), k, n)
-#ifdef DEBUG
+#ifdef ES_DEBUG
 # define ES_PNODE(p,n)		ES_PortNode(ESCOMPONENT(p),(n))
 #else
 # define ES_PNODE(p,n)		(ESCOMPONENT(p)->ports[n].node)
@@ -184,18 +185,14 @@ typedef struct es_component {
 __BEGIN_DECLS
 extern ES_ComponentClass esComponentClass;
 
-void   ES_ComponentLog(void *, const char *, ...);
+void     ES_ComponentLog(void *, const char *, ...);
+void     ES_ComponentMenu(ES_Component *, VG_View *);
+void    *ES_ComponentEdit(void *);
+void     ES_ComponentListClasses(AG_Event *);
+void     ES_AttachSchemEntity(void *, VG_Node *);
+void     ES_DetachSchemEntity(void *, VG_Node *);
 
-void   ES_ComponentMenu(ES_Component *, VG_View *);
-void  *ES_ComponentEdit(void *);
-void   ES_ComponentListClasses(AG_Event *);
-
-void   ES_InitPorts(void *, const ES_Port *);
-void   ES_FreePorts(ES_Component *);
-
-void           ES_AttachSchemEntity(void *, VG_Node *);
-void           ES_DetachSchemEntity(void *, VG_Node *);
-
+void     ES_InitPorts(void *, const ES_Port *);
 Uint	 ES_PortNode(ES_Component *, int);
 int	 ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
 ES_Port	*ES_FindPort(void *, const char *);

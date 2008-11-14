@@ -256,7 +256,6 @@ Edit(void *p)
 {
 	ES_Capacitor *c = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
-	AG_Numerical *num;
 
 	M_NumericalNewRealP(box, 0, "F", _("Capacitance: "), &c->C);
 	M_NumericalNewReal(box, 0, "V", _("Initial voltage: "), &c->V0);

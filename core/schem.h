@@ -18,7 +18,7 @@ typedef struct es_schem {
 
 __BEGIN_DECLS
 extern AG_ObjectClass esSchemClass;
-#ifdef DEBUG
+#ifdef ES_DEBUG
 extern VG_ToolOps esSchemProximityTool;
 #endif
 extern VG_ToolOps esSchemSelectTool;

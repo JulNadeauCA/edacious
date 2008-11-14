@@ -23,7 +23,7 @@ VG_ToolOps *esVgTools[] = {
 	&vgCircleTool,
 	&vgTextTool,
 	&vgPolygonTool,
-#ifdef DEBUG
+#ifdef ES_DEBUG
 	&vgProximityTool,
 #endif
 	NULL

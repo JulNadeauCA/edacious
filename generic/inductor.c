@@ -280,7 +280,6 @@ Edit(void *p)
 {
 	ES_Inductor *i = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
-	AG_Numerical *num;
 
 	M_NumericalNewRealPNZ(box, 0, "H", _("Inductance: "), &i->L);
 

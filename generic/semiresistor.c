@@ -70,9 +70,6 @@ static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_SemiResistor *r = obj;
-	ES_Node *n;
-	Uint k = PNODE(r,1);
-	Uint j = PNODE(r,2);
 	M_Real dT = dc->T0 - COMPONENT(r)->Tspec;
 	M_Real g;
 
@@ -84,9 +81,6 @@ static void
 DC_StepIter(void *obj, ES_SimDC *dc)
 {
 	ES_SemiResistor *r = obj;
-	ES_Node *n;
-	Uint k = PNODE(r,1);
-	Uint j = PNODE(r,2);
 	M_Real dT = dc->T0 - COMPONENT(r)->Tspec;
 	M_Real g;
 

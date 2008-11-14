@@ -185,6 +185,7 @@ rescan:
 	ES_UnlockCircuit(ckt);
 }
 
+#if 0
 static void
 LoadComponent(AG_Event *event)
 {
@@ -202,6 +203,7 @@ SaveComponent(AG_Event *event)
 	if (AG_ObjectSave(com) == -1)
 		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
 }
+#endif
 
 static void
 SelectCircuitTool(AG_Event *event)
@@ -289,7 +291,6 @@ ES_ComponentMenu(ES_Component *com, VG_View *vv)
 	pm = AG_PopupNew(vv);
 	mi = pm->item;
 	{
-		extern VG_ToolOps esCircuitSelectTool;
 		extern VG_ToolOps esWireTool;
 
 		AG_MenuState(mi, (vv->curtool == NULL) ||
@@ -367,6 +368,7 @@ ES_ComponentMenu(ES_Component *com, VG_View *vv)
 	AG_PopupShow(pm);
 }
 
+#if 0
 static void
 CreateView(AG_Event *event)
 {
@@ -383,13 +385,13 @@ CreateView(AG_Event *event)
 	AG_WindowAttach(pWin, win);
 	AG_WindowShow(win);
 }
+#endif
 
 static void
 FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 {
 	AG_Object *cob;
 	AG_TlistItem *it;
-	int selected = 0;
 
 	if (AG_OfClass(pob, "ES_Circuit:ES_Component:*")) {
 		if (ESCOMPONENT(pob)->flags & ES_COMPONENT_SUPPRESSED) {
@@ -427,7 +429,6 @@ PollObjects(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	AG_Object *ckt = AG_PTR(1);
-	AG_TlistItem *it;
 
 	AG_TlistClear(tl);
 	AG_LockVFS(ckt);
@@ -439,7 +440,6 @@ PollObjects(AG_Event *event)
 static void
 SelectedObject(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
 	VG_View *vv = AG_PTR(1);
 	AG_TlistItem *it = AG_PTR(2);
 	int state = AG_INT(3);
@@ -458,10 +458,9 @@ static void
 MouseButtonDown(AG_Event *event)
 {
 	VG_View *vv =  AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
-	int button = AG_INT(2);
-	float x = AG_FLOAT(3);
-	float y = AG_FLOAT(4);
+	int button = AG_INT(1);
+	float x = AG_FLOAT(2);
+	float y = AG_FLOAT(3);
 	VG_Node *vn;
 
 	if (button != SDL_BUTTON_RIGHT) {
@@ -483,9 +482,8 @@ MouseButtonDown(AG_Event *event)
 static void
 SelectSchem(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
-	AG_TlistItem *ti = AG_PTR(3);
+	VG_View *vv = AG_PTR(1);
+	AG_TlistItem *ti = AG_PTR(2);
 	VG *vg = ti->p1;
 	
 	VG_ViewSetVG(vv, vg);
@@ -605,7 +603,7 @@ ES_ComponentEdit(void *obj)
 	ES_Circuit *ckt = obj;
 	AG_Pane *hPane;
 	AG_Window *win;
-	AG_Menu *menu;
+/*	AG_Menu *menu; */
 	AG_Notebook *nb;
 	AG_NotebookTab *nt;
 	VG_ToolOps **pOps, *ops;
@@ -644,14 +642,17 @@ ES_ComponentEdit(void *obj)
 	
 		hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
 		{
-			AG_Event ev;
-
 			tlSchems = AG_TlistNewPolled(hPane->div[0],
 			    AG_TLIST_EXPAND,
 			    PollSchems, "%p,%p", com, vv);
 			AG_TlistSizeHint(tlSchems, "Schematic #0000", 5);
 			AG_SetEvent(tlSchems, "tlist-dblclick",
-			    SelectSchem, "%p,%p", com, vv);
+			    SelectSchem, "%p", vv);
+	
+			if (!TAILQ_EMPTY(&com->schems)) {
+				VG_ViewSetVG(vv, TAILQ_FIRST(&com->schems));
+				VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
+			}
 
 			bCmds = AG_BoxNewHoriz(hPane->div[0], AG_BOX_HOMOGENOUS|
 			                                      AG_BOX_HFILL);
@@ -707,7 +708,7 @@ ES_ComponentEdit(void *obj)
 		AG_NotebookTab *ntab;
 		ES_LibraryEditor *led;
 		AG_Tlist *tl;
-		AG_Box *vBox, *hBox;
+		AG_Box *hBox;
 		AG_Pane *vPane;
 		AG_Toolbar *tb;
 	
@@ -768,7 +769,7 @@ ES_ComponentEdit(void *obj)
 				    AG_WIDGET_BOOL, &tool->selected);
 			}
 			VG_ViewRegTool(vv, &esInsertTool, ckt);
-			VG_ViewButtondownFn(vv, MouseButtonDown, "%p", ckt);
+			VG_ViewButtondownFn(vv, MouseButtonDown, NULL);
 		}
 	}
 
