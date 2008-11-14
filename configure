@@ -207,12 +207,12 @@ echo "    --with-libtool            Specify path to libtool [use bundled]"
 echo "    --with-cygwin             Add cygwin dependencies under cygwin [no]"
 echo "    --enable-nls              Native Language Support [no]"
 echo "    --with-gettext            Use gettext tools [check]"
-echo "    --enable-debug            Include debugging code [no]"
-echo "    --enable-static           Produce a static binary [default: no]"
+echo "    --enable-debug            General debugging [default: no]"
+echo "    --enable-fpdebug          Debug FP exceptions [default: no]"
+echo "    --enable-exprdebug        Debug expression parsing [default: no]"
 echo "    --enable-warnings         Enable compiler warnings [default: no]"
 echo "    --enable-edition          Enable graphical editor [default: yes]"
 echo "    --enable-threads          Thread safety [default: check]"
-echo "    --enable-fpdebug          Catch floating point exceptions [default: no]"
 exit 1
 fi
 
@@ -288,16 +288,6 @@ else
 fi
 if [ "${with_docs}" = "no" ]; then
 	echo "NODOC=yes" >> Makefile.config
-fi
-
-# Process debug option.
-if [ "${enable_debug}" = "yes" ]; then
-	echo "LDFLAGS+=-g" >> Makefile.config
-	echo "#ifndef DEBUG" > config/debug.h
-	echo "#define DEBUG 1" >> config/debug.h
-	echo "#endif /* DEBUG */" >> config/debug.h
-else
-	echo "#undef DEBUG" > config/debug.h
 fi
 
 # Process NLS options.
@@ -426,7 +416,7 @@ echo "#ifndef SYSCONFDIR" > config/sysconfdir.h
 echo "#define SYSCONFDIR \"${SYSCONFDIR}\"" >> config/sysconfdir.h
 echo "#endif /* SYSCONFDIR */" >> config/sysconfdir.h
 
-VERSION="0.1"
+VERSION="1.0-beta"
 echo "#ifndef VERSION" > config/version.h
 echo "#define VERSION \"$VERSION\"" >> config/version.h
 echo "#endif" >> config/version.h
@@ -1346,6 +1336,171 @@ if [ "${cache}" != "" ]; then
 fi
 rm -f conftest.c $testdir/conftest$EXECSUFFIX
 fi;
+$ECHO_N "checking for the getopt() function..."
+$ECHO_N "checking for the getopt() function..." >> config.log
+MK_CACHED="No"
+MK_COMPILE_STATUS="OK"
+if [ "${cache}" != "" ]; then
+	if [ -e "${cache}/ctest-HAVE_GETOPT" ]; then
+		HAVE_GETOPT=`cat ${cache}/ctest-HAVE_GETOPT`
+		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_GETOPT`
+		MK_CACHED="Yes"
+	fi
+fi
+if [ "${MK_CACHED}" = "No" ]; then
+	cat << EOT > conftest.c
+#include <unistd.h>
+
+int
+main(int argc, char *argv[])
+{
+	int c, x;
+	while ((c = getopt(argc, argv, "foo")) != -1) {
+		extern char *optarg;
+		extern int optind, opterr, optopt;
+		if (optarg != NULL) { x = 1; }
+		if (optind > 0) { x = 2; }
+		if (opterr > 0) { x = 3; }
+		if (optopt > 0) { x = 4; }
+	}
+	return (0);
+}
+
+EOT
+	echo "$CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest conftest.c" >>config.log
+	$CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest conftest.c 2>>config.log
+	if [ $? != 0 ]; then
+		echo "-> failed ($?)" >> config.log
+		MK_COMPILE_STATUS="FAIL($?)"
+	fi
+fi
+if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
+echo "yes"
+echo "yes" >> config.log
+HAVE_GETOPT="yes"
+echo "#ifndef HAVE_GETOPT" > config/have_getopt.h
+echo "#define HAVE_GETOPT \"$HAVE_GETOPT\"" >> config/have_getopt.h
+echo "#endif" >> config/have_getopt.h
+echo "hdefs[\"HAVE_GETOPT\"] = \"$HAVE_GETOPT\"" >>configure.lua
+else
+echo "no"
+echo "no" >> config.log
+HAVE_GETOPT="no"
+echo "#undef HAVE_GETOPT" >config/have_getopt.h
+echo "hdefs[\"HAVE_GETOPT\"] = nil" >>configure.lua
+fi;
+if [ "${cache}" != "" ]; then
+	echo "$HAVE_GETOPT" > ${cache}/ctest-HAVE_GETOPT
+	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_GETOPT
+fi
+rm -f conftest.c $testdir/conftest$EXECSUFFIX
+$ECHO_N "checking for a getpwuid() function..."
+$ECHO_N "checking for a getpwuid() function..." >> config.log
+MK_CACHED="No"
+MK_COMPILE_STATUS="OK"
+if [ "${cache}" != "" ]; then
+	if [ -e "${cache}/ctest-HAVE_GETPWUID" ]; then
+		HAVE_GETPWUID=`cat ${cache}/ctest-HAVE_GETPWUID`
+		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_GETPWUID`
+		MK_CACHED="Yes"
+	fi
+fi
+if [ "${MK_CACHED}" = "No" ]; then
+	cat << EOT > conftest.c
+#include <sys/types.h>
+#include <pwd.h>
+
+int
+main(int argc, char *argv[])
+{
+	struct passwd *pwd;
+	uid_t uid = 0;
+
+	pwd = getpwuid(uid);
+	return (0);
+}
+
+EOT
+	echo "$CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest conftest.c" >>config.log
+	$CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest conftest.c 2>>config.log
+	if [ $? != 0 ]; then
+		echo "-> failed ($?)" >> config.log
+		MK_COMPILE_STATUS="FAIL($?)"
+	fi
+fi
+if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
+echo "yes"
+echo "yes" >> config.log
+HAVE_GETPWUID="yes"
+echo "#ifndef HAVE_GETPWUID" > config/have_getpwuid.h
+echo "#define HAVE_GETPWUID \"$HAVE_GETPWUID\"" >> config/have_getpwuid.h
+echo "#endif" >> config/have_getpwuid.h
+echo "hdefs[\"HAVE_GETPWUID\"] = \"$HAVE_GETPWUID\"" >>configure.lua
+else
+echo "no"
+echo "no" >> config.log
+HAVE_GETPWUID="no"
+echo "#undef HAVE_GETPWUID" >config/have_getpwuid.h
+echo "hdefs[\"HAVE_GETPWUID\"] = nil" >>configure.lua
+fi;
+if [ "${cache}" != "" ]; then
+	echo "$HAVE_GETPWUID" > ${cache}/ctest-HAVE_GETPWUID
+	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_GETPWUID
+fi
+rm -f conftest.c $testdir/conftest$EXECSUFFIX
+$ECHO_N "checking for a getuid() function..."
+$ECHO_N "checking for a getuid() function..." >> config.log
+MK_CACHED="No"
+MK_COMPILE_STATUS="OK"
+if [ "${cache}" != "" ]; then
+	if [ -e "${cache}/ctest-HAVE_GETUID" ]; then
+		HAVE_GETUID=`cat ${cache}/ctest-HAVE_GETUID`
+		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_GETUID`
+		MK_CACHED="Yes"
+	fi
+fi
+if [ "${MK_CACHED}" = "No" ]; then
+	cat << EOT > conftest.c
+#include <sys/types.h>
+#include <unistd.h>
+
+int
+main(int argc, char *argv[])
+{
+	uid_t uid;
+
+	uid = getuid();
+	return (0);
+}
+
+EOT
+	echo "$CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest conftest.c" >>config.log
+	$CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest conftest.c 2>>config.log
+	if [ $? != 0 ]; then
+		echo "-> failed ($?)" >> config.log
+		MK_COMPILE_STATUS="FAIL($?)"
+	fi
+fi
+if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
+echo "yes"
+echo "yes" >> config.log
+HAVE_GETUID="yes"
+echo "#ifndef HAVE_GETUID" > config/have_getuid.h
+echo "#define HAVE_GETUID \"$HAVE_GETUID\"" >> config/have_getuid.h
+echo "#endif" >> config/have_getuid.h
+echo "hdefs[\"HAVE_GETUID\"] = \"$HAVE_GETUID\"" >>configure.lua
+else
+echo "no"
+echo "no" >> config.log
+HAVE_GETUID="no"
+echo "#undef HAVE_GETUID" >config/have_getuid.h
+echo "hdefs[\"HAVE_GETUID\"] = nil" >>configure.lua
+fi;
+if [ "${cache}" != "" ]; then
+	echo "$HAVE_GETUID" > ${cache}/ctest-HAVE_GETUID
+	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_GETUID
+fi
+rm -f conftest.c $testdir/conftest$EXECSUFFIX
 $ECHO_N "checking for Agar (http://libagar.org/)..."
 $ECHO_N "checking for Agar (http://libagar.org/)..." >> config.log
 MK_EXEC_FOUND="No"
@@ -2261,171 +2416,6 @@ echo "hdefs[\"AGAR_MATH_CFLAGS\"] = nil" >>configure.lua
 echo "#undef AGAR_MATH_LIBS" >config/agar_math_libs.h
 echo "hdefs[\"AGAR_MATH_LIBS\"] = nil" >>configure.lua
 fi;
-$ECHO_N "checking for the getopt() function..."
-$ECHO_N "checking for the getopt() function..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_GETOPT" ]; then
-		HAVE_GETOPT=`cat ${cache}/ctest-HAVE_GETOPT`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_GETOPT`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <unistd.h>
-
-int
-main(int argc, char *argv[])
-{
-	int c, x;
-	while ((c = getopt(argc, argv, "foo")) != -1) {
-		extern char *optarg;
-		extern int optind, opterr, optopt;
-		if (optarg != NULL) { x = 1; }
-		if (optind > 0) { x = 2; }
-		if (opterr > 0) { x = 3; }
-		if (optopt > 0) { x = 4; }
-	}
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest conftest.c" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest conftest.c 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_GETOPT="yes"
-echo "#ifndef HAVE_GETOPT" > config/have_getopt.h
-echo "#define HAVE_GETOPT \"$HAVE_GETOPT\"" >> config/have_getopt.h
-echo "#endif" >> config/have_getopt.h
-echo "hdefs[\"HAVE_GETOPT\"] = \"$HAVE_GETOPT\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_GETOPT="no"
-echo "#undef HAVE_GETOPT" >config/have_getopt.h
-echo "hdefs[\"HAVE_GETOPT\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_GETOPT" > ${cache}/ctest-HAVE_GETOPT
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_GETOPT
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
-$ECHO_N "checking for a getpwuid() function..."
-$ECHO_N "checking for a getpwuid() function..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_GETPWUID" ]; then
-		HAVE_GETPWUID=`cat ${cache}/ctest-HAVE_GETPWUID`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_GETPWUID`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <sys/types.h>
-#include <pwd.h>
-
-int
-main(int argc, char *argv[])
-{
-	struct passwd *pwd;
-	uid_t uid = 0;
-
-	pwd = getpwuid(uid);
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest conftest.c" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest conftest.c 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_GETPWUID="yes"
-echo "#ifndef HAVE_GETPWUID" > config/have_getpwuid.h
-echo "#define HAVE_GETPWUID \"$HAVE_GETPWUID\"" >> config/have_getpwuid.h
-echo "#endif" >> config/have_getpwuid.h
-echo "hdefs[\"HAVE_GETPWUID\"] = \"$HAVE_GETPWUID\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_GETPWUID="no"
-echo "#undef HAVE_GETPWUID" >config/have_getpwuid.h
-echo "hdefs[\"HAVE_GETPWUID\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_GETPWUID" > ${cache}/ctest-HAVE_GETPWUID
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_GETPWUID
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
-$ECHO_N "checking for a getuid() function..."
-$ECHO_N "checking for a getuid() function..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_GETUID" ]; then
-		HAVE_GETUID=`cat ${cache}/ctest-HAVE_GETUID`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_GETUID`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <sys/types.h>
-#include <unistd.h>
-
-int
-main(int argc, char *argv[])
-{
-	uid_t uid;
-
-	uid = getuid();
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest conftest.c" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest conftest.c 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_GETUID="yes"
-echo "#ifndef HAVE_GETUID" > config/have_getuid.h
-echo "#define HAVE_GETUID \"$HAVE_GETUID\"" >> config/have_getuid.h
-echo "#endif" >> config/have_getuid.h
-echo "hdefs[\"HAVE_GETUID\"] = \"$HAVE_GETUID\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_GETUID="no"
-echo "#undef HAVE_GETUID" >config/have_getuid.h
-echo "hdefs[\"HAVE_GETUID\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_GETUID" > ${cache}/ctest-HAVE_GETUID
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_GETUID
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
 CFLAGS="$CFLAGS -D_ES_INTERNAL"
 CXXFLAGS="$CXXFLAGS -D_ES_INTERNAL"
 echo "CFLAGS=$CFLAGS" >>Makefile.config
@@ -3170,30 +3160,60 @@ if [ "${HAVE_AGAR_MATH}" != "yes" ]
 fi
 if [ "${enable_warnings}" != "no" ]
  then
-CFLAGS="$CFLAGS -Wall -Werror -Wmissing-prototypes"
+CFLAGS="$CFLAGS -Wall"
+CXXFLAGS="$CXXFLAGS -Wall"
 echo "CFLAGS=$CFLAGS" >>Makefile.config
 echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-CFLAGS="$CFLAGS -Wno-unused"
+echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
+echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
+CFLAGS="$CFLAGS -Werror"
+CXXFLAGS="$CXXFLAGS -Werror"
 echo "CFLAGS=$CFLAGS" >>Makefile.config
 echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-fi
-if [ "${enable_static}" = "yes" ]
- then
-LDFLAGS="-static"
-echo "LDFLAGS=$LDFLAGS" >>Makefile.config
-echo "mdefs[\"LDFLAGS\"] = \"$LDFLAGS\"" >>configure.lua
+echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
+echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
+CFLAGS="$CFLAGS -Wmissing-prototypes"
+CXXFLAGS="$CXXFLAGS -Wmissing-prototypes"
+echo "CFLAGS=$CFLAGS" >>Makefile.config
+echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
+echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
+echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 fi
 if [ "${enable_debug}" = "yes" ]
  then
-CFLAGS="$CFLAGS -DDEBUG"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
+ES_DEBUG="yes"
+echo "#ifndef ES_DEBUG" > config/es_debug.h
+echo "#define ES_DEBUG \"$ES_DEBUG\"" >> config/es_debug.h
+echo "#endif" >> config/es_debug.h
+echo "hdefs[\"ES_DEBUG\"] = \"$ES_DEBUG\"" >>configure.lua
+LDFLAGS="$LDFLAGS-g"
+echo "LDFLAGS=$LDFLAGS" >>Makefile.config
+echo "mdefs[\"LDFLAGS\"] = \"$LDFLAGS\"" >>configure.lua
+else
+echo "#undef ES_DEBUG" >config/es_debug.h
+echo "hdefs[\"ES_DEBUG\"] = nil" >>configure.lua
 fi
 if [ "${enable_fpdebug}" = "yes" ]
  then
-CFLAGS="$CFLAGS -DFP_DEBUG"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
+FP_DEBUG="yes"
+echo "#ifndef FP_DEBUG" > config/fp_debug.h
+echo "#define FP_DEBUG \"$FP_DEBUG\"" >> config/fp_debug.h
+echo "#endif" >> config/fp_debug.h
+echo "hdefs[\"FP_DEBUG\"] = \"$FP_DEBUG\"" >>configure.lua
+else
+echo "#undef FP_DEBUG" >config/fp_debug.h
+echo "hdefs[\"FP_DEBUG\"] = nil" >>configure.lua
+fi
+if [ "${enable_exprdebug}" = "yes" ]
+ then
+EXPR_DEBUG="yes"
+echo "#ifndef EXPR_DEBUG" > config/expr_debug.h
+echo "#define EXPR_DEBUG \"$EXPR_DEBUG\"" >> config/expr_debug.h
+echo "#endif" >> config/expr_debug.h
+echo "hdefs[\"EXPR_DEBUG\"] = \"$EXPR_DEBUG\"" >>configure.lua
+else
+echo "#undef EXPR_DEBUG" >config/expr_debug.h
+echo "hdefs[\"EXPR_DEBUG\"] = nil" >>configure.lua
 fi
 if [ "${with_proj_generation}" != "yes" ]
  then

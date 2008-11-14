@@ -37,66 +37,97 @@ PREMAKEFLAGS?=
 PROJECT?=
 PROJDIR?=	ProjectFiles
 PROJFILESEXTRA?=
-PROJINCLUDES?=${TOP}/configure.lua
 PROJFILELIST=	.projfiles2.out
-PROJPREPKG?=
-PROJPOSTPKG?=
+PROJCONFIGDIR?=
+PROJNOCLEAN?=	no
 
-PROJFILES?=	windows:i386:cb-gcc:: \
-		windows:i386:vs6:: \
-		windows:i386:vs2002:: \
-		windows:i386:vs2003:: \
-		windows:i386:vs2005::
+PROJFILES?=	bsd:cb-gcc:: \
+		linux:cb-gcc:: \
+		macosx:cb-gcc:: \
+		windows:cb-gcc:: \
+		windows:cb-ow:: \
+		windows:vs6:: \
+		windows:vs2002:: \
+		windows:vs2003:: \
+		windows:vs2005:: \
+		windows:vs2008::
 
-CLEANFILES+=	premake.lua configure.lua
+CLEANFILES+=	${PREMAKEOUT} ${PROJINCLUDES}
 
-proj: proj-subdir
+proj-package:
 	@if [ "${PROJECT}" = "" ]; then \
-	    echo "Checking ${PROJINCLUDES}"; \
-	    for INCL in ${PROJINCLUDES}; do \
-	        if [ ! -e "$$INCL" ]; then \
-	            echo "Missing $$INCL; generating"; \
-	            (cd ${TOP} && cat configure.in | mkconfigure \
-	             --emul-os=windows --emul-arch=i386 >/dev/null); \
-	        fi; \
-	    done; \
-	    cat Makefile | ${MKPROJFILES} "" ${PROJINCLUDES} > ${PREMAKEOUT};\
-	else \
-	    if [ ! -d "${PROJDIR}" ]; then \
-	    	echo "mkdir -p ${PROJDIR}"; \
-	    	mkdir -p ${PROJDIR}; \
-	    fi; \
-	    for TGT in ${PROJFILES}; do \
-	        _tgtos=`echo $$TGT |awk -F: '{print $$1}' `; \
-	        _tgtarch=`echo $$TGT |awk -F: '{print $$2}' `; \
-	        _tgtproj=`echo $$TGT |awk -F: '{print $$3}' `; \
-	        _tgtflav=`echo $$TGT |awk -F: '{print $$4}' `; \
-	        _tgtopts=`echo $$TGT |awk -F: '{print $$5}'|sed 's/,/ /g'`; \
-		echo "Target: $$_tgtos ($$_tgtproj)"; \
-		echo "Target flavor: $$_tgtflav"; \
-		echo "Target options: $$_tgtopts"; \
-		rm -fR config; \
+	    echo "cat Makefile | ${MKPROJFILES} > ${PREMAKEOUT}"; \
+	    cat Makefile | \
+	        env PROJTARGET="${PROJTARGET}" PROJOS="${PROJOS}" \
+		PROJFLAVOR="" PROJINCLUDES="${PROJINCLUDES}" \
+	        ${MKPROJFILES} > ${PREMAKEOUT}; \
+	fi
+
+proj:
+	@if [ ! -d "${PROJDIR}" ]; then \
+		echo "mkdir -p ${PROJDIR}"; \
+		mkdir -p ${PROJDIR}; \
+	fi
+	@for TGT in ${PROJFILES}; do \
+		_tgtos=`echo $$TGT |awk -F: '{print $$1}' `; \
+		_tgtproj=`echo $$TGT |awk -F: '{print $$2}' `; \
+		_tgtflav=`echo $$TGT |awk -F: '{print $$3}' `; \
+		_tgtopts=`echo $$TGT |awk -F: '{print $$4}'|sed 's/,/ /g'`; \
+		echo "*"; \
+		echo "* Target: $$_tgtos ($$_tgtproj)"; \
+		echo "* Target flavor: $$_tgtflav"; \
+		echo "* Target options: $$_tgtopts"; \
+		echo "*"; \
+		\
+		if [ -e "config" ]; then \
+			echo "rm -fR config"; \
+			rm -fR config; \
+		fi; \
+		if [ -e "${PROJCONFIGDIR}" ]; then \
+			echo "rm -fR ${PROJCONFIGDIR}"; \
+			rm -fR "${PROJCONFIGDIR}"; \
+		fi; \
+		echo "mkconfigure --emul-env=$$_tgtproj --emul-os=$$_tgtos \
+		    > configure.tmp"; \
 		cat configure.in | \
-		    mkconfigure --emul-os=$$_tgtos --emul-arch=$$_tgtarch > \
-		    configure.tmp; \
+		    mkconfigure --emul-env=$$_tgtproj --emul-os=$$_tgtos \
+		    > configure.tmp; \
 		if [ $$? != 0 ]; then \
 			echo "mkconfigure failed"; \
-			rm -fR configure.tmp configure.lua; \
+			rm -fR configure.tmp ${PROJINCLUDES}; \
 			exit 1; \
 		fi; \
-		/bin/sh ./configure.tmp $$_tgtopts; \
+		echo "./configure.tmp $$_tgtopts --with-proj-generation"; \
+		${SH} ./configure.tmp $$_tgtopts --with-proj-generation; \
 		if [ $$? != 0 ]; then \
 			echo "configure failed"; \
-			echo -n > Makefile.config; \
+			echo > Makefile.config; \
 			exit 1; \
 		fi; \
-		rm -f configure.tmp config.log; \
-		echo -n >Makefile.config; \
+		echo "${MAKE} proj-package-subdir"; \
+		env PROJTARGET="$$_tgtproj" PROJOS="$$_tgtos" \
+		    PROJINCLUDES="${PROJINCLUDES}" \
+		    ${MAKE} proj-package-subdir; \
+		\
+		if [ "${PROJCONFIGDIR}" != "" ]; then \
+			echo "rm -fR ${PROJCONFIGDIR}"; \
+			rm -fR ${PROJCONFIGDIR}; \
+			echo "mv -f config ${PROJCONFIGDIR}"; \
+			mv -f config ${PROJCONFIGDIR}; \
+		fi; \
+		if [ "${PROJNOCLEAN}" = "no" ]; then \
+			echo "rm -f configure.tmp config.log"; \
+			rm -f configure.tmp config.log; \
+			echo >Makefile.config; \
+		fi; \
+		\
+	        echo "cat Makefile | ${MKPROJFILES} > ${PREMAKEOUT}"; \
+	        cat Makefile | \
+		    env PROJFLAVOR="$$_tgtflav" \
+		    PROJOS="$$_tgtos" \
+		    PROJINCLUDES="${PROJINCLUDES}" \
+		    ${MKPROJFILES} > ${PREMAKEOUT}; \
 	        perl ${TOP}/mk/cmpfiles.pl; \
-	        echo "cat Makefile | ${MKPROJFILES} "$$_tgtflav" \
-		    ${PROJINCLUDES} > ${PREMAKEOUT}";\
-	        cat Makefile | ${MKPROJFILES} "$$_tgtflav" \
-		    ${PROJINCLUDES} > ${PREMAKEOUT};\
 	        echo "${PREMAKE} ${PREMAKEFLAGS} --file ${PREMAKEOUT} \
 		    --os $$_tgtos --target $$_tgtproj"; \
 	        ${PREMAKE} ${PREMAKEFLAGS} --file ${PREMAKEOUT} \
@@ -106,30 +137,40 @@ proj: proj-subdir
 			exit 1; \
 		fi; \
 	        perl ${TOP}/mk/cmpfiles.pl added > .projfiles.out; \
+		echo "* Generated files: "; \
+		cat .projfiles.out; \
 		cp -f .projfiles.out ${PROJFILELIST}; \
 	        rm .cmpfiles.out; \
 		if [ "${PROJFILESEXTRA}" != "" ]; then \
 	            for EXTRA in ${PROJFILESEXTRA}; do \
+		        echo "+ $$EXTRA: "; \
 		        echo "$$EXTRA" >> ${PROJFILELIST}; \
 		    done; \
 		fi; \
-	        echo "config" >> ${PROJFILELIST}; \
-		rm -f ${PROJDIR}/$$_tgtproj-$$_tgtos.zip; \
-		if [ "${PROJPREPKG}" != "" ]; then \
-			echo "${MAKE} ${PROJPREPKG}"; \
-			env PKG_OS=$$_tgtos PKG_ARCH=$$_tgtarch \
-			    PKG_IDE=$$_tgtproj ${MAKE} ${PROJPREPKG}; \
+		if [ -e "${PROJCONFIGDIR}" ]; then \
+			echo "+ ${PROJCONFIGDIR}"; \
+	        	echo "${PROJCONFIGDIR}" >> ${PROJFILELIST}; \
 		fi; \
+		echo "rm -f ${PROJDIR}/$$_tgtproj-$$_tgtos$$_tgtflav.zip"; \
+		rm -f "${PROJDIR}/$$_tgtproj-$$_tgtos$$_tgtflav.zip"; \
+		echo "* Creating $$_tgtproj-$$_tgtos$$_tgtflav.zip";\
 		cat ${PROJFILELIST} | ${ZIP} ${ZIPFLAGS} \
-		    ${PROJDIR}/$$_tgtproj-$$_tgtos-$$_tgtarch$$_tgtflav.zip -@;\
-		if [ "${PROJPOSTPKG}" != "" ]; then \
-			echo "${MAKE} ${PROJPOSTPKG}"; \
-			env PKG_OS=$$_tgtos PKG_ARCH=$$_tgtarch \
-			    PKG_IDE=$$_tgtproj ${MAKE} ${PROJPOSTPKG}; \
+		    ${PROJDIR}/$$_tgtproj-$$_tgtos$$_tgtflav.zip -@;\
+		if [ "${PROJNOCLEAN}" = "no" ]; then \
+			echo "* Cleaning up"; \
+			cat .projfiles.out | perl ${TOP}/mk/cleanfiles.pl; \
+			rm -fR ${PROJCONFIGDIR} ${PROJFILELIST}; \
+			rm -f .projfiles.out ${PROJINCLUDES}; \
 		fi; \
-		rm `cat .projfiles.out`; \
-		rm -fR config .projfiles.out ${PROJFILELIST}; \
-	    done; \
+	done
+	@if [ "${PROJNOCLEAN}" = "no" ]; then \
+		echo "${MAKE} proj-clean"; \
+		${MAKE} proj-clean; \
 	fi
+	@echo "* Done"
+
+proj-clean: proj-clean-subdir
+	@echo "rm -f ${PREMAKEOUT}"
+	@rm -f ${PREMAKEOUT}
 
 .PHONY: proj

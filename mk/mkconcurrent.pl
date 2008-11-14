@@ -43,7 +43,12 @@ $BUILD = '';
 	'^ltconfig$',
 	'^ltmain\.sh$',
 	'^manlinks\.pl$',
-	'^hstrip\.pl$'
+	'^hstrip\.pl$',
+	'^cmpfiles\.pl$',
+	'^cleanfiles\.pl$',
+	'^gen-includes\.pl$',
+	'^gen-declspecs\.pl$',
+	'^install-manpages\.sh$',
 );
 
 sub Debug

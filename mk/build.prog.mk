@@ -277,22 +277,22 @@ clean-prog:
 	        echo "rm -f ${POBJS}"; \
 	        rm -f ${OBJS}; \
 	    fi; \
-	    echo "rm -f ${PROG} ${GMONOUT} ${WINRES}.o"; \
-	    rm -f ${PROG} ${GMONOUT} ${WINRES}.o; \
+	    echo "rm -f ${PROG}${EXECSUFFIX} ${GMONOUT} ${WINRES}.o"; \
+	    rm -f ${PROG}${EXECSUFFIX} ${GMONOUT} ${WINRES}.o; \
 	fi
 	@if [ "${CLEANFILES}" != "" ]; then \
 	    echo "rm -f ${CLEANFILES}"; \
 	    rm -f ${CLEANFILES}; \
 	fi
 	@if [ -e ".depend" ]; then \
-		echo "echo -n >.depend"; \
-		echo -n >.depend; \
+		echo "echo >.depend"; \
+		echo >.depend; \
 	fi
 
 cleandir-prog:
 	rm -f *.core config.log tags
 	if [ -e "./config/prefix.h" ]; then rm -fr ./config; fi
-	if [ -e "Makefile.config" ]; then echo -n >Makefile.config; fi
+	if [ -e "Makefile.config" ]; then echo >Makefile.config; fi
 
 install-prog:
 	@if [ ! -e "${BINDIR}" ]; then \
@@ -300,8 +300,8 @@ install-prog:
 	    ${SUDO} ${INSTALL_PROG_DIR} ${BINDIR}; \
 	fi
 	@if [ "${PROG}" != "" -a "${PROG_INSTALL}" != "No" ]; then \
-	    echo "${INSTALL_PROG} ${PROG} ${BINDIR}"; \
-	    ${SUDO} ${INSTALL_PROG} ${PROG} ${BINDIR}; \
+	    echo "${INSTALL_PROG} ${PROG}${EXECSUFFIX} ${BINDIR}"; \
+	    ${SUDO} ${INSTALL_PROG} ${PROG}${EXECSUFFIX} ${BINDIR}; \
 	fi
 	@if [ "${SHARE}" != "none" ]; then \
             if [ ! -d "${SHAREDIR}" ]; then \
@@ -359,8 +359,8 @@ install-prog:
 
 deinstall-prog:
 	@if [ "${PROG}" != "" -a "${PROG_INSTALL}" != "No" ]; then \
-	    echo "${DEINSTALL_PROG} ${BINDIR}/${PROG}"; \
-	    ${SUDO} ${DEINSTALL_PROG} ${BINDIR}/${PROG}; \
+	    echo "${DEINSTALL_PROG} ${BINDIR}/${PROG}${EXECSUFFIX}"; \
+	    ${SUDO} ${DEINSTALL_PROG} ${BINDIR}/${PROG}${EXECSUFFIX}; \
 	fi
 	@if [ "${SHARE}" != "none" ]; then \
 	    for F in ${SHARE}; do \
