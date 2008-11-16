@@ -543,6 +543,14 @@ Quit(AG_Event *event)
 }
 
 static void
+VideoResize(Uint w, Uint h)
+{
+	AG_SetCfgUint("gui-width", w);
+	AG_SetCfgUint("gui-height", h);
+	(void)AG_ConfigSave();
+}
+
+static void
 FileMenu(AG_Event *event)
 {
 	AG_MenuItem *m = AG_SENDER();
@@ -627,6 +635,41 @@ EditPreferences(AG_Event *event)
 }
 
 static void
+SelectedFont(AG_Event *event)
+{
+	AG_Window *win = AG_PTR(1);
+
+	AG_SetCfgString("font.face", "%s", OBJECT(agDefaultFont)->name);
+	AG_SetCfgInt("font.size", agDefaultFont->size);
+	AG_SetCfgUint("font.flags", agDefaultFont->flags);
+	(void)AG_ConfigSave();
+
+	AG_TextWarning("default-font-changed",
+	    _("The default font has been changed.\n"
+	      "Please restart Edacious for this change to take effect."));
+	AG_ViewDetach(win);
+}
+
+static void
+SelectFontDlg(AG_Event *event)
+{
+	AG_Window *win;
+	AG_FontSelector *fs;
+	AG_Box *hBox;
+
+	win = AG_WindowNew(0);
+	AG_WindowSetCaption(win, _("Font selection"));
+
+	fs = AG_FontSelectorNew(win, AG_FONTSELECTOR_EXPAND);
+	AG_WidgetBindPointer(fs, "font", &agDefaultFont);
+
+	hBox = AG_BoxNewHoriz(win, AG_BOX_HFILL|AG_BOX_HOMOGENOUS);
+	AG_ButtonNewFn(hBox, 0, _("OK"), SelectedFont, "%p", win);
+	AG_ButtonNewFn(hBox, 0, _("Cancel"), AG_WindowCloseGenEv, "%p", win);
+	AG_WindowShow(win);
+}
+
+static void
 EditMenu(AG_Event *event)
 {
 	AG_MenuItem *m = AG_SENDER();
@@ -642,6 +685,7 @@ EditMenu(AG_Event *event)
 	AG_MenuSeparator(m);
 
 	AG_MenuAction(m, _("Preferences..."), NULL, EditPreferences, NULL);
+	AG_MenuAction(m, _("Select font..."), NULL, SelectFontDlg, NULL);
 
 	AG_MutexUnlock(&objLock);
 }
@@ -662,7 +706,6 @@ main(int argc, char *argv[])
 		fprintf(stderr, "InitCore: %s\n", AG_GetError());
 		return (1);
 	}
-	AG_TextParseFontSpec("_agFontVera:14");
 #ifdef HAVE_GETOPT
 	while ((c = getopt(argc, argv, "?vdt:r:T:t:gGP")) != -1) {
 		extern char *optarg;
@@ -710,12 +753,19 @@ main(int argc, char *argv[])
 	}
 #endif /* HAVE_GETOPT */
 
+	if (!AG_CfgDefined("gui-width")) { AG_SetCfgUint("gui-width", 640); }
+	if (!AG_CfgDefined("gui-height")) { AG_SetCfgUint("gui-height", 480); }
+
 	/* Setup the display. */
-	if (AG_InitVideo(800, 600, 32, videoFlags) == -1) {
+	if (AG_InitVideo(
+	    AG_CfgUint("gui-width"),
+	    AG_CfgUint("gui-height"),
+	    32, videoFlags) == -1) {
 		fprintf(stderr, "%s\n", AG_GetError());
 		return (-1);
 	}
 	AG_SetRefreshRate(fps);
+	AG_SetVideoResizeCallback(VideoResize);
 	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, AG_Quit);
 	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
 
