@@ -24,7 +24,9 @@
 #include <edacious/core/stamp.h>
 #include <edacious/core/spice.h>
 #include <edacious/core/wire.h>
-#include <edacious/core/library.h>
+
+#include <edacious/core/component_library.h>
+#include <edacious/core/schem_library.h>
 
 #ifdef _ES_INTERNAL
 # include <edacious/core/core_internal.h>

@@ -231,7 +231,8 @@ ES_CoreInit(Uint flags)
 		AG_FreeDSOList(dsoList, dsoCount);
 	}
 
-	ES_LibraryInit();
+	ES_ComponentLibraryInit();
+	ES_SchemLibraryInit();
 }
 
 void
@@ -240,7 +241,8 @@ ES_CoreDestroy(void)
 	AG_DSO *dso, *dsoNext;
 
 	AG_LockDSO();
-	ES_LibraryDestroy();
+	ES_ComponentLibraryDestroy();
+	ES_SchemLibraryDestroy();
 
 	for (dso = TAILQ_FIRST(&agLoadedDSOs);
 	     dso != TAILQ_END(&agLoadedDSOs);

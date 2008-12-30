@@ -479,18 +479,20 @@ MouseButtonDown(AG_Event *event)
 	}
 }
 
+/* Schematic selected */
 static void
 SelectSchem(AG_Event *event)
 {
 	VG_View *vv = AG_PTR(1);
 	AG_TlistItem *ti = AG_PTR(2);
-	VG *vg = ti->p1;
+	ES_Schem *scm = ti->p1;
 	
-	VG_ViewSetVG(vv, vg);
+	VG_ViewSetVG(vv, scm->vg);
 	VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 	VG_Status(vv, _("Selected: %s"), ti->text);
 }
 
+/* Update current schematics list. */
 static void
 PollSchems(AG_Event *event)
 {
@@ -498,56 +500,116 @@ PollSchems(AG_Event *event)
 	ES_Component *com = AG_PTR(1);
 	VG_View *vv = AG_PTR(2);
 	AG_TlistItem *ti = NULL;
-	VG *vg;
+	ES_Schem *scm;
 	int i = 0;
 
 	AG_ObjectLock(vv);
 	AG_TlistBegin(tl);
-	TAILQ_FOREACH(vg, &com->schems, user) {
+	TAILQ_FOREACH(scm, &com->schems, schems) {
 		ti = AG_TlistAdd(tl, vgIconDrawing.s,
-		    (vv->vg == vg) ?
+		    (vv->vg == scm->vg) ?
 		    _("Schematic #%d [*]") :
 		    _("Schematic #%d"),
 		    i++);
-		ti->p1 = vg;
+		ti->p1 = scm;
 	}
 	AG_TlistEnd(tl);
 	AG_ObjectUnlock(vv);
 }
 
+/* "New schematic" button pressed. */
 static void
-InsertSchem(AG_Event *event)
+NewSchem(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
 	VG_View *vv = AG_PTR(2);
-	VG *vg;
+	ES_Schem *scm;
 
-	vg = VG_New(0);
-	TAILQ_INSERT_TAIL(&com->schems, vg, user);
-	VG_ViewSetVG(vv, vg);
+	scm = ES_SchemNew(NULL);
+	TAILQ_INSERT_TAIL(&com->schems, scm, schems);
+	VG_ViewSetVG(vv, scm->vg);
 	VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 }
 
+/* "Remove schematic" button pressed. */
 static void
 RemoveSchem(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
-	VG *vg = AG_TLIST_ITEM(2);
+	ES_Schem *scm = AG_TLIST_ITEM(2);
 	VG_View *vv = AG_PTR(3);
 
-	if (vg == NULL)
+	if (scm == NULL)
 		return;
 
 	AG_ObjectLock(vv);
-	if (vv->vg == vg) {
+	if (vv->vg == scm->vg) {
 		VG_ViewSetVG(vv, NULL);
 	}
 	AG_ObjectUnlock(vv);
 	
-	TAILQ_REMOVE(&com->schems, vg, user);
-	VG_Destroy(vg);
-	Free(vg);
+	TAILQ_REMOVE(&com->schems, scm, schems);
+	AG_ObjectDestroy(scm);
 }
+
+/* Import a schematic from file. */
+static void
+ImportSchem(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	VG_View *vv = AG_PTR(2);
+	char *path = AG_STRING(3);
+	ES_Schem *scm;
+
+	if ((scm = AG_ObjectNew(&esVfsRoot, NULL, &esSchemClass)) == NULL) {
+		AG_TextMsgFromError();
+		return;
+	}
+	if (AG_ObjectLoadFromFile(scm, path) == -1) {
+		AG_TextMsgFromError();
+		AG_ObjectDetach(scm);
+		AG_ObjectDestroy(scm);
+		return;
+	}
+	ES_SetObjectNameFromPath(scm, path);
+
+	TAILQ_INSERT_TAIL(&com->schems, scm, schems);
+
+	VG_ViewSetVG(vv, scm->vg);
+	VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
+	VG_Status(vv, _("Imported: %s"), OBJECT(scm)->name);
+}
+
+/* "Import schematic" button pressed. */
+static void
+ImportSchemDlg(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	VG_View *vv = AG_PTR(2);
+	AG_Window *win;
+	AG_FileDlg *fd;
+
+	win = AG_WindowNew(0);
+	AG_WindowSetCaption(win, _("Import schematic..."));
+	
+	fd = AG_FileDlgNewMRU(win, "edacious.mru.schems",
+	    AG_FILEDLG_LOAD|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
+	AG_FileDlgAddType(fd, _("Edacious schematic"), "*.esh",
+	    ImportSchem, "%p,%p", com, vv);
+	AG_WindowShow(win);
+}
+
+#if 0
+/* Evaluate state of "remove schematic" button. */
+static int
+EvalRemoveButtonState(AG_Event *event)
+{
+	AG_Tlist *tl = AG_PTR(1);
+	AG_TlistItem *ti;
+
+	return ((ti = AG_TlistSelectedItem(tl)) != NULL && ti->p1 != NULL);
+}
+#endif
 
 #if 0
 static void
@@ -641,7 +703,15 @@ ES_ComponentEdit(void *obj)
 		    VG_GetColorRGB(200,200,0));
 	
 		hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
+
+		/*
+		 * Left side
+		 */
 		{
+			/*
+			 * Model schematics
+			 */
+			AG_LabelNew(hPane->div[0], 0, _("Schematic blocks:"));
 			tlSchems = AG_TlistNewPolled(hPane->div[0],
 			    AG_TLIST_EXPAND,
 			    PollSchems, "%p,%p", com, vv);
@@ -650,17 +720,36 @@ ES_ComponentEdit(void *obj)
 			    SelectSchem, "%p", vv);
 	
 			if (!TAILQ_EMPTY(&com->schems)) {
-				VG_ViewSetVG(vv, TAILQ_FIRST(&com->schems));
+				ES_Schem *scmFirst = TAILQ_FIRST(&com->schems);
+
+				VG_ViewSetVG(vv, scmFirst->vg);
 				VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 			}
 
 			bCmds = AG_BoxNewHoriz(hPane->div[0], AG_BOX_HOMOGENOUS|
 			                                      AG_BOX_HFILL);
+			AG_BoxSetSpacing(bCmds, 0);
+			AG_BoxSetPadding(bCmds, 0);
 			AG_ButtonNewFn(bCmds, 0, _("New"),
-			    InsertSchem, "%p,%p", com, vv);
-			AG_ButtonNewFn(bCmds, 0, _("Remove"),
+			    NewSchem, "%p,%p", com, vv);
+			btn = AG_ButtonNewFn(bCmds, 0, _("Remove"),
 			    RemoveSchem, "%p,%p,%p", com, tlSchems, vv);
-		
+#if 0
+			AG_WidgetBindIntFn(btn, "state",
+			    EvalRemoveButtonState, "%p", tlSchems);
+#endif
+			bCmds = AG_BoxNewHoriz(hPane->div[0], AG_BOX_HOMOGENOUS|
+			                                      AG_BOX_HFILL);
+			AG_BoxSetSpacing(bCmds, 0);
+			AG_BoxSetPadding(bCmds, 0);
+			AG_ButtonNewFn(bCmds, 0, _("Import..."),
+			    ImportSchemDlg, "%p,%p", com, vv);
+		}
+
+		/*
+		 * Right side
+		 */
+		{
 			AG_ObjectAttach(hPane->div[1], vv);
 		}
 	
@@ -706,7 +795,7 @@ ES_ComponentEdit(void *obj)
 		VG_View *vv;
 		AG_Notebook *nb;
 		AG_NotebookTab *ntab;
-		ES_LibraryEditor *led;
+		ES_ComponentLibraryEditor *led;
 		AG_Tlist *tl;
 		AG_Box *hBox;
 		AG_Pane *vPane;
@@ -718,9 +807,9 @@ ES_ComponentEdit(void *obj)
 
 		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
-		ntab = AG_NotebookAddTab(nb, _("Models"), AG_BOX_VERT);
+		ntab = AG_NotebookAddTab(nb, _("Library"), AG_BOX_VERT);
 		{
-			led = ES_LibraryEditorNew(ntab, vv, ckt, 0);
+			led = ES_ComponentLibraryEditorNew(ntab, vv, ckt, 0);
 			AG_WidgetSetFocusable(led, 0);
 		}
 		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);

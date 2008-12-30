@@ -103,7 +103,7 @@ typedef struct es_component {
 	void (*dcSimEnd)(void *, struct es_sim_dc *);
 	void (*dcUpdateError)(void *, struct es_sim_dc *, M_Real *);
 	
-	TAILQ_HEAD(,vg) schems;			/* Schematic blocks */
+	TAILQ_HEAD(,es_schem) schems;		/* Schematic blocks */
 	TAILQ_HEAD(,vg_node) schemEnts;		/* Entities in circuit schem */
 	TAILQ_ENTRY(es_component) components;
 } ES_Component;

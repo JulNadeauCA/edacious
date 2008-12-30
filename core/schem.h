@@ -6,6 +6,7 @@
 typedef struct es_schem {
 	struct ag_object _inherit;
 	VG *vg;
+	TAILQ_ENTRY(es_schem) schems;
 } ES_Schem;
 
 #ifdef _ES_INTERNAL

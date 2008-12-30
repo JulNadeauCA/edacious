@@ -13,6 +13,7 @@ SRCS=	core.c \
 	circuit_edit.c \
 	component.c \
 	component_edit.c \
+	component_library.c \
 	dc.c \
 	insert_tool.c \
 	interpreteur.c \
@@ -22,14 +23,14 @@ SRCS=	core.c \
 	wire.c \
 	wire_tool.c \
 	schem.c \
+	schem_library.c \
 	schem_block.c \
 	schem_port.c \
 	schem_port_tool.c \
 	schem_select_tool.c \
 	schem_wire.c \
 	integration.c \
-	tools.c \
-	library.c
+	tools.c
 
 CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 

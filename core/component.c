@@ -39,12 +39,11 @@
 static void
 FreeSchems(ES_Component *com)
 {
-	VG *vg;
+	ES_Schem *scm;
 
-	while ((vg = TAILQ_FIRST(&com->schems)) != NULL) {
-		TAILQ_REMOVE(&com->schems, vg, user);
-		VG_Destroy(vg);
-		Free(vg);
+	while ((scm = TAILQ_FIRST(&com->schems)) != NULL) {
+		TAILQ_REMOVE(&com->schems, scm, schems);
+		AG_ObjectDestroy(scm);
 	}
 	TAILQ_INIT(&com->schems);
 }
@@ -153,7 +152,7 @@ OnAttach(AG_Event *event)
 {
 	ES_Component *com = AG_SELF();
 	ES_Circuit *ckt = AG_SENDER();
-	VG *vg;
+	ES_Schem *scm;
 	
 	if (!AG_OfClass(ckt, "ES_Circuit:*"))
 		return;
@@ -167,18 +166,17 @@ OnAttach(AG_Event *event)
 	 * entities in the Circuit VG. For efficiency reasons, the schems list
 	 * must be discarded in the process.
 	 */
-	TAILQ_FOREACH(vg, &com->schems, user) {
+	TAILQ_FOREACH(scm, &com->schems, schems) {
 		ES_SchemBlock *sb;
 
-		Debug(com, "Instantiating model schematic: %p\n", vg);
+		Debug(com, "Instantiating model schematic: %p\n", scm->vg);
 		sb = ES_SchemBlockNew(ckt->vg->root, OBJECT(com)->name);
-		VG_Merge(sb, vg);
+		VG_Merge(sb, scm->vg);
 		ES_AttachSchemEntity(com, VGNODE(sb));
 	}
-	while ((vg = TAILQ_FIRST(&com->schems)) != NULL) {
-		TAILQ_REMOVE(&com->schems, vg, user);
-		VG_Destroy(vg);
-		Free(vg);
+	while ((scm = TAILQ_FIRST(&com->schems)) != NULL) {
+		TAILQ_REMOVE(&com->schems, scm, schems);
+		AG_ObjectDestroy(scm);
 	}
 	TAILQ_INIT(&com->schems);
 
@@ -370,7 +368,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_Component *com = p;
 	Uint i, count;
-	VG *vg;
+	ES_Schem *scm;
 	
 	com->flags = (Uint)AG_ReadUint32(ds);
 	com->Tspec = M_ReadReal(ds);
@@ -379,13 +377,13 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	count = (Uint)AG_ReadUint32(ds);
 	for (i = 0; i < count; i++) {
 		Debug(com, "Loading schematic block %u/%u\n", i, count);
-		if ((vg = VG_New(0)) == NULL) {
+		if ((scm = ES_SchemNew(NULL)) == NULL) {
 			return (-1);
 		}
-		if (VG_Load(vg, ds) == -1) {
+		if (esSchemClass.load(scm, ds, NULL) == -1) {
 			return (-1);		/* XXX TODO undo others */
 		}
-		TAILQ_INSERT_TAIL(&com->schems, vg, user);
+		TAILQ_INSERT_TAIL(&com->schems, scm, schems);
 	}
 	Debug(com, "Loaded %u schematic blocks\n", count);
 
@@ -398,7 +396,7 @@ Save(void *p, AG_DataSource *ds)
 	ES_Component *com = p;
 	off_t countOffs;
 	Uint32 count;
-	VG *vg;
+	ES_Schem *scm;
 
 	AG_WriteUint32(ds, com->flags & ES_COMPONENT_SAVED_FLAGS);
 	M_WriteReal(ds, com->Tspec);
@@ -407,8 +405,8 @@ Save(void *p, AG_DataSource *ds)
 	countOffs = AG_Tell(ds);
 	count = 0;
 	AG_WriteUint32(ds, 0);
-	TAILQ_FOREACH(vg, &com->schems, user) {
-		VG_Save(vg, ds);
+	TAILQ_FOREACH(scm, &com->schems, schems) {
+		esSchemClass.save(scm, ds);
 		count++;
 	}
 	AG_WriteUint32At(ds, count, countOffs);

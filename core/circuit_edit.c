@@ -438,14 +438,14 @@ ES_CircuitEdit(void *p)
 		AG_Notebook *nb;
 		AG_NotebookTab *ntab;
 		AG_Tlist *tl;
-		ES_LibraryEditor *led;
+		ES_ComponentLibraryEditor *led;
 		AG_Box *vBox, *hBox;
 
 		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
 		ntab = AG_NotebookAddTab(nb, _("Library"), AG_BOX_VERT);
 		{
-			led = ES_LibraryEditorNew(ntab, vv, ckt, 0);
+			led = ES_ComponentLibraryEditorNew(ntab, vv, ckt, 0);
 			AG_WidgetSetFocusable(led, 0);
 		}
 		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);

@@ -349,7 +349,7 @@ OpenDlg(AG_Event *event)
 	    LoadObject, "%p", &esCircuitClass);
 	AG_FileDlgAddType(fd, _("Edacious component model"), "*.em",
 	    LoadComponentModel, NULL);
-	AG_FileDlgAddType(fd, _("Edacious technical drawing"), "*.edwg",
+	AG_FileDlgAddType(fd, _("Edacious schematic"), "*.esh",
 	    LoadObject, "%p", &esSchemClass);
 
 	AG_WindowShow(win);
@@ -451,8 +451,8 @@ SaveAsDlg(AG_Event *event)
 		    "*.gbl,*.gtl,*.gbs,*.gts,*.gbo,*.gto",
 		    SaveCircuitToXGerber, "%p", obj);
 	} else if (AG_OfClass(obj, "ES_Schem:*")) {
-		AG_FileDlgAddType(fd, _("Edacious Technical Drawing"),
-		    "*.edwg",
+		AG_FileDlgAddType(fd, _("Edacious schematic"),
+		    "*.esh",
 		    SaveNativeObject, "%p", obj);
 		AG_FileDlgAddType(fd, _("Portable Document Format"),
 		    "*.pdf",
@@ -500,7 +500,7 @@ AbortQuit(AG_Event *event)
 static void
 Quit(AG_Event *event)
 {
-	AG_Object *vfsObj = NULL, *modelObj = NULL;
+	AG_Object *vfsObj = NULL, *modelObj = NULL, *schemObj = NULL;
 	AG_Window *win;
 	AG_Box *box;
 
@@ -513,12 +513,16 @@ Quit(AG_Event *event)
 		if (AG_ObjectChanged(vfsObj))
 			break;
 	}
-	OBJECT_FOREACH_CHILD(modelObj, &esModelLibrary, ag_object) {
+	OBJECT_FOREACH_CHILD(modelObj, &esComponentLibrary, ag_object) {
 		if (AG_ObjectChanged(modelObj))
 			break;
 	}
+	OBJECT_FOREACH_CHILD(schemObj, &esSchemLibrary, ag_object) {
+		if (AG_ObjectChanged(schemObj))
+			break;
+	}
 
-	if (vfsObj == NULL && modelObj == NULL) {
+	if (vfsObj == NULL && modelObj == NULL && schemObj == NULL) {
 		ConfirmQuit(NULL);
 	} else {
 		if ((win = AG_WindowNewNamed(AG_WINDOW_MODAL|AG_WINDOW_NOTITLE|
@@ -560,7 +564,7 @@ FileMenu(AG_Event *event)
 	    NewObject, "%p", &esCircuitClass);
 	AG_MenuAction(m, _("New component model..."), esIconComponent.s,
 	    NewComponentModelDlg, NULL);
-	AG_MenuAction(m, _("New technical drawing..."), vgIconDrawing.s,
+	AG_MenuAction(m, _("New schematic..."), vgIconDrawing.s,
 	    NewObject, "%p", &esSchemClass);
 
 	AG_MenuActionKb(m, _("Open..."), agIconLoad.s,
@@ -807,7 +811,7 @@ main(int argc, char *argv[])
 		AG_EventInit(&ev);
 		if (strcasecmp(ext, ".ecm") == 0) {
 			AG_EventPushPointer(&ev, "", &esCircuitClass);
-		} else if (strcasecmp(ext, ".eschem") == 0) {
+		} else if (strcasecmp(ext, ".esh") == 0) {
 			AG_EventPushPointer(&ev, "", &esSchemClass);
 		} else if (strcasecmp(ext, ".em") == 0) {
 			AG_EventPushPointer(&ev, "", &esComponentClass);
