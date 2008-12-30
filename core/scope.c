@@ -163,7 +163,7 @@ Edit(void *obj)
 	AG_Pane *vPane;
 
 	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, OBJECT(scope)->name);
+	AG_WindowSetCaption(win, "%s", OBJECT(scope)->name);
 	AG_WindowSetPosition(win, AG_WINDOW_UPPER_RIGHT, 0);
 
 	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
