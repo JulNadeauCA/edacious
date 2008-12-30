@@ -8,7 +8,6 @@ SUBDIR=		core \
 		generic \
 		macro \
 		sources \
-		Schematics \
 		edacious-config \
 		gui \
 		ecminfo \
