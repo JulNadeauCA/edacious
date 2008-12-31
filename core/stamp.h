@@ -56,11 +56,15 @@
 
 __BEGIN_DECLS
 
+/* A dummy variable that will contain all stamps relating to the ground.
+ * Declared here, defined in core.
+ * */
 extern M_Real esDummy;
+
+
 
 /* Conductance */
 typedef M_Real *StampConductanceData[4];
-
 static void __inline__
 InitStampConductance(Uint k, Uint l, StampConductanceData s, ES_SimDC *dc)
 {
