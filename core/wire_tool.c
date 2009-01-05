@@ -182,7 +182,8 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	case SDL_BUTTON_RIGHT:
 		if (t->curWire != NULL) {
 			AG_ObjectDetach(t->curWire);
-			AG_ObjectDestroy(t->curWire);
+			/* XXX */
+			/* AG_ObjectDestroy(t->curWire); */
 			t->curWire = NULL;
 			ES_UnselectAllPorts(ckt);
 			return (1);
