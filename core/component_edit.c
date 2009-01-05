@@ -658,6 +658,111 @@ ViewMenu(AG_Event *event)
 }
 #endif
 
+/* Update the list of associated device packages. */
+static void
+PollPackages(AG_Event *event)
+{
+	AG_Tlist *tl = AG_SELF();
+	ES_Component *com = AG_PTR(1);
+	ES_ComponentPkg *pkg;
+	AG_TlistItem *ti;
+
+	AG_TlistBegin(tl);
+	TAILQ_FOREACH(pkg, &com->pkgs, pkgs) {
+		if (pkg->devName[0] != '\0') {
+			ti = AG_TlistAdd(tl, esIconComponent.s, "%s (%s)",
+			    pkg->name, pkg->devName);
+		} else {
+			ti = AG_TlistAdd(tl, esIconComponent.s, "%s",
+			    pkg->name);
+		}
+		ti->p1 = pkg;
+	}
+	AG_TlistEnd(tl);
+}
+
+/* Selected device package. */
+static void
+SelectPackage(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	AG_Table *tblPins = AG_PTR(2);
+	AG_TlistItem *ti = AG_PTR(3);
+	ES_ComponentPkg *pkg = (ti != NULL) ? ti->p1 : AG_PTR(4);
+	AG_Numerical *num;
+	Uint i;
+
+	AG_TableBegin(tblPins);
+	for (i = 0; i < com->nports; i++) {
+		num = AG_NumericalNewInt(NULL, 0, NULL, NULL, &pkg->pins[i]);
+		AG_TableAddRow(tblPins, "%i:%[W]",
+		    com->ports[i+1].n, num);
+	}
+	AG_TableEnd(tblPins);
+}
+
+/* Link the component with a new device package. */
+static void
+AddPackage(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	AG_Textbox *tb = AG_PTR(2);
+	AG_Textbox *tbDev = AG_PTR(3);
+	AG_Table *tblPins = AG_PTR(4);
+	ES_ComponentPkg *pkg;
+	AG_Event ev;
+	int i;
+
+	pkg = Malloc(sizeof(ES_ComponentPkg));
+	AG_TextboxCopyString(tb, pkg->name, sizeof(pkg->name));
+	AG_TextboxCopyString(tbDev, pkg->devName, sizeof(pkg->devName));
+
+	if (pkg->name[0] == '\0') {
+		AG_TextError(_("Please enter a package name."));
+		free(pkg);
+		return;
+	}
+
+	pkg->pins = Malloc(com->nports*sizeof(int));
+	pkg->flags = 0;
+	TAILQ_INSERT_TAIL(&com->pkgs, pkg, pkgs);
+	
+	for (i = 0; i < com->nports; i++)
+		pkg->pins[i] = 0;
+
+	AG_TextboxClearString(tb);
+	AG_TextboxClearString(tbDev);
+	
+	AG_EventArgs(&ev, "%p,%p,%p,%p", com, tblPins, NULL, pkg);
+	SelectPackage(&ev);
+}
+
+/* Remove a device package. */
+static void
+RemovePackage(AG_Event *event)
+{
+	ES_Component *com = AG_PTR(1);
+	ES_ComponentPkg *pkg = AG_PTR(2);
+
+	TAILQ_REMOVE(&com->pkgs, pkg, pkgs);
+	Free(pkg->pins);
+	free(pkg);
+}
+
+static void
+PackagePopup(AG_Event *event)
+{
+	AG_Tlist *tl = AG_SELF();
+	AG_TlistItem *ti = AG_TlistSelectedItem(tl);
+	ES_Component *com = AG_PTR(1);
+	AG_PopupMenu *pm;
+
+	pm = AG_PopupNew(tl);
+	AG_MenuAction(pm->item, _("Delete"), agIconTrash.s,
+	    RemovePackage, "%p,%p", com, ti->p1);
+	AG_PopupShow(pm);
+}
+
 void *
 ES_ComponentEdit(void *obj)
 {
@@ -693,14 +798,11 @@ ES_ComponentEdit(void *obj)
 		AG_Box *bCmds;
 		AG_Toolbar *tb;
 
-		vv = VG_ViewNew(NULL, NULL, VG_VIEW_EXPAND|VG_VIEW_GRID|
-		                            VG_VIEW_CONSTRUCTION);
+		vv = VG_ViewNew(NULL, NULL, VG_VIEW_EXPAND|VG_VIEW_GRID|VG_VIEW_CONSTRUCTION);
 		VG_ViewSetSnapMode(vv, VG_GRID);
 		VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
-		VG_ViewSetGrid(vv, 0, VG_GRID_POINTS, 2,
-		    VG_GetColorRGB(100,100,100));
-		VG_ViewSetGrid(vv, 1, VG_GRID_POINTS, 8,
-		    VG_GetColorRGB(200,200,0));
+		VG_ViewSetGrid(vv, 0, VG_GRID_POINTS, 2, VG_GetColorRGB(100,100,100));
+		VG_ViewSetGrid(vv, 1, VG_GRID_POINTS, 8, VG_GetColorRGB(200,200,0));
 	
 		hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
 
@@ -712,22 +814,18 @@ ES_ComponentEdit(void *obj)
 			 * Model schematics
 			 */
 			AG_LabelNew(hPane->div[0], 0, _("Schematic blocks:"));
-			tlSchems = AG_TlistNewPolled(hPane->div[0],
-			    AG_TLIST_EXPAND,
+			tlSchems = AG_TlistNewPolled(hPane->div[0], AG_TLIST_EXPAND,
 			    PollSchems, "%p,%p", com, vv);
 			AG_TlistSizeHint(tlSchems, "Schematic #0000", 5);
 			AG_SetEvent(tlSchems, "tlist-dblclick",
 			    SelectSchem, "%p", vv);
 	
 			if (!TAILQ_EMPTY(&com->schems)) {
-				ES_Schem *scmFirst = TAILQ_FIRST(&com->schems);
-
-				VG_ViewSetVG(vv, scmFirst->vg);
+				VG_ViewSetVG(vv, (TAILQ_FIRST(&com->schems))->vg);
 				VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 			}
 
-			bCmds = AG_BoxNewHoriz(hPane->div[0], AG_BOX_HOMOGENOUS|
-			                                      AG_BOX_HFILL);
+			bCmds = AG_BoxNewHoriz(hPane->div[0], AG_BOX_HOMOGENOUS|AG_BOX_HFILL);
 			AG_BoxSetSpacing(bCmds, 0);
 			AG_BoxSetPadding(bCmds, 0);
 			AG_ButtonNewFn(bCmds, 0, _("New"),
@@ -738,8 +836,7 @@ ES_ComponentEdit(void *obj)
 			AG_WidgetBindIntFn(btn, "state",
 			    EvalRemoveButtonState, "%p", tlSchems);
 #endif
-			bCmds = AG_BoxNewHoriz(hPane->div[0], AG_BOX_HOMOGENOUS|
-			                                      AG_BOX_HFILL);
+			bCmds = AG_BoxNewHoriz(hPane->div[0], AG_BOX_HOMOGENOUS|AG_BOX_HFILL);
 			AG_BoxSetSpacing(bCmds, 0);
 			AG_BoxSetPadding(bCmds, 0);
 			AG_ButtonNewFn(bCmds, 0, _("Import..."),
@@ -815,8 +912,7 @@ ES_ComponentEdit(void *obj)
 		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
 		{
 			tl = AG_TlistNewPolled(ntab,
-			    AG_TLIST_POLL|AG_TLIST_TREE|AG_TLIST_EXPAND|
-			    AG_TLIST_NOSELSTATE,
+			    AG_TLIST_POLL|AG_TLIST_TREE|AG_TLIST_EXPAND|AG_TLIST_NOSELSTATE,
 			    PollObjects, "%p", ckt);
 			AG_SetEvent(tl, "tlist-changed",
 			    SelectedObject, "%p", vv);
@@ -879,6 +975,37 @@ ES_ComponentEdit(void *obj)
 			tb = AG_TextboxNew(hPane->div[1],
 			    AG_TEXTBOX_EXPAND|AG_TEXTBOX_MULTILINE, NULL);
 		}
+	}
+		
+	/*
+	 * Package list
+	 */
+	nt = AG_NotebookAddTab(nb, _("Packages"), AG_BOX_VERT);
+	hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
+	{
+		AG_Tlist *tl;
+		AG_Textbox *tb, *tbDev;
+		AG_Box *vBox;
+		AG_Table *tblPins;
+
+		tblPins = AG_TableNew(hPane->div[1], AG_TABLE_EXPAND);
+		AG_TableSetRowHeight(tblPins, agTextFontHeight+8);
+		AG_TableAddCol(tblPins, _("Component Port#"), "< Component Port# >", NULL);
+		AG_TableAddCol(tblPins, _("Package Pin#"), "< Package Pin# >", NULL);
+
+		vBox = AG_BoxNewVert(hPane->div[0], AG_BOX_EXPAND);
+		AG_LabelNew(vBox, 0, _("Available packages: "));
+		tl = AG_TlistNewPolled(vBox, AG_TLIST_POLL|AG_TLIST_EXPAND,
+		    PollPackages, "%p", com);
+		AG_TlistSizeHint(tl, "<XXXXXXXXXXXXXXXXX>", 10);
+		AG_TlistSetPopupFn(tl, PackagePopup, "%p", com);
+		AG_TlistSetCompareFn(tl, AG_TlistCompareStrings);
+		AG_TlistSetDblClickFn(tl, SelectPackage, "%p,%p", com, tblPins);
+
+		tb = AG_TextboxNew(vBox, AG_TEXTBOX_HFILL, _("Package: "));
+		tbDev = AG_TextboxNew(vBox, AG_TEXTBOX_HFILL, _("Device name: "));
+		AG_ButtonNewFn(vBox, AG_BUTTON_HFILL, _("Add package"),
+		    AddPackage, "%p,%p,%p,%p", com, tb, tbDev, tblPins);
 	}
 
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);
