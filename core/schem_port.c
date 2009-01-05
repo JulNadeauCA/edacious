@@ -48,6 +48,7 @@ Init(void *p)
 {
 	ES_SchemPort *sp = p;
 
+	sp->flags = 0;
 	sp->name[0] = '\0';
 	sp->r = 3.0f;
 	sp->com = NULL;
