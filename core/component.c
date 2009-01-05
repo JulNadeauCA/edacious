@@ -61,6 +61,21 @@ FreeSchemEnts(ES_Component *com)
 }
 
 static void
+FreePkgs(ES_Component *com)
+{
+	ES_ComponentPkg *pkg, *pkgNext;
+
+	for (pkg = TAILQ_FIRST(&com->pkgs);
+	     pkg != TAILQ_END(&com->pkgs);
+	     pkg = pkgNext) {
+		pkgNext = TAILQ_NEXT(pkg, pkgs);
+		Free(pkg->pins);
+		free(pkg);
+	}
+	TAILQ_INIT(&com->pkgs);
+}
+
+static void
 FreePairs(ES_Component *com)
 {
 	int i;
@@ -82,6 +97,7 @@ FreeDataset(void *p)
 
 	FreeSchems(com);
 	FreeSchemEnts(com);
+	FreePkgs(com);
 }
 
 static void
@@ -296,6 +312,7 @@ Init(void *obj)
 	
 	TAILQ_INIT(&com->schems);
 	TAILQ_INIT(&com->schemEnts);
+	TAILQ_INIT(&com->pkgs);
 
 	AG_SetEvent(com, "attached", OnAttach, NULL);
 	AG_SetEvent(com, "detached", OnDetach, NULL);

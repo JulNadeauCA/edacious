@@ -62,12 +62,21 @@ typedef struct es_spec {
 	SLIST_HEAD(,es_spec_condition) conds;	/* Test conditions */
 } ES_Spec;
 
+/* Link to device package. */
+typedef struct es_component_pkg {
+	char name[64];			/* Package identifier */
+	char devName[64];		/* Package-specific device name */
+	int  *pins;			/* Pin mappings */
+	Uint flags;
+	TAILQ_ENTRY(es_component_pkg) pkgs;
+} ES_ComponentPkg;
+
 /* Generic component description and operation vector. */
 typedef struct es_component_class {
 	AG_ObjectClass obj;
-	const char *name;	/* Name (e.g., "Resistor") */
-	const char *pfx;	/* Prefix (e.g., "R") */
-	const char *categories;	/* Classes */
+	const char *name;		/* Name (e.g., "Resistor") */
+	const char *pfx;		/* Prefix (e.g., "R") */
+	const char *categories;		/* Classes */
 	struct ag_static_icon *icon;
 
 	void	 (*draw)(void *, VG *);
@@ -104,6 +113,7 @@ typedef struct es_component {
 	void (*dcUpdateError)(void *, struct es_sim_dc *, M_Real *);
 	
 	TAILQ_HEAD(,es_schem) schems;		/* Schematic blocks */
+	TAILQ_HEAD(,es_component_pkg) pkgs;	/* Related device packages */
 	TAILQ_HEAD(,vg_node) schemEnts;		/* Entities in circuit schem */
 	TAILQ_ENTRY(es_component) components;
 } ES_Component;
