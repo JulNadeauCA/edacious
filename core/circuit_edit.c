@@ -481,7 +481,8 @@ ES_CircuitEdit(void *p)
 		VG_Tool *tool;
 
 		AG_MenuToolbar(mi, tbRight);
-
+	
+		/* Register Circuit-specific tools */
 		for (pOps = &esCircuitTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, ckt);
@@ -492,6 +493,19 @@ ES_CircuitEdit(void *p)
 			    &OBJECT(vv)->lock);
 			if (ops == &esSchemSelectTool)
 				VG_ViewSetDefaultTool(vv, tool);
+		}
+		
+		AG_MenuSeparator(mi);
+		
+		/* Register generic VG drawing tools */
+		for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
+			ops = *pOps;
+			tool = VG_ViewRegTool(vv, ops, NULL);
+			mAction = AG_MenuAction(mi, ops->name,
+			    ops->icon ? ops->icon->s : NULL,
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, NULL);
+			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
+			    &OBJECT(vv)->lock);
 		}
 
 		VG_ViewRegTool(vv, &esInsertTool, ckt);
