@@ -24,22 +24,22 @@
  */
 
 /*
- * Tool for selecting and moving entities in a component schematic.
+ * Tool for selecting and moving entities in a circuit layout.
  */
 
 #include "core.h"
 #include <agar/core/limits.h>
 
-typedef struct es_schem_select_tool {
+typedef struct es_layout_select_tool {
 	VG_Tool _inherit;
 	Uint flags;
 #define MOVING_ENTITIES	0x01	/* Translation is in progress */
 	VG_Vector vLast;	/* For grid snapping */
-} ES_SchemSelectTool;
+} ES_LayoutSelectTool;
 
 /* Return the entity nearest to vPos. */
 void *
-ES_SchemNearest(VG_View *vv, VG_Vector vPos)
+ES_LayoutNearest(VG_View *vv, VG_Vector vPos)
 {
 	VG *vg = vv->vg;
 	float prox, proxNearest;
@@ -48,7 +48,7 @@ ES_SchemNearest(VG_View *vv, VG_Vector vPos)
 
 	/* First check if we intersect a block. */
 	TAILQ_FOREACH(vn, &vg->nodes, list) {
-		if (!VG_NodeIsClass(vn, "SchemBlock")) {
+		if (!VG_NodeIsClass(vn, "LayoutBlock")) {
 			continue;
 		}
 		v = vPos;
@@ -96,21 +96,21 @@ ES_SchemNearest(VG_View *vv, VG_Vector vPos)
 static int
 MouseButtonDown(void *p, VG_Vector v, int b)
 {
-	ES_SchemSelectTool *t = p;
-	ES_SchemBlock *sb;
+	ES_LayoutSelectTool *t = p;
+	ES_LayoutBlock *lb;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Node *vn;
 
-	if ((vn = ES_SchemNearest(vv, v)) == NULL) {
+	if ((vn = ES_LayoutNearest(vv, v)) == NULL) {
 		return (0);
 	}
 	switch (b) {
 	case SDL_BUTTON_LEFT:
 		t->vLast = v;
 		if (VG_SELECT_MULTI(vv)) {
-			if (VG_NodeIsClass(vn, "SchemBlock")) {
-				sb = (ES_SchemBlock *)vn;
-				ES_SelectComponent(sb->com, vv);
+			if (VG_NodeIsClass(vn, "LayoutBlock")) {
+				lb = (ES_LayoutBlock *)vn;
+				ES_SelectComponent(lb->com, vv);
 			}
 			if (vn->flags & VG_NODE_SELECTED) {
 				vn->flags &= ~(VG_NODE_SELECTED);
@@ -118,11 +118,10 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 				vn->flags |= VG_NODE_SELECTED;
 			}
 		} else {
-			if (VG_NodeIsClass(vn, "SchemBlock")) {
-				sb = (ES_SchemBlock *)vn;
-				ES_UnselectAllComponents(COMCIRCUIT(sb->com),
-				    vv);
-				ES_SelectComponent(sb->com, vv);
+			if (VG_NodeIsClass(vn, "LayoutBlock")) {
+				lb = (ES_LayoutBlock *)vn;
+				ES_UnselectAllComponents(COMCIRCUIT(lb->com), vv);
+				ES_SelectComponent(lb->com, vv);
 			}
 			VG_UnselectAll(vv->vg);
 			vn->flags |= VG_NODE_SELECTED;
@@ -137,7 +136,7 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 static int
 MouseButtonUp(void *p, VG_Vector v, int b)
 {
-	ES_SchemSelectTool *t = p;
+	ES_LayoutSelectTool *t = p;
 
 	if (b != SDL_BUTTON_LEFT) {
 		return (0);
@@ -149,7 +148,7 @@ MouseButtonUp(void *p, VG_Vector v, int b)
 static int
 MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 {
-	ES_SchemSelectTool *t = p;
+	ES_LayoutSelectTool *t = p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Node *vn;
 	VG_Vector v;
@@ -158,20 +157,17 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
 			vn->flags &= ~(VG_NODE_MOUSEOVER);
 		}
-		if ((vn = ES_SchemNearest(vv, vPos)) != NULL) {
-			if (VG_NodeIsClass(vn, "SchemBlock")) {
+		if ((vn = ES_LayoutNearest(vv, vPos)) != NULL) {
+			if (VG_NodeIsClass(vn, "LayoutBlock")) {
 				ES_HighlightComponent(SCHEM_BLOCK(vn)->com);
 				VG_Status(vv, _("Select component: %s"),
 				    OBJECT(SCHEM_BLOCK(vn)->com)->name);
-			} else if (VG_NodeIsClass(vn, "SchemWire")) {
-				ES_SchemWire *sw = SCHEM_WIRE(vn);
+			} else if (VG_NodeIsClass(vn, "LayoutTrace")) {
 				vn->flags |= VG_NODE_MOUSEOVER;
-				VG_Status(vv, _("Select wire (n%d)"),
-				    COMPONENT(sw->wire)->ports[1].node);
-			} else if (VG_NodeIsClass(vn, "SchemPort")) {
+				VG_Status(vv, _("Select trace #%d"), vn->handle);
+			} else if (VG_NodeIsClass(vn, "LayoutHole")) {
 				vn->flags |= VG_NODE_MOUSEOVER;
-				VG_Status(vv, _("Select port (n%d)"),
-				    SCHEM_PORT(vn)->port->node);
+				VG_Status(vv, _("Select hole #%d"), vn->handle);
 			} else {
 				vn->flags |= VG_NODE_MOUSEOVER;
 				VG_Status(vv, _("Select entity: %s%d"),
@@ -219,7 +215,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 static int
 KeyDown(void *p, int ksym, int kmod, int unicode)
 {
-	ES_SchemSelectTool *t = p;
+	ES_LayoutSelectTool *t = p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Node *vn;
 	Uint nDel = 0;
@@ -249,16 +245,16 @@ del:
 static void
 Init(void *p)
 {
-	ES_SchemSelectTool *t = p;
+	ES_LayoutSelectTool *t = p;
 
 	t->flags = 0;
 }
 
-VG_ToolOps esSchemSelectTool = {
-	N_("Select schematic entities"),
-	N_("Select / move circuit schematic elements."),
+VG_ToolOps esLayoutSelectTool = {
+	N_("Select PCB layout entities"),
+	N_("Select / move PCB layout elements."),
 	&esIconSelectArrow,
-	sizeof(ES_SchemSelectTool),
+	sizeof(ES_LayoutSelectTool),
 	VG_NOSNAP|VG_NOEDITCLEAR,
 	Init,
 	NULL,			/* destroy */

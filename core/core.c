@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2009 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,7 @@ void *esCoreClasses[] = {
 	&esWireClass,
 	&esScopeClass,
 	&esSchemClass,
+	&esLayoutClass,
 	NULL
 };
 

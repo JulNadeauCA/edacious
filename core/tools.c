@@ -16,6 +16,14 @@ VG_ToolOps *esSchemTools[] = {
 	NULL
 };
 
+/* PCB layout edition tools */
+VG_ToolOps *esLayoutTools[] = {
+	&esLayoutSelectTool,
+	&esLayoutNodeTool,
+	&esLayoutTraceTool,
+	NULL
+};
+
 /* VG edition tools */
 VG_ToolOps *esVgTools[] = {
 	&vgPointTool,

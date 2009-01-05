@@ -87,6 +87,8 @@ typedef struct es_circuit {
 	struct ag_console *console;	/* Log console */
 	struct ag_object **extObjs;	/* External simulation objects */
 	Uint              nExtObjs;
+
+	TAILQ_HEAD(,es_layout) layouts;	/* Associated PCB layouts */
 } ES_Circuit;
 
 #define ESCIRCUIT(p) ((ES_Circuit *)(p))
@@ -133,6 +135,7 @@ extern VG_ToolOps esWireTool;
 extern VG_ToolOps *esCircuitTools[];
 extern VG_ToolOps *esSchemTools[];
 extern VG_ToolOps *esVgTools[];
+extern VG_ToolOps *esLayoutTools[];
 
 ES_Circuit *ES_CircuitNew(void *, const char *);
 void        ES_CircuitLog(void *, const char *, ...);

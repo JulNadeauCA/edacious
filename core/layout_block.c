@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2009 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,41 +24,39 @@
  */
 
 /*
- * Schematic block entity. Blocks represent groups of entities which remain 
- * rigid across transformations and are specific to a component. Components
- * may create one or more blocks on attach.
+ * Layout block entity. Blocks represent groups of layout elements which
+ * remain rigid across transformations (e.g., device packages).
  */
 
 #include "core.h"
 #include <agar/gui/primitive.h>
-#include <agar/core/limits.h>
 
 static void
 Init(void *p)
 {
-	ES_SchemBlock *sb = p;
+	ES_LayoutBlock *lb = p;
 
-	sb->name[0] = '\0';
-	sb->com = NULL;
+	lb->name[0] = '\0';
+	lb->com = NULL;
 }
 
 static int
 Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 {
-	ES_SchemBlock *sb = p;
+	ES_LayoutBlock *lb = p;
 
 	(void)AG_ReadUint32(ds);				/* flags */
-	AG_CopyString(sb->name, ds, sizeof(sb->name));
+	AG_CopyString(lb->name, ds, sizeof(lb->name));
 	return (0);
 }
 
 static void
 Save(void *p, AG_DataSource *ds)
 {
-	ES_SchemBlock *sb = p;
+	ES_LayoutBlock *lb = p;
 
 	AG_WriteUint32(ds, 0);					/* flags */
-	AG_WriteString(ds, sb->name);
+	AG_WriteString(ds, lb->name);
 }
 
 static void
@@ -82,8 +80,8 @@ GetNodeExtent(VG_Node *vn, VG_View *vv, VG_Vector *aBlk, VG_Vector *bBlk)
 static void
 Extent(void *p, VG_View *vv, VG_Vector *a, VG_Vector *b)
 {
-	ES_SchemBlock *sb = p;
-	VG_Vector vPos = VG_Pos(sb);
+	ES_LayoutBlock *lb = p;
+	VG_Vector vPos = VG_Pos(lb);
 	VG_Node *vnChld;
 
 	a->x = vPos.x;
@@ -91,20 +89,20 @@ Extent(void *p, VG_View *vv, VG_Vector *a, VG_Vector *b)
 	b->x = vPos.x;
 	b->y = vPos.y;
 
-	VG_FOREACH_CHLD(vnChld, sb, vg_node)
+	VG_FOREACH_CHLD(vnChld, lb, vg_node)
 		GetNodeExtent(vnChld, vv, a, b);
 }
 
 static void
 Draw(void *p, VG_View *vv)
 {
-	ES_SchemBlock *sb = p;
+	ES_LayoutBlock *lb = p;
 	AG_Rect rDraw;
 	VG_Vector a, b;
 	Uint8 c[4] = { 0, 255, 0, 64 };
 
-	if (sb->com->flags & (ES_COMPONENT_SELECTED|ES_COMPONENT_HIGHLIGHTED)) {
-		Extent(sb, vv, &a, &b);
+	if (lb->com->flags & (ES_COMPONENT_SELECTED|ES_COMPONENT_HIGHLIGHTED)) {
+		Extent(lb, vv, &a, &b);
 		a.x -= vv->wPixel*4;
 		a.y -= vv->wPixel*4;
 		b.x += vv->wPixel*4;
@@ -112,12 +110,12 @@ Draw(void *p, VG_View *vv)
 		VG_GetViewCoords(vv, a, &rDraw.x, &rDraw.y);
 		rDraw.w = (b.x - a.x)*vv->scale;
 		rDraw.h = (b.y - a.y)*vv->scale;
-		if (sb->com->flags & ES_COMPONENT_SELECTED) {
+		if (lb->com->flags & ES_COMPONENT_SELECTED) {
 			AG_DrawRectBlended(vv, rDraw, c, AG_ALPHA_SRC);
 		}
-		if (sb->com->flags & ES_COMPONENT_HIGHLIGHTED) {
+		if (lb->com->flags & ES_COMPONENT_HIGHLIGHTED) {
 			AG_DrawRectOutline(vv, rDraw,
-			    VG_MapColorRGB(VGNODE(sb)->color));
+			    VG_MapColorRGB(VGNODE(lb)->color));
 		}
 	}
 }
@@ -125,13 +123,13 @@ Draw(void *p, VG_View *vv)
 static float
 PointProximity(void *p, VG_View *vv, VG_Vector *vPt)
 {
-	ES_SchemBlock *sb = p;
+	ES_LayoutBlock *lb = p;
 	float x = vPt->x;
 	float y = vPt->y;
 	VG_Vector a, b, c, d;
 	float len;
 
-	Extent(sb, vv, &a, &c);
+	Extent(lb, vv, &a, &c);
 	a.x -= vv->wPixel*4;
 	a.y -= vv->wPixel*4;
 	c.x += vv->wPixel*4;
@@ -178,34 +176,34 @@ PointProximity(void *p, VG_View *vv, VG_Vector *vPt)
 static void
 Move(void *p, VG_Vector vPos, VG_Vector vRel)
 {
-	ES_SchemBlock *sb = p;
+	ES_LayoutBlock *lb = p;
 	VG_Matrix T;
 
-	T = VGNODE(sb)->T;
-	VG_LoadIdentity(sb);
-	VG_Translate(sb, vRel);
-	VG_MultMatrix(&VGNODE(sb)->T, &T);
+	T = VGNODE(lb)->T;
+	VG_LoadIdentity(lb);
+	VG_Translate(lb, vRel);
+	VG_MultMatrix(&VGNODE(lb)->T, &T);
 }
 
-/* Load the contents of the specified VG file into a SchemBlock. */
+/* Load the contents of the specified VG file into a LayoutBlock. */
 int
-ES_SchemBlockLoad(ES_SchemBlock *sb, const char *path)
+ES_LayoutBlockLoad(ES_LayoutBlock *lb, const char *path)
 {
-	ES_Schem *scm;
+	ES_Layout *layout;
 
-	scm = ES_SchemNew(NULL);
-	if (AG_ObjectLoadFromFile(scm, path) == -1) {
+	layout = ES_LayoutNew(NULL);
+	if (AG_ObjectLoadFromFile(layout, path) == -1) {
 		return (-1);
 	}
-	VG_Merge(sb, scm->vg);
-	AG_ObjectDestroy(scm);
+	VG_Merge(lb, layout->vg);
+	AG_ObjectDestroy(layout);
 	return (0);
 }
 
-VG_NodeOps esSchemBlockOps = {
-	N_("SchemBlock"),
+VG_NodeOps esLayoutBlockOps = {
+	N_("LayoutBlock"),
 	&esIconComponent,
-	sizeof(ES_SchemBlock),
+	sizeof(ES_LayoutBlock),
 	Init,
 	NULL,			/* destroy */
 	Load,
