@@ -351,6 +351,8 @@ OpenDlg(AG_Event *event)
 	    LoadComponentModel, NULL);
 	AG_FileDlgAddType(fd, _("Edacious schematic"), "*.esh",
 	    LoadObject, "%p", &esSchemClass);
+	AG_FileDlgAddType(fd, _("Edacious PCB layout"), "*.ecl",
+	    LoadObject, "%p", &esLayoutClass);
 
 	AG_WindowShow(win);
 }
@@ -373,14 +375,21 @@ SaveNativeObject(AG_Event *event)
 }
 
 static void
-SaveCircuitToGerber(AG_Event *event)
+SaveLayoutToGedaPCB(AG_Event *event)
+{
+	/* TODO */
+	AG_TextError("Export to gEDA PCB not implemented yet");
+}
+
+static void
+SaveLayoutToGerber(AG_Event *event)
 {
 	/* TODO */
 	AG_TextError("Export to Gerber not implemented yet");
 }
 
 static void
-SaveCircuitToXGerber(AG_Event *event)
+SaveLayoutToXGerber(AG_Event *event)
 {
 	/* TODO */
 	AG_TextError("Export to XGerber not implemented yet");
@@ -426,11 +435,11 @@ SaveAsDlg(AG_Event *event)
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 
 	if (AG_OfClass(obj, "ES_Circuit:ES_Component:*")) {
-		AG_FileDlgAddType(fd, _("Edacious Component Model"),
+		AG_FileDlgAddType(fd, _("Edacious component model"),
 		    "*.em",
 		    SaveNativeObject, "%p", obj);
 	} else if (AG_OfClass(obj, "ES_Circuit:*")) {
-		AG_FileDlgAddType(fd, _("Edacious Circuit Model"),
+		AG_FileDlgAddType(fd, _("Edacious circuit model"),
 		    "*.ecm",
 		    SaveNativeObject, "%p", obj);
 		ft = AG_FileDlgAddType(fd, _("SPICE3 netlist"),
@@ -441,15 +450,18 @@ SaveAsDlg(AG_Event *event)
 		    SaveCircuitToPDF, "%p", obj);
 		/* ... */
 	} else if (AG_OfClass(obj, "ES_Layout:*")) {
-		AG_FileDlgAddType(fd, _("Edacious Circuit Layout"),
+		AG_FileDlgAddType(fd, _("Edacious circuit layout"),
 		    "*.ecl",
 		    SaveNativeObject, "%p", obj);
+		AG_FileDlgAddType(fd, _("gEDA PCB format"),
+		    "*.pcb",
+		    SaveLayoutToGedaPCB, "%p", obj);
 		AG_FileDlgAddType(fd, _("Gerber (RS-274D)"),
 		    "*.gbr,*.phd,*.spl,*.art",
-		    SaveCircuitToGerber, "%p", obj);
+		    SaveLayoutToGerber, "%p", obj);
 		AG_FileDlgAddType(fd, _("Extended Gerber (RS-274X)"),
-		    "*.gbl,*.gtl,*.gbs,*.gts,*.gbo,*.gto",
-		    SaveCircuitToXGerber, "%p", obj);
+		    "*.ger,*.gbl,*.gtl,*.gbs,*.gts,*.gbo,*.gto",
+		    SaveLayoutToXGerber, "%p", obj);
 	} else if (AG_OfClass(obj, "ES_Schem:*")) {
 		AG_FileDlgAddType(fd, _("Edacious schematic"),
 		    "*.esh",
@@ -566,6 +578,8 @@ FileMenu(AG_Event *event)
 	    NewComponentModelDlg, NULL);
 	AG_MenuAction(m, _("New schematic..."), vgIconDrawing.s,
 	    NewObject, "%p", &esSchemClass);
+	AG_MenuAction(m, _("New PCB layout..."), vgIconDrawing.s,
+	    NewObject, "%p", &esLayoutClass);
 
 	AG_MenuActionKb(m, _("Open..."), agIconLoad.s,
 	    SDLK_o, KMOD_CTRL,
@@ -813,6 +827,8 @@ main(int argc, char *argv[])
 			AG_EventPushPointer(&ev, "", &esCircuitClass);
 		} else if (strcasecmp(ext, ".esh") == 0) {
 			AG_EventPushPointer(&ev, "", &esSchemClass);
+		} else if (strcasecmp(ext, ".ecl") == 0) {
+			AG_EventPushPointer(&ev, "", &esLayoutClass);
 		} else if (strcasecmp(ext, ".em") == 0) {
 			AG_EventPushPointer(&ev, "", &esComponentClass);
 		} else {
