@@ -32,14 +32,14 @@
 #include <agar/math/m_plotter.h>
 
 ES_Scope *
-ES_ScopeNew(void *parent, const char *name, ES_Circuit *ckt)
+ES_ScopeNew(ES_Circuit *ckt, const char *name)
 {
 	ES_Scope *scope;
-
+	
 	scope = Malloc(sizeof(ES_Scope));
 	AG_ObjectInit(scope, &esScopeClass);
 	AG_ObjectSetName(scope, "%s", name);
-	AG_ObjectAttach(parent, scope);
+	AG_ObjectAttach(ckt, scope);
 
 	ES_AddSimulationObj(ckt, scope);
 	AG_ObjectAddDep(scope, ckt, 0);

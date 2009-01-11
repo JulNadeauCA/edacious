@@ -90,11 +90,12 @@ typedef struct es_component {
 	struct es_circuit _inherit;
 	struct es_circuit *ckt;			/* Back pointer to circuit */
 	Uint flags;
-#define ES_COMPONENT_FLOATING	 0x01		/* Not yet connected */
 #define ES_COMPONENT_SELECTED	 0x02		/* Selected for edition */
 #define ES_COMPONENT_HIGHLIGHTED 0x04		/* Highlighted for selection */
 #define ES_COMPONENT_SUPPRESSED	 0x08		/* Become zero voltage source */
-#define ES_COMPONENT_SAVED_FLAGS (ES_COMPONENT_SUPPRESSED)
+#define ES_COMPONENT_SPECIAL	 0x10		/* Exclude from components list */
+#define ES_COMPONENT_CONNECTED	 0x20		/* Connected to circuit */
+#define ES_COMPONENT_SAVED_FLAGS (ES_COMPONENT_SUPPRESSED|ES_COMPONENT_SPECIAL)
 
 	M_Real Tspec;				/* Instance temp (k) */
 	ES_Port ports[COMPONENT_MAX_PORTS];	/* Ports (indices 1..nports) */
@@ -145,7 +146,7 @@ typedef struct es_component {
 	    (i)++)
 #define ESCOMPONENT_IS_FLOATING(com) \
 	(AG_OfClass((com),"ES_Circuit:ES_Component:*") && \
-	 ESCOMPONENT(com)->flags & ES_COMPONENT_FLOATING)
+	 !(ESCOMPONENT(com)->flags & ES_COMPONENT_CONNECTED))
 
 #if defined(_ES_INTERNAL) || defined(_USE_EDACIOUS_CORE)
 # define COMPONENT(p) ESCOMPONENT(p)
@@ -172,6 +173,7 @@ void    *ES_ComponentEdit(void *);
 void     ES_ComponentListClasses(AG_Event *);
 void     ES_AttachSchemEntity(void *, VG_Node *);
 void     ES_DetachSchemEntity(void *, VG_Node *);
+int	 ES_InsertComponent(ES_Circuit *, VG_Tool *, ES_Component *);
 
 void     ES_InitPorts(void *, const ES_Port *);
 Uint	 ES_PortNode(ES_Component *, int);
@@ -182,12 +184,14 @@ ES_Port	*ES_FindPort(void *, const char *);
 static __inline__ void
 ES_SelectComponent(ES_Component *com, VG_View *vv)
 {
+	void *wEdit;
+
 	com->flags |= ES_COMPONENT_SELECTED;
 
-	if (vv->nEditAreas > 0) {
+	if (vv->nEditAreas > 0 && AGOBJECT_CLASS(com)->edit != NULL &&
+	    (wEdit = AGOBJECT_CLASS(com)->edit(com)) != NULL) {
 		AG_ObjectFreeChildren(vv->editAreas[0]);
-		AG_ObjectAttach(vv->editAreas[0],
-		    AGOBJECT_CLASS(com)->edit(com));
+		AG_ObjectAttach(vv->editAreas[0], wEdit);
 		AG_WindowUpdate(AG_ParentWindow(vv->editAreas[0]));
 		AG_WidgetShownRecursive(vv->editAreas[0]);
 	}

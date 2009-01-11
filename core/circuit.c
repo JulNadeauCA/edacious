@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2009 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2006-2009 Julien Nadeau (julien.nadeau@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -190,6 +190,7 @@ Init(void *p)
 	ckt->nExtObjs = 0;
 	TAILQ_INIT(&ckt->layouts);
 	TAILQ_INIT(&ckt->syms);
+	TAILQ_INIT(&ckt->components);
 	InitGround(ckt);
 
 	ckt->vg = VG_New(0);

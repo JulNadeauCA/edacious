@@ -1,10 +1,14 @@
 /*	Public domain	*/
 
+struct es_circuit;
+
 /* PCB layout or layout block */
 typedef struct es_layout {
 	struct ag_object _inherit;
-	VG *vg;
+	struct es_circuit *ckt;			/* Associated circuit */
+	VG *vg;					/* Graphical layout */
 	TAILQ_ENTRY(es_layout) layouts;
+	TAILQ_HEAD(,es_package) packages;	/* Device packages */
 } ES_Layout;
 
 #ifdef _ES_INTERNAL
@@ -21,7 +25,8 @@ extern AG_ObjectClass esLayoutClass;
 extern VG_ToolOps esLayoutSelectTool;
 extern VG_ToolOps esLayoutNodeTool;
 extern VG_ToolOps esLayoutTraceTool;
+extern VG_ToolOps esPackageTool;
 
-ES_Layout *ES_LayoutNew(void *);
+ES_Layout *ES_LayoutNew(struct es_circuit *);
 void      *ES_LayoutNearest(VG_View *, VG_Vector);
 __END_DECLS

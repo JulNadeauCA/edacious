@@ -159,16 +159,15 @@ Edit(void *p)
 
 		VG_AddEditArea(vv, hPane->div[0]);
 
-		vBox = AG_BoxNewVert(hPane->div[1], AG_BOX_EXPAND);
-		AG_BoxSetSpacing(vBox, 0);
-		AG_BoxSetPadding(vBox, 0);
+		vBox = AG_BoxNewVertNS(hPane->div[1], AG_BOX_EXPAND);
+		{
+			hBox = AG_BoxNewHorizNS(vBox, AG_BOX_EXPAND);
+			{
+				AG_ObjectAttach(hBox, vv);
+				AG_ObjectAttach(hBox, tbRight);
+			}
+		}
 
-		hBox = AG_BoxNewHoriz(vBox, AG_BOX_EXPAND);
-		AG_BoxSetSpacing(hBox, 0);
-		AG_BoxSetPadding(hBox, 0);
-
-		AG_ObjectAttach(hBox, vv);
-		AG_ObjectAttach(hBox, tbRight);
 		AG_WidgetFocus(vv);
 	}
 

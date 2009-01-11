@@ -185,21 +185,6 @@ Move(void *p, VG_Vector vPos, VG_Vector vRel)
 	VG_MultMatrix(&VGNODE(lb)->T, &T);
 }
 
-/* Load the contents of the specified VG file into a LayoutBlock. */
-int
-ES_LayoutBlockLoad(ES_LayoutBlock *lb, const char *path)
-{
-	ES_Layout *layout;
-
-	layout = ES_LayoutNew(NULL);
-	if (AG_ObjectLoadFromFile(layout, path) == -1) {
-		return (-1);
-	}
-	VG_Merge(lb, layout->vg);
-	AG_ObjectDestroy(layout);
-	return (0);
-}
-
 VG_NodeOps esLayoutBlockOps = {
 	N_("LayoutBlock"),
 	&esIconComponent,

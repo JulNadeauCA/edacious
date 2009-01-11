@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2009 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  */
 
 /*
- * Interface to the library of component models.
+ * Interface to the library of device packages.
  */
 
 #include "core.h"
@@ -39,14 +39,14 @@
 #include <pwd.h>
 #endif
 
-AG_Object *esComponentLibrary = NULL;	/* Component model library */
+AG_Object *esPackageLibrary = NULL;	/* Package library */
 
-char **esComponentLibraryDirs;
-int    esComponentLibraryDirCount;
+char **esPackageLibraryDirs;
+int    esPackageLibraryDirCount;
 
-/* Load a component model from file. */
+/* Load a package from file. */
 static int
-LoadComponentFile(const char *path, AG_Object *objParent)
+LoadPackageFile(const char *path, AG_Object *objParent)
 {
 	AG_ObjectHeader oh;
 	AG_DataSource *ds;
@@ -63,9 +63,6 @@ LoadComponentFile(const char *path, AG_Object *objParent)
 	}
 	AG_CloseFile(ds);
 
-	Debug(objParent, "%s: Model for %s\n", ES_ShortFilename(path),
-	    oh.cs.hier);
-
 	/*
 	 * Fetch class information for the model contained. If dynamic library
 	 * modules are required, they get linked at this stage.
@@ -73,7 +70,7 @@ LoadComponentFile(const char *path, AG_Object *objParent)
 	if ((cl = AG_LoadClass(oh.cs.hier)) == NULL)
 		return (-1);
 
-	/* Create the component model instance and load its contents. */
+	/* Create the package model instance and load its contents. */
 	if ((obj = AG_ObjectNew(objParent, NULL, cl)) == NULL) {
 		return (-1);
 	}
@@ -86,9 +83,9 @@ LoadComponentFile(const char *path, AG_Object *objParent)
 	return (0);
 }
 
-/* Load component model files in specified directory (and subdirectories). */
+/* Load package model files in specified directory (and subdirectories). */
 static int
-LoadComponentsFromDisk(const char *modelDir, AG_Object *objParent)
+LoadPackagesFromDisk(const char *modelDir, AG_Object *objParent)
 {
 	char path[AG_PATHNAME_MAX];
 	AG_Object *objFolder;
@@ -124,7 +121,7 @@ LoadComponentsFromDisk(const char *modelDir, AG_Object *objParent)
 				AG_Verbose("Ignoring folder: %s\n", file);
 				continue;
 			}
-			if (LoadComponentsFromDisk(path, objFolder) == -1) {
+			if (LoadPackagesFromDisk(path, objFolder) == -1) {
 				AG_Verbose("Ignoring model dir: %s (%s)\n",
 				    path, AG_GetError());
 			}
@@ -133,7 +130,7 @@ LoadComponentsFromDisk(const char *modelDir, AG_Object *objParent)
 		if ((s = strstr(file, ".em")) == NULL || s[3] != '\0') {
 			continue;
 		}
-		if (LoadComponentFile(path, objParent) == -1)
+		if (LoadPackageFile(path, objParent) == -1)
 			AG_Verbose("Ignoring model file: %s (%s)", path,
 			    AG_GetError());
 	}
@@ -141,7 +138,7 @@ LoadComponentsFromDisk(const char *modelDir, AG_Object *objParent)
 	return (0);
 }
 
-/* Load component model "folder" objects from disk. */
+/* Load package model "folder" objects from disk. */
 static int
 LoadFoldersFromDisk(const char *modelDir, AG_Object *objParent)
 {
@@ -191,32 +188,31 @@ LoadFoldersFromDisk(const char *modelDir, AG_Object *objParent)
 
 /* Load the model library from disk. */
 int
-ES_ComponentLibraryLoad(void)
+ES_PackageLibraryLoad(void)
 {
 	int i;
 
-	if (esComponentLibrary != NULL) {
-		if (AG_ObjectInUse(esComponentLibrary)) {
+	if (esPackageLibrary != NULL) {
+		if (AG_ObjectInUse(esPackageLibrary)) {
 			/* XXX */
 			AG_Verbose("Not freeing model library; model(s) are"
 			           "currently in use");
 		} else {
-	//		AG_ObjectDestroy(esComponentLibrary);
+	//		AG_ObjectDestroy(esPackageLibrary);
 		}
 	}
 
 	/* Create the folder structure. */
-	esComponentLibrary = AG_ObjectNew(NULL, "Component Library",
-	    &agObjectClass);
-	for (i = 0; i < esComponentLibraryDirCount; i++) {
-		if (LoadFoldersFromDisk(esComponentLibraryDirs[i], esComponentLibrary) == -1)
+	esPackageLibrary = AG_ObjectNew(NULL, "Package Library", &agObjectClass);
+	for (i = 0; i < esPackageLibraryDirCount; i++) {
+		if (LoadFoldersFromDisk(esPackageLibraryDirs[i], esPackageLibrary) == -1)
 			AG_Verbose("Skipping: %s\n",  AG_GetError());
 	}
 
 	/* Load the model files. */
-	for (i = 0; i < esComponentLibraryDirCount; i++) {
-		if (LoadComponentsFromDisk(esComponentLibraryDirs[i],
-		    esComponentLibrary) == -1)
+	for (i = 0; i < esPackageLibraryDirCount; i++) {
+		if (LoadPackagesFromDisk(esPackageLibraryDirs[i],
+		    esPackageLibrary) == -1)
 			AG_Verbose("Skipping: %s\n",  AG_GetError());
 	}
 	return (0);
@@ -224,13 +220,13 @@ ES_ComponentLibraryLoad(void)
 
 /* Register a search path for model files. */
 void
-ES_ComponentLibraryRegisterDir(const char *path)
+ES_PackageLibraryRegisterDir(const char *path)
 {
 	char *s, *p;
 
-	esComponentLibraryDirs = Realloc(esComponentLibraryDirs,
-	    (esComponentLibraryDirCount+1)*sizeof(char *));
-	esComponentLibraryDirs[esComponentLibraryDirCount++] = s = Strdup(path);
+	esPackageLibraryDirs = Realloc(esPackageLibraryDirs,
+	    (esPackageLibraryDirCount+1)*sizeof(char *));
+	esPackageLibraryDirs[esPackageLibraryDirCount++] = s = Strdup(path);
 
 	if (*(p = &s[strlen(s)-1]) == PATHSEPCHAR)
 		*p = '\0';
@@ -238,39 +234,39 @@ ES_ComponentLibraryRegisterDir(const char *path)
 
 /* Unregister a model directory. */
 void
-ES_ComponentLibraryUnregisterDir(const char *path)
+ES_PackageLibraryUnregisterDir(const char *path)
 {
 	int i;
 
-	for (i = 0; i < esComponentLibraryDirCount; i++) {
-		if (strcmp(esComponentLibraryDirs[i], path) == 0)
+	for (i = 0; i < esPackageLibraryDirCount; i++) {
+		if (strcmp(esPackageLibraryDirs[i], path) == 0)
 			break;
 	}
-	if (i == esComponentLibraryDirCount) {
+	if (i == esPackageLibraryDirCount) {
 		return;
 	}
-	free(esComponentLibraryDirs[i]);
-	if (i < esComponentLibraryDirCount-1) {
-		memmove(&esComponentLibraryDirs[i], &esComponentLibraryDirs[i+1],
-		    (esComponentLibraryDirCount-1)*sizeof(char *));
+	free(esPackageLibraryDirs[i]);
+	if (i < esPackageLibraryDirCount-1) {
+		memmove(&esPackageLibraryDirs[i], &esPackageLibraryDirs[i+1],
+		    (esPackageLibraryDirCount-1)*sizeof(char *));
 	}
-	esComponentLibraryDirCount--;
+	esPackageLibraryDirCount--;
 }
 
 /* Initialize the model library. */
 void
-ES_ComponentLibraryInit(void)
+ES_PackageLibraryInit(void)
 {
 	char path[AG_PATHNAME_MAX];
 
-	esComponentLibrary = NULL;
-	esComponentLibraryDirs = NULL;
-	esComponentLibraryDirCount = 0;
+	esPackageLibrary = NULL;
+	esPackageLibraryDirs = NULL;
+	esPackageLibraryDirCount = 0;
 	
 	Strlcpy(path, SHAREDIR, sizeof(path));
-	Strlcat(path, "/Models", sizeof(path));
-	printf("Registering component library dir: %s\n", path);
-	ES_ComponentLibraryRegisterDir(path);
+	Strlcat(path, "/Packages", sizeof(path));
+	printf("Registering package library dir: %s\n", path);
+	ES_PackageLibraryRegisterDir(path);
 
 #if defined(HAVE_GETPWUID) && defined(HAVE_GETUID)
 	{
@@ -279,41 +275,40 @@ ES_ComponentLibraryInit(void)
 		Strlcat(path, PATHSEP, sizeof(path));
 		Strlcat(path, ".edacious", sizeof(path));
 		Strlcat(path, PATHSEP, sizeof(path));
-		Strlcat(path, "Models", sizeof(path));
+		Strlcat(path, "Packages", sizeof(path));
 		if (!AG_FileExists(path)) {
 			if (AG_MkPath(path) == -1) {
 				AG_Verbose("Failed to create %s (%s)\n", path,
 				    AG_GetError());
 			}
 		}
-		ES_ComponentLibraryRegisterDir(path);
+		ES_PackageLibraryRegisterDir(path);
 	}
 #endif
-	if (ES_ComponentLibraryLoad() == -1)
+	if (ES_PackageLibraryLoad() == -1)
 		AG_Verbose("Loading library: %s", AG_GetError());
 }
 
 /* Destroy the model library. */
 void
-ES_ComponentLibraryDestroy(void)
+ES_PackageLibraryDestroy(void)
 {
-	AG_ObjectDestroy(esComponentLibrary);
-	esComponentLibrary = NULL;
-	Free(esComponentLibraryDirs);
+	AG_ObjectDestroy(esPackageLibrary);
+	esPackageLibrary = NULL;
+	Free(esPackageLibraryDirs);
 }
 
 static AG_TlistItem *
-FindComponents(AG_Tlist *tl, AG_Object *pob, int depth)
+FindPackages(AG_Tlist *tl, AG_Object *pob, int depth)
 {
 	AG_Object *chld;
 	AG_TlistItem *it;
-	int isComponent = AG_OfClass(pob, "ES_Circuit:ES_Component:*");
 
 	it = AG_TlistAddPtr(tl,
-	    isComponent ? esIconComponent.s : agIconDirectory.s,
+	    AG_OfClass(pob, "ES_Layout:ES_Package:*") ?
+	    esIconComponent.s : agIconDirectory.s,
 	    pob->name, pob);
 	it->depth = depth;
-	it->cat = isComponent ? "component" : "folder";
 
 	if (!TAILQ_EMPTY(&pob->children)) {
 		it->flags |= AG_TLIST_HAS_CHILDREN;
@@ -321,12 +316,12 @@ FindComponents(AG_Tlist *tl, AG_Object *pob, int depth)
 	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
 	    AG_TlistVisibleChildren(tl, it)) {
 		TAILQ_FOREACH(chld, &pob->children, cobjs)
-			FindComponents(tl, chld, depth+1);
+			FindPackages(tl, chld, depth+1);
 	}
 	return (it);
 }
 
-/* Generate a Tlist tree for the component model library. */
+/* Generate a Tlist tree for the package library. */
 static void
 PollLibrary(AG_Event *event)
 {
@@ -334,35 +329,13 @@ PollLibrary(AG_Event *event)
 	AG_TlistItem *ti;
 	
 	AG_TlistClear(tl);
-	AG_LockVFS(esComponentLibrary);
+	AG_LockVFS(esPackageLibrary);
 
-	ti = FindComponents(tl, OBJECT(esComponentLibrary), 0);
+	ti = FindPackages(tl, OBJECT(esPackageLibrary), 0);
 	ti->flags |= AG_TLIST_EXPANDED;
 
-	AG_UnlockVFS(esComponentLibrary);
+	AG_UnlockVFS(esPackageLibrary);
 	AG_TlistRestore(tl);
-}
-
-static void
-InsertComponent(AG_Event *event)
-{
-	VG_View *vv = AG_PTR(1);
-	ES_Circuit *ckt = AG_PTR(2);
-	AG_TlistItem *ti = AG_PTR(3);
-	ES_Component *comModel = ti->p1;
-	VG_Tool *insTool;
-	
-	if (strcmp(ti->cat, "component") != 0)
-		return;
-
-	if ((insTool = VG_ViewFindToolByOps(vv, &esInsertTool)) == NULL) {
-		AG_TextMsgFromError();
-		return;
-	}
-	VG_ViewSelectTool(vv, insTool, ckt);
-	if (VG_ToolCommandExec(insTool, "Insert",
-	    "%p,%p,%p", insTool, ckt, comModel) == -1)
-		AG_TextMsgFromError();
 }
 
 static void
@@ -370,7 +343,7 @@ RefreshLibrary(AG_Event *event)
 {
 	AG_Tlist *tl = AG_PTR(1);
 
-	if (ES_ComponentLibraryLoad() == -1) {
+	if (ES_PackageLibraryLoad() == -1) {
 		AG_TextMsgFromError();
 		return;
 	}
@@ -378,7 +351,7 @@ RefreshLibrary(AG_Event *event)
 }
 
 static void
-EditComponent(AG_Event *event)
+EditPackage(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
 
@@ -386,7 +359,7 @@ EditComponent(AG_Event *event)
 }
 
 static void
-SaveComponent(AG_Event *event)
+SavePackage(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
 	char *path = AG_STRING(2);
@@ -397,7 +370,7 @@ SaveComponent(AG_Event *event)
 			return;
 		}
 		AG_TextTmsg(AG_MSG_INFO, 1250,
-		    _("Successfully saved model to %s"),
+		    _("Successfully saved package model to %s"),
 		    ES_ShortFilename(obj->archivePath));
 	} else {
 		if (AG_ObjectSaveToFile(obj, path) == -1) {
@@ -406,13 +379,13 @@ SaveComponent(AG_Event *event)
 		}
 		ES_SetObjectNameFromPath(obj, path);
 		AG_TextTmsg(AG_MSG_INFO, 1250,
-		    _("Successfully saved model to %s"),
+		    _("Successfully saved package model to %s"),
 		    ES_ShortFilename(path));
 	}
 }
 
 static void
-SaveComponentAsDlg(AG_Event *event)
+SavePackageAsDlg(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
 	AG_Window *win;
@@ -421,57 +394,57 @@ SaveComponentAsDlg(AG_Event *event)
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Save %s as..."), obj->name);
 
-	fd = AG_FileDlgNewMRU(win, "edacious.mru.models",
+	fd = AG_FileDlgNewMRU(win, "edacious.mru.packages",
 	    AG_FILEDLG_SAVE|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
-	AG_FileDlgAddType(fd, _("Edacious Component Model"), "*.em",
-	    SaveComponent, "%p", obj);
+	AG_FileDlgAddType(fd, _("Edacious device package"), "*.edp",
+	    SavePackage, "%p", obj);
 	AG_WindowShow(win);
 }
 
 static void
-ComponentMenu(AG_Event *event)
+PackageMenu(AG_Event *event)
 {
 	AG_Tlist *tl = AG_SELF();
 	AG_Object *obj = AG_TlistSelectedItemPtr(tl);
 	AG_PopupMenu *pm;
 
-	if (!AG_OfClass(obj, "ES_Circuit:ES_Component:*"))
+	if (!AG_OfClass(obj, "ES_Layout:ES_Package:*"))
 		return;
 	
 	pm = AG_PopupNew(tl);
 
-	AG_MenuAction(pm->item, _("Edit component model..."), esIconComponent.s,
-	    EditComponent, "%p", obj);
+	AG_MenuAction(pm->item, _("Edit package model..."), esIconComponent.s,
+	    EditPackage, "%p", obj);
 	AG_MenuSeparator(pm->item);
 	AG_MenuAction(pm->item, _("Save"), agIconSave.s,
-	    SaveComponent, "%p,%s", obj, "");
+	    SavePackage, "%p,%s", obj, "");
 	AG_MenuAction(pm->item, _("Save as..."), agIconSave.s,
-	    SaveComponentAsDlg, "%p", obj);
+	    SavePackageAsDlg, "%p", obj);
 	
 	AG_PopupShow(pm);
 }
 
-ES_ComponentLibraryEditor *
-ES_ComponentLibraryEditorNew(void *parent, VG_View *vv, ES_Circuit *ckt,
-    Uint flags)
+ES_PackageLibraryEditor *
+ES_PackageLibraryEditorNew(void *parent, VG_View *vv, ES_Layout *lo,
+    Uint flags, AG_EventFn insFn, const char *fmt, ...)
 {
 	AG_Box *box;
 	AG_Button *btn;
 	AG_Tlist *tl;
 	AG_Event ev;
+	AG_Event *evSel;
 
 	box = AG_BoxNewVert(parent, AG_BOX_EXPAND);
 
 	tl = AG_TlistNewPolled(box, AG_TLIST_TREE|AG_TLIST_EXPAND,
 	    PollLibrary, NULL);
-	AG_TlistSetRefresh(tl, -1);
 	AG_WidgetSetFocusable(tl, 0);
-
+	AG_TlistSetRefresh(tl, -1);
 	AG_TlistSizeHint(tl, "XXXXXXXXXXXXXXXXXXX", 10);
-	AG_TlistSetPopupFn(tl, ComponentMenu, NULL);
-	AG_SetEvent(tl, "tlist-dblclick",
-	    InsertComponent, "%p,%p", vv, ckt);
+	AG_TlistSetPopupFn(tl, PackageMenu, NULL);
+	evSel = AG_SetEvent(tl, "tlist-dblclick", insFn, NULL);
+	AG_EVENT_GET_ARGS(evSel, fmt);
 
 	btn = AG_ButtonNewFn(box, AG_BUTTON_HFILL, _("Refresh list"),
 	    RefreshLibrary, "%p", tl);
@@ -479,5 +452,5 @@ ES_ComponentLibraryEditorNew(void *parent, VG_View *vv, ES_Circuit *ckt,
 
 	AG_EventArgs(&ev, "%p", tl);
 	RefreshLibrary(&ev);
-	return (ES_ComponentLibraryEditor *)box;
+	return (ES_PackageLibraryEditor *)box;
 }

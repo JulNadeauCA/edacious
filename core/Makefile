@@ -37,7 +37,10 @@ SRCS=	core.c \
 	layout_node_tool.c \
 	layout_trace.c \
 	layout_trace_tool.c \
-	layout_block.c
+	layout_block.c \
+	package.c \
+	package_library.c \
+	package_tool.c
 
 CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 

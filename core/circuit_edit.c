@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2009 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,45 @@
 
 #include "core.h"
 
+/* Open a circuit sub-object for edition */
+AG_Window *
+ES_CircuitOpenObject(void *p)
+{
+	AG_Object *obj = p;
+	AG_Object *objParent = AG_ObjectParent(obj);
+	AG_Window *win;
+
+	if ((win = AGOBJECT_CLASS(obj)->edit(obj)) == NULL) {
+		AG_TextMsgFromError();
+		return (NULL);
+	}
+	AG_WindowSetCaption(win, "<%s>: %s",
+	    (objParent->archivePath != NULL) ?
+	    ES_ShortFilename(objParent->archivePath) : objParent->name,
+	    obj->name);
+
+	AG_SetPointer(win, "object", objParent);
+	AG_SetPointer(win, "circuit-object", obj);
+	
+	AG_WindowShow(win);
+	return (win);
+}
+
+/* Close a circuit sub-object from edition */
+void
+ES_CircuitCloseObject(void *obj)
+{
+	AG_Window *win;
+	void *wObj;
+
+	TAILQ_FOREACH(win, &agView->windows, windows) {
+		if (AG_GetProp(win, "circuit-object", AG_PROP_POINTER,
+		    (void *)&wObj) && wObj == obj)
+			AG_ViewDetach(win);
+	}
+}
+
+/* Update contents of "Show Topology / Loops" */
 static void
 PollCircuitLoops(AG_Event *event)
 {
@@ -49,6 +88,7 @@ PollCircuitLoops(AG_Event *event)
 	AG_TlistRestore(tl);
 }
 
+/* Update contents of "Show Topology / Nodes" */
 static void
 PollCircuitNodes(AG_Event *event)
 {
@@ -83,6 +123,7 @@ PollCircuitNodes(AG_Event *event)
 	AG_TlistRestore(tl);
 }
 
+/* Update contents of "Show Topology / Sources" */
 static void
 PollCircuitSources(AG_Event *event)
 {
@@ -99,6 +140,7 @@ PollCircuitSources(AG_Event *event)
 	AG_TlistRestore(tl);
 }
 
+/* Display circuit topology information */
 static void
 ShowTopology(AG_Event *event)
 {
@@ -143,6 +185,7 @@ ShowTopology(AG_Event *event)
 	AG_WindowShow(win);
 }
 
+/* Show "File / Properties..." dialog */
 static void
 ShowProperties(AG_Event *event)
 {
@@ -177,6 +220,7 @@ ShowProperties(AG_Event *event)
 	AG_WindowShow(win);
 }
 
+/* Process click on schematic area */
 static void
 MouseButtonDown(AG_Event *event)
 {
@@ -202,6 +246,7 @@ MouseButtonDown(AG_Event *event)
 	}
 }
 
+/* Simulation mode selected in "Simulation" menu */
 static void
 SelectSimulation(AG_Event *event)
 {
@@ -224,6 +269,7 @@ SelectSimulation(AG_Event *event)
 		AG_WindowAttach(pwin, sim->win);
 }
 
+/* Update contents of tree in "Objects" pane */
 static void
 FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 {
@@ -261,6 +307,7 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 	}
 }
 
+/* Update contents of tree in "Objects" pane */
 static void
 PollObjects(AG_Event *event)
 {
@@ -274,6 +321,7 @@ PollObjects(AG_Event *event)
 	AG_TlistRestore(tl);
 }
 
+/* Item selected in "Objects" pane */
 static void
 SelectedObject(AG_Event *event)
 {
@@ -291,6 +339,7 @@ SelectedObject(AG_Event *event)
 	}
 }
 
+/* Display log console */
 static void
 ShowConsole(AG_Event *event)
 {
@@ -311,6 +360,7 @@ ShowConsole(AG_Event *event)
 	AG_WindowShow(win);
 }
 
+/* Create alternate schematic view */
 static void
 CreateView(AG_Event *event)
 {
@@ -329,21 +379,98 @@ CreateView(AG_Event *event)
 	AG_WindowShow(win);
 }
 
+/* Create new oscilloscope object */
 static void
 NewScope(AG_Event *event)
 {
 	char name[AG_OBJECT_NAME_MAX];
 	ES_Circuit *ckt = AG_PTR(1);
+	AG_Window *winParent = AG_PTR(2);
 	ES_Scope *scope;
-	Uint nscope = 0;
+	AG_Window *win;
 
-tryname:
-	Snprintf(name, sizeof(name), _("Scope #%u"), nscope++);
-	if (AG_ObjectFindChild(ckt, name) != NULL) {
-		goto tryname;
+	scope = ES_ScopeNew(ckt, name);
+	AG_ObjectGenName(ckt, &esScopeClass, name, sizeof(name));
+	AG_ObjectSetName(scope, "%s", name);
+
+	if ((win = ES_CircuitOpenObject(scope)) != NULL)
+		AG_WindowAttach(winParent, win);
+}
+
+/* Update list of PCB layouts */
+static void
+PollLayouts(AG_Event *event)
+{
+	AG_Tlist *tl = AG_SELF();
+	ES_Circuit *ckt = AG_PTR(1);
+	AG_TlistItem *ti;
+	ES_Layout *lo;
+
+	AG_TlistBegin(tl);
+	TAILQ_FOREACH(lo, &ckt->layouts, layouts) {
+		ti = AG_TlistAdd(tl, NULL, "%s", OBJECT(lo)->name);
+		ti->p1 = lo;
 	}
-	scope = ES_ScopeNew(&esVfsRoot, name, ckt);
-	ES_OpenObject(scope);
+	AG_TlistEnd(tl);
+}
+
+/* Open a PCB layout for edition */
+static void
+OpenLayout(AG_Event *event)
+{
+	AG_Window *winParent = AG_PTR(1);
+	AG_TlistItem *ti = AG_PTR(2);
+	ES_Layout *lo = ti->p1;
+	AG_Window *win;
+
+	if ((win = ES_CircuitOpenObject(lo)) != NULL)
+		AG_WindowAttach(winParent, win);
+}
+
+/* Create a new PCB layout and open it for edition */
+static void
+NewLayout(AG_Event *event)
+{
+	char name[AG_OBJECT_NAME_MAX];
+	ES_Circuit *ckt = AG_PTR(1);
+	AG_Window *winParent = AG_PTR(2);
+	AG_Tlist *tlLayouts = AG_PTR(3);
+	ES_Layout *lo;
+	AG_Window *win;
+
+	if ((lo = ES_LayoutNew(ckt)) == NULL) {
+		AG_TextMsgFromError();
+		return;
+	}
+	AG_ObjectGenName(ckt, &esLayoutClass, name, sizeof(name));
+	AG_ObjectSetName(lo, "%s", name);
+
+	TAILQ_INSERT_TAIL(&ckt->layouts, lo, layouts);
+	AG_TlistRefresh(tlLayouts);
+
+	if ((win = ES_CircuitOpenObject(lo)) != NULL)
+		AG_WindowAttach(winParent, win);
+}
+
+/* Delete a PCB layout */
+static void
+DeleteLayout(AG_Event *event)
+{
+	ES_Circuit *ckt = AG_PTR(1);
+	AG_Tlist *tlLayouts = AG_PTR(2);
+	AG_TlistItem *ti = AG_TlistSelectedItem(tlLayouts);
+	ES_Layout *lo;
+
+	if (ti == NULL) { return; }
+	lo = ti->p1;
+
+	ES_CircuitCloseObject(lo);
+
+	TAILQ_REMOVE(&ckt->layouts, lo, layouts);
+	AG_ObjectDetach(lo);
+	AG_ObjectDestroy(lo);
+
+	AG_TlistRefresh(tlLayouts);
 }
 
 void *
@@ -366,7 +493,7 @@ ES_CircuitEdit(void *p)
 	
 	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
 	VG_ViewSetSnapMode(vv, VG_GRID);
-	VG_ViewSetScale(vv, 0);
+	VG_ViewSetScale(vv, 1);
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	mi = AG_MenuAddItem(menu, _("File"));
@@ -391,7 +518,7 @@ ES_CircuitEdit(void *p)
 
 		AG_MenuSeparator(mi);
 
-		mi2 = AG_MenuNode(mi, _("Schematic"), esIconCircuit.s);
+		mi2 = AG_MenuNode(mi, _("Display"), esIconCircuit.s);
 		{
 			AG_MenuToolbar(mi2, tbTop);
 			AG_MenuFlags(mi2, _("Nodes annotations"),
@@ -436,42 +563,59 @@ ES_CircuitEdit(void *p)
 	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
 	{
 		AG_Notebook *nb;
-		AG_NotebookTab *ntab;
+		AG_NotebookTab *nt;
 		AG_Tlist *tl;
 		ES_ComponentLibraryEditor *led;
 		AG_Box *vBox, *hBox;
 
 		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
-		ntab = AG_NotebookAddTab(nb, _("Library"), AG_BOX_VERT);
+		nt = AG_NotebookAddTab(nb, _("Library"), AG_BOX_VERT);
 		{
-			led = ES_ComponentLibraryEditorNew(ntab, vv, ckt, 0);
+			led = ES_ComponentLibraryEditorNew(nt, vv, ckt, 0);
 			AG_WidgetSetFocusable(led, 0);
 		}
-		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
+		nt = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
 		{
-			tl = AG_TlistNewPolled(ntab,
-			    AG_TLIST_POLL|AG_TLIST_TREE|AG_TLIST_EXPAND|
-			    AG_TLIST_NOSELSTATE,
+			tl = AG_TlistNewPolled(nt,
+			    AG_TLIST_TREE|AG_TLIST_EXPAND|AG_TLIST_NOSELSTATE,
 			    PollObjects, "%p", ckt);
+			AG_TlistSetRefresh(tl, 500);
 			AG_SetEvent(tl, "tlist-changed",
 			    SelectedObject, "%p", vv);
 			AG_WidgetSetFocusable(tl, 0);
 		}
+		nt = AG_NotebookAddTab(nb, _("PCBs"), AG_BOX_VERT);
+		{
+			tl = AG_TlistNewPolled(nt, AG_TLIST_TREE|AG_TLIST_EXPAND,
+			    PollLayouts, "%p", ckt);
+			AG_TlistSetRefresh(tl, -1);
+			AG_TlistSetDblClickFn(tl,
+			    OpenLayout, "%p", win);
+			AG_WidgetSetFocusable(tl, 0);
+
+			hBox = AG_BoxNewHorizNS(nt, AG_BOX_HFILL|AG_BOX_HOMOGENOUS);
+			{
+				AG_ButtonNewFn(hBox, 0, _("New"),
+				    NewLayout, "%p,%p,%p", ckt, win, tl);
+				AG_ButtonNewFn(hBox, 0, _("Delete"),
+				    DeleteLayout, "%p,%p", ckt, tl);
+			}
+		}
+
 		VG_AddEditArea(vv, vPane->div[1]);
 
-		vBox = AG_BoxNewVert(hPane->div[1], AG_BOX_EXPAND);
-		AG_BoxSetSpacing(vBox, 0);
-		AG_BoxSetPadding(vBox, 0);
+		vBox = AG_BoxNewVertNS(hPane->div[1], AG_BOX_EXPAND);
 		{
 			AG_ObjectAttach(vBox, tbTop);
-			hBox = AG_BoxNewHoriz(vBox, AG_BOX_EXPAND);
-			AG_BoxSetSpacing(hBox, 0);
-			AG_BoxSetPadding(hBox, 0);
-			AG_ObjectAttach(hBox, vv);
-			AG_ObjectAttach(hBox, tbRight);
-			AG_WidgetFocus(vv);
+			hBox = AG_BoxNewHorizNS(vBox, AG_BOX_EXPAND);
+			{
+				AG_ObjectAttach(hBox, vv);
+				AG_ObjectAttach(hBox, tbRight);
+			}
 		}
+
+		AG_WidgetFocus(vv);
 	}
 
 	mi = AG_MenuAddItem(menu, _("Tools"));
@@ -508,7 +652,9 @@ ES_CircuitEdit(void *p)
 			    &OBJECT(vv)->lock);
 		}
 
+		/* Register (but hide) the special "insert component" tool. */
 		VG_ViewRegTool(vv, &esInsertTool, ckt);
+
 		VG_ViewButtondownFn(vv, MouseButtonDown, NULL);
 		
 		AG_MenuToolbar(mi, NULL);
@@ -518,7 +664,7 @@ ES_CircuitEdit(void *p)
 	{
 		AG_MenuToolbar(mi, tbTop);
 		AG_MenuAction(mi, _("New scope..."), esIconScope.s,
-		    NewScope, "%p", ckt);
+		    NewScope, "%p,%p", ckt, win);
 		AG_MenuToolbar(mi, NULL);
 	}
 	

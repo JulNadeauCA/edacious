@@ -48,14 +48,17 @@ void *esCoreClasses[] = {
 	&esScopeClass,
 	&esSchemClass,
 	&esLayoutClass,
+	&esPackageClass,
 	NULL
 };
 
 /* User-creatable object classes. */
 const char *esEditableClasses[] = {
+	"ES_Circuit:ES_Component:*",
 	"ES_Circuit:*",
+	"ES_Layout:ES_Package:*",
+	"ES_Layout:*",
 	"ES_Schem:*",
-	"ES_Scope:*",
 	NULL
 };
 

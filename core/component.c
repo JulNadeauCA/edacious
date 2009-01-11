@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2005-2009 Julien Nadeau (julien.nadeau@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -273,6 +269,8 @@ del_nodes:
 	COMPONENT_FOREACH_PAIR(pair, i, com) {
 		Free(pair->loops);
 		Free(pair->loopPolarity);
+		pair->loops = NULL;
+		pair->loopPolarity = NULL;
 		pair->nLoops = 0;
 	}
 
@@ -284,7 +282,11 @@ del_nodes:
 		port->flags = (port->flags & ES_PORT_SAVED_FLAGS);
 		port->sp = NULL;
 	}
+
 	com->ckt = NULL;
+	
+	if (com->flags & ES_COMPONENT_CONNECTED)
+		TAILQ_REMOVE(&ckt->components, com, components);
 
 	ES_UnlockCircuit(ckt);
 }

@@ -15,6 +15,7 @@
 
 #include <edacious/core/schem.h>
 #include <edacious/core/layout.h>
+#include <edacious/core/package.h>
 #include <edacious/core/sim.h>
 #include <edacious/core/circuit.h>
 #include <edacious/core/component.h>
@@ -28,6 +29,7 @@
 
 #include <edacious/core/component_library.h>
 #include <edacious/core/schem_library.h>
+#include <edacious/core/package_library.h>
 
 #ifdef _ES_INTERNAL
 # include <edacious/core/core_internal.h>
@@ -57,7 +59,6 @@ void	ES_CoreInit(Uint);
 void	ES_CoreDestroy(void);
 void	ES_SetObjectOpenHandler(AG_Window *(*fn)(void *));
 void	ES_SetObjectCloseHandler(void (*fn)(void *));
-int	ES_InsertComponent(ES_Circuit *, VG_Tool *, ES_Component *);
 
 int	ES_LoadModule(const char *);
 int	ES_UnloadModule(const char *);

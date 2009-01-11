@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2009 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -531,9 +531,9 @@ NewSchem(AG_Event *event)
 	VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 }
 
-/* "Remove schematic" button pressed. */
+/* "Delete schematic" button pressed. */
 static void
-RemoveSchem(AG_Event *event)
+DeleteSchem(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
 	ES_Schem *scm = AG_TLIST_ITEM(2);
@@ -825,22 +825,22 @@ ES_ComponentEdit(void *obj)
 				VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 			}
 
-			bCmds = AG_BoxNewHoriz(hPane->div[0], AG_BOX_HOMOGENOUS|AG_BOX_HFILL);
-			AG_BoxSetSpacing(bCmds, 0);
-			AG_BoxSetPadding(bCmds, 0);
-			AG_ButtonNewFn(bCmds, 0, _("New"),
-			    NewSchem, "%p,%p", com, vv);
-			btn = AG_ButtonNewFn(bCmds, 0, _("Remove"),
-			    RemoveSchem, "%p,%p,%p", com, tlSchems, vv);
+			bCmds = AG_BoxNewHorizNS(hPane->div[0], AG_BOX_HOMOGENOUS|AG_BOX_HFILL);
+			{
+				AG_ButtonNewFn(bCmds, 0, _("New"),
+				    NewSchem, "%p,%p", com, vv);
+				btn = AG_ButtonNewFn(bCmds, 0, _("Delete"),
+				    DeleteSchem, "%p,%p,%p", com, tlSchems, vv);
 #if 0
-			AG_WidgetBindIntFn(btn, "state",
-			    EvalRemoveButtonState, "%p", tlSchems);
+				AG_WidgetBindIntFn(btn, "state",
+				    EvalRemoveButtonState, "%p", tlSchems);
 #endif
-			bCmds = AG_BoxNewHoriz(hPane->div[0], AG_BOX_HOMOGENOUS|AG_BOX_HFILL);
-			AG_BoxSetSpacing(bCmds, 0);
-			AG_BoxSetPadding(bCmds, 0);
-			AG_ButtonNewFn(bCmds, 0, _("Import..."),
-			    ImportSchemDlg, "%p,%p", com, vv);
+			}
+			bCmds = AG_BoxNewHorizNS(hPane->div[0], AG_BOX_HOMOGENOUS|AG_BOX_HFILL);
+			{
+				AG_ButtonNewFn(bCmds, 0, _("Import..."),
+				    ImportSchemDlg, "%p,%p", com, vv);
+			}
 		}
 
 		/*
@@ -924,38 +924,40 @@ ES_ComponentEdit(void *obj)
 		AG_ObjectAttach(hBox, vv);
 		AG_WidgetFocus(vv);
 		tb = AG_ToolbarNew(hBox, AG_TOOLBAR_VERT, 1, 0);
-		{
-			for (pOps = &esCircuitTools[0]; *pOps != NULL; pOps++) {
-				ops = *pOps;
-				tool = VG_ViewRegTool(vv, ops, ckt);
 
-				btn = AG_ToolbarButtonIcon(tb,
-				    (ops->icon ? ops->icon->s : NULL), 0,
-				    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool,
-				    ckt);
-				AG_WidgetBindMp(btn, "state", &OBJECT(vv)->lock,
-				    AG_WIDGET_BOOL, &tool->selected);
+		/* Register Circuit-specific tools */
+		for (pOps = &esCircuitTools[0]; *pOps != NULL; pOps++) {
+			ops = *pOps;
+			tool = VG_ViewRegTool(vv, ops, ckt);
 
-				if (ops == &esSchemSelectTool)
-					VG_ViewSetDefaultTool(vv, tool);
-			}
+			btn = AG_ToolbarButtonIcon(tb,
+			    (ops->icon ? ops->icon->s : NULL), 0,
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
+			AG_WidgetBindMp(btn, "state", &OBJECT(vv)->lock,
+			    AG_WIDGET_BOOL, &tool->selected);
 
-			AG_ToolbarSeparator(tb);
-
-			for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
-				ops = *pOps;
-				tool = VG_ViewRegTool(vv, ops, ckt);
-
-				btn = AG_ToolbarButtonIcon(tb,
-				    (ops->icon ? ops->icon->s : NULL), 0,
-				    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool,
-				    ckt);
-				AG_WidgetBindMp(btn, "state", &OBJECT(vv)->lock,
-				    AG_WIDGET_BOOL, &tool->selected);
-			}
-			VG_ViewRegTool(vv, &esInsertTool, ckt);
-			VG_ViewButtondownFn(vv, MouseButtonDown, NULL);
+			if (ops == &esSchemSelectTool)
+				VG_ViewSetDefaultTool(vv, tool);
 		}
+
+		AG_ToolbarSeparator(tb);
+
+		/* Register generic VG drawing tools */
+		for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
+			ops = *pOps;
+			tool = VG_ViewRegTool(vv, ops, ckt);
+
+			btn = AG_ToolbarButtonIcon(tb,
+			    (ops->icon ? ops->icon->s : NULL), 0,
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
+			AG_WidgetBindMp(btn, "state", &OBJECT(vv)->lock,
+			    AG_WIDGET_BOOL, &tool->selected);
+		}
+		
+		/* Register (but hide) the special "insert component" tool. */
+		VG_ViewRegTool(vv, &esInsertTool, ckt);
+
+		VG_ViewButtondownFn(vv, MouseButtonDown, NULL);
 	}
 
 	if (strcmp(OBJECT_CLASS(com)->hier, "ES_Circuit:ES_Component") != 0) {

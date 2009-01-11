@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2004-2009 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,52 +35,6 @@ typedef struct es_insert_tool {
 #define INSERT_MULTIPLE	0x01		/* Insert multiple instances */
 	ES_Component *floatingCom;
 } ES_InsertTool;
-
-/* Insert a new floating component instance in the circuit. */
-int
-ES_InsertComponent(ES_Circuit *ckt, VG_Tool *pt, ES_Component *model)
-{
-	ES_InsertTool *t = (ES_InsertTool *)pt;
-	ES_ComponentClass *cls = COMCLASS(model);
-	char name[AG_OBJECT_NAME_MAX];
-	VG_View *vv = VGTOOL(t)->vgv;
-	ES_Component *com;
-	int n = 1;
-
-	ES_LockCircuit(ckt);
-
-tryname:
-	/* Generate a unique name for the component instance. */
-	Snprintf(name, sizeof(name), "%s%d", cls->pfx, n++);
-	CIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) {
-		if (strcmp(OBJECT(com)->name, name) == 0)
-			break;
-	}
-	if (com != NULL)
-		goto tryname;
-
-	/* Allocate the instance and initialize from the model file. */
-	com = Malloc(cls->obj.size);
-	AG_ObjectInit(com, cls);
-	if (AG_ObjectLoadFromFile(com, OBJECT(model)->archivePath) == -1) {
-		AG_ObjectDestroy(com);
-		goto fail;
-	}
-	AG_ObjectSetName(com, "%s", name);
-
-	/* Attach to the circuit as a floating component. */
-	com->flags |= ES_COMPONENT_FLOATING;
-	t->floatingCom = com;
-	AG_ObjectAttach(ckt, com);
-	ES_SelectComponent(com, vv);
-	AG_PostEvent(ckt, com, "circuit-shown", NULL);
-
-	ES_UnlockCircuit(ckt);
-	return (0);
-fail:
-	ES_UnlockCircuit(ckt);
-	return (-1);
-}
 
 /* Highlight the component connections that would be made to existing nodes. */
 static void
@@ -128,8 +82,18 @@ ConnectComponent(ES_InsertTool *t, ES_Circuit *ckt, ES_Component *com)
 	int i;
 
 	ES_LockCircuit(ckt);
+
 	Debug(ckt, "Connecting component: %s\n", OBJECT(com)->name);
 	Debug(com, "Connecting to circuit: %s\n", OBJECT(ckt)->name);
+
+	/*
+	 * Query for SchemPorts nearest to the component "pins". Add the
+	 * appropriate branches, creating new nodes where no SchemPorts
+	 * are found.
+	 *
+	 * Components (such as Ground) can override this behavior using the
+	 * connect() operation.
+	 */
 	COMPONENT_FOREACH_PORT(port, i, com) {
 		if (port->sp == NULL) {
 			continue;
@@ -158,7 +122,10 @@ ConnectComponent(ES_InsertTool *t, ES_Circuit *ckt, ES_Component *com)
 		}
 		ES_UnselectPort(port);
 	}
-	com->flags &= ~(ES_COMPONENT_FLOATING);
+
+	/* Connect to the circuit. The component is no longer floating. */
+	TAILQ_INSERT_TAIL(&ckt->components, com, components);
+	com->flags |= ES_COMPONENT_CONNECTED;
 	AG_PostEvent(ckt, com, "circuit-connected", NULL);
 	ES_CircuitModified(ckt);
 	ES_UnlockCircuit(ckt);
@@ -168,6 +135,7 @@ ConnectComponent(ES_InsertTool *t, ES_Circuit *ckt, ES_Component *com)
 	t->floatingCom = NULL;
 
 #if 0
+	/* Insert more instances... */
 	if (ES_InsertComponent(ckt, VGTOOL(t), model) == -1) {
 		AG_TextError("Inserting additional instance: %s", AG_GetError());
 	}
@@ -256,25 +224,68 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 	return (0);
 }
 
-static int
-Abort(VG_Tool *t, SDLKey key, int state, void *arg)
+/* Insert a new floating component instance in the circuit. */
+static void
+Insert(AG_Event *event)
 {
-	if (state) {
-		RemoveFloatingComponent((ES_InsertTool *)t);
-		VG_ViewSelectTool(t->vgv, NULL, NULL);
+	char name[AG_OBJECT_NAME_MAX];
+	ES_InsertTool *t = AG_PTR(1);
+	ES_Circuit *ckt = AG_PTR(2);
+	ES_Component *comModel = AG_PTR(3), *com;
+	VG_View *vv = VGTOOL(t)->vgv;
+
+	ES_LockCircuit(ckt);
+
+	/* Allocate the instance and initialize from the model file. */
+	if ((com = malloc(COMCLASS(comModel)->obj.size)) == NULL) {
+		AG_SetError("Out of memory");
+		goto fail;
 	}
-	return (1);
+	AG_ObjectInit(com, COMCLASS(comModel));
+	if (AG_ObjectLoadFromFile(com, OBJECT(comModel)->archivePath) == -1) {
+		AG_ObjectDestroy(com);
+		goto fail;
+	}
+
+	/* Generate a unique component name */
+	AG_ObjectGenNamePfx(ckt, COMCLASS(comModel)->pfx, name, sizeof(name));
+	AG_ObjectSetName(com, "%s", name);
+
+	/* Attach to the circuit as a floating component. */
+	t->floatingCom = com;
+	AG_ObjectAttach(ckt, com);
+	ES_SelectComponent(com, vv);
+	AG_PostEvent(ckt, com, "circuit-shown", NULL);
+
+	ES_UnlockCircuit(ckt);
+	return;
+fail:
+	AG_TextMsgFromError();
+	ES_UnlockCircuit(ckt);
+}
+
+/* Abort the current insert operation. */
+static void
+AbortInsert(AG_Event *event)
+{
+	ES_InsertTool *t = AG_PTR(1);
+
+	RemoveFloatingComponent(t);
+	VG_ViewSelectTool(VGTOOL(t)->vgv, NULL, NULL);
 }
 
 static void
 Init(void *p)
 {
 	ES_InsertTool *t = p;
+	VG_ToolCommand *tc;
 
 	t->floatingCom = NULL;
 	t->flags = INSERT_MULTIPLE;
-	VG_ToolBindKey(t, KMOD_NONE, SDLK_ESCAPE, Abort, NULL);
-	VG_ToolBindKey(t, KMOD_NONE, SDLK_DELETE, Abort, NULL);
+
+	VG_ToolCommandNew(t, "Insert", Insert);
+	tc = VG_ToolCommandNew(t, "AbortInsert", AbortInsert);
+	VG_ToolCommandKey(tc, KMOD_NONE, SDLK_ESCAPE);
 }
 
 static void *

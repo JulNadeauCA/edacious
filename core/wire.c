@@ -40,24 +40,15 @@ ES_Wire *
 ES_WireNew(ES_Circuit *ckt)
 {
 	char name[AG_OBJECT_NAME_MAX];
-	ES_Component *com;
 	ES_Wire *wire;
-	Uint n = 0;
 
-tryname:
-	Snprintf(name, sizeof(name), "%s%d", esWireClass.pfx, n++);
-	CIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) {
-		if (strcmp(OBJECT(com)->name, name) == 0)
-			break;
-	}
-	if (com != NULL)
-		goto tryname;
-	
+	/* Allocate the wire object instance. */
 	wire = Malloc(sizeof(ES_Wire));
 	AG_ObjectInit(wire, &esWireClass);
+	AG_ObjectGenNamePfx(ckt, esWireClass.pfx, name, sizeof(name));
 	AG_ObjectSetName(wire, "%s", name);
-	COMPONENT(wire)->flags |= ES_COMPONENT_FLOATING;
 
+	/* Attach the wire object to the circuit as a floating component. */
 	ES_LockCircuit(ckt);
 	AG_ObjectAttach(ckt, wire);
 	AG_PostEvent(ckt, wire, "circuit-shown", NULL);
@@ -95,6 +86,9 @@ Init(void *p)
 	w->flags = 0;
 	w->cat = 0;
 	w->schemWire = NULL;
+
+	/* Exclude from displayed component lists */
+	COMPONENT(w)->flags |= ES_COMPONENT_SPECIAL;
 }
 
 static void *

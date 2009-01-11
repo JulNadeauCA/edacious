@@ -110,11 +110,14 @@ main(int argc, char *argv[])
 				    ESCOMPONENT_CLASS(com)->name,
 				    AGOBJECT(com)->name,
 				    com->nports);
-				if (com->flags & ES_COMPONENT_FLOATING) {
+				if (!(com->flags & ES_COMPONENT_CONNECTED)) {
 					printf(" <FLOATING>");
 				}
 				if (com->flags & ES_COMPONENT_SUPPRESSED) {
 					printf(" <SUPPRESSED>");
+				}
+				if (com->flags & ES_COMPONENT_SPECIAL) {
+					printf(" <SPECIAL>");
 				}
 				printf("\n");
 			}

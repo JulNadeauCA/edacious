@@ -31,13 +31,17 @@
 #include "core.h"
 
 ES_Layout *
-ES_LayoutNew(void *parent)
+ES_LayoutNew(ES_Circuit *ckt)
 {
 	ES_Layout *lo;
 
-	lo = AG_Malloc(sizeof(ES_Layout));
+	if ((lo = malloc(sizeof(ES_Layout))) == NULL) {
+		AG_SetError("Out of memory");
+		return (NULL);
+	}
 	AG_ObjectInit(lo, &esLayoutClass);
-	AG_ObjectAttach(parent, lo);
+	AG_ObjectAttach(ckt, lo);
+	lo->ckt = ckt;
 	return (lo);
 }
 
@@ -47,6 +51,8 @@ Init(void *obj)
 	ES_Layout *lo = obj;
 
 	lo->vg = VG_New(0);
+	lo->ckt = NULL;
+	TAILQ_INIT(&lo->packages);
 }
 
 static void
@@ -83,6 +89,7 @@ Save(void *obj, AG_DataSource *ds)
 	return (0);
 }
 
+/* Create an alternate view of the layout */
 static void
 CreateView(AG_Event *event)
 {
@@ -99,6 +106,67 @@ CreateView(AG_Event *event)
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_TR, 60, 50);
 	AG_WindowAttach(pwin, win);
 	AG_WindowShow(win);
+}
+
+/* Update the list of components and related device packages */
+static void
+PollDevicePkgs(AG_Event *event)
+{
+	AG_Tlist *tl = AG_SELF();
+	ES_Layout *lo = AG_PTR(1);
+	ES_Circuit *ckt = lo->ckt;
+	ES_Component *com;
+	ES_ComponentPkg *pkg;
+	AG_TlistItem *ti;
+
+	AG_TlistBegin(tl);
+	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		if (com->flags & ES_COMPONENT_SPECIAL) {
+			continue;
+		}
+		ti = AG_TlistAdd(tl, esIconComponent.s, "%s", OBJECT(com)->name);
+		ti->depth = 0;
+		ti->cat = "component";
+		ti->p1 = com;
+		TAILQ_FOREACH(pkg, &com->pkgs, pkgs) {
+			ti = AG_TlistAdd(tl, esIconComponent.s, "%s", pkg->name);
+			ti->depth = 1;
+			ti->cat = "package";
+			ti->p1 = pkg;
+		}
+	}
+	AG_TlistEnd(tl);
+}
+
+/* Insert a device package layout for a component. */
+static void
+InsertDevicePkg(AG_Event *event)
+{
+	VG_View *vv = AG_PTR(1);
+	ES_Layout *lo = AG_PTR(2);
+	AG_TlistItem *ti = AG_PTR(3);
+	ES_Package *pkg = ti->p1;
+	VG_Tool *insTool;
+
+	if (strcmp(ti->cat, "package") != 0)
+		return;
+
+	if ((insTool = VG_ViewFindToolByOps(vv, &esPackageTool)) == NULL) {
+		AG_TextMsgFromError();
+		return;
+	}
+	VG_ViewSelectTool(vv, insTool, lo);
+	if (VG_ToolCommandExec(insTool, "Insert",
+	    "%p,%p,%p", insTool, lo, pkg) == -1)
+		AG_TextMsgFromError();
+}
+
+/* Update the list of layers */
+static void
+PollLayers(AG_Event *event)
+{
+//	AG_Tlist *tl = AG_SELF();
+//	ES_Layout *lo = AG_PTR(1);
 }
 
 static void *
@@ -143,7 +211,7 @@ Edit(void *p)
 
 		AG_MenuSeparator(mi);
 
-		mi2 = AG_MenuNode(mi, _("Schematic"), esIconCircuit.s);
+		mi2 = AG_MenuNode(mi, _("Display"), esIconCircuit.s);
 		{
 			AG_MenuFlags(mi2, _("Grid"), vgIconSnapGrid.s,
 			    &vv->flags, VG_VIEW_GRID, 0);
@@ -155,20 +223,55 @@ Edit(void *p)
 	
 	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
 	{
+		AG_Notebook *nb;
+		AG_NotebookTab *nt;
 		AG_Box *vBox, *hBox;
+		AG_Pane *vPane;
+		AG_Tlist *tl;
+		
+		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
+		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
+		
+		if (lo->ckt != NULL) {
+			nt = AG_NotebookAddTab(nb, _("Devices"), AG_BOX_VERT);
+			tl = AG_TlistNewPolled(nt,
+			    AG_TLIST_TREE|AG_TLIST_EXPAND|AG_TLIST_NOSELSTATE,
+			    PollDevicePkgs, "%p", lo);
+			AG_TlistSizeHint(tl, "<XXXXXXXXX>", 10);
+			AG_TlistSetRefresh(tl, 1000);
+			AG_WidgetSetFocusable(tl, 0);
+			AG_TlistSetDblClickFn(tl,
+			    InsertDevicePkg, "%p,%p", vv, lo);
+		}
+		nt = AG_NotebookAddTab(nb, _("Layers"), AG_BOX_VERT);
+		{
+			tl = AG_TlistNewPolled(nt,
+			    AG_TLIST_TREE|AG_TLIST_EXPAND|AG_TLIST_NOSELSTATE,
+			    PollLayers, "%p", lo);
+			AG_TlistSetRefresh(tl, -1);
+			AG_WidgetSetFocusable(tl, 0);
+#if 0
+			hBox = AG_BoxNewHorizNS(nt, AG_BOX_HFILL|AG_BOX_HOMOGENOUS);
+			{
+				AG_ButtonNewFn(hBox, 0, _("New"),
+				    NewLayer, "%p,%p,%p", ckt, win, tl);
+				AG_ButtonNewFn(hBox, 0, _("Delete"),
+				    DeleteLayer, "%p,%p", ckt, tl);
+			}
+#endif
+		}
 
-		VG_AddEditArea(vv, hPane->div[0]);
+		VG_AddEditArea(vv, vPane->div[1]);
 
-		vBox = AG_BoxNewVert(hPane->div[1], AG_BOX_EXPAND);
-		AG_BoxSetSpacing(vBox, 0);
-		AG_BoxSetPadding(vBox, 0);
+		vBox = AG_BoxNewVertNS(hPane->div[1], AG_BOX_EXPAND);
+		{
+			hBox = AG_BoxNewHorizNS(vBox, AG_BOX_EXPAND);
+			{
+				AG_ObjectAttach(hBox, vv);
+				AG_ObjectAttach(hBox, tbRight);
+			}
+		}
 
-		hBox = AG_BoxNewHoriz(vBox, AG_BOX_EXPAND);
-		AG_BoxSetSpacing(hBox, 0);
-		AG_BoxSetPadding(hBox, 0);
-
-		AG_ObjectAttach(hBox, vv);
-		AG_ObjectAttach(hBox, tbRight);
 		AG_WidgetFocus(vv);
 	}
 
@@ -203,6 +306,9 @@ Edit(void *p)
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
 			    &OBJECT(vv)->lock);
 		}
+		
+		/* Register (but hide) the special "insert package" tool. */
+		VG_ViewRegTool(vv, &esPackageTool, lo);
 
 		AG_MenuToolbar(mi, NULL);
 	}

@@ -88,21 +88,17 @@ typedef struct es_circuit {
 	struct ag_object **extObjs;	/* External simulation objects */
 	Uint              nExtObjs;
 
-	TAILQ_HEAD(,es_layout) layouts;	/* Associated PCB layouts */
+	TAILQ_HEAD(,es_component) components;	/* Connected components */
+	TAILQ_HEAD(,es_layout) layouts;		/* Associated PCB layouts */
 } ES_Circuit;
 
 #define ESCIRCUIT(p) ((ES_Circuit *)(p))
 
-/* Iterate over all Components of the Circuit, floating or not. */
-#define ESCIRCUIT_FOREACH_COMPONENT_ALL(com, ckt) \
-	AGOBJECT_FOREACH_CHILD((com),(ckt),es_component)
-
-/* Iterate over all non-floating Components in the Circuit. */
-#define ESCIRCUIT_FOREACH_COMPONENT(com, ckt)			\
-	ESCIRCUIT_FOREACH_COMPONENT_ALL((com),ckt)		\
-		if ((com)->flags & ES_COMPONENT_FLOATING) {	\
-			continue;				\
-		} else
+/* Iterate over attached Components in the Circuit. */
+#define ESCIRCUIT_FOREACH_COMPONENT(com, ckt) \
+	for((com) = AG_TAILQ_FIRST(&ckt->components); \
+	    (com) != AG_TAILQ_END(&ckt->components); \
+	    (com) = AG_TAILQ_NEXT(ESCOMPONENT(com), components))
 
 /* Iterate over all selected, non-floating Components in the Circuit. */
 #define ESCIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt)		\
@@ -117,8 +113,6 @@ typedef struct es_circuit {
 
 #if defined(_ES_INTERNAL) || defined(_USE_EDACIOUS_CORE)
 # define CIRCUIT(p) ESCIRCUIT(p)
-# define CIRCUIT_FOREACH_COMPONENT_ALL(com,ckt) \
-	 ESCIRCUIT_FOREACH_COMPONENT_ALL((com),(ckt))
 # define CIRCUIT_FOREACH_COMPONENT(com,ckt) \
 	 ESCIRCUIT_FOREACH_COMPONENT((com),(ckt))
 # define CIRCUIT_FOREACH_COMPONENT_SELECTED(com,ckt) \
@@ -140,6 +134,8 @@ extern VG_ToolOps *esLayoutTools[];
 ES_Circuit *ES_CircuitNew(void *, const char *);
 void        ES_CircuitLog(void *, const char *, ...);
 void       *ES_CircuitEdit(void *);
+AG_Window  *ES_CircuitOpenObject(void *);
+void        ES_CircuitCloseObject(void *);
 
 int         ES_AddNode(ES_Circuit *);
 int         ES_AddVoltageSource(ES_Circuit *, void *);

@@ -26,6 +26,4 @@ ES_LayoutBlockNew(void *pNode, const char *name)
 	VG_NodeAttach(pNode, lb);
 	return (lb);
 }
-
-int ES_LayoutBlockLoad(ES_LayoutBlock *, const char *);
 __END_DECLS
