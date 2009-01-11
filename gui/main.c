@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2003-2009 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -353,6 +353,8 @@ OpenDlg(AG_Event *event)
 	    LoadObject, "%p", &esSchemClass);
 	AG_FileDlgAddType(fd, _("Edacious PCB layout"), "*.ecl",
 	    LoadObject, "%p", &esLayoutClass);
+	AG_FileDlgAddType(fd, _("Edacious device package"), "*.edp",
+	    LoadObject, "%p", &esPackageClass);
 
 	AG_WindowShow(win);
 }
@@ -426,19 +428,22 @@ SaveAsDlg(AG_Event *event)
 	AG_Window *win;
 	AG_FileDlg *fd;
 	AG_FileType *ft;
+	char *defDir = AG_CfgString("save-path");
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Save %s as..."), obj->name);
 
-	fd = AG_FileDlgNewMRU(win, "edacious.mru.circuits",
-	    AG_FILEDLG_SAVE|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
+	fd = AG_FileDlgNew(win, AG_FILEDLG_SAVE|AG_FILEDLG_CLOSEWIN|
+	                        AG_FILEDLG_EXPAND);
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 
 	if (AG_OfClass(obj, "ES_Circuit:ES_Component:*")) {
+		AG_FileDlgSetDirectoryMRU(fd, "edacious.mru.components", defDir);
 		AG_FileDlgAddType(fd, _("Edacious component model"),
 		    "*.em",
 		    SaveNativeObject, "%p", obj);
 	} else if (AG_OfClass(obj, "ES_Circuit:*")) {
+		AG_FileDlgSetDirectoryMRU(fd, "edacious.mru.circuits", defDir);
 		AG_FileDlgAddType(fd, _("Edacious circuit model"),
 		    "*.ecm",
 		    SaveNativeObject, "%p", obj);
@@ -449,8 +454,14 @@ SaveAsDlg(AG_Event *event)
 		    "*.pdf",
 		    SaveCircuitToPDF, "%p", obj);
 		/* ... */
+	} else if (AG_OfClass(obj, "ES_Layout:ES_Package:*")) {
+		AG_FileDlgSetDirectoryMRU(fd, "edacious.mru.packages", defDir);
+		AG_FileDlgAddType(fd, _("Edacious device package"),
+		    "*.edp",
+		    SaveNativeObject, "%p", obj);
 	} else if (AG_OfClass(obj, "ES_Layout:*")) {
-		AG_FileDlgAddType(fd, _("Edacious circuit layout"),
+		AG_FileDlgSetDirectoryMRU(fd, "edacious.mru.layouts", defDir);
+		AG_FileDlgAddType(fd, _("Edacious PCB layout"),
 		    "*.ecl",
 		    SaveNativeObject, "%p", obj);
 		AG_FileDlgAddType(fd, _("gEDA PCB format"),
@@ -463,6 +474,7 @@ SaveAsDlg(AG_Event *event)
 		    "*.ger,*.gbl,*.gtl,*.gbs,*.gts,*.gbo,*.gto",
 		    SaveLayoutToXGerber, "%p", obj);
 	} else if (AG_OfClass(obj, "ES_Schem:*")) {
+		AG_FileDlgSetDirectoryMRU(fd, "edacious.mru.schems", defDir);
 		AG_FileDlgAddType(fd, _("Edacious schematic"),
 		    "*.esh",
 		    SaveNativeObject, "%p", obj);
@@ -580,6 +592,8 @@ FileMenu(AG_Event *event)
 	    NewObject, "%p", &esSchemClass);
 	AG_MenuAction(m, _("New PCB layout..."), vgIconDrawing.s,
 	    NewObject, "%p", &esLayoutClass);
+	AG_MenuAction(m, _("New device package..."), vgIconDrawing.s,
+	    NewObject, "%p", &esPackageClass);
 
 	AG_MenuActionKb(m, _("Open..."), agIconLoad.s,
 	    SDLK_o, KMOD_CTRL,
@@ -784,7 +798,7 @@ main(int argc, char *argv[])
 	}
 	AG_SetRefreshRate(fps);
 	AG_SetVideoResizeCallback(VideoResize);
-	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, AG_Quit);
+/*	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, AG_Quit); */
 	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
 
 	/*
@@ -829,6 +843,8 @@ main(int argc, char *argv[])
 			AG_EventPushPointer(&ev, "", &esSchemClass);
 		} else if (strcasecmp(ext, ".ecl") == 0) {
 			AG_EventPushPointer(&ev, "", &esLayoutClass);
+		} else if (strcasecmp(ext, ".edp") == 0) {
+			AG_EventPushPointer(&ev, "", &esPackageClass);
 		} else if (strcasecmp(ext, ".em") == 0) {
 			AG_EventPushPointer(&ev, "", &esComponentClass);
 		} else {
