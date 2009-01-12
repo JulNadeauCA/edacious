@@ -29,12 +29,12 @@
 
 #include "core.h"
 
-typedef struct es_insert_tool {
+typedef struct es_component_insert_tool {
 	VG_Tool _inherit;
 	Uint flags;
 #define INSERT_MULTIPLE	0x01		/* Insert multiple instances */
 	ES_Component *floatingCom;
-} ES_InsertTool;
+} ES_ComponentInsertTool;
 
 /* Highlight the component connections that would be made to existing nodes. */
 static void
@@ -73,7 +73,7 @@ HighlightConnections(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
  * there is no overlap, create new nodes.
  */
 static int
-ConnectComponent(ES_InsertTool *t, ES_Circuit *ckt, ES_Component *com)
+ConnectComponent(ES_ComponentInsertTool *t, ES_Circuit *ckt, ES_Component *com)
 {
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Vector portPos;
@@ -145,7 +145,7 @@ ConnectComponent(ES_InsertTool *t, ES_Circuit *ckt, ES_Component *com)
 
 /* Remove the current floating component if any. */
 static void
-RemoveFloatingComponent(ES_InsertTool *t)
+RemoveFloatingComponent(ES_ComponentInsertTool *t)
 {
 	if (t->floatingCom != NULL) {
 		AG_ObjectDetach(t->floatingCom);
@@ -157,7 +157,7 @@ RemoveFloatingComponent(ES_InsertTool *t)
 static int
 MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
-	ES_InsertTool *t = p;
+	ES_ComponentInsertTool *t = p;
 	ES_Circuit *ckt = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	
@@ -209,7 +209,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 static int
 MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 {
-	ES_InsertTool *t = p;
+	ES_ComponentInsertTool *t = p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	ES_Circuit *ckt = VGTOOL(t)->p;
 	VG_Node *vn;
@@ -229,7 +229,7 @@ static void
 Insert(AG_Event *event)
 {
 	char name[AG_OBJECT_NAME_MAX];
-	ES_InsertTool *t = AG_PTR(1);
+	ES_ComponentInsertTool *t = AG_PTR(1);
 	ES_Circuit *ckt = AG_PTR(2);
 	ES_Component *comModel = AG_PTR(3), *com;
 	VG_View *vv = VGTOOL(t)->vgv;
@@ -268,7 +268,7 @@ fail:
 static void
 AbortInsert(AG_Event *event)
 {
-	ES_InsertTool *t = AG_PTR(1);
+	ES_ComponentInsertTool *t = AG_PTR(1);
 
 	RemoveFloatingComponent(t);
 	VG_ViewSelectTool(VGTOOL(t)->vgv, NULL, NULL);
@@ -277,7 +277,7 @@ AbortInsert(AG_Event *event)
 static void
 Init(void *p)
 {
-	ES_InsertTool *t = p;
+	ES_ComponentInsertTool *t = p;
 	VG_ToolCommand *tc;
 
 	t->floatingCom = NULL;
@@ -291,7 +291,7 @@ Init(void *p)
 static void *
 Edit(void *p, VG_View *vv)
 {
-	ES_InsertTool *t = p;
+	ES_ComponentInsertTool *t = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
 	AG_CheckboxNewFlag(box, 0, _("Insert multiple instances"),
@@ -299,11 +299,11 @@ Edit(void *p, VG_View *vv)
 	return (box);
 }
 
-VG_ToolOps esInsertTool = {
+VG_ToolOps esComponentInsertTool = {
 	N_("Insert component"),
 	N_("Insert new components into the circuit."),
 	NULL,
-	sizeof(ES_InsertTool),
+	sizeof(ES_ComponentInsertTool),
 	0,
 	Init,
 	NULL,			/* destroy */

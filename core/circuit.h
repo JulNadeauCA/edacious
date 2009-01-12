@@ -124,7 +124,7 @@ typedef struct es_circuit {
 __BEGIN_DECLS
 extern AG_ObjectClass esCircuitClass;
 extern VG_ToolOps esSelectTool;
-extern VG_ToolOps esInsertTool;
+extern VG_ToolOps esComponentInsertTool;
 extern VG_ToolOps esWireTool;
 extern VG_ToolOps *esCircuitTools[];
 extern VG_ToolOps *esSchemTools[];

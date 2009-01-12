@@ -355,7 +355,7 @@ InsertComponent(AG_Event *event)
 	if (strcmp(ti->cat, "component") != 0)
 		return;
 
-	if ((insTool = VG_ViewFindToolByOps(vv, &esInsertTool)) == NULL) {
+	if ((insTool = VG_ViewFindToolByOps(vv, &esComponentInsertTool)) == NULL) {
 		AG_TextMsgFromError();
 		return;
 	}

@@ -14,8 +14,8 @@ SRCS=	core.c \
 	component.c \
 	component_edit.c \
 	component_library.c \
+	component_insert_tool.c \
 	dc.c \
-	insert_tool.c \
 	interpreteur.c \
 	scope.c \
 	sim.c \
@@ -40,7 +40,7 @@ SRCS=	core.c \
 	layout_block.c \
 	package.c \
 	package_library.c \
-	package_tool.c
+	package_insert_tool.c
 
 CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 

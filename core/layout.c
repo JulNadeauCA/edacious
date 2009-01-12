@@ -151,7 +151,7 @@ InsertDevicePkg(AG_Event *event)
 	if (strcmp(ti->cat, "package") != 0)
 		return;
 
-	if ((insTool = VG_ViewFindToolByOps(vv, &esPackageTool)) == NULL) {
+	if ((insTool = VG_ViewFindToolByOps(vv, &esPackageInsertTool)) == NULL) {
 		AG_TextMsgFromError();
 		return;
 	}
@@ -308,7 +308,7 @@ Edit(void *p)
 		}
 		
 		/* Register (but hide) the special "insert package" tool. */
-		VG_ViewRegTool(vv, &esPackageTool, lo);
+		VG_ViewRegTool(vv, &esPackageInsertTool, lo);
 
 		AG_MenuToolbar(mi, NULL);
 	}

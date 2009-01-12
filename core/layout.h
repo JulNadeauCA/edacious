@@ -25,7 +25,7 @@ extern AG_ObjectClass esLayoutClass;
 extern VG_ToolOps esLayoutSelectTool;
 extern VG_ToolOps esLayoutNodeTool;
 extern VG_ToolOps esLayoutTraceTool;
-extern VG_ToolOps esPackageTool;
+extern VG_ToolOps esPackageInsertTool;
 
 ES_Layout *ES_LayoutNew(struct es_circuit *);
 void      *ES_LayoutNearest(VG_View *, VG_Vector);

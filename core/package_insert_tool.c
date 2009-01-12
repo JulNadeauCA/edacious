@@ -30,12 +30,12 @@
 
 #include "core.h"
 
-typedef struct es_package_tool {
+typedef struct es_package_insert_tool {
 	VG_Tool _inherit;
 	Uint flags;
 #define INSERT_MULTIPLE	0x01		/* Insert multiple instances */
 	ES_Package *floatingPkg;
-} ES_PackageTool;
+} ES_PackageInsertTool;
 
 #if 0
 /*
@@ -75,7 +75,7 @@ HighlightConnections(VG_View *vv, ES_Layout *lo, ES_Component *com)
 
 /* Connect a floating package to the layout. */
 static int
-ConnectPackage(ES_PackageTool *t, ES_Layout *lo, ES_Package *pkg)
+ConnectPackage(ES_PackageInsertTool *t, ES_Layout *lo, ES_Package *pkg)
 {
 //	VG_View *vv = VGTOOL(t)->vgv;
 
@@ -91,7 +91,7 @@ ConnectPackage(ES_PackageTool *t, ES_Layout *lo, ES_Package *pkg)
 
 /* Remove the current floating package if any. */
 static void
-RemoveFloatingPackage(ES_PackageTool *t)
+RemoveFloatingPackage(ES_PackageInsertTool *t)
 {
 	if (t->floatingPkg != NULL) {
 		AG_ObjectDetach(t->floatingPkg);
@@ -103,7 +103,7 @@ RemoveFloatingPackage(ES_PackageTool *t)
 static int
 MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
-	ES_PackageTool *t = p;
+	ES_PackageInsertTool *t = p;
 	ES_Layout *lo = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	
@@ -154,7 +154,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 static int
 MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 {
-	ES_PackageTool *t = p;
+	ES_PackageInsertTool *t = p;
 //	VG_View *vv = VGTOOL(t)->vgv;
 //	ES_Layout *lo = VGTOOL(t)->p;
 	VG_Node *vn;
@@ -173,7 +173,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int b)
 static void
 Insert(AG_Event *event)
 {
-	ES_PackageTool *t = AG_PTR(1);
+	ES_PackageInsertTool *t = AG_PTR(1);
 	ES_Layout *lo = AG_PTR(2);
 	ES_Package *pkgModel = AG_PTR(3), *pkg;
 	char name[AG_OBJECT_NAME_MAX];
@@ -204,7 +204,7 @@ Insert(AG_Event *event)
 static void
 AbortInsert(AG_Event *event)
 {
-	ES_PackageTool *t = AG_PTR(1);
+	ES_PackageInsertTool *t = AG_PTR(1);
 
 	RemoveFloatingPackage(t);
 	VG_ViewSelectTool(VGTOOL(t)->vgv, NULL, NULL);
@@ -213,7 +213,7 @@ AbortInsert(AG_Event *event)
 static void
 Init(void *p)
 {
-	ES_PackageTool *t = p;
+	ES_PackageInsertTool *t = p;
 	VG_ToolCommand *tc;
 
 	t->floatingPkg = NULL;
@@ -227,7 +227,7 @@ Init(void *p)
 static void *
 Edit(void *p, VG_View *vv)
 {
-	ES_PackageTool *t = p;
+	ES_PackageInsertTool *t = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
 	AG_CheckboxNewFlag(box, 0, _("Insert multiple instances"),
@@ -235,11 +235,11 @@ Edit(void *p, VG_View *vv)
 	return (box);
 }
 
-VG_ToolOps esPackageTool = {
+VG_ToolOps esPackageInsertTool = {
 	N_("Insert package"),
 	N_("Insert new device package into the layout."),
 	NULL,
-	sizeof(ES_PackageTool),
+	sizeof(ES_PackageInsertTool),
 	0,
 	Init,
 	NULL,			/* destroy */

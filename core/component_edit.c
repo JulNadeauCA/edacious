@@ -955,7 +955,7 @@ ES_ComponentEdit(void *obj)
 		}
 		
 		/* Register (but hide) the special "insert component" tool. */
-		VG_ViewRegTool(vv, &esInsertTool, ckt);
+		VG_ViewRegTool(vv, &esComponentInsertTool, ckt);
 
 		VG_ViewButtondownFn(vv, MouseButtonDown, NULL);
 	}
