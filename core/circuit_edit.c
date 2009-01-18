@@ -635,8 +635,10 @@ ES_CircuitEdit(void *p)
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
 			    &OBJECT(vv)->lock);
-			if (ops == &esSchemSelectTool)
+			if (ops == &esSchemSelectTool) {
 				VG_ViewSetDefaultTool(vv, tool);
+				VG_ViewSelectTool(vv, tool, ckt);
+			}
 		}
 		
 		AG_MenuSeparator(mi);
@@ -644,6 +646,9 @@ ES_CircuitEdit(void *p)
 		/* Register generic VG drawing tools */
 		for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
+			if (ops == &vgSelectTool) {
+				continue;		/* We use our own */
+			}
 			tool = VG_ViewRegTool(vv, ops, NULL);
 			mAction = AG_MenuAction(mi, ops->name,
 			    ops->icon ? ops->icon->s : NULL,

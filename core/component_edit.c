@@ -24,7 +24,7 @@
  */
 
 /*
- * Component edition routines.
+ * Component edition interface.
  */
 
 #include "core.h"
@@ -86,7 +86,7 @@ Delete(AG_Event *event)
 	VG_View *vv = AG_PTR(2);
 	ES_Circuit *ckt = com->ckt;
 	
-	ES_ClearEditAreas(vv);
+	VG_ClearEditAreas(vv);
 	ES_LockCircuit(ckt);
 	
 	if (!AG_ObjectInUse(com)) {
@@ -165,7 +165,7 @@ DeleteSelections(AG_Event *event)
 	ES_Component *com;
 	int changed = 0;
 
-	ES_ClearEditAreas(vv);
+	VG_ClearEditAreas(vv);
 	ES_LockCircuit(ckt);
 rescan:
 	CIRCUIT_FOREACH_COMPONENT_SELECTED(com, ckt) {
@@ -863,16 +863,20 @@ ES_ComponentEdit(void *obj)
 				AG_WidgetBindMp(btn, "state", &OBJECT(vv)->lock,
 				    AG_WIDGET_BOOL, &tool->selected);
 
-				if (ops == &esSchemSelectTool)
+				if (ops == &esSchemSelectTool) {
 					VG_ViewSetDefaultTool(vv, tool);
+					VG_ViewSelectTool(vv, tool, NULL);
+				}
 			}
 
 			AG_ToolbarSeparator(tb);
 
 			for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
 				ops = *pOps;
+				if (ops == &vgSelectTool) {
+					continue;	/* We use our own */
+				}
 				tool = VG_ViewRegTool(vv, ops, NULL);
-
 				btn = AG_ToolbarButtonIcon(tb,
 				    (ops->icon ? ops->icon->s : NULL), 0,
 				    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool,
@@ -936,8 +940,10 @@ ES_ComponentEdit(void *obj)
 			AG_WidgetBindMp(btn, "state", &OBJECT(vv)->lock,
 			    AG_WIDGET_BOOL, &tool->selected);
 
-			if (ops == &esSchemSelectTool)
+			if (ops == &esSchemSelectTool) {
 				VG_ViewSetDefaultTool(vv, tool);
+				VG_ViewSelectTool(vv, tool, ckt);
+			}
 		}
 
 		AG_ToolbarSeparator(tb);
@@ -945,8 +951,10 @@ ES_ComponentEdit(void *obj)
 		/* Register generic VG drawing tools */
 		for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
+			if (ops == &vgSelectTool) {
+				continue;		/* We use our own */
+			}
 			tool = VG_ViewRegTool(vv, ops, ckt);
-
 			btn = AG_ToolbarButtonIcon(tb,
 			    (ops->icon ? ops->icon->s : NULL), 0,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
