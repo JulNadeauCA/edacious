@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2009 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,8 +24,7 @@
  */
 
 /*
- * Component schematic. This is mainly a vector drawing with specific
- * functionality for ports and labels.
+ * General-purpose schematic drawing.
  */
 
 #include "core.h"
@@ -83,117 +82,60 @@ Save(void *obj, AG_DataSource *ds)
 	return (0);
 }
 
-static void
-CreateView(AG_Event *event)
+/* Return the entity nearest to vPos. */
+void *
+ES_SchemNearest(VG_View *vv, VG_Vector vPos)
 {
-	AG_Window *pwin = AG_PTR(1);
-	ES_Schem *scm = AG_PTR(2);
-	VG_View *vv;
-	AG_Window *win;
+	VG *vg = vv->vg;
+	float prox, proxNearest;
+	VG_Node *vn, *vnNearest;
+	VG_Vector v;
 
-	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, _("View of %s"), OBJECT(scm)->name);
-
-	vv = VG_ViewNew(win, scm->vg, VG_VIEW_EXPAND);
-	AG_WidgetFocus(vv);
-	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_TR, 60, 50);
-	AG_WindowAttach(pwin, win);
-	AG_WindowShow(win);
-}
-
-static void *
-Edit(void *p)
-{
-	ES_Schem *scm = p;
-	AG_Window *win;
-	AG_Toolbar *tbRight;
-	AG_Pane *hPane;
-	VG_View *vv;
-	AG_Menu *menu;
-	AG_MenuItem *mi, *mi2;
-
-	win = AG_WindowNew(0);
-
-	tbRight = AG_ToolbarNew(NULL, AG_TOOLBAR_VERT, 1, 0);
-	AG_ExpandVert(tbRight);
-	
-	vv = VG_ViewNew(NULL, scm->vg, VG_VIEW_EXPAND|VG_VIEW_GRID|
-	                               VG_VIEW_CONSTRUCTION);
-	VG_ViewSetSnapMode(vv, VG_GRID);
-	VG_ViewSetScale(vv, 0);
-
-	menu = AG_MenuNew(win, AG_MENU_HFILL);
-#if 0
-	mi = AG_MenuAddItem(menu, _("File"));
-	{
-		AG_MenuAction(mi, _("Properties..."), agIconGear.s,
-		    ShowProperties, "%p,%p,%p", win, scm, vv);
-	}
-#endif
-	mi = AG_MenuAddItem(menu, _("Edit"));
-	{
-		mi2 = AG_MenuNode(mi, _("Snapping mode"), NULL);
-		VG_SnapMenu(mi2, vv);
-	}
-	mi = AG_MenuAddItem(menu, _("View"));
-	{
-		AG_MenuActionKb(mi, _("New view..."), esIconCircuit.s,
-		    SDLK_v, KMOD_CTRL,
-		    CreateView, "%p,%p", win, scm);
-
-		AG_MenuSeparator(mi);
-
-		mi2 = AG_MenuNode(mi, _("Schematic"), esIconCircuit.s);
-		{
-			AG_MenuFlags(mi2, _("Grid"), vgIconSnapGrid.s,
-			    &vv->flags, VG_VIEW_GRID, 0);
-			AG_MenuFlags(mi2, _("Construction geometry"),
-			    esIconConstructionGeometry.s,
-			    &vv->flags, VG_VIEW_CONSTRUCTION, 0);
+	/* First check if we intersect a block. */
+	TAILQ_FOREACH(vn, &vg->nodes, list) {
+		if (!VG_NodeIsClass(vn, "SchemBlock")) {
+			continue;
 		}
+		v = vPos;
+		prox = vn->ops->pointProximity(vn, vv, &v);
+		if (prox == 0.0f)
+			return (vn);
 	}
-	
-	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
-	{
-		AG_Box *vBox, *hBox;
 
-		VG_AddEditArea(vv, hPane->div[0]);
-
-		vBox = AG_BoxNewVertNS(hPane->div[1], AG_BOX_EXPAND);
-		{
-			hBox = AG_BoxNewHorizNS(vBox, AG_BOX_EXPAND);
-			{
-				AG_ObjectAttach(hBox, vv);
-				AG_ObjectAttach(hBox, tbRight);
+	/* Then prioritize points at a fixed distance. */
+	proxNearest = AG_FLT_MAX;
+	vnNearest = NULL;
+	TAILQ_FOREACH(vn, &vg->nodes, list) {
+		if (!VG_NodeIsClass(vn, "Point")) {
+			continue;
+		}
+		v = vPos;
+		prox = vn->ops->pointProximity(vn, vv, &v);
+		if (prox <= vv->pointSelRadius) {
+			if (prox < proxNearest) {
+				proxNearest = prox;
+				vnNearest = vn;
 			}
 		}
-
-		AG_WidgetFocus(vv);
 	}
+	if (vnNearest != NULL)
+		return (vnNearest);
 
-	mi = AG_MenuAddItem(menu, _("Tools"));
-	{
-		AG_MenuItem *mAction;
-		VG_ToolOps **pOps, *ops;
-		VG_Tool *tool;
-
-		AG_MenuToolbar(mi, tbRight);
-		
-		for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
-			ops = *pOps;
-			tool = VG_ViewRegTool(vv, ops, NULL);
-			mAction = AG_MenuAction(mi, ops->name,
-			    ops->icon ? ops->icon->s : NULL,
-			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, NULL);
-			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
-			    &OBJECT(vv)->lock);
+	/* Finally, fallback to a general query. */
+	proxNearest = AG_FLT_MAX;
+	vnNearest = NULL;
+	TAILQ_FOREACH(vn, &vg->nodes, list) {
+		if (vn->ops->pointProximity == NULL) {
+			continue;
 		}
-
-		AG_MenuToolbar(mi, NULL);
+		v = vPos;
+		prox = vn->ops->pointProximity(vn, vv, &v);
+		if (prox < proxNearest) {
+			proxNearest = prox;
+			vnNearest = vn;
+		}
 	}
-	
-	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);
-	return (win);
+	return (vnNearest);
 }
 
 AG_ObjectClass esSchemClass = {
@@ -205,5 +147,5 @@ AG_ObjectClass esSchemClass = {
 	Destroy,
 	Load,
 	Save,
-	Edit
+	ES_SchemEdit
 };

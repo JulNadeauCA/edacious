@@ -29,4 +29,5 @@ extern VG_ToolOps esPackageInsertTool;
 
 ES_Layout *ES_LayoutNew(struct es_circuit *);
 void      *ES_LayoutNearest(VG_View *, VG_Vector);
+void      *ES_LayoutEdit(void *);
 __END_DECLS

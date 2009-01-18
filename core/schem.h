@@ -25,4 +25,5 @@ extern VG_ToolOps esSchemPortTool;
 
 ES_Schem *ES_SchemNew(void *);
 void     *ES_SchemNearest(VG_View *, VG_Vector);
+void     *ES_SchemEdit(void *);
 __END_DECLS
