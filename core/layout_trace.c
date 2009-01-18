@@ -145,6 +145,19 @@ Move(void *p, VG_Vector vCurs, VG_Vector vRel)
 	VG_MultMatrix(&lt->p2->T, &T2);
 }
 
+static void *
+Edit(void *p, VG_View *vv)
+{
+	ES_LayoutTrace *lt = p;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+
+	AG_NumericalNewFlt(box, 0, "mm", _("Thickness: "), &lt->thickness);
+	AG_NumericalNewFlt(box, 0, "mm", _("Clearance: "), &lt->clearance);
+	AG_CheckboxNewFlag(box, 0, _("Rat line"), &lt->flags, ES_LAYOUTTRACE_RAT);
+
+	return (box);
+}
+
 VG_NodeOps esLayoutTraceOps = {
 	N_("LayoutTrace"),
 	&esIconInsertWire,
@@ -158,5 +171,6 @@ VG_NodeOps esLayoutTraceOps = {
 	PointProximity,
 	NULL,			/* lineProximity */
 	Delete,
-	Move
+	Move,
+	Edit
 };

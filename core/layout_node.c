@@ -126,5 +126,6 @@ VG_NodeOps esLayoutNodeOps = {
 	PointProximity,
 	NULL,			/* lineProximity */
 	NULL,			/* delete */
-	Move
+	Move,
+	NULL,			/* edit */
 };

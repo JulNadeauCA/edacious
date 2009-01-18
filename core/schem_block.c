@@ -215,5 +215,6 @@ VG_NodeOps esSchemBlockOps = {
 	PointProximity,
 	NULL,			/* lineProximity */
 	NULL,			/* delete */
-	Move
+	Move,
+	NULL			/* edit */
 };

@@ -178,6 +178,26 @@ Move(void *p, VG_Vector vCurs, VG_Vector vRel)
 	VG_Translate(sp, vRel);
 }
 
+static void *
+Edit(void *p, VG_View *vv)
+{
+	ES_SchemPort *sp = p;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+	AG_Textbox *tb;
+
+#if 0
+	AG_LabelNewPolled(box, 0, _("Component: %s(%d)"), &sp->comName,
+	    &sp->portName);
+	AG_SeparatorNewHoriz(box);
+#endif
+	tb = AG_TextboxNew(box, AG_TEXTBOX_HFILL, _("Symbol: "));
+	AG_TextboxBindUTF8(tb, sp->name, sizeof(sp->name));
+
+	AG_NumericalNewFlt(box, 0, NULL, _("Display radius: "), &sp->r);
+
+	return (box);
+}
+
 VG_NodeOps esSchemPortOps = {
 	N_("SchemPort"),
 	&esIconPortEditor,
@@ -191,5 +211,6 @@ VG_NodeOps esSchemPortOps = {
 	PointProximity,
 	NULL,			/* lineProximity */
 	NULL,			/* delete */
-	Move
+	Move,
+	Edit
 };

@@ -146,6 +146,20 @@ Move(void *p, VG_Vector vCurs, VG_Vector vRel)
 	VG_MultMatrix(&sw->p2->T, &T2);
 }
 
+static void *
+Edit(void *p, VG_View *vv)
+{
+	ES_SchemWire *sw = p;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+
+#if 0
+	AG_LabelNewPolled(box, 0, _("Component: %s"), &sw->name);
+	AG_SeparatorNewHoriz(box);
+#endif
+	AG_NumericalNewUint(box, 0, "px", _("Thickness: "), &sw->thickness);
+	return (box);
+}
+
 VG_NodeOps esSchemWireOps = {
 	N_("SchemWire"),
 	&esIconInsertWire,
@@ -159,5 +173,6 @@ VG_NodeOps esSchemWireOps = {
 	PointProximity,
 	NULL,			/* lineProximity */
 	Delete,
-	Move
+	Move,
+	Edit
 };
