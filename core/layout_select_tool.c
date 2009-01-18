@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2009 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,7 @@
  */
 
 /*
- * Tool for selecting and moving entities in a circuit layout.
+ * Layout editor: Tool for selecting and moving entities in a circuit layout.
  */
 
 #include "core.h"
@@ -35,6 +35,7 @@ typedef struct es_layout_select_tool {
 	Uint flags;
 #define MOVING_ENTITIES	0x01	/* Translation is in progress */
 	VG_Vector vLast;	/* For grid snapping */
+	VG_Node *vnMouseOver;	/* Element under cursor */
 } ES_LayoutSelectTool;
 
 /* Return the entity nearest to vPos. */
@@ -108,20 +109,25 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 	case SDL_BUTTON_LEFT:
 		t->vLast = v;
 		if (VG_SELECT_MULTI(vv)) {
-			if (VG_NodeIsClass(vn, "LayoutBlock")) {
-				lb = (ES_LayoutBlock *)vn;
-				ES_SelectComponent(lb->com, vv);
-			}
 			if (vn->flags & VG_NODE_SELECTED) {
 				vn->flags &= ~(VG_NODE_SELECTED);
 			} else {
 				vn->flags |= VG_NODE_SELECTED;
+			
+				if (VG_NodeIsClass(vn, "LayoutBlock")) {
+					lb = (ES_LayoutBlock *)vn;
+					ES_SelectComponent(lb->com, vv);
+				} else {
+					VG_EditNode(vv, 0, vn);
+				}
 			}
 		} else {
 			if (VG_NodeIsClass(vn, "LayoutBlock")) {
 				lb = (ES_LayoutBlock *)vn;
 				ES_UnselectAllComponents(COMCIRCUIT(lb->com), vv);
 				ES_SelectComponent(lb->com, vv);
+			} else {
+				VG_EditNode(vv, 0, vn);
 			}
 			VG_UnselectAll(vv->vg);
 			vn->flags |= VG_NODE_SELECTED;
@@ -153,29 +159,28 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	VG_Node *vn;
 	VG_Vector v;
 
+	/* Provide visual feedback of current selection. */
 	if ((t->flags & MOVING_ENTITIES) == 0) {
-		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
-			vn->flags &= ~(VG_NODE_MOUSEOVER);
-		}
-		if ((vn = ES_LayoutNearest(vv, vPos)) != NULL) {
+		if ((vn = ES_LayoutNearest(vv, vPos)) != NULL &&
+		    t->vnMouseOver != vn) {
+			t->vnMouseOver = vn;
 			if (VG_NodeIsClass(vn, "LayoutBlock")) {
 				ES_HighlightComponent(SCHEM_BLOCK(vn)->com);
 				VG_Status(vv, _("Select component: %s"),
 				    OBJECT(SCHEM_BLOCK(vn)->com)->name);
 			} else if (VG_NodeIsClass(vn, "LayoutTrace")) {
-				vn->flags |= VG_NODE_MOUSEOVER;
 				VG_Status(vv, _("Select trace #%d"), vn->handle);
 			} else if (VG_NodeIsClass(vn, "LayoutHole")) {
-				vn->flags |= VG_NODE_MOUSEOVER;
 				VG_Status(vv, _("Select hole #%d"), vn->handle);
 			} else {
-				vn->flags |= VG_NODE_MOUSEOVER;
-				VG_Status(vv, _("Select entity: %s%d"),
+				VG_Status(vv, _("Select layout entity: %s%d"),
 				    vn->ops->name, vn->handle);
 			}
 		}
 		return (0);
 	}
+
+	/* Translate any selected entities. */
 	v = vPos;
 	if (!VG_SKIP_CONSTRAINTS(vv)) {
 		VG_Vector vLast, vSnapRel;
@@ -243,11 +248,25 @@ del:
 }
 
 static void
+PostDraw(void *p, VG_View *vv)
+{
+	ES_LayoutSelectTool *t = p;
+	int x, y;
+
+	if (t->vnMouseOver != NULL) {
+		VG_GetViewCoords(vv, VG_Pos(t->vnMouseOver), &x,&y);
+		AG_DrawCircle(vv, x,y, 3,
+		    VG_MapColorRGB(vv->vg->selectionColor));
+	}
+}
+
+static void
 Init(void *p)
 {
 	ES_LayoutSelectTool *t = p;
 
 	t->flags = 0;
+	t->vnMouseOver = NULL;
 }
 
 VG_ToolOps esLayoutSelectTool = {
@@ -260,7 +279,7 @@ VG_ToolOps esLayoutSelectTool = {
 	NULL,			/* destroy */
 	NULL,			/* edit */
 	NULL,			/* predraw */
-	NULL,			/* postdraw */
+	PostDraw,
 	NULL,			/* selected */
 	NULL,			/* deselected */
 	MouseMotion,
