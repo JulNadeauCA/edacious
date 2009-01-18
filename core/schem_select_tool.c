@@ -35,63 +35,8 @@ typedef struct es_schem_select_tool {
 	Uint flags;
 #define MOVING_ENTITIES	0x01	/* Translation is in progress */
 	VG_Vector vLast;	/* For grid snapping */
+	VG_Node *vnMouseOver;	/* Element under cursor */
 } ES_SchemSelectTool;
-
-/* Return the entity nearest to vPos. */
-void *
-ES_SchemNearest(VG_View *vv, VG_Vector vPos)
-{
-	VG *vg = vv->vg;
-	float prox, proxNearest;
-	VG_Node *vn, *vnNearest;
-	VG_Vector v;
-
-	/* First check if we intersect a block. */
-	TAILQ_FOREACH(vn, &vg->nodes, list) {
-		if (!VG_NodeIsClass(vn, "SchemBlock")) {
-			continue;
-		}
-		v = vPos;
-		prox = vn->ops->pointProximity(vn, vv, &v);
-		if (prox == 0.0f)
-			return (vn);
-	}
-
-	/* Then prioritize points at a fixed distance. */
-	proxNearest = AG_FLT_MAX;
-	vnNearest = NULL;
-	TAILQ_FOREACH(vn, &vg->nodes, list) {
-		if (!VG_NodeIsClass(vn, "Point")) {
-			continue;
-		}
-		v = vPos;
-		prox = vn->ops->pointProximity(vn, vv, &v);
-		if (prox <= vv->pointSelRadius) {
-			if (prox < proxNearest) {
-				proxNearest = prox;
-				vnNearest = vn;
-			}
-		}
-	}
-	if (vnNearest != NULL)
-		return (vnNearest);
-
-	/* Finally, fallback to a general query. */
-	proxNearest = AG_FLT_MAX;
-	vnNearest = NULL;
-	TAILQ_FOREACH(vn, &vg->nodes, list) {
-		if (vn->ops->pointProximity == NULL) {
-			continue;
-		}
-		v = vPos;
-		prox = vn->ops->pointProximity(vn, vv, &v);
-		if (prox < proxNearest) {
-			proxNearest = prox;
-			vnNearest = vn;
-		}
-	}
-	return (vnNearest);
-}
 
 static int
 MouseButtonDown(void *p, VG_Vector v, int b)
@@ -108,14 +53,17 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 	case SDL_BUTTON_LEFT:
 		t->vLast = v;
 		if (VG_SELECT_MULTI(vv)) {
-			if (VG_NodeIsClass(vn, "SchemBlock")) {
-				sb = (ES_SchemBlock *)vn;
-				ES_SelectComponent(sb->com, vv);
-			}
 			if (vn->flags & VG_NODE_SELECTED) {
 				vn->flags &= ~(VG_NODE_SELECTED);
 			} else {
 				vn->flags |= VG_NODE_SELECTED;
+
+				if (VG_NodeIsClass(vn, "SchemBlock")) {
+					sb = (ES_SchemBlock *)vn;
+					ES_SelectComponent(sb->com, vv);
+				} else {
+					VG_EditNode(vv, 0, vn);
+				}
 			}
 		} else {
 			if (VG_NodeIsClass(vn, "SchemBlock")) {
@@ -123,6 +71,8 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 				ES_UnselectAllComponents(COMCIRCUIT(sb->com),
 				    vv);
 				ES_SelectComponent(sb->com, vv);
+			} else {
+				VG_EditNode(vv, 0, vn);
 			}
 			VG_UnselectAll(vv->vg);
 			vn->flags |= VG_NODE_SELECTED;
@@ -154,32 +104,30 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	VG_Node *vn;
 	VG_Vector v;
 
+	/* Provide visual feedback of current selection. */
 	if ((t->flags & MOVING_ENTITIES) == 0) {
-		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
-			vn->flags &= ~(VG_NODE_MOUSEOVER);
-		}
-		if ((vn = ES_SchemNearest(vv, vPos)) != NULL) {
+		if ((vn = ES_SchemNearest(vv, vPos)) != NULL &&
+		    t->vnMouseOver != vn) {
+			t->vnMouseOver = vn;
 			if (VG_NodeIsClass(vn, "SchemBlock")) {
 				ES_HighlightComponent(SCHEM_BLOCK(vn)->com);
 				VG_Status(vv, _("Select component: %s"),
 				    OBJECT(SCHEM_BLOCK(vn)->com)->name);
 			} else if (VG_NodeIsClass(vn, "SchemWire")) {
-				ES_SchemWire *sw = SCHEM_WIRE(vn);
-				vn->flags |= VG_NODE_MOUSEOVER;
 				VG_Status(vv, _("Select wire (n%d)"),
-				    COMPONENT(sw->wire)->ports[1].node);
+				    COMPONENT(SCHEM_WIRE(vn)->wire)->ports[1].node);
 			} else if (VG_NodeIsClass(vn, "SchemPort")) {
-				vn->flags |= VG_NODE_MOUSEOVER;
 				VG_Status(vv, _("Select port (n%d)"),
 				    SCHEM_PORT(vn)->port->node);
 			} else {
-				vn->flags |= VG_NODE_MOUSEOVER;
-				VG_Status(vv, _("Select entity: %s%d"),
+				VG_Status(vv, _("Select schematic entity: %s%d"),
 				    vn->ops->name, vn->handle);
 			}
 		}
 		return (0);
 	}
+
+	/* Translate any selected entities. */
 	v = vPos;
 	if (!VG_SKIP_CONSTRAINTS(vv)) {
 		VG_Vector vLast, vSnapRel;
