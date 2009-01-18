@@ -190,7 +190,7 @@ ES_SelectComponent(ES_Component *com, VG_View *vv)
 
 	if (vv->nEditAreas > 0 && AGOBJECT_CLASS(com)->edit != NULL &&
 	    (wEdit = AGOBJECT_CLASS(com)->edit(com)) != NULL) {
-		AG_ObjectFreeChildren(vv->editAreas[0]);
+		VG_ClearEditAreas(vv);
 		AG_ObjectAttach(vv->editAreas[0], wEdit);
 		AG_WindowUpdate(AG_ParentWindow(vv->editAreas[0]));
 		AG_WidgetShownRecursive(vv->editAreas[0]);
@@ -217,7 +217,7 @@ ES_UnselectAllComponents(ES_Circuit *ckt, VG_View *vv)
 	ESCIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		com->flags &= ~(ES_COMPONENT_SELECTED);
 	}
-	ES_ClearEditAreas(vv);
+	VG_ClearEditAreas(vv);
 }
 /* Highlight component for selection. */
 static __inline__ void
