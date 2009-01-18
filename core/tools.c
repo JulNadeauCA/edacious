@@ -26,6 +26,7 @@ VG_ToolOps *esLayoutTools[] = {
 
 /* VG edition tools */
 VG_ToolOps *esVgTools[] = {
+	&vgSelectTool,
 	&vgPointTool,
 	&vgLineTool,
 	&vgCircleTool,
