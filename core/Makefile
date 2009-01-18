@@ -23,6 +23,7 @@ SRCS=	core.c \
 	wire.c \
 	wire_tool.c \
 	schem.c \
+	schem_edit.c \
 	schem_library.c \
 	schem_block.c \
 	schem_port.c \
@@ -32,6 +33,7 @@ SRCS=	core.c \
 	integration.c \
 	tools.c \
 	layout.c \
+	layout_edit.c \
 	layout_select_tool.c \
 	layout_node.c \
 	layout_node_tool.c \
