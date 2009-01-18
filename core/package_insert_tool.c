@@ -24,8 +24,8 @@
  */
 
 /*
- * "Insert package" tool. This tool inserts a device package for a given
- * component into the circuit layout.
+ * Layout editor: Tool for inserting a device package into the circuit layout.
+ * Typically, it will be loaded from a file in the device package library.
  */
 
 #include "core.h"
@@ -177,6 +177,7 @@ Insert(AG_Event *event)
 	ES_Layout *lo = AG_PTR(2);
 	ES_Package *pkgModel = AG_PTR(3), *pkg;
 	char name[AG_OBJECT_NAME_MAX];
+	VG_View *vv = VGTOOL(t)->vgv;
 
 	/* Allocate the Package instance and load from file. */
 	if ((pkg = malloc(sizeof(ES_Package))) == NULL) {
@@ -198,6 +199,8 @@ Insert(AG_Event *event)
 	t->floatingPkg = pkg;
 	AG_ObjectAttach(lo, pkg);
 //	ES_SelectComponent(pkg, vv);
+	
+	AG_WidgetFocus(vv);
 }
 
 /* Abort the current insert operation. */

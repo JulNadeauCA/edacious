@@ -257,6 +257,7 @@ Insert(AG_Event *event)
 	ES_SelectComponent(com, vv);
 	AG_PostEvent(ckt, com, "circuit-shown", NULL);
 
+	AG_WidgetFocus(vv);
 	ES_UnlockCircuit(ckt);
 	return;
 fail:
