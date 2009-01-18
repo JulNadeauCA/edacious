@@ -526,7 +526,9 @@ Quit(AG_Event *event)
 {
 	AG_Object *vfsObj = NULL, *modelObj = NULL, *schemObj = NULL;
 	AG_Window *win;
+/*	AG_Checkbox *cb; */
 	AG_Box *box;
+	int val;
 
 	if (agTerminating) {
 		ConfirmQuit(NULL);
@@ -546,8 +548,32 @@ Quit(AG_Event *event)
 			break;
 	}
 
-	if (vfsObj == NULL && modelObj == NULL && schemObj == NULL) {
-		ConfirmQuit(NULL);
+	if (vfsObj == NULL &&
+	    modelObj == NULL &&
+	    schemObj == NULL) {
+		if (AG_GetProp(agConfig, "no-confirm-quit", AG_PROP_BOOL, &val) &&
+		    val == 1) {
+			ConfirmQuit(NULL);
+		} else {
+			if ((win = AG_WindowNewNamed(AG_WINDOW_MODAL|AG_WINDOW_NOTITLE|
+			    AG_WINDOW_NORESIZE, "QuitCallback")) == NULL) {
+				return;
+			}
+			AG_WindowSetCaption(win, _("Quit application?"));
+			AG_WindowSetPosition(win, AG_WINDOW_CENTER, 0);
+			AG_WindowSetSpacing(win, 8);
+
+			AG_LabelNewString(win, 0, _("Exit Edacious?"));
+#if 0
+			cb = AG_CheckboxNew(win, 0, _("Don't ask again"))
+			AG_WidgetBindProp(cb, "state", agConfig, "no-confirm-quit");
+#endif
+
+			box = AG_BoxNewHorizNS(win, AG_VBOX_HFILL);
+			AG_ButtonNewFn(box, 0, _("Quit"), ConfirmQuit, NULL);
+			AG_WidgetFocus(AG_ButtonNewFn(box, 0, _("Cancel"), AbortQuit, "%p", win));
+			AG_WindowShow(win);
+		}
 	} else {
 		if ((win = AG_WindowNewNamed(AG_WINDOW_MODAL|AG_WINDOW_NOTITLE|
 		    AG_WINDOW_NORESIZE, "QuitCallback")) == NULL) {
@@ -559,15 +585,17 @@ Quit(AG_Event *event)
 		AG_LabelNewString(win, 0,
 		    _("There is at least one object with unsaved changes.  "
 	              "Exit application?"));
-		box = AG_BoxNewHoriz(win, AG_BOX_HOMOGENOUS|AG_VBOX_HFILL);
-		AG_BoxSetSpacing(box, 0);
-		AG_BoxSetPadding(box, 0);
-		AG_ButtonNewFn(box, 0, _("Discard changes"),
-		    ConfirmQuit, NULL);
-		AG_WidgetFocus(AG_ButtonNewFn(box, 0, _("Cancel"),
-		    AbortQuit, "%p", win));
+		box = AG_BoxNewHorizNS(win, AG_VBOX_HFILL|AG_BOX_HOMOGENOUS);
+		AG_ButtonNewFn(box, 0, _("Discard changes"), ConfirmQuit, NULL);
+		AG_WidgetFocus(AG_ButtonNewFn(box, 0, _("Cancel"), AbortQuit, "%p", win));
 		AG_WindowShow(win);
 	}
+}
+
+static void
+QuitByKBD(void)
+{
+	Quit(NULL);
 }
 
 static void
@@ -798,7 +826,7 @@ main(int argc, char *argv[])
 	}
 	AG_SetRefreshRate(fps);
 	AG_SetVideoResizeCallback(VideoResize);
-/*	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, AG_Quit); */
+	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, QuitByKBD);
 	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
 
 	/*
