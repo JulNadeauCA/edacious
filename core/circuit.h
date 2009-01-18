@@ -192,19 +192,4 @@ ES_UnlockCircuit(ES_Circuit *ckt)
 	}
 	AG_ObjectUnlock(ckt);
 }
-
-/* Clear component edition areas in the GUI. */
-static __inline__ void
-ES_ClearEditAreas(VG_View *vv)
-{
-	Uint i;
-
-	AG_ObjectLock(vv);
-	for (i = 0; i < vv->nEditAreas; i++) {
-		AG_ObjectFreeChildren(vv->editAreas[i]);
-		AG_WindowUpdate(AG_ParentWindow(vv->editAreas[i]));
-		AG_WidgetHiddenRecursive(vv->editAreas[i]);
-	}
-	AG_ObjectUnlock(vv);
-}
 __END_DECLS
