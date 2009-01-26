@@ -38,8 +38,8 @@ facilitates testing on multiple machines using network filesystems.
 
 1) Create the build directory. Where available, a memory filesystem is a
    good location to build from.
-    $ mkdir w-agareda
-    $ cd w-agareda
+    $ mkdir w-edacious
+    $ cd w-edacious
 
 2) Run configure from the source directory with --srcdir.
     $ ~/edacious-sources/configure --srcdir=$HOME/edacious-sources [...]
