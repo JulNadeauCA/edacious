@@ -200,6 +200,7 @@ Init(void *p)
 	ES_SchemSelectTool *t = p;
 
 	t->flags = 0;
+	t->vnMouseOver = NULL;
 }
 
 VG_ToolOps esSchemSelectTool = {
