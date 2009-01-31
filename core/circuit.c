@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2009 Julien Nadeau (julien.nadeau@hypertriton.com)
+ * Copyright (c) 2006-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -81,16 +81,22 @@ EditClose(AG_Event *event)
 
 /* Update the voltage entries in the Circuit's property table. */
 static M_Real
-ReadNodeVoltage(void *p, AG_Prop *pr)
+NodeVoltageFn(AG_Event *event)
 {
-	return (ES_NodeVoltage(p, atoi(&pr->key[1])));
+	ES_Circuit *ckt = AG_PTR(1);
+	int v = AG_INT(2);
+
+	return ES_NodeVoltage(ckt, v);
 }
 
 /* Update the branch current entries in the Circuit's property table. */
 static M_Real
-ReadBranchCurrent(void *p, AG_Prop *pr)
+BranchCurrentFn(AG_Event *event)
 {
-	return (ES_BranchCurrent(p, atoi(&pr->key[1])));
+	ES_Circuit *ckt = AG_PTR(1);
+	int i = AG_INT(2);
+
+	return ES_BranchCurrent(ckt, i);
 }
 
 /* Commit a change in the circuit topology. */
@@ -101,7 +107,6 @@ ES_CircuitModified(ES_Circuit *ckt)
 	ES_Component *com;
 /*	ES_Vsource *vs; */
 	Uint i;
-	AG_Prop *pr;
 
 #if 0
 	/* Regenerate loop and pair information. */
@@ -137,16 +142,14 @@ ES_CircuitModified(ES_Circuit *ckt)
 		ckt->sim->ops->cktmod(ckt->sim, ckt);
 
 	/* Update the voltage/current entries in the property table. */
-	AG_ObjectFreeProps(OBJECT(ckt));
+	AG_ObjectFreeVariables(OBJECT(ckt));
 	for (i = 0; i < ckt->n; i++) {
 		Snprintf(key, sizeof(key), "v%u", i);
-		pr = M_SetReal(ckt, key, 0.0);
-		M_SetRealRdFn(pr, ReadNodeVoltage);
+		M_BindRealFn(ckt, key, NodeVoltageFn, "%p,%i", ckt, i);
 	}
 	for (i = 0; i < ckt->m; i++) {
 		Snprintf(key, sizeof(key), "I%u", i);
-		pr = M_SetReal(ckt, key, 0.0);
-		M_SetRealRdFn(pr, ReadBranchCurrent);
+		M_BindRealFn(ckt, key, BranchCurrentFn, "%p,%i", ckt, i);
 	}
 	
 	/* Notify the component models of the change. */
