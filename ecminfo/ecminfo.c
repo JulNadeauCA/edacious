@@ -92,13 +92,17 @@ main(int argc, char *argv[])
 		printf("\tTotal nodes: %u\n", ckt->n);
 
 		if (showProps) {
-			AG_Prop *prop;
+			AG_Variable *V;
+			Uint i;
 			char s[1024];
 
 			printf("\tProperties:\n");
-			AGOBJECT_FOREACH_PROP(prop, ckt) {
-				AG_PropPrint(s, sizeof(s), ckt, prop->key);
-				printf("\t\t%s = %s\n", prop->key, s);
+			AGOBJECT_FOREACH_VARIABLE(V, i, ckt) {
+				AG_LockVariable(V);
+				AG_EvalVariable(ckt, V);
+				AG_PrintVariable(s, sizeof(s), V);
+				printf("\t\t%s = %s\n", V->name, s);
+				AG_UnlockVariable(V);
 			}
 		}
 		if (!TAILQ_EMPTY(&AGOBJECT(ckt)->children)) {
