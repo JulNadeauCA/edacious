@@ -20,18 +20,15 @@ typedef struct es_digital {
 	int VccPort;		/* DC supply port */
 	int GndPort;		/* Ground port */
 	M_Vector *G;		/* Current conductive state */
-	M_Range Vcc;		/* DC supply voltage (operating) */
-	M_Range Tamb;		/* Operating ambient temperature */
-	M_Range Idd;		/* Quiescent current */
-	M_Range Vol, Voh;	/* Output voltage LOW/HIGH (buffered) */
-	M_Range Vil, Vih;	/* Input voltage LOW/HIGH (buffered) */
-	M_Range Iol;		/* Output (sink current); LOW */
-	M_Range Ioh;		/* Output (source current); HIGH */
-	M_Range Iin;		/* Input leakage current (+-) */
-	M_Range Iozh;		/* 3-state output leakage current; HIGH */
-	M_Range Iozl;		/* 3-state output leakage current; LOW */
-	M_TimeRange Tthl;	/* Output transition time; HIGH->LOW */
-	M_TimeRange Ttlh;	/* Output transition time; LOW->HIGH */
+	M_Real Vcc;		/* DC supply voltage (operating) */
+	M_Real VoL, VoH;	/* Output voltage (buffered) */
+	M_Real ViH_min; 	/* Min input voltage for HIGH (buffered) */
+	M_Real ViL_max;		/* Max input voltage for LOW (buffered) */
+	M_Real Idd;		/* Quiescent current */
+	M_Real IoL, IoH;	/* Output (sink current) */
+	M_Real Iin;		/* Input leakage current (+-) */
+	M_Real IozH, IozL;	/* 3-state output leakage current */
+	M_Time tHL, tLH;		/* Output transition time; HIGH<->LOW */
 } ES_Digital;
 
 #define ES_DIGITAL(p) ((ES_Digital *)(p))
