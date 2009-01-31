@@ -776,6 +776,7 @@ ES_ComponentEdit(void *obj)
 	VG_ToolOps **pOps, *ops;
 	VG_Tool *tool;
 	AG_Button *btn;
+	AG_Pane *vPane;
 
 	win = AG_WindowNew(0);
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
@@ -809,12 +810,13 @@ ES_ComponentEdit(void *obj)
 		/*
 		 * Left side
 		 */
+		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
 		{
 			/*
 			 * Model schematics
 			 */
-			AG_LabelNew(hPane->div[0], 0, _("Schematic blocks:"));
-			tlSchems = AG_TlistNewPolled(hPane->div[0], AG_TLIST_EXPAND,
+			AG_LabelNew(vPane->div[0], 0, _("Schematic blocks:"));
+			tlSchems = AG_TlistNewPolled(vPane->div[0], AG_TLIST_EXPAND,
 			    PollSchems, "%p,%p", com, vv);
 			AG_TlistSizeHint(tlSchems, "Schematic #0000", 5);
 			AG_SetEvent(tlSchems, "tlist-dblclick",
@@ -825,7 +827,7 @@ ES_ComponentEdit(void *obj)
 				VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 			}
 
-			bCmds = AG_BoxNewHorizNS(hPane->div[0], AG_BOX_HOMOGENOUS|AG_BOX_HFILL);
+			bCmds = AG_BoxNewHorizNS(vPane->div[0], AG_BOX_HOMOGENOUS|AG_BOX_HFILL);
 			{
 				AG_ButtonNewFn(bCmds, 0, _("New"),
 				    NewSchem, "%p,%p", com, vv);
@@ -836,12 +838,13 @@ ES_ComponentEdit(void *obj)
 				    EvalRemoveButtonState, "%p", tlSchems);
 #endif
 			}
-			bCmds = AG_BoxNewHorizNS(hPane->div[0], AG_BOX_HOMOGENOUS|AG_BOX_HFILL);
+			bCmds = AG_BoxNewHorizNS(vPane->div[0], AG_BOX_HOMOGENOUS|AG_BOX_HFILL);
 			{
 				AG_ButtonNewFn(bCmds, 0, _("Import..."),
 				    ImportSchemDlg, "%p,%p", com, vv);
 			}
 		}
+		VG_AddEditArea(vv, vPane->div[1]);
 
 		/*
 		 * Right side
@@ -899,7 +902,6 @@ ES_ComponentEdit(void *obj)
 		ES_ComponentLibraryEditor *led;
 		AG_Tlist *tl;
 		AG_Box *hBox;
-		AG_Pane *vPane;
 		AG_Toolbar *tb;
 	
 		vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
