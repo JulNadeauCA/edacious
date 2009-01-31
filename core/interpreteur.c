@@ -686,7 +686,7 @@ M_Real my_Div(M_Real a, M_Real b)
 M_Real my_Pow(M_Real a, M_Real b)
 {
 	M_Real y;
-	y = pow(a, b);
+	y = Pow(a, b);
 	EvaluerDebug("%g ^ %g = %g\n", a, b, y);
 	return y;
 }

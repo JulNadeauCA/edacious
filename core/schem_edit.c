@@ -67,7 +67,7 @@ ES_SchemEdit(void *p)
 	vv = VG_ViewNew(NULL, scm->vg, VG_VIEW_EXPAND|VG_VIEW_GRID|
 	                               VG_VIEW_CONSTRUCTION);
 	VG_ViewSetSnapMode(vv, VG_GRID);
-	VG_ViewSetScale(vv, 0);
+	VG_ViewSetScale(vv, 2);
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 #if 0

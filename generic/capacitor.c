@@ -1,9 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Steven Herbst (herbst@mit.edu)
- * Antoine Levitt (smeuuh@gmail.com)
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -67,33 +65,32 @@ GetDeltaT(ES_SimDC *dc, int n)
 static void
 UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
 {
-	M_Real v = dc->currStep == 0 ? c->V0 : GetVoltage(c, 1);
-	switch(dc->method) {
+	M_Real v = (dc->currStep == 0.0) ? c->V0 : GetVoltage(c, 1);
+
+	switch (dc->method) {
 	case BE:
 		/* Thevenin companion model : better suited
 		 * for small timesteps */
 		c->v = v;
-		c->r = dc->deltaT / c->C;
+		c->r = dc->deltaT/c->C;
 		break;
 	case FE:
-		c->v = v + dc->deltaT / c->C * GetCurrent(c, 1);
+		c->v = v + dc->deltaT/c->C*GetCurrent(c,1);
 		break;
 	case TR:
-		c->v = v + dc->deltaT / (2 * c->C) * GetCurrent(c, 1);
-		c->r = dc->deltaT / (2 * c->C);
+		c->v = v + dc->deltaT/(2.0*c->C)*GetCurrent(c,1);
+		c->r = dc->deltaT/(2.0*c->C);
 		break;
 	case G2:
-		if(dc->currStep == 0)
-		{
+		if (dc->currStep == 0) {
 			/* Fall back to BE for first step */
 			dc->method = BE;
 			UpdateModel(c, dc);
 			dc->method = G2;
 			return;
 		}
-		
-		c->v = 4.0/3.0 * GetVoltage(c, 1) - 1.0/3.0 * GetVoltage(c, 2);
-		c->r = 2.0/3.0 * dc->deltaT / c->C;
+		c->v = 4.0/3.0*GetVoltage(c,1) - 1.0/3.0*GetVoltage(c,2);
+		c->r = 2.0/3.0*dc->deltaT/c->C;
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -101,13 +98,14 @@ UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
 	}
 }
 
-static void
+static __inline__ void
 Stamp(ES_Capacitor *c, ES_SimDC *dc)
 {
-	if(isImplicit[dc->method])
+	if (ES_IMPLICIT_METHOD(dc->method)) {
 		StampThevenin(c->v, c->r, c->s);
-	else
+	} else {
 		StampVoltageSource(c->v, c->s);
+	}
 }
 
 static int
@@ -117,10 +115,11 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	Uint k = PNODE(c,PORT_A);
 	Uint l = PNODE(c,PORT_B);
 
-	if(isImplicit[dc->method])
+	if (ES_IMPLICIT_METHOD(dc->method)) {
 		InitStampThevenin(k, l, c->vIdx, c->s, dc);
-	else
+	} else {
 		InitStampVoltageSource(k, l, c->vIdx, c->s, dc);
+	}
 
 	UpdateModel(c, dc);
 	Stamp(c, dc);
@@ -150,18 +149,19 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 static M_Real
 DividedDifference(ES_Capacitor *c, ES_SimDC *dc, int start, int end)
 {
-	M_Real num;
-	M_Real denom = 0;
+	M_Real num, denom;
 	int i;
-	if(start == end)
+
+	if (start == end)
 		return GetVoltage(c, start);
 
-	num = (DividedDifference(c, dc, start + 1, end) - DividedDifference(c, dc, start, end - 1)) / (end - start);
-	for(i = start; i < end; i++)
-	{
+	num = (DividedDifference(c, dc, start+1, end) -
+	       DividedDifference(c, dc, start, end-1)) /
+	       (end-start);
+	for (i = start, denom = 0.0; i < end; i++) {
 		denom += GetDeltaT(dc, i);
 	}
-	return num/denom;
+	return (num / denom);
 }
 
 static M_Real
@@ -178,16 +178,17 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 	ES_Capacitor *c = obj;
 	M_Real localErr;
 	M_Real dtn = dc->deltaT;
-	enum es_integration_method actualMethod;
-	actualMethod = ((dc->method == G2) && (dc->currStep == 0)) ? BE : dc->method;
+	const ES_IntegrationMethod *im;
 
-	localErr= Fabs(
-		pow(dtn, methodOrder[actualMethod] + 1)
-		* methodErrorConstant[actualMethod]
-		* Derivative(c, dc, methodOrder[actualMethod] + 1)
-		/ GetVoltage(c, 0));
+	im = &esIntegrationMethods[((dc->method == G2) && (dc->currStep == 0)) ?
+	                           BE : dc->method];
+
+	localErr = Fabs(
+	    Pow(dtn, im->order+1) * im->errConst *
+	    Derivative(c,dc,im->order+1) /
+	    GetVoltage(c,0));
 	
-	if(localErr > *err)
+	if (localErr > *err)
 		*err = localErr;
 }
 
@@ -227,28 +228,9 @@ Init(void *p)
 	
 	AG_SetEvent(c, "circuit-connected", Connected, NULL);
 	AG_SetEvent(c, "circuit-disconnected", Disconnected, NULL);
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_Capacitor *c = p;
-
-	c->C = M_ReadReal(buf);
-	c->V0 = M_ReadReal(buf);
-	
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_Capacitor *c = p;
-
-	M_WriteReal(buf, c->C);
-	M_WriteReal(buf, c->V0);
-
-	return (0);
+	M_BindReal(c, "C", &c->C);
+	M_BindReal(c, "V0", &c->V0);
 }
 
 static void *
@@ -275,8 +257,8 @@ ES_ComponentClass esCapacitorClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		Load,		/* load */
-		Save,		/* save */
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Capacitor"),

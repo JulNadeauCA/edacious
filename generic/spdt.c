@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -99,31 +95,12 @@ Init(void *p)
 	ES_Spdt *sw = p;
 
 	ES_InitPorts(sw, esSpdtPorts);
-	sw->rOn = 1.0;
-	sw->rOff = HUGE_VAL;
+	sw->Ron = 1.0;
+	sw->Roff = HUGE_VAL;
 	sw->state = 1;
-}
-
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_Spdt *sw = p;
-
-	sw->rOn = M_ReadReal(buf);
-	sw->rOff = M_ReadReal(buf);
-	sw->state = (int)AG_ReadUint8(buf);
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_Spdt *sw = p;
-
-	M_WriteReal(buf, sw->rOn);
-	M_WriteReal(buf, sw->rOff);
-	AG_WriteUint8(buf, (Uint8)sw->state);
-	return (0);
+	M_BindReal(sw, "Ron", &sw->Ron);
+	M_BindReal(sw, "Roff", &sw->Roff);
+	AG_BindInt(sw, "state", &sw->state);
 }
 
 static double
@@ -132,19 +109,19 @@ Resistance(void *p, ES_Port *p1, ES_Port *p2)
 	ES_Spdt *sw = p;
 
 	if (p1->n == 2 && p2->n == 3)
-		return (sw->rOff);
+		return (sw->Roff);
 
 	switch (p1->n) {
 	case 1:
 		switch (p2->n) {
 		case 2:
-			return (sw->state == 1 ? sw->rOn : sw->rOff);
+			return (sw->state == 1 ? sw->Ron : sw->Roff);
 		case 3:
-			return (sw->state == 2 ? sw->rOn : sw->rOff);
+			return (sw->state == 2 ? sw->Ron : sw->Roff);
 		}
 		break;
 	case 2:
-		return (sw->rOff);
+		return (sw->Roff);
 	}
 	return (-1);
 }
@@ -193,8 +170,8 @@ Edit(void *p)
 	ES_Spdt *sw = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	M_NumericalNewRealPNZ(box, 0, "ohm", _("ON resistance: "), &sw->rOn);
-	M_NumericalNewRealPNZ(box, 0, "ohm", _("OFF resistance: "), &sw->rOff);
+	M_NumericalNewRealPNZ(box, 0, "ohm", _("ON resistance: "), &sw->Ron);
+	M_NumericalNewRealPNZ(box, 0, "ohm", _("OFF resistance: "), &sw->Roff);
 	AG_ButtonAct(box, AG_BUTTON_EXPAND, _("Toggle state"),
 	    ToggleState, "%p", sw);
 	return (box);
@@ -207,10 +184,10 @@ ES_ComponentClass esSpdtClass = {
 		sizeof(ES_Spdt),
 		{ 0,0 },
 		Init,
-		NULL,			/* reinit */
-		NULL,			/* destroy */
-		Load,
-		Save,
+		NULL,		/* reinit */
+		NULL,		/* destroy */
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Switch (SPDT)"),

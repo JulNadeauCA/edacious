@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -51,31 +47,31 @@ const ES_Port esInductorPorts[] = {
 static M_Real
 GetVoltage(ES_Inductor *i, int n)
 {
-	return V_PREV_STEP(i,PORT_A, n)-V_PREV_STEP(i,PORT_B, n);
+	return V_PREV_STEP(i,PORT_A,n) - V_PREV_STEP(i,PORT_B,n);
 }
 
 /* Gets current at step current-n */
-static M_Real
+static __inline__ M_Real
 GetCurrent(ES_Inductor *i, int n)
 {
 	return i->I[n-1];
 }
 
-static M_Real GetDeltaT(ES_SimDC *dc, int n)
+static __inline__ M_Real
+GetDeltaT(ES_SimDC *dc, int n)
 {
-	if(n == 0) return dc->deltaT;
-	else return dc->deltaTPrevSteps[n - 1];
+	return (n == 0) ? dc->deltaT : dc->deltaTPrevSteps[n-1];
 }
-
 
 /* Returns current flowing through the linearized model at this step */
 static M_Real
 InductorBranchCurrent(ES_Inductor *i, ES_SimDC *dc)
 {
-	if(isImplicit[dc->method])
-		return i->Ieq + i->g * GetVoltage(i, 1);
-	else
-		return i->Ieq;
+	if (ES_IMPLICIT_METHOD(dc->method)) {
+		return (i->Ieq + i->g*GetVoltage(i,1));
+	} else {
+		return (i->Ieq);
+	}
 }
 
 static void
@@ -99,27 +95,28 @@ UpdateModel(ES_Inductor *i, ES_SimDC *dc)
 {
 	switch(dc->method) {
 	case BE:
-		i->Ieq = GetCurrent(i, 1);
-		i->g = dc->deltaT / i->L;
+		i->Ieq = GetCurrent(i,1);
+		i->g = dc->deltaT/i->L;
 		break;
 	case FE:
-		i->Ieq = GetCurrent(i, 1) + dc->deltaT / i->L * GetVoltage(i, 1);
+		i->Ieq = GetCurrent(i,1) +
+		         dc->deltaT/i->L*GetVoltage(i,1);
 		break;
 	case TR:
-		i->Ieq = GetCurrent(i, 1) + dc->deltaT / (2 * i->L) * GetVoltage(i, 1);
-		i->g = dc->deltaT / (2 * i->L);
+		i->Ieq = GetCurrent(i,1) + dc->deltaT/(2.0*i->L)*GetVoltage(i,1);
+		i->g = dc->deltaT/(2.0*i->L);
 		break;
 	case G2:
-		if(dc->currStep == 0)
-		{
+		if (dc->currStep == 0) {
 			/* Fall back to BE for first step */
 			dc->method = BE;
 			UpdateModel(i, dc);
 			dc->method = G2;
 			return;
 		}
-		i->Ieq = 4.0/3.0 * GetCurrent(i, 1) - 1.0/3.0 * GetCurrent(i, 2);
-		i->g = 2.0/3.0 * dc->deltaT / i->L;
+		i->Ieq = 4.0/3.0*GetCurrent(i,1) -
+		         1.0/3.0*GetCurrent(i,2);
+		i->g = 2.0/3.0*dc->deltaT/i->L;
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -127,15 +124,15 @@ UpdateModel(ES_Inductor *i, ES_SimDC *dc)
 	}
 }
 
-static void
+static __inline__ void
 Stamp(ES_Inductor *i, ES_SimDC *dc)
 {
-	if(isImplicit[dc->method]) {
+	if (ES_IMPLICIT_METHOD(dc->method)) {
 		StampConductance(i->g, i->s_conductance);
 		StampCurrentSource(i->Ieq, i->s_current_source);
-	}
-	else
+	} else {
 		StampCurrentSource(i->Ieq,i->s_current_source);
+	}
 }
 
 static int
@@ -146,21 +143,20 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	Uint l = PNODE(i,PORT_B);
 	int index;
 	
-	if(isImplicit[dc->method]) {
+	if (ES_IMPLICIT_METHOD(dc->method)) {
 		InitStampConductance(k, l, i->s_conductance, dc);
 		InitStampCurrentSource(l, k, i->s_current_source, dc);
-	}
-	else
+	} else {
 		InitStampCurrentSource(l, k, i->s_current_source, dc);
+	}
 
-	i->I = malloc(sizeof(M_Real) * dc->stepsToKeep);
-	for(index = 0; index < dc->stepsToKeep; index++)
+	i->I = Malloc(sizeof(M_Real)*dc->stepsToKeep);
+	for (index = 0; index < dc->stepsToKeep; index++)
 		i->I[index] = 0.0;
 	
 	i->g = 0.0;
 	i->Ieq = 0.0;
 	Stamp(i, dc);
-
 	return (0);
 }
 
@@ -171,13 +167,13 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	
 	UpdateModel(i, dc);
 	Stamp(i, dc);
-
 }
 
 static void
 DC_StepEnd(void *obj, ES_SimDC *dc)
 {
 	ES_Inductor *i = obj;
+
 	CyclePreviousI(i, dc);
 	i->I[0] = InductorBranchCurrent(i, dc);
 }
@@ -190,23 +186,26 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 	Stamp(i, dc);
 }
 
-/* Computes the approximation of the derivative of v of order
- * (end - start) by divided difference */
+/*
+ * Computes the approximation of the derivative of v of order (end - start)
+ * by divided difference.
+ */
 static M_Real
 DividedDifference(ES_Inductor *i, ES_SimDC *dc, int start, int end)
 {
 	M_Real num;
 	M_Real denom = 0;
 	int index;
-	if(start == end)
+
+	if (start == end)
 		return GetCurrent(i, start);
 
-	num = (DividedDifference(i, dc, start + 1, end) - DividedDifference(i, dc, start, end - 1)) / (end - start) ;
-	for(index = start; index < end; index++)
-	{
+	num = (DividedDifference(i, dc, start+1, end) -
+	      DividedDifference(i, dc, start, end-1))/(end-start) ;
+	for (index = start; index < end; index++) {
 		denom += GetDeltaT(dc, index);
 	}
-	return num/denom;
+	return (num/denom);
 }
 
 static M_Real
@@ -216,25 +215,28 @@ Derivative(ES_Inductor *i, ES_SimDC *dc, int n)
 	return - DividedDifference(i, dc, 1, n+1);
 }
 
-/* LTE for capacitor, estimated via divided differences
+/*
+ * LTE for capacitor, estimated via divided differences.
  * We use the LTE formula relevant to the integration method, and compute
- * it by approximating the derivative with divided differences */
+ * it by approximating the derivative with divided differences
+ */
 static void
 DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 {
 	ES_Inductor *i = obj;
 	M_Real localErr;
 	M_Real dtn = dc->deltaT;
-	enum es_integration_method actualMethod;
-	actualMethod = ((dc->method == G2) && (dc->currStep == 0)) ? BE : dc->method;
+	const ES_IntegrationMethod *im;
 
-	localErr= Fabs(
-		pow(dtn, methodOrder[actualMethod] + 1)
-		* methodErrorConstant[actualMethod]
-		* Derivative(i, dc, methodOrder[actualMethod] + 1)
-		/ GetCurrent(i, 1));
+	im = &esIntegrationMethods[((dc->method == G2) && (dc->currStep == 0)) ?
+	                           BE : dc->method];
 
-	if(localErr > *err)
+	localErr = Fabs(
+	    Pow(dtn, im->order+1) * im->errConst *
+	    Derivative(i,dc,im->order+1) /
+	    GetCurrent(i,1));
+
+	if (localErr > *err)
 		*err = localErr;
 }
 
@@ -253,26 +255,8 @@ Init(void *p)
 	COMPONENT(i)->dcStepEnd = DC_StepEnd;
 	COMPONENT(i)->dcStepIter = DC_StepIter;
 	COMPONENT(i)->dcUpdateError = DC_UpdateError;
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_Inductor *i = p;
-
-	i->L = M_ReadReal(buf);
-	
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_Inductor *i = p;
-
-	M_WriteReal(buf, i->L);
-
-	return (0);
+	M_BindReal(i, "L", &i->L);
 }
 
 static void *
@@ -290,8 +274,8 @@ static void
 Destroy(void *p)
 {
 	ES_Inductor *i = p;
-	if(i->I)
-		free(i->I);
+
+	Free(i->I);
 }
 
 ES_ComponentClass esInductorClass = {
@@ -303,8 +287,8 @@ ES_ComponentClass esInductorClass = {
 		Init,
 		NULL,		/* reinit */
 		Destroy,	/* destroy */
-		Load,		/* load */
-		Save,		/* save */
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Inductor"),

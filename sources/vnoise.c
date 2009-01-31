@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2008-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -136,13 +132,17 @@ Init(void *p)
 	vn->buf = Malloc(vn->bufSize);
 	vn->bufPos = 0;
 	vn->deltaMax = 0.1;
-
 	Strlcpy(vn->srcPath, "/dev/urandom", sizeof(vn->srcPath));
 
 	COMPONENT(vn)->dcSimBegin = DC_SimBegin;
 	COMPONENT(vn)->dcSimEnd = DC_SimEnd;
 	COMPONENT(vn)->dcStepBegin = DC_StepBegin;
 	COMPONENT(vn)->dcStepIter = DC_StepIter;
+
+	M_BindReal(vn, "vMin", &vn->vMin);
+	M_BindReal(vn, "vMax", &vn->vMax);
+	M_BindReal(vn, "deltaMax", &vn->deltaMax);
+	AG_BindString(vn, "srcPath", vn->srcPath, sizeof(vn->srcPath));
 }
 
 static void
@@ -151,30 +151,6 @@ Destroy(void *p)
 	ES_VNoise *vn = p;
 
 	Free(vn->buf);
-}
-
-static int
-Load(void *p, AG_DataSource *ds, const AG_Version *ver)
-{
-	ES_VNoise *vn= p;
-
-	vn->vMin = M_ReadReal(ds);
-	vn->vMax = M_ReadReal(ds);
-	vn->deltaMax = M_ReadReal(ds);
-	AG_CopyString(vn->srcPath, ds, sizeof(vn->srcPath));
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *ds)
-{
-	ES_VNoise *vn = p;
-
-	M_WriteReal(ds, vn->vMin);
-	M_WriteReal(ds, vn->vMax);
-	M_WriteReal(ds, vn->deltaMax);
-	AG_WriteString(ds, vn->srcPath);
-	return (0);
 }
 
 static void *
@@ -203,8 +179,8 @@ ES_ComponentClass esVNoiseClass = {
 		Init,
 		NULL,		/* reinit */
 		Destroy,
-		Load,
-		Save,
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Voltage source (noise)"),

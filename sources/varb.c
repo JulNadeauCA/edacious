@@ -1,11 +1,5 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +24,7 @@
  */
 
 /*
- * Arbitrary expression evaluator
+ * Independent voltage source with voltage defined using arbitrary expression.
  */
 
 #include <core/core.h>
@@ -47,7 +41,7 @@ const ES_Port esVArbPorts[] = {
 	{ -1 },
 };
 
-static void 
+static __inline__ void 
 Stamp(ES_VArb *va, ES_SimDC *dc)
 {
 	StampVoltageSource(VSOURCE(va)->v, VSOURCE(va)->s);
@@ -123,24 +117,8 @@ Init(void *p)
 	COMPONENT(va)->dcSimBegin = DC_SimBegin;
 	COMPONENT(va)->dcStepBegin = DC_StepBegin;
 	COMPONENT(va)->dcStepIter = DC_StepIter;
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_VArb *va = p;
-
-	AG_CopyString(va->exp, buf, sizeof(va->exp));
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_VArb *va = p;
-
-	AG_WriteString(buf, va->exp);
-	return (0);
+	AG_BindString(va, "expr", va->exp, sizeof(va->exp));
 }
 
 static void
@@ -180,7 +158,7 @@ Edit(void *p)
 	AG_Event *ev;
 
 	AG_LabelNewPolledMT(box, 0, &OBJECT(va)->lock,
-	    _("Effective voltage: %fv"), &VSOURCE(va)->v);
+	    _("Effective voltage: %[R]v"), &VSOURCE(va)->v);
 	
 	tb = AG_TextboxNew(box, 0, "v(t) = ");
 	AG_TextboxBindASCII(tb, va->exp, sizeof(va->exp));
@@ -209,8 +187,8 @@ ES_ComponentClass esVArbClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		Load,
-		Save,
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Voltage source (expression)"),

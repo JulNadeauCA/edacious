@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,10 +39,9 @@ const ES_Port esVSinePorts[] = {
 	{ -1 },
 };
 
-static void
+static __inline__ void
 Stamp(ES_VSine *vs, ES_SimDC *dc)
 {
-
 	StampVoltageSource(VSOURCE(vs)->v, VSOURCE(vs)->s);
 }
 
@@ -97,26 +92,9 @@ Init(void *p)
 	COMPONENT(vs)->dcSimBegin = DC_SimBegin;
 	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
 	COMPONENT(vs)->dcStepIter = DC_StepIter;
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_VSine *vs = p;
-
-	vs->vPeak = M_ReadReal(buf);
-	vs->f = M_ReadReal(buf);
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_VSine *vs = p;
-
-	M_WriteReal(buf, vs->vPeak);
-	M_WriteReal(buf, vs->f);
-	return (0);
+	M_BindReal(vs, "vPeak", &vs->vPeak);
+	M_BindReal(vs, "f", &vs->f);
 }
 
 static void *
@@ -128,7 +106,7 @@ Edit(void *p)
 	M_NumericalNewReal(box, 0, "V", _("Peak voltage: "), &vs->vPeak);
 	M_NumericalNewRealPNZ(box, 0, "Hz", _("Frequency: "), &vs->f);
 	AG_LabelNewPolledMT(box, 0, &OBJECT(vs)->lock,
-	    _("Effective voltage: %f"), &VSOURCE(vs)->v);
+	    _("Effective voltage: %[R]"), &VSOURCE(vs)->v);
 	return (box);
 }
 
@@ -141,8 +119,8 @@ ES_ComponentClass esVSineClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		Load,
-		Save,
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Voltage source (sine)"),

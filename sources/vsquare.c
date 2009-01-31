@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2008-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,10 +39,9 @@ const ES_Port esVSquarePorts[] = {
 	{ -1 },
 };
 
-static void
+static __inline__ void
 Stamp(ES_VSquare *vsq, ES_SimDC *dc)
 {
-
 	StampVoltageSource(VSOURCE(vsq)->v, VSOURCE(vsq)->s);
 }
 
@@ -55,18 +50,13 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSquare *vsq = obj;
 	ES_Vsource *vs = VSOURCE(vsq);
-
 	Uint k = PNODE(vsq,1);
 	Uint j = PNODE(vsq,2);
 
 	vs->v = 0.0;
-
 	InitStampVoltageSource(k,j, vs->vIdx, vs->s, dc);
-
 	Stamp(vsq,dc);
-
 	vsq->vPrev = vs->v;
-
 	return (0);
 }
 
@@ -76,18 +66,18 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 	ES_Vsource *vs = obj;
 	ES_VSquare *vsq = obj;
 
-#define my_modulus(x, y) (x - M_Floor(x/y) * y)
-	if (my_modulus(dc->Telapsed, (vsq->tL + vsq->tH)) < vsq->tL)
+#define my_modulus(x, y) (x - Floor(x/y) * y)
+	if (my_modulus(dc->Telapsed, (vsq->tL + vsq->tH)) < vsq->tL) {
 		vs->v = vsq->vL;
-	else
+	} else {
 		vs->v = vsq->vH;
+	}
 #undef my_modulus
 	
-	if (M_Fabs(vs->v - vsq->vPrev) > 0.5)
-		dc->inputStep=1;
-
+	if (Fabs(vs->v - vsq->vPrev) > 0.5) {
+		dc->inputStep = 1;
+	}
 	vsq->vPrev = vs->v;
-
 	Stamp(vsq,dc);
 }
 
@@ -95,9 +85,9 @@ static void
 DC_StepIter(void *obj, ES_SimDC *dc)
 {
 	ES_VSquare *vsq = obj;
+
 	Stamp(vsq,dc);
 }
-
 
 static void
 Init(void *p)
@@ -112,30 +102,11 @@ Init(void *p)
 	COMPONENT(vs)->dcSimBegin = DC_SimBegin;
 	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
 	COMPONENT(vs)->dcStepIter = DC_StepIter;
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_VSquare *vs = p;
-
-	vs->vH = M_ReadReal(buf);
-	vs->vL = M_ReadReal(buf);
-	vs->tH = M_ReadReal(buf);
-	vs->tL = M_ReadReal(buf);
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_VSquare *vs = p;
-
-	M_WriteReal(buf, vs->vH);
-	M_WriteReal(buf, vs->vL);
-	M_WriteReal(buf, vs->tH);
-	M_WriteReal(buf, vs->tL);
-	return (0);
+	M_BindReal(vs, "vH", &vs->vH);
+	M_BindReal(vs, "vL", &vs->vL);
+	M_BindReal(vs, "tH", &vs->tH);
+	M_BindReal(vs, "tL", &vs->tL);
 }
 
 static void *
@@ -160,8 +131,8 @@ ES_ComponentClass esVSquareClass = {
 		Init,
 		NULL,		/* free_dataset */
 		NULL,		/* destroy */
-		Load,
-		Save,
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Voltage source (square)"),

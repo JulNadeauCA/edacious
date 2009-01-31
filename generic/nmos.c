@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,26 +45,26 @@ const ES_Port esNMOSPorts[] = {
 	{ -1 },
 };
 
-static M_Real
+static __inline__ M_Real
 VdsPrevStep(ES_NMOS *u)
 {
-	return V_PREV_STEP(u,PORT_D,1)-V_PREV_STEP(u,PORT_S,1);
+	return V_PREV_STEP(u,PORT_D,1) - V_PREV_STEP(u,PORT_S,1);
 }
-static M_Real
+static __inline__ M_Real
 VgsPrevStep(ES_NMOS *u)
 {
-	return V_PREV_STEP(u,PORT_G,1)-V_PREV_STEP(u,PORT_S,1);
+	return V_PREV_STEP(u,PORT_G,1) - V_PREV_STEP(u,PORT_S,1);
 }
 
 static M_Real
 vDS(ES_NMOS *u)
 {
-	return VPORT(u,PORT_D)-VPORT(u,PORT_S);
+	return VPORT(u,PORT_D) - VPORT(u,PORT_S);
 }
 static M_Real
 vGS(ES_NMOS *u)
 {
-	return VPORT(u,PORT_G)-VPORT(u,PORT_S);
+	return VPORT(u,PORT_G) - VPORT(u,PORT_S);
 }
 
 static void
@@ -76,41 +72,27 @@ UpdateModel(ES_NMOS *u, M_Real vGS, M_Real vDS)
 {
 	M_Real I;
 
-	if (vGS < u->Vt)
-	{
-		// Cutoff 
-
+	if (vGS < u->Vt) {					/* Cutoff */
 		I = 0;
 		u->gm = 0;
 		u->go = 0;
-
-	}
-	else if ((vGS-u->Vt) < vDS)
-	{
-		// Saturation
-
+	} else if ((vGS-u->Vt) < vDS) {				/* Saturation */
 		M_Real vSat = vGS-u->Vt;
 
-		I=(u->K)/2*vSat*vSat*(1+(vDS-vSat)/u->Va);
-		u->gm=sqrt(2*(u->K)*I);
-		u->go=I/(u->Va);
-
-	}
-	else
-	{
-		// Triode
-		
-		I=(u->K)*((vGS-(u->Vt))-vDS/2)*vDS;
-		u->gm=(u->K)*vDS;
-		u->go=(u->K)*((vGS-(u->Vt))-vDS);
-
+		I = (u->K)/2.0*(vSat*vSat)*(1.0 + (vDS - vSat)/u->Va);
+		u->gm = Sqrt(2.0*(u->K)*I);
+		u->go = I/u->Va;
+	} else {						/* Triode */
+		I = (u->K)*((vGS - (u->Vt)) - vDS/2)*vDS;
+		u->gm = (u->K)*vDS;
+		u->go = (u->K)*((vGS - (u->Vt)) - vDS);
 	}
 
 	u->Ieq = I - u->gm*vGS - u->go*vDS;
-
 }
 
-static void Stamp(ES_NMOS *u, ES_SimDC *dc)
+static __inline__ void
+Stamp(ES_NMOS *u, ES_SimDC *dc)
 {
 	StampVCCS(u->gm, u->s_vccs);
 	StampConductance(u->go, u->s_conductance);
@@ -129,9 +111,9 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	InitStampConductance(d,s, u->s_conductance, dc);
 	InitStampCurrentSource(s,d, u->s_current, dc);
 
-	u->gm=0.0;
-	u->go=1.0;
-	u->Ieq=0.0;
+	u->gm = 0.0;
+	u->go = 1.0;
+	u->Ieq = 0.0;
 	Stamp(u,dc);
 
 	return (0);
@@ -144,7 +126,6 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 
 	UpdateModel(u,VgsPrevStep(u),VdsPrevStep(u));
 	Stamp(u,dc);
-
 }
 
 static void
@@ -169,30 +150,10 @@ Init(void *p)
 	COMPONENT(u)->dcSimBegin = DC_SimBegin;
 	COMPONENT(u)->dcStepBegin = DC_StepBegin;
 	COMPONENT(u)->dcStepIter = DC_StepIter;
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_NMOS *u = p;
-
-	u->Vt = M_ReadReal(buf);
-	u->Va = M_ReadReal(buf);
-	u->K = M_ReadReal(buf);
-	
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_NMOS *u = p;
-
-	M_WriteReal(buf, u->Vt);
-	M_WriteReal(buf, u->Va);
-	M_WriteReal(buf, u->K);
-
-	return (0);
+	M_BindReal(u, "Vt", &u->Vt);
+	M_BindReal(u, "Va", &u->Va);
+	M_BindReal(u, "K", &u->K);
 }
 
 static void *
@@ -217,8 +178,8 @@ ES_ComponentClass esNMOSClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		Load,		/* load */
-		Save,		/* save */
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit		/* edit */
 	},
 	N_("Transistor (NMOS)"),

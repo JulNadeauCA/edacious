@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2008-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,10 +39,9 @@ const ES_Port esVSweepPorts[] = {
 	{ -1 },
 };
 
-static void
+static __inline__ void
 Stamp(ES_VSweep *vsw, ES_SimDC *dc)
 {
-
 	StampVoltageSource(VSOURCE(vsw)->v, VSOURCE(vsw)->s);
 }
 
@@ -114,30 +109,11 @@ Init(void *p)
 	COMPONENT(vsw)->dcSimBegin = DC_SimBegin;
 	COMPONENT(vsw)->dcStepBegin = DC_StepBegin;
 	COMPONENT(vsw)->dcStepIter = DC_StepIter;
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_VSweep *vsw = p;
-
-	vsw->v1 = M_ReadReal(buf);
-	vsw->v2 = M_ReadReal(buf);
-	vsw->t = M_ReadReal(buf);
-	vsw->count = (int)AG_ReadUint8(buf);
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_VSweep *vsw = p;
-
-	M_WriteReal(buf, vsw->v1);
-	M_WriteReal(buf, vsw->v2);
-	M_WriteReal(buf, vsw->t);
-	AG_WriteUint8(buf, (Uint8)vsw->count);
-	return (0);
+	M_BindReal(vsw, "v1", &vsw->v1);
+	M_BindReal(vsw, "v2", &vsw->v2);
+	M_BindReal(vsw, "t", &vsw->t);
+	AG_BindInt(vsw, "count", &vsw->count);
 }
 
 static void *
@@ -162,8 +138,8 @@ ES_ComponentClass esVSweepClass = {
 		Init,
 		NULL,		/* free_dataset */
 		NULL,		/* destroy */
-		Load,
-		Save,
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Voltage source (sweep)"),

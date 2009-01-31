@@ -379,7 +379,7 @@ CreateView(AG_Event *event)
 	AG_WindowShow(win);
 }
 
-/* Create new oscilloscope object */
+/* Create new Scope object */
 static void
 NewScope(AG_Event *event)
 {
@@ -389,9 +389,8 @@ NewScope(AG_Event *event)
 	ES_Scope *scope;
 	AG_Window *win;
 
-	scope = ES_ScopeNew(ckt, name);
 	AG_ObjectGenName(ckt, &esScopeClass, name, sizeof(name));
-	AG_ObjectSetName(scope, "%s", name);
+	scope = ES_ScopeNew(ckt, name);
 
 	if ((win = ES_CircuitOpenObject(scope)) != NULL)
 		AG_WindowAttach(winParent, win);
@@ -493,7 +492,7 @@ ES_CircuitEdit(void *p)
 	
 	vv = VG_ViewNew(NULL, ckt->vg, VG_VIEW_EXPAND|VG_VIEW_GRID);
 	VG_ViewSetSnapMode(vv, VG_GRID);
-	VG_ViewSetScale(vv, 1);
+	VG_ViewSetScale(vv, 2);
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 	mi = AG_MenuAddItem(menu, _("File"));

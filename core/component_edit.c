@@ -29,7 +29,7 @@
 
 #include "core.h"
 
-#define DEFAULT_SCHEM_SCALE	2
+#define DEFAULT_SCHEM_SCALE	4
 #define DEFAULT_CIRCUIT_SCALE	0
 
 /*

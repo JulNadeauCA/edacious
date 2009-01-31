@@ -82,17 +82,22 @@ Save(void *obj, AG_DataSource *buf)
 static void
 PollSrcs(AG_Event *event)
 {
-	char pval[32];
+	char pval[64];
 	AG_Tlist *tl = AG_SELF();
 	ES_Circuit *ckt = AG_PTR(1);
-	AG_Prop *prop;
 	AG_TlistItem *it;
+	AG_Variable *V;
+	Uint i;
 
 	AG_TlistClear(tl);
-	TAILQ_FOREACH(prop, &OBJECT(ckt)->props, props) {
-		AG_PropPrint(pval, sizeof(pval), ckt, prop->key);
-		it = AG_TlistAdd(tl, NULL, "%s (%s)", prop->key, pval);
-		it->p1 = prop;
+	AGOBJECT_FOREACH_VARIABLE(V, i, ckt) {
+		AG_LockVariable(V);
+		AG_EvalVariable(ckt, V);
+		AG_PrintVariable(pval, sizeof(pval), V);
+		AG_UnlockVariable(V);
+
+		it = AG_TlistAdd(tl, NULL, "%s (%s)", V->name, pval);
+		it->p1 = V;
 	}
 	AG_TlistRestore(tl);
 }
@@ -117,16 +122,18 @@ PollPlots(AG_Event *event)
 static void
 AddPlotFromSrc(AG_Event *event)
 {
-	char prop_path[AG_PROP_PATH_MAX];
+	char varPath[AG_OBJECT_PATH_MAX];
 	ES_Circuit *ckt = AG_PTR(1);
 	M_Plotter *ptr = AG_PTR(2);
 	AG_TlistItem *ti = AG_PTR(3);
-	AG_Prop *prop = ti->p1;
+	AG_Variable *V = ti->p1;
 	M_Plot *pl;
-
-	AG_PropCopyPath(prop_path, sizeof(prop_path), ckt, prop->key);
-	pl = M_PlotFromProp(ptr, M_PLOT_LINEAR, prop->key, &esVfsRoot,
-	    prop_path);
+	
+	AG_ObjectCopyName(ckt, varPath, sizeof(varPath));
+	Strlcat(varPath, ":", sizeof(varPath));
+	Strlcat(varPath, V->name, sizeof(varPath));
+	pl = M_PlotFromVariableVFS(ptr, M_PLOT_LINEAR, V->name,
+	    &esVfsRoot, varPath);
 	M_PlotSetXoffs(pl, ptr->xMax-1);
 	M_PlotSetScale(pl, 0.0, 15.0);
 }

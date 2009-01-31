@@ -1,11 +1,5 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -61,28 +55,6 @@ Draw(void *p, VG *vg)
 	VG_PolygonVertex(vp, VG_PointNew(vp, VGVECTOR(1.09375, -0.240)));
 }
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_Led *led = p;
-
-	led->Vforw = M_ReadReal(buf);
-	led->Vrev = M_ReadReal(buf);
-	led->I = M_ReadReal(buf);
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_Led *led = p;
-
-	M_WriteReal(buf, led->Vforw);
-	M_WriteReal(buf, led->Vrev);
-	M_WriteReal(buf, led->I);
-	return (0);
-}
-
 static void
 DC_StepEnd(void *obj, ES_SimDC *dc)
 {
@@ -104,6 +76,10 @@ Init(void *p)
 	led->I = 2500e-3;
 	led->state = 0;
 	COMPONENT(led)->dcStepEnd = DC_StepEnd;
+
+	M_BindReal(led, "Vforw", &led->Vforw);
+	M_BindReal(led, "Vrev", &led->Vrev);
+	M_BindReal(led, "I", &led->I);
 }
 
 static void *
@@ -127,8 +103,8 @@ ES_ComponentClass esLedClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		Load,
-		Save,
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Led"),

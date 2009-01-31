@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -46,10 +42,10 @@ const ES_Port esSpstPorts[] = {
 static void
 UpdateModel(ES_Spst *sw)
 {
-	sw->g = 1.0/(sw->state ? sw->rOn : sw->rOff);
+	sw->g = 1.0/(sw->state ? sw->Ron : sw->Roff);
 }
 
-static void
+static __inline__ void
 Stamp(ES_Spst *sw)
 {
 	StampConductance(sw->g, sw->s);
@@ -63,11 +59,8 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	Uint j = PNODE(sw,2);
 
 	InitStampConductance(k, j, sw->s, dc);
-
 	UpdateModel(sw);
-
 	Stamp(sw);
-	
 	return (0);
 }
 
@@ -95,35 +88,17 @@ Init(void *p)
 	ES_Spst *sw = p;
 
 	ES_InitPorts(sw, esSpstPorts);
-	sw->rOn = 1.0;
-	sw->rOff = HUGE_VAL;
+	sw->Ron = 1.0;
+	sw->Roff = HUGE_VAL;
 	sw->state = 0;
 
 	COMPONENT(sw)->dcSimBegin = DC_SimBegin;
 	COMPONENT(sw)->dcStepBegin = DC_StepBegin;
 	COMPONENT(sw)->dcStepIter = DC_StepIter;
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_Spst *sw = p;
-
-	sw->rOn = M_ReadReal(buf);
-	sw->rOff = M_ReadReal(buf);
-	sw->state = (int)AG_ReadUint8(buf);
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_Spst *sw = p;
-
-	M_WriteReal(buf, sw->rOn);
-	M_WriteReal(buf, sw->rOff);
-	AG_WriteUint8(buf, (Uint8)sw->state);
-	return (0);
+	M_BindReal(sw, "Ron", &sw->Ron);
+	M_BindReal(sw, "Roff", &sw->Roff);
+	AG_BindInt(sw, "state", &sw->state);
 }
 
 static double
@@ -131,7 +106,7 @@ Resistance(void *p, ES_Port *p1, ES_Port *p2)
 {
 	ES_Spst *sw = p;
 
-	return (sw->state ? sw->rOn : sw->rOff);
+	return (sw->state ? sw->Ron : sw->Roff);
 }
 
 static int
@@ -199,8 +174,8 @@ Edit(void *p)
 	ES_Spst *sw = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 
-	M_NumericalNewRealPNZ(box, 0, "ohm", _("ON resistance: "), &sw->rOn);
-	M_NumericalNewRealPNZ(box, 0, "ohm", _("OFF resistance: "), &sw->rOff);
+	M_NumericalNewRealPNZ(box, 0, "ohm", _("ON resistance: "), &sw->Ron);
+	M_NumericalNewRealPNZ(box, 0, "ohm", _("OFF resistance: "), &sw->Roff);
 	AG_ButtonAct(box, AG_BUTTON_EXPAND, _("Toggle state"),
 	    ToggleState, "%p", sw);
 	return (box);
@@ -215,8 +190,8 @@ ES_ComponentClass esSpstClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		Load,
-		Save,
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Switch (SPST)"),

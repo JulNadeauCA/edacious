@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2004-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,50 +42,6 @@ ES_DigitalInitPorts(void *obj, const ES_Port *ports)
 		AG_FatalError(NULL);
 	}
 	M_SetZero(dig->G);
-}
-
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_Digital *dig = p;
-
-	dig->Vcc = M_ReadRange(buf);
-	dig->Tamb = M_ReadRange(buf);
-	dig->Idd = M_ReadRange(buf);
-	dig->Vol = M_ReadRange(buf);
-	dig->Voh = M_ReadRange(buf);
-	dig->Vil = M_ReadRange(buf);
-	dig->Vih = M_ReadRange(buf);
-	dig->Iol = M_ReadRange(buf);
-	dig->Ioh = M_ReadRange(buf);
-	dig->Iin = M_ReadRange(buf);
-	dig->Iozh = M_ReadRange(buf);
-	dig->Iozl = M_ReadRange(buf);
-	dig->Tthl = M_ReadTimeRange(buf);
-	dig->Ttlh = M_ReadTimeRange(buf);
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_Digital *dig = p;
-
-	M_WriteRange(buf, dig->Vcc);
-	M_WriteRange(buf, dig->Tamb);
-	M_WriteRange(buf, dig->Idd);
-	M_WriteRange(buf, dig->Vol);
-	M_WriteRange(buf, dig->Voh);
-	M_WriteRange(buf, dig->Vil);
-	M_WriteRange(buf, dig->Vih);
-	M_WriteRange(buf, dig->Iol);
-	M_WriteRange(buf, dig->Ioh);
-	M_WriteRange(buf, dig->Iin);
-	M_WriteRange(buf, dig->Iozh);
-	M_WriteRange(buf, dig->Iozl);
-	M_WriteTimeRange(buf, dig->Tthl);
-	M_WriteTimeRange(buf, dig->Ttlh);
-	return (0);
 }
 
 void
@@ -167,9 +123,9 @@ ES_LogicInput(void *p, const char *portname)
 		return (-1);
 	}
 	v = ES_NodeVoltage(COMPONENT(dig)->ckt, port->node);
-	if (v >= dig->Vih.min) {
+	if (v >= dig->ViH_min) {
 		return (ES_HIGH);
-	} else if (v <= dig->Vil.max) {
+	} else if (v <= dig->ViL_max) {
 		return (ES_LOW);
 	} else {
 		Debug(dig, "%s: Invalid logic level (%fV)", portname, v);
@@ -186,16 +142,32 @@ Init(void *obj)
 	dig->GndPort = 2;
 	dig->G = NULL;
 
-	dig->Vcc.min = 3.0;	dig->Vcc.typ = 5.0;	dig->Vcc.max = 15.0;
-	dig->Vol.min = 0.0;	dig->Vol.typ = 0.0;	dig->Vol.max = 0.05;
-	dig->Voh.min = 4.95;	dig->Voh.typ = 5.0;	dig->Voh.max = HUGE_VAL;
-	dig->Vil.min = 0.0;	dig->Vil.typ = 0.0;	dig->Vil.max = 1.0;
-	dig->Vih.min = 4.0;	dig->Vih.typ = 5.0;	dig->Vih.max = HUGE_VAL;
-	dig->Iol.min = 0.51;	dig->Iol.typ = 0.88;	dig->Iol.max = HUGE_VAL;
-	dig->Ioh.min = -0.51;	dig->Ioh.typ = -0.88;	dig->Ioh.max = HUGE_VAL;
-	dig->Iin.min = 0.0;	dig->Iin.typ = -10.0e-5; dig->Iin.max = -0.1;
-	
+	dig->Vcc = 5.0;
+	dig->VoL = 0.0;
+	dig->VoH = 5.0;
+	dig->ViH_min = 4.0;
+	dig->ViL_max = 1.0;
+	dig->Iin = -10.0e-5;
+	dig->Idd = 0.0;
+	dig->IoL = 0.88;	dig->IoH = -0.88;
+	dig->tHL = 10;		dig->tLH = 10;
+	dig->IozH = 0.0;	dig->IozL = 0.0;
+
 	COMPONENT(dig)->dcStepIter = ES_DigitalStepIter;
+	
+	M_BindReal(dig, "Vcc",	&dig->Vcc);
+	M_BindReal(dig, "VoL",	&dig->VoL);
+	M_BindReal(dig, "VoH",	&dig->VoH);
+	M_BindReal(dig, "ViH_min", &dig->ViH_min);
+	M_BindReal(dig, "ViL_max", &dig->ViL_max);
+	M_BindReal(dig, "Idd",	&dig->Idd);
+	M_BindReal(dig, "IoL",	&dig->IoL);
+	M_BindReal(dig, "IoH",	&dig->IoH);
+	M_BindReal(dig, "Iin",	&dig->Iin);
+	M_BindReal(dig, "IozH",	&dig->IozH);
+	M_BindReal(dig, "IozL",	&dig->IozL);
+	M_BindTime(dig, "tHL",	&dig->tHL);
+	M_BindTime(dig, "tLH",	&dig->tLH);
 }
 
 static void
@@ -239,10 +211,10 @@ ES_ComponentClass esDigitalClass = {
 		sizeof(ES_Digital),
 		{ 0,0 },
 		Init,
-		NULL,			/* reinit */
-		NULL,			/* destroy */
-		Load,
-		Save,
+		NULL,		/* reinit */
+		NULL,		/* destroy */
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Digital component"),

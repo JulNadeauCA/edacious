@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2008-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,7 +39,7 @@ const ES_Port esIsourcePorts[] = {
 	{ -1 },
 };
 
-static void
+static __inline__ void
 Stamp(ES_Isource *i, ES_SimDC *dc)
 {
 	StampCurrentSource(i->I, i->s);
@@ -91,26 +87,8 @@ Init(void *p)
 	COMPONENT(i)->dcSimBegin = DC_SimBegin;
 	COMPONENT(i)->dcStepBegin = DC_StepBegin;
 	COMPONENT(i)->dcStepIter = DC_StepIter;
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_Isource *i = p;
-
-	i->I = M_ReadReal(buf);
-	
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_Isource *i = p;
-
-	M_WriteReal(buf, i->I);
-
-	return (0);
+	M_BindReal(i, "I", &i->I);
 }
 
 static void *
@@ -133,8 +111,8 @@ ES_ComponentClass esIsourceClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		Load,		/* load */
-		Save,		/* save */
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Current source"),

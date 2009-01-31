@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -104,34 +100,13 @@ Init(void *p)
 	COMPONENT(r)->dcSimBegin = DC_SimBegin;
 	COMPONENT(r)->dcStepBegin = DC_StepBegin;
 	COMPONENT(r)->dcStepIter = DC_StepIter;
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_SemiResistor *r = p;
-
-	r->l = M_ReadReal(buf);
-	r->w = M_ReadReal(buf);
-	r->rSh = M_ReadReal(buf);
-	r->narrow = M_ReadReal(buf);
-	r->Tc1 = M_ReadReal(buf);
-	r->Tc2 = M_ReadReal(buf);
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_SemiResistor *r = p;
-
-	M_WriteReal(buf, r->l);
-	M_WriteReal(buf, r->w);
-	M_WriteReal(buf, r->rSh);
-	M_WriteReal(buf, r->narrow);
-	M_WriteReal(buf, r->Tc1);
-	M_WriteReal(buf, r->Tc2);
-	return (0);
+	M_BindReal(r, "l", &r->l);
+	M_BindReal(r, "w", &r->w);
+	M_BindReal(r, "rSh", &r->rSh);
+	M_BindReal(r, "narrow", &r->narrow);
+	M_BindReal(r, "Tc1", &r->Tc1);
+	M_BindReal(r, "Tc2", &r->Tc2);
 }
 
 static int
@@ -176,7 +151,7 @@ Edit(void *p)
 	
 	AG_SeparatorNewHoriz(box);
 
-	AG_LabelNewPolledMT(box, 0, &OBJECT(r)->lock, "rEff: %f", &r->rEff);
+	AG_LabelNewPolledMT(box, 0, &OBJECT(r)->lock, "rEff: %[R]", &r->rEff);
 	return (box);
 }
 
@@ -187,10 +162,10 @@ ES_ComponentClass esSemiResistorClass = {
 		sizeof(ES_SemiResistor),
 		{ 0,0 },
 		Init,
-		NULL,			/* reinit */
-		NULL,			/* destroy */
-		Load,
-		Save,
+		NULL,		/* reinit */
+		NULL,		/* destroy */
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Resistor (semiconductor)"),

@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -64,17 +60,19 @@
 #define MAX_TIMESTEP    1
 #define MIN_TIMESTEP    1e-6
 
-/* Solve Ax=z where A=[G,B;C,D], x=[v,j] and z=[i;e]. */
+/* #define DC_DEBUG */
+
+/* Solve the system of equations. */
 static int
 SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 {
 	*sim->groundNode = 1.0;
-	/* Find LU factorization and solve by backsubstitution. */
-	if(M_FactorizeLU(sim->A) == -1)
-		return -1;
+	if (M_FactorizeLU(sim->A) == -1) {
+		return (-1);
+	}
 	M_VecCopy(sim->x, sim->z);
 	M_BacksubstLU(sim->A, sim->x); 
-	return 0;
+	return (0);
 }
 
 static void
@@ -119,7 +117,7 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 		 * the difference from previous iteration and the fact
 		 * that the simulation may be damped
 		 */
-		if(sim->isDamped)
+		if (sim->isDamped)
 			goto iter;
 
 		/* check for undefined voltages or current, which are a sign that the timestep is too large */
@@ -137,7 +135,8 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 		{
 			M_Real prev = M_VecGet(sim->xPrevIter, j);
 			M_Real cur = M_VecGet(sim->x, j);
-			if(Fabs(cur - prev) > MAX_V_DIFF + Fabs(MAX_REL_DIFF * prev))
+
+			if (Fabs(cur-prev) > MAX_V_DIFF+Fabs(MAX_REL_DIFF*prev))
 				goto iter;
 		}
 
@@ -146,7 +145,8 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 		{
 			M_Real prev = M_VecGet(sim->xPrevIter, j);
 			M_Real cur = M_VecGet(sim->x, j);
-			if(Fabs(cur - prev) > MAX_I_DIFF + Fabs(MAX_REL_DIFF * prev))
+
+			if (Fabs(cur-prev) > MAX_I_DIFF+Fabs(MAX_REL_DIFF*prev))
 				goto iter;
 		}
 	}
@@ -163,10 +163,8 @@ NR_Iterations(ES_Circuit *ckt, ES_SimDC *sim)
 static void
 SetTimestep(ES_SimDC *sim, M_Real deltaT)
 {
-	if(deltaT > MAX_TIMESTEP)
-		deltaT = MAX_TIMESTEP;
-	if(deltaT < MIN_TIMESTEP)
-		deltaT = MIN_TIMESTEP;
+	if (deltaT > MAX_TIMESTEP) { deltaT = MAX_TIMESTEP; }
+	if (deltaT < MIN_TIMESTEP) { deltaT = MIN_TIMESTEP; }
 	
 	sim->deltaT = deltaT;
 
@@ -182,14 +180,14 @@ CyclePreviousSolutions(ES_SimDC *sim)
 {
 	int i;
 	M_Vector *last = sim->xPrevSteps[sim->stepsToKeep - 1];
-	if(sim->stepsToKeep == 1)
-	{
+
+	if (sim->stepsToKeep == 1) {
 		M_VecSetZero(sim->xPrevSteps[0]);
 		sim->deltaTPrevSteps[0] = 0;
 		return;
 	}
-	for(i = sim->stepsToKeep - 2 ; i >= 0 ; i--)
-	{
+
+	for (i = sim->stepsToKeep-2; i >= 0; i--) {
 		sim->xPrevSteps[i+1] = sim->xPrevSteps[i];
 		sim->deltaTPrevSteps[i+1] = sim->deltaTPrevSteps[i];
 	}
@@ -237,9 +235,11 @@ stepbegin:
 			AG_SetError(_("Could not find stable solution."));
 			goto halt;
 		}
-
-		Debug(ckt,"NR failed to converge, decimating stepsize to %g, retry #%d\n", sim->deltaT / 10, retries);
-
+#ifdef DC_DEBUG
+		Debug(ckt,"NR failed to converge; timestep %g -> %g, "
+		          "retry #%d\n", sim->deltaT, sim->deltaT/10,
+			  retries);
+#endif
 		/* Undo last time step and and decimate deltaT. */
 		sim->Telapsed -= sim->deltaT;
 		SetTimestep(sim, sim->deltaT/10.0);
@@ -269,16 +269,19 @@ stepbegin:
 			com->dcUpdateError(com, sim, &error);
 	}
 	/* No energy storage components : no error */
-	if(error < 0.0)
-		error = 0;
+	if (error < 0.0) {
+		error = 0.0;
+	}
 	M_SetReal(ckt, "%err", error*100);
-
+	
 	/* Do we accept this step ? */
-	if(error > MAX_REL_LTE) {
-		/* Reject */
-		Debug(ckt,"LTE of %g, rejecting step and decreasing timestep from %g to %g\n", error, sim->deltaT, sim->deltaT / 2);
+	if (error > MAX_REL_LTE) {
+#ifdef DC_DEBUG
+		Debug(ckt, "LTE of %g, rejecting step; timestep %g -> %g\n",
+		    error, sim->deltaT, sim->deltaT/2.0);
+#endif
 		sim->Telapsed -= sim->deltaT;
-		SetTimestep(sim, sim->deltaT / 2);
+		SetTimestep(sim, sim->deltaT/2.0);
 		sim->Telapsed += sim->deltaT;
 		goto stepbegin;
 	}
@@ -293,14 +296,17 @@ stepbegin:
 	sim->deltaTPrevSteps[0] = sim->deltaT;
 
 	/* Adjust timestep according to LTE */
-	if(error < MIN_REL_LTE) {
-		Debug(ckt,"LTE of %g, accepting step and increasing timestep from %g to %g\n", error, sim->deltaT, sim->deltaT * 2);
-		SetTimestep(sim, sim->deltaT * 2);
+	if (error < MIN_REL_LTE) {
+#ifdef DC_DEBUG
+		Debug(ckt, "LTE of %g, accepting step; timestep %g -> %g\n",
+		    error, sim->deltaT, sim->deltaT*2.0);
+#endif
+		SetTimestep(sim, sim->deltaT*2.0);
 	}
 	
 	/* Schedule next step */
 	if (SIM(sim)->running) {
-		return sim->ticksDelay;
+		return (sim->ticksDelay);
 	} else {
 		AG_LockTimeouts(ckt);
 		AG_DelTimeout(ckt, &sim->toUpdate);
@@ -370,18 +376,17 @@ InitMatrices(void *p, ES_Circuit *ckt)
 
 	sim->groundNode = M_GetElement(sim->A, 0, 0);
 
-	/* Get number of steps to keep according to integration method */
+	/* Get number of steps to keep according to integration method. XXX */
 	sim->stepsToKeep = 4;
+
 	/* Initialise arrays */
-	sim->xPrevSteps = malloc(sim->stepsToKeep * sizeof(M_Vector *));
-	for(i = 0; i < sim->stepsToKeep ; i++)
-	{
+	sim->xPrevSteps = Malloc(sim->stepsToKeep * sizeof(M_Vector *));
+	for (i = 0; i < sim->stepsToKeep; i++) {
 		sim->xPrevSteps[i] = M_VecNew(n+m);
 		M_VecSetZero(sim->xPrevSteps[i]);
 	}
-	sim->deltaTPrevSteps = malloc(sim->stepsToKeep * sizeof(M_Real));
-	for(i = 0; i < sim->stepsToKeep ; i++)
-	{
+	sim->deltaTPrevSteps = Malloc(sim->stepsToKeep * sizeof(M_Real));
+	for (i = 0; i < sim->stepsToKeep; i++) {
 		sim->deltaTPrevSteps[i] = 0.0;
 	}
 }
@@ -462,6 +467,7 @@ static void
 Destroy(void *p)
 {
 	ES_SimDC *sim = p;
+	int i;
 	
 	Stop(sim);
 
@@ -470,16 +476,13 @@ Destroy(void *p)
 	M_VecFree(sim->x);
 	M_VecFree(sim->xPrevIter);
 
-	if(sim->xPrevSteps)
-	{
-		int i;
-		for(i = 0; i < sim->stepsToKeep ; i++)
-		{
+	if (sim->xPrevSteps) {
+		for (i = 0; i < sim->stepsToKeep; i++) {
 			M_VecFree(sim->xPrevSteps[i]);
 		}
 		free(sim->xPrevSteps);
 	}
-	if(sim->deltaTPrevSteps)
+	if (sim->deltaTPrevSteps)
 		free(sim->deltaTPrevSteps);
 }
 
@@ -512,18 +515,23 @@ Edit(void *p, ES_Circuit *ckt)
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
 	ntab = AG_NotebookAddTab(nb, _("Continuous mode"), AG_BOX_VERT);
 	{
+		AG_Radio *rad;
+		int i;
+
 		AG_ButtonAct(ntab, AG_BUTTON_HFILL|AG_BUTTON_STICKY,
 		    _("Run simulation"),
 		    RunSimulation, "%p", sim);
 	
 		AG_SeparatorNew(ntab, AG_SEPARATOR_HORIZ);
 	
-		AG_NumericalNewUint(ntab, 0, NULL,
-		    _("Refresh rate (delay): "), &sim->ticksDelay);
-		AG_NumericalNewUint(ntab, 0, NULL,
-		    _("Max. iterations/step: "), &sim->itersMax);
+		AG_NumericalNewUint(ntab, 0, NULL, _("Refresh rate (delay): "), &sim->ticksDelay);
+		AG_NumericalNewUint(ntab, 0, NULL, _("Max. iterations/step: "), &sim->itersMax);
 
-		AG_RadioNewUint(ntab, 0, methodNames, &sim->method);
+		rad = AG_RadioNewUint(ntab, 0, NULL, &sim->method);
+		for (i = 0; i < esIntegrationMethodCount; i++) {
+			AG_RadioAddItem(rad, "%s",
+			    _(esIntegrationMethods[i].desc));
+		}
 
 		AG_SeparatorNewHoriz(ntab);
 
@@ -570,10 +578,12 @@ static M_Real
 NodeVoltagePrevStep(void *p, int j, int n)
 {
 	ES_SimDC *sim = p;
-	if(n == 0)
+
+	if (n == 0) {
 		return NodeVoltage(p, j);
-	
-	return (j>=0)&&(sim->xPrevSteps[n-1]->m > j) ? M_VecGet(sim->xPrevSteps[n-1], j) : 0.0;
+	}
+	return (j >= 0) && (sim->xPrevSteps[n-1]->m > j) ?
+	       M_VecGet(sim->xPrevSteps[n-1],j) : 0.0;
 }
 
 static M_Real
@@ -583,7 +593,7 @@ BranchCurrent(void *p, int k)
 	ES_Circuit *ckt = SIM(sim)->ckt;
 	int i = ckt->n + k;
 
-	return (i>=0)&&(sim->x->m > i) ? M_VecGet(sim->x, i) : 0.0;
+	return (i >= 0) && (sim->x->m > i) ? M_VecGet(sim->x,i) : 0.0;
 }
 
 static M_Real
@@ -592,10 +602,12 @@ BranchCurrentPrevStep(void *p, int k, int n)
 	ES_SimDC *sim = p;
 	ES_Circuit *ckt = SIM(sim)->ckt;
 	int i = ckt->n + k;
-	if(n == 0)
-		return BranchCurrent(p, k);
 
-	return (i>=0)&&(sim->xPrevSteps[n-1]->m > i) ? M_VecGet(sim->xPrevSteps[n-1], i) : 0.0;
+	if (n == 0) {
+		return BranchCurrent(p,k);
+	}
+	return (i >= 0) && (sim->xPrevSteps[n-1]->m > i) ?
+	       M_VecGet(sim->xPrevSteps[n-1],i) : 0.0;
 }
 
 const ES_SimOps esSimDcOps = {

@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -67,12 +63,9 @@ vPrevStep(ES_Diode *d)
 static void
 ResetModel(ES_Diode *d)
 {
-	d->g=1.0;
-
-	d->Ieq=0.0;
-
+	d->g = 1.0;
+	d->Ieq = 0.0;
 	d->vPrevIter = 0.7;
-
 }
 
 /* Updates the small- and large-signal models, saving the previous values. */
@@ -94,7 +87,7 @@ UpdateModel(ES_Diode *d, ES_SimDC *dc, M_Real v)
 	d->Ieq = I-(d->g)*v;
 }
 
-static void
+static __inline__ void
 Stamp(ES_Diode *d, ES_SimDC *dc)
 {
 	StampConductance(d->g, d->s_conductance);
@@ -155,28 +148,9 @@ Init(void *p)
 	COMPONENT(d)->dcSimBegin = DC_SimBegin;
 	COMPONENT(d)->dcStepBegin = DC_StepBegin;
 	COMPONENT(d)->dcStepIter = DC_StepIter;
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_Diode *d = p;
-
-	d->Is = M_ReadReal(buf);
-	d->Vt = M_ReadReal(buf);
-	
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_Diode *d = p;
-
-	M_WriteReal(buf, d->Is);
-	M_WriteReal(buf, d->Vt);
-
-	return (0);
+	M_BindReal(d, "Is", &d->Is);
+	M_BindReal(d, "Vt", &d->Vt);
 }
 
 static void *
@@ -202,8 +176,8 @@ ES_ComponentClass esDiodeClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		Load,		/* load */
-		Save,		/* save */
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Diode"),

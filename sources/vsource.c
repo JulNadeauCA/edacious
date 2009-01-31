@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +26,7 @@
  */
 
 /*
- * Independent voltage source class.
+ * Independent voltage source
  */
 
 #include <core/core.h>
@@ -189,7 +185,7 @@ ES_VsourceFindLoops(ES_Vsource *vs)
 	vs->nlstack = 0;
 }
 
-static void
+static __inline__ void
 Stamp(ES_Vsource *vs, ES_SimDC *dc)
 {
 	StampVoltageSource(vs->v,vs->s);
@@ -260,9 +256,11 @@ Init(void *p)
 	COMPONENT(vs)->dcSimBegin = DC_SimBegin;
 	COMPONENT(vs)->dcStepBegin = DC_StepBegin;
 	COMPONENT(vs)->dcStepIter = DC_StepIter;
-	
+
 	AG_SetEvent(vs, "circuit-connected", Connected, NULL);
 	AG_SetEvent(vs, "circuit-disconnected", Disconnected, NULL);
+	
+	M_BindReal(vs, "v", &vs->v);
 }
 
 static void
@@ -291,24 +289,6 @@ ES_VsourceFreeLoops(ES_Vsource *vs)
 	Free(vs->lstack);
 	vs->lstack = NULL;
 	vs->nlstack = 0;
-}
-
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_Vsource *vs = p;
-
-	vs->v = M_ReadReal(buf);
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_Vsource *vs = p;
-
-	M_WriteReal(buf, vs->v);
-	return (0);
 }
 
 static int
@@ -398,8 +378,8 @@ ES_ComponentClass esVsourceClass = {
 		Init,
 		FreeDataset,
 		NULL,		/* destroy */
-		Load,
-		Save,
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit
 	},
 	N_("Voltage source"),

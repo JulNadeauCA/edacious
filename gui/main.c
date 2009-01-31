@@ -424,11 +424,13 @@ SaveSchemToPDF(AG_Event *event)
 static void
 SaveAsDlg(AG_Event *event)
 {
+	char defDir[AG_PATHNAME_MAX];
 	AG_Object *obj = AG_PTR(1);
 	AG_Window *win;
 	AG_FileDlg *fd;
 	AG_FileType *ft;
-	char *defDir = AG_CfgString("save-path");
+
+	AG_CopyCfgString("save-path", defDir, sizeof(defDir));
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Save %s as..."), obj->name);
@@ -780,7 +782,7 @@ main(int argc, char *argv[])
 			fps = atoi(optarg);
 			break;
 		case 'T':
-			AG_SetString(agConfig, "font-path", "%s", optarg);
+			AG_SetString(agConfig, "font-path", optarg);
 			break;
 		case 't':
 			AG_TextParseFontSpec(optarg);

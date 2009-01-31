@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -110,7 +106,7 @@ UpdateModel(ES_PMOS *u, M_Real vSG, M_Real vSD)
 
 }
 
-static void
+static __inline__ void
 Stamp(ES_PMOS *u, ES_SimDC *dc)
 {
 	StampVCCS(u->gm, u->s_vccs);
@@ -169,30 +165,10 @@ Init(void *p)
 	COMPONENT(u)->dcSimBegin = DC_SimBegin;
 	COMPONENT(u)->dcStepBegin = DC_StepBegin;
 	COMPONENT(u)->dcStepIter = DC_StepIter;
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_PMOS *u = p;
-
-	u->Vt = M_ReadReal(buf);
-	u->Va = M_ReadReal(buf);
-	u->K = M_ReadReal(buf);
-	
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_PMOS *u = p;
-
-	M_WriteReal(buf, u->Vt);
-	M_WriteReal(buf, u->Va);
-	M_WriteReal(buf, u->K);
-
-	return (0);
+	M_BindReal(u, "Vt", &u->Vt);
+	M_BindReal(u, "Va", &u->Va);
+	M_BindReal(u, "K", &u->K);
 }
 
 static void *
@@ -217,8 +193,8 @@ ES_ComponentClass esPMOSClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		Load,		/* load */
-		Save,		/* save */
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit		/* edit */
 	},
 	N_("Transistor (PMOS)"),

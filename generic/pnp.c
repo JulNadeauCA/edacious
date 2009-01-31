@@ -1,11 +1,7 @@
 /*
- * Copyright (c) 2008 
- *
- * Antoine Levitt (smeuuh@gmail.com)
- * Steven Herbst (herbst@mit.edu)
- *
- * Hypertriton, Inc. <http://hypertriton.com/>
- *
+ * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
+ * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
+ * Copyright (c) 2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -129,16 +125,14 @@ UpdateModel(ES_PNP *u, ES_SimDC *dc, M_Real vEB, M_Real vCB)
 	u->Icc_eq = Icc - u->gmF*vEB + u->gmR*vCB - u->go*vEC;
 }
 
-static void Stamp(ES_PNP *u, ES_SimDC *dc)
+static __inline__ void
+Stamp(ES_PNP *u, ES_SimDC *dc)
 {
 	StampConductance(u->gPiF,u->sc_be);
 	StampConductance(u->gPiR,u->sc_bc);
-
 	StampConductance(u->go,u->sc_ec);
-
 	StampVCCS(u->gmF,u->sv_ebec);
 	StampVCCS(u->gmR,u->sv_cbce);
-
 	StampCurrentSource(u->Ibf_eq, u->si_be);
 	StampCurrentSource(u->Ibr_eq, u->si_bc);
 	StampCurrentSource(u->Icc_eq, u->si_ce);
@@ -148,26 +142,21 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_PNP *u = obj;
-
 	Uint b = PNODE(u,PORT_B);
 	Uint e = PNODE(u,PORT_E);
 	Uint c = PNODE(u,PORT_C);
 
 	InitStampConductance(b,e, u->sc_be, dc);
 	InitStampConductance(b,c, u->sc_bc, dc);
-
 	InitStampConductance(e,c, u->sc_ec, dc);
-
 	InitStampVCCS(e,b,e,c, u->sv_ebec, dc);
 	InitStampVCCS(c,b,c,e, u->sv_cbce, dc);
-
 	InitStampCurrentSource(b,e, u->si_be, dc);
 	InitStampCurrentSource(b,c, u->si_bc, dc);
 	InitStampCurrentSource(c,e, u->si_ce, dc);
 
 	ResetModel(u);
 	Stamp(u,dc);
-
 	return (0);
 }
 
@@ -176,15 +165,13 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_PNP *u = obj;
 
-	if (dc->inputStep)
+	if (dc->inputStep) {
 		ResetModel(u);
-	else
-	{
+	} else {
 		u->VebPrevIter = VebPrevStep(u);
 		u->VcbPrevIter = VcbPrevStep(u);
 		UpdateModel(u,dc,VebPrevStep(u),VcbPrevStep(u));
 	}
-
 	Stamp(u,dc);
 }
 
@@ -214,36 +201,13 @@ Init(void *p)
 	COMPONENT(u)->dcSimBegin = DC_SimBegin;
 	COMPONENT(u)->dcStepBegin = DC_StepBegin;
 	COMPONENT(u)->dcStepIter = DC_StepIter;
-}
 
-static int
-Load(void *p, AG_DataSource *buf, const AG_Version *ver)
-{
-	ES_PNP *u = p;
-
-	u->Vt = M_ReadReal(buf);
-	u->Va = M_ReadReal(buf);
-	u->betaF = M_ReadReal(buf);
-	u->betaR = M_ReadReal(buf);
-	u->Ifs = M_ReadReal(buf);
-	u->Irs = M_ReadReal(buf);
-	
-	return (0);
-}
-
-static int
-Save(void *p, AG_DataSource *buf)
-{
-	ES_PNP *u = p;
-
-	M_WriteReal(buf, u->Vt);
-	M_WriteReal(buf, u->Va);
-	M_WriteReal(buf, u->betaF);
-	M_WriteReal(buf, u->betaR);
-	M_WriteReal(buf, u->Ifs);
-	M_WriteReal(buf, u->Irs);
-
-	return (0);
+	M_BindReal(u, "Vt",	&u->Vt);
+	M_BindReal(u, "Va",	&u->Va);
+	M_BindReal(u, "betaF",	&u->betaF);
+	M_BindReal(u, "betaR",	&u->betaR);
+	M_BindReal(u, "Ifs",	&u->Ifs);
+	M_BindReal(u, "Irs",	&u->Irs);
 }
 
 static void *
@@ -271,8 +235,8 @@ ES_ComponentClass esPNPClass = {
 		Init,
 		NULL,		/* reinit */
 		NULL,		/* destroy */
-		Load,		/* load */
-		Save,		/* save */
+		NULL,		/* load */
+		NULL,		/* save */
 		Edit		/* edit */
 	},
 	N_("Transistor (PNP)"),
