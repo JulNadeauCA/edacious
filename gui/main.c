@@ -240,7 +240,7 @@ NewComponentModelDlg(AG_Event *event)
 	AG_Box *hBox;
 
 	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, _("New component model..."));
+	AG_WindowSetCaption(win, _("New component..."));
 	
 	AG_LabelNew(win, 0, _("Class: "));
 	tlHier = AG_TlistNewPolled(win, AG_TLIST_TREE|AG_TLIST_EXPAND,

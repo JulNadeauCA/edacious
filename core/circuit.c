@@ -272,6 +272,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	ES_SchemBlock *sb;
 	ES_SchemWire *sw;
 	ES_SchemPort *sp;
+	VG_Text *vt;
 
 	/* Circuit information */
 	AG_CopyString(ckt->descr, ds, sizeof(ckt->descr));
@@ -368,6 +369,9 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	if (VG_Load(ckt->vg, ds) == -1) {
 		return (-1);
 	}
+	VG_FOREACH_NODE_CLASS(vt, ckt->vg, vg_text, "Text")
+		VG_TextSubstObject(vt, ckt);
+
 	VG_FOREACH_NODE_CLASS(sb, ckt->vg, es_schem_block, "SchemBlock") {
 		if ((com = AG_ObjectFindChild(ckt, sb->name)) != NULL) {
 			sb->com = com;
@@ -405,7 +409,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		}
 		sp->port = &sp->com->ports[sp->portName];
 	}
-
+	
 	/* Symbol table */
 	count = (Uint)AG_ReadUint32(ds);
 	Debug(ckt, "Loading symbol table (%u)\n", count);
@@ -490,6 +494,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		AG_PostEvent(ckt, com, "circuit-connected", NULL);
 		AG_PostEvent(ckt, com, "circuit-shown", NULL);
 	}
+
 	ES_CircuitModified(ckt);
 	return (0);
 }

@@ -879,11 +879,11 @@ ES_ComponentEdit(void *obj)
 				if (ops == &vgSelectTool) {
 					continue;	/* We use our own */
 				}
-				tool = VG_ViewRegTool(vv, ops, NULL);
+				tool = VG_ViewRegTool(vv, ops, com);
 				btn = AG_ToolbarButtonIcon(tb,
 				    (ops->icon ? ops->icon->s : NULL), 0,
-				    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool,
-				    NULL);
+				    VG_ViewSelectToolEv, "%p,%p,%p",
+				    vv, tool, com);
 				AG_WidgetBindMp(btn, "state", &OBJECT(vv)->lock,
 				    AG_WIDGET_BOOL, &tool->selected);
 			}
@@ -954,12 +954,12 @@ ES_ComponentEdit(void *obj)
 		for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			if (ops == &vgSelectTool) {
-				continue;		/* We use our own */
+				continue;	/* We use our own */
 			}
-			tool = VG_ViewRegTool(vv, ops, ckt);
+			tool = VG_ViewRegTool(vv, ops, com);
 			btn = AG_ToolbarButtonIcon(tb,
 			    (ops->icon ? ops->icon->s : NULL), 0,
-			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, com);
 			AG_WidgetBindMp(btn, "state", &OBJECT(vv)->lock,
 			    AG_WIDGET_BOOL, &tool->selected);
 		}

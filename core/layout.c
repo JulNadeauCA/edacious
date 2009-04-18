@@ -77,7 +77,10 @@ Load(void *obj, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_Layout *lo = obj;
 	
-	return VG_Load(lo->vg, ds);
+	if (VG_Load(lo->vg, ds) == -1)
+		return (-1);
+	
+	return (0);
 }
 
 static int

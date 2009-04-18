@@ -240,10 +240,10 @@ ES_LayoutEdit(void *p)
 		/* Register generic VG drawing tools */
 		for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
-			tool = VG_ViewRegTool(vv, ops, NULL);
+			tool = VG_ViewRegTool(vv, ops, lo);
 			mAction = AG_MenuAction(mi, ops->name,
 			    ops->icon ? ops->icon->s : NULL,
-			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, NULL);
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, lo);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
 			    &OBJECT(vv)->lock);
 		}

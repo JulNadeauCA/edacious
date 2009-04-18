@@ -70,7 +70,10 @@ Load(void *obj, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_Schem *scm = obj;
 	
-	return VG_Load(scm->vg, ds);
+	if (VG_Load(scm->vg, ds) == -1)
+		return (-1);
+	
+	return (0);
 }
 
 static int

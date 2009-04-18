@@ -154,6 +154,20 @@ ES_DetachSchemEntity(void *pCom, VG_Node *vn)
 	TAILQ_REMOVE(&com->schemEnts, vn, user);
 }
 
+/* Enable variable substitution in VG_Text nodes. */
+static void
+SetTextSubstObjects(VG_Node *vnParent, ES_Component *com)
+{
+	VG_Node *vnSub;
+
+	VG_FOREACH_CHLD(vnSub, vnParent, vg_node) {
+		if (VG_NodeIsClass(vnSub, "Text")) {
+			VG_TextSubstObject((VG_Text *)vnSub, com);
+		}
+		SetTextSubstObjects(vnSub, com);
+	}
+}
+
 /*
  * Circuit<-Component attach callback. If a schematic file is specified in
  * the Component's class information, merge its contents into the Circuit's
@@ -181,10 +195,10 @@ OnAttach(AG_Event *event)
 	TAILQ_FOREACH(scm, &com->schems, schems) {
 		ES_SchemBlock *sb;
 
-		Debug(com, "Instantiating model schematic: %p\n", scm->vg);
 		sb = ES_SchemBlockNew(ckt->vg->root, OBJECT(com)->name);
 		VG_Merge(sb, scm->vg);
 		ES_AttachSchemEntity(com, VGNODE(sb));
+		SetTextSubstObjects(VGNODE(sb), com);
 	}
 	while ((scm = TAILQ_FIRST(&com->schems)) != NULL) {
 		TAILQ_REMOVE(&com->schems, scm, schems);
@@ -196,9 +210,9 @@ OnAttach(AG_Event *event)
 	 * Invoke the Component draw() operation, which may generate one or
 	 * more SchemBlock entities in the Circuit VG.
 	 */
-	if (COMCLASS(com)->draw != NULL) {
+	if (COMCLASS(com)->draw != NULL)
 		COMCLASS(com)->draw(com, ckt->vg);
-	}
+
 	ES_UnlockCircuit(ckt);
 }
 
@@ -405,7 +419,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		TAILQ_INSERT_TAIL(&com->schems, scm, schems);
 	}
 	Debug(com, "Loaded %u schematic blocks\n", count);
-
 	return (0);
 }
 

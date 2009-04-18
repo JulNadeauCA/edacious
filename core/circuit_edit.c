@@ -646,12 +646,12 @@ ES_CircuitEdit(void *p)
 		for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			if (ops == &vgSelectTool) {
-				continue;		/* We use our own */
+				continue;	/* Use alternate "select" */
 			}
-			tool = VG_ViewRegTool(vv, ops, NULL);
+			tool = VG_ViewRegTool(vv, ops, ckt);
 			mAction = AG_MenuAction(mi, ops->name,
 			    ops->icon ? ops->icon->s : NULL,
-			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, NULL);
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
 			    &OBJECT(vv)->lock);
 		}

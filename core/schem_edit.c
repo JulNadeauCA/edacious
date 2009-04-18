@@ -128,15 +128,15 @@ ES_SchemEdit(void *p)
 		
 		for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
-			tool = VG_ViewRegTool(vv, ops, NULL);
+			tool = VG_ViewRegTool(vv, ops, scm);
 			mAction = AG_MenuAction(mi, ops->name,
 			    ops->icon ? ops->icon->s : NULL,
-			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, NULL);
+			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, scm);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
 			    &OBJECT(vv)->lock);
 			if (ops == &vgSelectTool) {
 				VG_ViewSetDefaultTool(vv, tool);
-				VG_ViewSelectTool(vv, tool, NULL);
+				VG_ViewSelectTool(vv, tool, scm);
 			}
 		}
 
