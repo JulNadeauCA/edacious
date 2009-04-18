@@ -111,6 +111,7 @@ Init(void *p)
 
 	ES_InitPorts(r, esResistorPorts);
 	r->R = 1.0;
+	r->Pmax = 0.0;
 	r->Tc1 = 0.0;
 	r->Tc2 = 0.0;
 	COMPONENT(r)->dcSimBegin = DC_SimBegin;
