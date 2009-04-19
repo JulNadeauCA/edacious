@@ -499,8 +499,7 @@ Save(AG_Event *event)
 	if (AG_ObjectSave(obj) == -1) {
 		AG_TextError(_("Error saving object: %s"), AG_GetError());
 	} else {
-		AG_TextInfo("saved-object",
-		    _("Saved %s successfully"),
+		AG_TextTmsg(AG_MSG_INFO, 1250, _("Saved %s successfully"),
 		    OBJECT(obj)->archivePath);
 	}
 }
