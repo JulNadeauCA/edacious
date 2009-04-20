@@ -136,6 +136,7 @@ void        ES_CircuitLog(void *, const char *, ...);
 void       *ES_CircuitEdit(void *);
 AG_Window  *ES_CircuitOpenObject(void *);
 void        ES_CircuitCloseObject(void *);
+int         ES_CircuitExportTXT(ES_Circuit *, const char *);
 
 int         ES_AddNode(ES_Circuit *);
 int         ES_AddVoltageSource(ES_Circuit *, void *);

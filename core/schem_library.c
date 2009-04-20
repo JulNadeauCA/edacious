@@ -81,10 +81,10 @@ LoadSchemsFromDisk(const char *schemDir, AG_Object *objParent)
 	AG_Object *objFolder;
 	AG_Dir *dir;
 	int j;
-
+#if 0
 	Debug(NULL, "Scanning schem directory: %s (under \"%s\")\n",
 	    schemDir, objParent->name);
-
+#endif
 	if ((dir = AG_OpenDir(schemDir)) == NULL) {
 		return (-1);
 	}
@@ -136,10 +136,10 @@ LoadFoldersFromDisk(const char *schemDir, AG_Object *objParent)
 	AG_Dir *dir;
 	AG_Object *objFolder;
 	int j;
-
+#if 0
 	Debug(NULL, "Scanning for folders in: %s (under \"%s\")\n",
 	    schemDir, objParent->name);
-
+#endif
 	if ((dir = AG_OpenDir(schemDir)) == NULL) {
 		return (-1);
 	}
@@ -254,7 +254,6 @@ ES_SchemLibraryInit(void)
 	
 	Strlcpy(path, SHAREDIR, sizeof(path));
 	Strlcat(path, "/Schematics", sizeof(path));
-	printf("Registering schem library dir: %s\n", path);
 	ES_SchemLibraryRegisterDir(path);
 
 #if defined(HAVE_GETPWUID) && defined(HAVE_GETUID)

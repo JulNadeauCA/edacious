@@ -173,15 +173,18 @@ OpenObject(void *p)
 
 /* Close edition window associated with an object. */
 static void
-CloseObject(void *p)
+CloseObject(void *obj)
 {
 	AG_Window *win;
-	void *wObj;
+	AG_Variable *V;
 
 	TAILQ_FOREACH(win, &agView->windows, windows) {
-		if (AG_GetProp(p, "object", AG_PROP_POINTER, (void *)&wObj) &&
-		    wObj == p)
-			AG_ViewDetach(win);
+		if ((V = AG_GetVariableLocked(win, "object")) != NULL) {
+			if (V->data.p == obj) {
+				AG_ViewDetach(win);
+			}
+			AG_UnlockVariable(V);
+		}
 	}
 }
 
@@ -408,10 +411,13 @@ SaveCircuitToSPICE3(AG_Event *event)
 }
 
 static void
-SaveCircuitToPDF(AG_Event *event)
+SaveCircuitToTXT(AG_Event *event)
 {
-	/* TODO */
-	AG_TextError("Export to PDF not implemented yet");
+	ES_Circuit *ckt = AG_PTR(1);
+	char *path = AG_STRING(2);
+
+	if (ES_CircuitExportTXT(ckt, path) == -1)
+		AG_TextMsgFromError();
 }
 
 static void
@@ -452,9 +458,9 @@ SaveAsDlg(AG_Event *event)
 		ft = AG_FileDlgAddType(fd, _("SPICE3 netlist"),
 		    "*.cir",
 		    SaveCircuitToSPICE3, "%p", obj);
-		AG_FileDlgAddType(fd, _("Portable Document Format"),
-		    "*.pdf",
-		    SaveCircuitToPDF, "%p", obj);
+		AG_FileDlgAddType(fd, _("Text file"),
+		    "*.txt",
+		    SaveCircuitToTXT, "%p", obj);
 		/* ... */
 	} else if (AG_OfClass(obj, "ES_Layout:ES_Package:*")) {
 		AG_FileDlgSetDirectoryMRU(fd, "edacious.mru.packages", defDir);
@@ -527,9 +533,8 @@ Quit(AG_Event *event)
 {
 	AG_Object *vfsObj = NULL, *modelObj = NULL, *schemObj = NULL;
 	AG_Window *win;
-/*	AG_Checkbox *cb; */
+	AG_Checkbox *cb;
 	AG_Box *box;
-	int val;
 
 	if (agTerminating) {
 		ConfirmQuit(NULL);
@@ -552,10 +557,11 @@ Quit(AG_Event *event)
 	if (vfsObj == NULL &&
 	    modelObj == NULL &&
 	    schemObj == NULL) {
-		if (AG_GetProp(agConfig, "no-confirm-quit", AG_PROP_BOOL, &val) &&
-		    val == 1) {
+		if (!AG_GetInt(agConfig,"no-confirm-quit")) {
 			ConfirmQuit(NULL);
 		} else {
+			AG_Variable *Vdisable;
+
 			if ((win = AG_WindowNewNamed(AG_WINDOW_MODAL|AG_WINDOW_NOTITLE|
 			    AG_WINDOW_NORESIZE, "QuitCallback")) == NULL) {
 				return;
@@ -565,10 +571,9 @@ Quit(AG_Event *event)
 			AG_WindowSetSpacing(win, 8);
 
 			AG_LabelNewString(win, 0, _("Exit Edacious?"));
-#if 0
-			cb = AG_CheckboxNew(win, 0, _("Don't ask again"))
-			AG_WidgetBindProp(cb, "state", agConfig, "no-confirm-quit");
-#endif
+			cb = AG_CheckboxNew(win, 0, _("Don't ask again"));
+			Vdisable = AG_SetInt(agConfig,"no-confirm-quit",0);
+			AG_BindInt(cb, "state", &Vdisable->data.i);
 
 			box = AG_BoxNewHorizNS(win, AG_VBOX_HFILL);
 			AG_ButtonNewFn(box, 0, _("Quit"), ConfirmQuit, NULL);

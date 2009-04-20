@@ -104,12 +104,20 @@ Destroy(void *p)
 	FreePairs(com);
 }
 
+/*
+ * Recursively tie the various VG entities to actual Component and
+ * Circuit structures following an attach.
+ */
 static void
-AttachSchemPorts(ES_Component *com, VG_Node *vn)
+TieSchemEntities(ES_Component *com, VG_Node *vn)
 {
 	VG_Node *vnChld;
 
 	if (VG_NodeIsClass(vn, "SchemPort")) {
+		/*
+		 * Associate the SchemPort entities with the actual Port
+		 * structures of the circuit.
+		 */
 		ES_SchemPort *sp = (ES_SchemPort *)vn;
 		ES_Port *port;
 
@@ -121,15 +129,18 @@ AttachSchemPorts(ES_Component *com, VG_Node *vn)
 			VG_NodeDetach(vn);
 			return;
 		}
+	} else if (VG_NodeIsClass(vn, "Text")) {
+		/*
+		 * Substitute $(foo) references in VG_Text against the
+		 * Component's own variables.
+		 */
+		VG_TextSubstObject((VG_Text *)vn, com);
 	}
 	VG_FOREACH_CHLD(vnChld, vn, vg_node)
-		AttachSchemPorts(com, vnChld);
+		TieSchemEntities(com, vnChld);
 }
 
-/*
- * Associate a schematic entity with a Component. If the entity is a SchemBlock,
- * we also scan the block for SchemPorts and link them.
- */
+/* Associate a schematic entity against a Component. */
 void
 ES_AttachSchemEntity(void *pCom, VG_Node *vn)
 {
@@ -142,7 +153,7 @@ ES_AttachSchemEntity(void *pCom, VG_Node *vn)
 	} else if (VG_NodeIsClass(vn, "SchemWire")) {
 		SCHEM_WIRE(vn)->wire = WIRE(com);
 	}
-	AttachSchemPorts(com, vn);
+	TieSchemEntities(com, vn);
 }
 
 /* Remove a schematic block associated with a component. */
@@ -152,20 +163,6 @@ ES_DetachSchemEntity(void *pCom, VG_Node *vn)
 	ES_Component *com = pCom;
 	vn->p = NULL;
 	TAILQ_REMOVE(&com->schemEnts, vn, user);
-}
-
-/* Enable variable substitution in VG_Text nodes. */
-static void
-SetTextSubstObjects(VG_Node *vnParent, ES_Component *com)
-{
-	VG_Node *vnSub;
-
-	VG_FOREACH_CHLD(vnSub, vnParent, vg_node) {
-		if (VG_NodeIsClass(vnSub, "Text")) {
-			VG_TextSubstObject((VG_Text *)vnSub, com);
-		}
-		SetTextSubstObjects(vnSub, com);
-	}
 }
 
 /*
@@ -198,7 +195,6 @@ OnAttach(AG_Event *event)
 		sb = ES_SchemBlockNew(ckt->vg->root, OBJECT(com)->name);
 		VG_Merge(sb, scm->vg);
 		ES_AttachSchemEntity(com, VGNODE(sb));
-		SetTextSubstObjects(VGNODE(sb), com);
 	}
 	while ((scm = TAILQ_FIRST(&com->schems)) != NULL) {
 		TAILQ_REMOVE(&com->schems, scm, schems);

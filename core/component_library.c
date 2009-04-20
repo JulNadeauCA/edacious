@@ -62,10 +62,10 @@ LoadComponentFile(const char *path, AG_Object *objParent)
 		return (-1);
 	}
 	AG_CloseFile(ds);
-
+#if 0
 	Debug(objParent, "%s: Model for %s\n", ES_ShortFilename(path),
 	    oh.cs.hier);
-
+#endif
 	/*
 	 * Fetch class information for the model contained. If dynamic library
 	 * modules are required, they get linked at this stage.
@@ -94,10 +94,10 @@ LoadComponentsFromDisk(const char *modelDir, AG_Object *objParent)
 	AG_Object *objFolder;
 	AG_Dir *dir;
 	int j;
-
+#if 0
 	Debug(NULL, "Scanning model directory: %s (under \"%s\")\n",
 	    modelDir, objParent->name);
-
+#endif
 	if ((dir = AG_OpenDir(modelDir)) == NULL) {
 		return (-1);
 	}
@@ -149,10 +149,10 @@ LoadFoldersFromDisk(const char *modelDir, AG_Object *objParent)
 	AG_Dir *dir;
 	AG_Object *objFolder;
 	int j;
-
+#if 0
 	Debug(NULL, "Scanning for folders in: %s (under \"%s\")\n",
 	    modelDir, objParent->name);
-
+#endif
 	if ((dir = AG_OpenDir(modelDir)) == NULL) {
 		return (-1);
 	}
@@ -269,7 +269,6 @@ ES_ComponentLibraryInit(void)
 	
 	Strlcpy(path, SHAREDIR, sizeof(path));
 	Strlcat(path, "/Models", sizeof(path));
-	printf("Registering component library dir: %s\n", path);
 	ES_ComponentLibraryRegisterDir(path);
 
 #if defined(HAVE_GETPWUID) && defined(HAVE_GETUID)

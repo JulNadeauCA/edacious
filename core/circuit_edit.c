@@ -58,12 +58,15 @@ void
 ES_CircuitCloseObject(void *obj)
 {
 	AG_Window *win;
-	void *wObj;
+	AG_Variable *V;
 
 	TAILQ_FOREACH(win, &agView->windows, windows) {
-		if (AG_GetProp(win, "circuit-object", AG_PROP_POINTER,
-		    (void *)&wObj) && wObj == obj)
-			AG_ViewDetach(win);
+		if ((V = AG_GetVariableLocked(win,"circuit-object")) != NULL) {
+			if (V->data.p == obj) {
+				AG_ViewDetach(win);
+			}
+			AG_UnlockVariable(V);
+		}
 	}
 }
 
