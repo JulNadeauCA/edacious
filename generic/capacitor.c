@@ -65,7 +65,7 @@ GetDeltaT(ES_SimDC *dc, int n)
 static void
 UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
 {
-	M_Real v = (dc->currStep == 0.0) ? c->V0 : GetVoltage(c, 1);
+	M_Real v = (dc->currStep == 0) ? c->V0 : GetVoltage(c, 1);
 
 	switch (dc->method) {
 	case BE:
