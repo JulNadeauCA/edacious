@@ -233,9 +233,9 @@ FreeDataset(void *p)
 	ES_Port *port;
 	ES_Sym *sym, *nsym;
 	Uint i;
-
+	
 	ES_DestroySimulation(ckt);
-
+	
 	Free(ckt->loops);
 	ckt->loops = NULL;
 	ckt->l = 0;
@@ -818,16 +818,6 @@ ES_DelVoltageSource(ES_Circuit *ckt, int vName)
 			ckt->vSrcs[v] = ckt->vSrcs[v+1];
 	}
 	Debug(ckt, "Removed voltage source v%d\n", v);
-}
-
-/* Clear the voltage sources array. */
-void
-ES_ClearVoltageSources(ES_Circuit *ckt)
-{
-	Debug(ckt, "Clearing %u voltage sources\n", ckt->m);
-	Free(ckt->vSrcs);
-	ckt->vSrcs = NULL;
-	ckt->m = 0;
 }
 
 /* Create a new symbol referencing a node. */

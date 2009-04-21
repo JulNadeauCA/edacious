@@ -139,8 +139,9 @@ SuppressComponent(AG_Event *event)
 	ES_Circuit *ckt = com->ckt;
 	
 	ES_LockCircuit(ckt);
-	VG_Status(vv, _("Suppressed component %s."), OBJECT(com)->name);
+	AG_PostEvent(ckt, com, "circuit-disconnected", NULL);
 	com->flags |= ES_COMPONENT_SUPPRESSED;
+	VG_Status(vv, _("Suppressed component %s."), OBJECT(com)->name);
 	ES_UnlockCircuit(ckt);
 }
 
@@ -154,6 +155,7 @@ UnsuppressComponent(AG_Event *event)
 	ES_LockCircuit(ckt);
 	VG_Status(vv, _("Unsuppressed component %s."), OBJECT(com)->name);
 	com->flags &= ~(ES_COMPONENT_SUPPRESSED);
+	AG_PostEvent(ckt, com, "circuit-connected", NULL);
 	ES_UnlockCircuit(ckt);
 }
 

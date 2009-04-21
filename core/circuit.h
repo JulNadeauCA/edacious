@@ -139,13 +139,13 @@ void        ES_CircuitCloseObject(void *);
 int         ES_CircuitExportTXT(ES_Circuit *, const char *);
 
 int         ES_AddNode(ES_Circuit *);
-int         ES_AddVoltageSource(ES_Circuit *, void *);
-void        ES_DelVoltageSource(ES_Circuit *, int);
-void        ES_ClearVoltageSources(ES_Circuit *);
 void        ES_DelNode(ES_Circuit *, int);
 int         ES_MergeNodes(ES_Circuit *, int, int);
 ES_Branch  *ES_AddBranch(ES_Circuit *, int, struct es_port *);
 void        ES_DelBranch(ES_Circuit *, int, ES_Branch *);
+
+int         ES_AddVoltageSource(ES_Circuit *, void *);
+void        ES_DelVoltageSource(ES_Circuit *, int);
 
 ES_Node	   *ES_GetNode(ES_Circuit *, int);
 void        ES_CopyNodeSymbol(ES_Circuit *, int, char *, size_t);
