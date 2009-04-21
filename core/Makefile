@@ -44,6 +44,8 @@ SRCS=	core.c \
 	package_library.c \
 	package_insert_tool.c
 
+MAN3=	ES_Circuit.3
+
 CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 
 include ${TOP}/mk/build.lib.mk

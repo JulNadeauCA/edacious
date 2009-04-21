@@ -1,0 +1,156 @@
+.\" Copyright (c) 2009 Hypertriton, Inc. <http://hypertriton.com/>
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+.\" IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+.\" WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+.\" INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+.\" (INCLUDING BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+.\" SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+.\" STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+.\" IN ANY WAY OUT OF THE USE OF THIS SOFTWARE EVEN IF ADVISED OF THE
+.\" POSSIBILITY OF SUCH DAMAGE.
+.\"
+.Dd April 21, 2009
+.Dt ES_CIRCUIT 3
+.Os
+.ds vT Edacious API Reference
+.ds oS Edacious 1.0
+.Sh NAME
+.Nm ES_Circuit
+.Nd Edacious circuit structure
+.Sh SYNOPSIS
+.Bd -literal
+#include <edacious/core.h>
+.Ed
+.Sh DESCRIPTION
+The Edacious
+.Nm
+object describes an electronic circuit in terms of
+components
+.Xr ( ES_Component 3
+objects) and connection points (nodes).
+A node is described as a list of
+.Ft ES_Branch
+items, each referencing specific component pins
+.Ft ( ES_Port
+items).
+.Sh INHERITANCE HIERARCHY
+.Xr AG_Object 3 ->
+.Xr ES_Circuit 3 ->
+.Nm .
+.Sh INTERFACE
+.nr nS 1
+.Ft "ES_Circuit *"
+.Fn ES_CircuitNew "void *parent" "const char *name"
+.Pp
+.Ft "void"
+.Fn ES_LockCircuit "ES_Circuit *ckt"
+.Pp
+.Ft "void"
+.Fn ES_UnlockCircuit "ES_Circuit *ckt"
+.Pp
+.Ft "int"
+.Fn ES_AddNode "ES_Circuit *ckt"
+.Pp
+.Ft "void"
+.Fn ES_DelNode "ES_Circuit *ckt" "int node"
+.Pp
+.Ft "int"
+.Fn ES_MergeNodes "ES_Circuit *ckt" "int node1" "int node2"
+.Pp
+.Ft "ES_Branch *"
+.Fn ES_AddBranch "ES_Circuit *ckt" "int node" "ES_Port *port"
+.Pp
+.Ft "void"
+.Fn ES_DelBranch "ES_Circuit *ckt" "int node" "ES_Branch *branch"
+.Pp
+.Ft "int"
+.Fn ES_AddVoltageSource "ES_Circuit *ckt" "ES_Component *component"
+.Pp
+.Ft "void"
+.Fn ES_DelVoltageSource "ES_Circuit *ckt" "int source"
+.Pp
+.nr nS 0
+The
+.Fn ES_CircuitNew
+function allocates, initializes, and attaches a new
+.Nm
+object.
+.Pp
+.Fn ES_LockCircuit
+acquires the lock protecting the circuit from modifications.
+If there is a simulation in progress, it is suspended as a result.
+.Fn ES_UnlockCircuit
+releases the lock on the circuit, resuming any suspended simulation.
+.Pp
+.Fn ES_AddNode
+allocates a new circuit node.
+New nodes initially contains no branches.
+.Fn ES_DelNode
+removes a node.
+If components are referencing the node, these references will be removed
+accordingly.
+Node 0 (ground) cannot be deleted.
+The
+.Fn ES_MergeNodes
+function merges
+.Fa node1
+and
+.Fa node2
+into a single node and returns its number.
+Whichever node has the highest number is deleted (node 0 cannot be
+deleted).
+.Pp
+.Fn ES_AddBranch
+creates a new branch (i.e., a reference to a Component
+.Ft ES_Port
+structure), under the given node.
+.Fn ES_DelBranch
+removes the specified branch
+.Pp
+.Fn ES_AddVoltageSource
+registers a new independent voltage source in the circuit and returns a
+numerical identifier for the source.
+.Fn ES_DelVoltageSource
+deletes the specified voltage source.
+For the "suppress component" feature to work properly, components should
+register and unregister voltage sources in response to the
+.Sq circuit-connected
+and
+.Sq circuit-disconnected
+events.
+.Sh EVENTS
+The
+.Nm
+object may post the following events to attached Component objects:
+.Pp
+.Bl -tag -compact -width "circuit-disconnected "
+.It circuit-connected
+The component has been connected to the circuit, or the component has been
+"unsuppressed".
+This event is also raised when a circuit is read from file, once all
+other components have been attached to the circuit.
+.It circuit-disconnected
+The component has been disconnected from the circuit either by deletion or
+use of the "suppress" feature.
+.El
+.Sh SEE ALSO
+.Xr edacious 1 ,
+.Xr ES_Intro 3 ,
+.Xr ES_Component 3
+.Sh HISTORY
+The
+.Nm
+structure first appeared in Edacious 1.0.
