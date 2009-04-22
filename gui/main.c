@@ -212,7 +212,8 @@ fail:
 static void
 CreateComponentModel(AG_Event *event)
 {
-	AG_Tlist *tlClasses = AG_PTR(1);
+	AG_Window *pWin = AG_PTR(1);
+	AG_Tlist *tlClasses = AG_PTR(2);
 	AG_TlistItem *itClass;
 	ES_Component *com;
 
@@ -228,6 +229,7 @@ CreateComponentModel(AG_Event *event)
 		goto fail;
 	}
 	AG_PostEvent(NULL, com, "edit-open", NULL);
+	AG_ViewDetach(pWin);
 	return;
 fail:
 	AG_TextError(_("Could not create component: %s"), AG_GetError());
@@ -251,7 +253,7 @@ NewComponentModelDlg(AG_Event *event)
 
 	hBox = AG_BoxNewHoriz(win, AG_BOX_HOMOGENOUS|AG_BOX_FRAME|AG_BOX_HFILL);
 	AG_ButtonNewFn(hBox, 0, _("Create model"),
-	    CreateComponentModel, "%p", tlHier);
+	    CreateComponentModel, "%p,%p", win, tlHier);
 	AG_ButtonNewFn(hBox, 0, _("Close"), AGWINDETACH(win));
 
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 60, 60);
