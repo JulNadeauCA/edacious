@@ -836,7 +836,7 @@ ES_ComponentEdit(void *obj)
 				btn = AG_ButtonNewFn(bCmds, 0, _("Delete"),
 				    DeleteSchem, "%p,%p,%p", com, tlSchems, vv);
 #if 0
-				AG_WidgetBindIntFn(btn, "state",
+				AG_BindIntFn(btn, "state",
 				    EvalRemoveButtonState, "%p", tlSchems);
 #endif
 			}
@@ -865,8 +865,8 @@ ES_ComponentEdit(void *obj)
 				    (ops->icon ? ops->icon->s : NULL), 0,
 				    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool,
 				    NULL);
-				AG_WidgetBindMp(btn, "state", &OBJECT(vv)->lock,
-				    AG_WIDGET_BOOL, &tool->selected);
+				AG_BindIntMp(btn, "state", &tool->selected,
+				    &OBJECT(vv)->lock);
 
 				if (ops == &esSchemSelectTool) {
 					VG_ViewSetDefaultTool(vv, tool);
@@ -886,8 +886,8 @@ ES_ComponentEdit(void *obj)
 				    (ops->icon ? ops->icon->s : NULL), 0,
 				    VG_ViewSelectToolEv, "%p,%p,%p",
 				    vv, tool, com);
-				AG_WidgetBindMp(btn, "state", &OBJECT(vv)->lock,
-				    AG_WIDGET_BOOL, &tool->selected);
+				AG_BindIntMp(btn, "state", &tool->selected,
+				    &OBJECT(vv)->lock);
 			}
 		}
 	}
@@ -941,8 +941,8 @@ ES_ComponentEdit(void *obj)
 			btn = AG_ToolbarButtonIcon(tb,
 			    (ops->icon ? ops->icon->s : NULL), 0,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
-			AG_WidgetBindMp(btn, "state", &OBJECT(vv)->lock,
-			    AG_WIDGET_BOOL, &tool->selected);
+			AG_BindIntMp(btn, "state", &tool->selected,
+			    &OBJECT(vv)->lock);
 
 			if (ops == &esSchemSelectTool) {
 				VG_ViewSetDefaultTool(vv, tool);
@@ -962,8 +962,8 @@ ES_ComponentEdit(void *obj)
 			btn = AG_ToolbarButtonIcon(tb,
 			    (ops->icon ? ops->icon->s : NULL), 0,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, com);
-			AG_WidgetBindMp(btn, "state", &OBJECT(vv)->lock,
-			    AG_WIDGET_BOOL, &tool->selected);
+			AG_BindIntMp(btn, "state", &tool->selected,
+			    &OBJECT(vv)->lock);
 		}
 		
 		/* Register (but hide) the special "insert component" tool. */

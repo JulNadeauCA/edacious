@@ -729,7 +729,7 @@ SelectFontDlg(AG_Event *event)
 	AG_WindowSetCaption(win, _("Font selection"));
 
 	fs = AG_FontSelectorNew(win, AG_FONTSELECTOR_EXPAND);
-	AG_WidgetBindPointer(fs, "font", &agDefaultFont);
+	AG_BindPointer(fs, "font", (void *)&agDefaultFont);
 
 	hBox = AG_BoxNewHoriz(win, AG_BOX_HFILL|AG_BOX_HOMOGENOUS);
 	AG_ButtonNewFn(hBox, 0, _("OK"), SelectedFont, "%p", win);
