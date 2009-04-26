@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2009 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,13 +33,14 @@
 #include <agar/core/limits.h>
 
 ES_SchemPort *
-ES_SchemPortNew(void *pNode)
+ES_SchemPortNew(void *pNode, ES_Port *port)
 {
 	ES_SchemPort *sp;
 
 	sp = AG_Malloc(sizeof(ES_SchemPort));
 	VG_NodeInit(sp, &esSchemPortOps);
 	VG_NodeAttach(pNode, sp);
+	sp->port = port;
 	return (sp);
 }
 
@@ -50,8 +51,7 @@ Init(void *p)
 
 	sp->flags = 0;
 	sp->name[0] = '\0';
-	sp->r = 3.0f;
-	sp->com = NULL;
+	sp->r = 1.5f;
 	sp->comName[0] = '\0';
 	sp->port = NULL;
 	sp->portName = -1;
@@ -77,15 +77,16 @@ Save(void *p, AG_DataSource *ds)
 
 	AG_WriteUint8(ds, (Uint8)sp->flags);
 	AG_WriteString(ds, sp->name);
-	AG_WriteString(ds, (sp->com != NULL) ? OBJECT(sp->com)->name : "");
+	AG_WriteString(ds, (sp->port != NULL && sp->port->com != NULL) ?
+	                   OBJECT(sp->port->com)->name : "");
 	AG_WriteUint32(ds, (sp->port != NULL) ? (Uint32)sp->port->n : 0);
 }
 
 static void
 Draw(void *p, VG_View *vv)
 {
-	char text[16];
 	ES_SchemPort *sp = p;
+	char text[16];
 	int x, y;
 	float r;
 
@@ -100,48 +101,23 @@ Draw(void *p, VG_View *vv)
 		AG_DrawCircle(vv, x, y, (int)(r*vv->scale),
 		    VG_MapColorRGB(VGNODE(sp)->color));
 	}
-	if (sp->port != NULL && sp->port->node != -1 &&
+	if (sp->port != NULL &&
+	    sp->port->com != NULL &&
 	    sp->port->com->ckt->flags & ES_CIRCUIT_SHOW_NODENAMES) {
-		SDL_Surface *suTmp = NULL;
-		int su = -1;
-	
 		AG_PushTextState();
 		AG_TextColorVideo32(VG_MapColorRGB(VGNODE(sp)->color));
 		Snprintf(text, sizeof(text), "n%d", sp->port->node);
-
-		if (agTextCache) {
-			su = AG_TextCacheInsLookup(vv->tCache, text);
-		} else {
-			suTmp = AG_TextRender(text);
-		}
-#ifdef HAVE_OPENGL
-		if (agView->opengl) {
-			glPushMatrix();
-			glTranslatef((float)(AGWIDGET(vv)->rView.x1+x + 10.0f),
-			             (float)(AGWIDGET(vv)->rView.y1+y + 10.0f),
-				     0.0f);
-			glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
-			if (agTextCache) {
-				AG_WidgetBlitSurfaceGL(vv, su,
-				    WSURFACE(vv,su)->w,
-				    WSURFACE(vv,su)->h);
-			} else {
-				AG_WidgetBlitGL(vv, suTmp,
-				    suTmp->w,
-				    suTmp->h);
-				AG_SurfaceFree(suTmp);
-			}
-			glPopMatrix();
-		} else
-#endif
-		{
-			if (agTextCache) {
-				AG_WidgetBlitSurface(vv, su, x+4, y+4);
-			} else {
-				AG_WidgetBlit(vv, suTmp, x+4, y+4);
-				AG_SurfaceFree(suTmp);
-			}
-		}
+		VG_DrawText(vv,
+		    x+10, y+10, 180.0f,
+		    text);
+		AG_PopTextState();
+	}
+	if (sp->port == NULL && sp->name[0] != '\0') {
+		AG_PushTextState();
+		AG_TextColorVideo32(VG_MapColorRGB(VGNODE(sp)->color));
+		VG_DrawText(vv,
+		    x+6, y+6, 180.0f,
+		    sp->name);
 		AG_PopTextState();
 	}
 }

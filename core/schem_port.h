@@ -8,7 +8,6 @@ typedef struct es_schem_port {
 	Uint flags;
 	char name[ES_SCHEM_NAME_MAX];		/* Symbol name */
 	float r;				/* Circle radius */
-	struct es_component *com;		/* Pointer to component */
 	char comName[AG_OBJECT_NAME_MAX];	/* Name of component (R) */
 	struct es_port *port;			/* Pointer to component port */
 	int portName;				/* Component port number (R) */
@@ -21,5 +20,5 @@ typedef struct es_schem_port {
 __BEGIN_DECLS
 extern VG_NodeOps esSchemPortOps;
 
-ES_SchemPort *ES_SchemPortNew(void *);
+ES_SchemPort *ES_SchemPortNew(void *, struct es_port *);
 __END_DECLS
