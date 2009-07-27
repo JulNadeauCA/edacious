@@ -123,7 +123,6 @@ TieSchemEntities(ES_Component *com, VG_Node *vn)
 
 		if ((port = ES_FindPort(com, sp->name)) != NULL) {
 			port->sp = sp;
-			sp->com = com;
 			sp->port = port;
 		} else {
 			VG_NodeDetach(vn);
