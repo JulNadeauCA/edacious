@@ -42,84 +42,113 @@ Init(void *p)
 {
 	ES_WireTool *t = p;
 
-	t->flags = 0;
+	t->flags = CREATE_NEW_NODES;
 	t->curWire = NULL;
+}
+	
+/* Create a new floating wire instance. */
+static void
+CreateWire(ES_WireTool *t, VG_Vector vPos)
+{
+	VG_View *vv = VGTOOL(t)->vgv;
+	ES_Circuit *ckt = VGTOOL(t)->p;
+	ES_Port *port1, *port2;
+	ES_SchemWire *sw;
+	ES_SchemPort *spNear;
+
+	ES_LockCircuit(ckt);
+	
+	/* Create the Circuit Wire object. */
+	t->curWire = ES_WireNew(ckt);
+	port1 = &COMPONENT(t->curWire)->ports[1];
+	port2 = &COMPONENT(t->curWire)->ports[2];
+
+	/* Insert the schematic entities. */
+	spNear = VG_PointProximityMax(vv, "SchemPort", &vPos, NULL,
+	    t->curWire, vv->pointSelRadius);
+
+	if (spNear != NULL) {
+		port1->node = spNear->port->node;
+	} else {
+		if ((t->flags & CREATE_NEW_NODES) == 0) {
+			VG_Status(vv, _("Node creation disabled"));
+			goto out;
+		}
+		port1->node = ES_AddNode(ckt);
+	}
+	VG_Status(vv, _("Connecting to n%d..."), port1->node);
+
+	port1->sp = ES_SchemPortNew(ckt->vg->root, port1);
+	port2->sp = ES_SchemPortNew(ckt->vg->root, port2);
+	VG_Translate(port1->sp, vPos);
+	VG_Translate(port2->sp, vPos);
+
+	sw = ES_SchemWireNew(ckt->vg->root, port1->sp, port2->sp);
+	sw->wire = t->curWire;
+	ES_AttachSchemEntity(t->curWire, VGNODE(sw));
+out:
+	ES_UnlockCircuit(ckt);
 }
 
 /*
  * Merge and create the nodes and branches needed to connect the two specified
  * points in the schematic.
  */
-static int
-ConnectWire(ES_WireTool *t, VG_View *vv, ES_Circuit *ckt, ES_Wire *wire,
-    VG_Vector p1, VG_Vector p2)
+static void
+ConnectWire(ES_WireTool *t, VG_Vector vPos)
 {
-	ES_SchemPort *sp1, *sp2;
-	int N1, N2, N3;
+	ES_Port *port1 = &COMPONENT(t->curWire)->ports[1];
+	ES_Port *port2 = &COMPONENT(t->curWire)->ports[2];
+	VG_Vector pos2 = VG_Pos(port2->sp);
+	ES_Wire *wire = t->curWire;
+	VG_View *vv = VGTOOL(t)->vgv;
+	ES_Circuit *ckt = VGTOOL(t)->p;
+	ES_SchemPort *spNear;
+	int nMerged;
 
 	ES_LockCircuit(ckt);
+	ES_UnselectPort(port1);
+	ES_UnselectPort(port2);
 
-	/* Query for two SchemPorts nearest to the endpoints. */
-	sp1 = VG_PointProximityMax(vv, "SchemPort", &p1, NULL, NULL, vv->pointSelRadius);
-	sp2 = VG_PointProximityMax(vv, "SchemPort", &p2, NULL, NULL, vv->pointSelRadius);
-	if ((sp1 != NULL && sp1->port->node != -1) &&
-	    (sp2 != NULL && sp2->port->node != -1) &&
-	    (sp1->port->node == sp2->port->node)) {
-		AG_SetError(_("Redundant connection"));
-		goto fail;
-	}
-
-	Debug(ckt, "WIRE: Port1=n%d, Port2=n%d\n",
-	    (sp1->port != NULL) ? sp1->port->node : -2,
-	    (sp2->port != NULL) ? sp2->port->node : -2);
-
-	/* Fail if no port is found and we cannot create new nodes. */
-	if ((t->flags & CREATE_NEW_NODES) == 0) {
-		if (sp1->port != NULL && sp1->port->node == -1) {
-			AG_SetError(_("Cannot find port1"));
+	spNear = VG_PointProximityMax(vv, "SchemPort", &pos2, NULL,
+	    port2->sp, vv->pointSelRadius);
+	if (spNear != NULL && spNear->port != NULL &&
+	    spNear->port->node != -1 &&
+	    port1->node != spNear->port->node) {
+		port2->node = spNear->port->node;
+		VG_NodeDetach(port2->sp);
+		VG_LoadIdentity(port2->sp);
+		VG_NodeAttach(spNear, port2->sp);
+	} else {
+		if ((t->flags & CREATE_NEW_NODES) == 0) {
+			AG_SetError(_("Node creation disabled"));
 			goto fail;
 		}
-		if (sp2->port != NULL && sp2->port->node == -1) {
-			AG_SetError(_("Cannot find port2"));
-			goto fail;
-		}
+		port2->node = ES_AddNode(ckt);
 	}
 
-	/* Get the actual node numbers. Create new nodes if required. */
-	N1 = (sp1->port != NULL && sp1->port->node != -1) ?
-	    sp1->port->node : ES_AddNode(ckt);
-	N2 = (sp2->port != NULL && sp2->port->node != -1) ?
-	    sp2->port->node : ES_AddNode(ckt);
-	COMPONENT(wire)->ports[1].node = N1;
-	COMPONENT(wire)->ports[2].node = N2;
-
-	/* Connect the two nodes, effectively merging them. */
-	if ((N3 = ES_MergeNodes(ckt, N1, N2)) == -1) {
+	/* Merge the two nodes, add branches to the Wire component. */
+	if ((nMerged = ES_MergeNodes(ckt, port1->node, port2->node)) == -1) {
 		goto fail;
 	}
-
-	/* Both Ports of the Wire point to the same node. */
-	sp1->port->node = N3;
-	sp2->port->node = N3;
-	COMPONENT(wire)->ports[1].node = N3;
-	COMPONENT(wire)->ports[2].node = N3;
-	ES_AddBranch(ckt, N3, &COMPONENT(wire)->ports[1]);
-	ES_AddBranch(ckt, N3, &COMPONENT(wire)->ports[2]);
+	port1->node = nMerged;
+	port2->node = nMerged;
+	ES_AddBranch(ckt, nMerged, port1);
+	ES_AddBranch(ckt, nMerged, port2);
 
 	/* Connect the Wire component to the Circuit. */
 	TAILQ_INSERT_TAIL(&ckt->components, COMPONENT(wire), components);
 	COMPONENT(wire)->flags |= ES_COMPONENT_CONNECTED;
 
-	VG_Status(vv, _("Connected %s:%d and %s:%d as n%d"),
-	    OBJECT(sp1->port->com)->name, sp1->port->n,
-	    OBJECT(sp2->port->com)->name, sp2->port->n, N3);
+	VG_Status(vv, _("Connected as n%d"), nMerged);
 
 	ES_CircuitModified(ckt);
 	ES_UnlockCircuit(ckt);
-	return (0);
+	t->curWire = NULL;
+	return;
 fail:
 	ES_UnlockCircuit(ckt);
-	return (-1);
+	VG_Status(vv, "%s", AG_GetError());
 }
 
 static void
@@ -142,47 +171,14 @@ static int
 MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
 	ES_WireTool *t = p;
-	VG_View *vv = VGTOOL(t)->vgv;
 	ES_Circuit *ckt = VGTOOL(t)->p;
-	VG *vg = vv->vg;
-	ES_Port *port1, *port2;
-	ES_SchemWire *sw;
 	
 	switch (button) {
 	case SDL_BUTTON_LEFT:
 		if (t->curWire == NULL) {
-			/* Create the Circuit Wire object */
-			t->curWire = ES_WireNew(ckt);
-			port1 = &COMPONENT(t->curWire)->ports[1];
-			port2 = &COMPONENT(t->curWire)->ports[2];
-
-			/* Create the schematic Port entities. */
-			port1->sp = ES_SchemPortNew(vg->root);
-			port2->sp = ES_SchemPortNew(vg->root);
-			port1->sp->com = COMPONENT(t->curWire);
-			port2->sp->com = COMPONENT(t->curWire);
-			port1->sp->port = port1;
-			port2->sp->port = port2;
-			VG_Translate(port1->sp, vPos);
-			VG_Translate(port2->sp, vPos);
-
-			/* Create the schematic Wire entity. */
-			sw = ES_SchemWireNew(vg->root, port1->sp, port2->sp);
-			sw->wire = t->curWire;
-			t->curWire->schemWire = sw;
-			ES_AttachSchemEntity(t->curWire, VGNODE(sw));
+			CreateWire(t, vPos);
 		} else {
-			port1 = &COMPONENT(t->curWire)->ports[1];
-			port2 = &COMPONENT(t->curWire)->ports[2];
-			ES_UnselectPort(port1);
-			ES_UnselectPort(port2);
-			if (ConnectWire(t, vv, ckt, t->curWire,
-			    VG_Pos(port1->sp),
-			    VG_Pos(port2->sp)) == -1) {
-				VG_Status(vv, "%s", AG_GetError());
-			} else {
-				t->curWire = NULL;
-			}
+			ConnectWire(t, vPos);
 		}
 		ES_UnselectAllPorts(ckt);
 		return (1);
@@ -239,18 +235,17 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	ES_WireTool *t = p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	ES_Circuit *ckt = VGTOOL(t)->p;
+	ES_SchemPort *spCur = (t->curWire != NULL) ?
+	                      COMPONENT(t->curWire)->ports[2].sp : NULL;
 	ES_SchemPort *spNear;
 
 	ES_UnselectAllPorts(ckt);
-	spNear = VG_PointProximityMax(vv, "SchemPort", &vPos, NULL,
-	    (t->curWire != NULL) ? COMPONENT(t->curWire)->ports[1].sp : NULL,
-	    vv->pointSelRadius);
-	if (spNear != NULL) {
+	if ((spNear = VG_PointProximityMax(vv, "SchemPort", &vPos, NULL,
+	    spCur, vv->pointSelRadius)) != NULL) {
 		ES_SelectPort(spNear->port);
 	}
-	if (t->curWire != NULL) {
-		VG_SetPosition(COMPONENT(t->curWire)->ports[1].sp,
-		    (spNear != NULL) ? VG_Pos(spNear) : vPos);
+	if (spCur != NULL) {
+		VG_SetPosition(spCur, (spNear != NULL) ? VG_Pos(spNear) : vPos);
 	}
 	UpdateStatus(vv, spNear);
 	return (0);

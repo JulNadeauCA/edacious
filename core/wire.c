@@ -85,7 +85,6 @@ Init(void *p)
 	ES_InitPorts(w, esWirePorts);
 	w->flags = 0;
 	w->cat = 0;
-	w->schemWire = NULL;
 
 	/* Exclude from displayed component lists */
 	COMPONENT(w)->flags |= ES_COMPONENT_SPECIAL;

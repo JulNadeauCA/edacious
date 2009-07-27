@@ -176,15 +176,21 @@ KeyDown(void *p, int ksym, int kmod, int unicode)
 del:
 		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
 			if (vn->flags & VG_NODE_SELECTED) {
-				if (VG_Delete(vn) == -1) {
-					vn->flags &= ~(VG_NODE_SELECTED);
-					VG_Status(vv, "%s%u: %s",
-					    vn->ops->name, vn->handle,
-					    AG_GetError());
-					return (0);
+				VG_ClearEditAreas(vv);
+				if (VG_NodeIsClass(vn, "SchemWire")) {
+					AG_ObjectDetach(SCHEM_WIRE(vn)->wire);
+				} else if (VG_NodeIsClass(vn, "SchemBlock")) {
+					AG_ObjectDetach(SCHEM_BLOCK(vn)->com);
 				} else {
-					nDel++;
+					if (VG_Delete(vn) == -1) {
+						vn->flags &= ~(VG_NODE_SELECTED);
+						VG_Status(vv, "%s%u: %s",
+						    vn->ops->name, vn->handle,
+						    AG_GetError());
+						return (0);
+					}
 				}
+				nDel++;
 				goto del;
 			}
 		}

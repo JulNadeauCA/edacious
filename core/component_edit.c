@@ -864,7 +864,7 @@ ES_ComponentEdit(void *obj)
 				btn = AG_ToolbarButtonIcon(tb,
 				    (ops->icon ? ops->icon->s : NULL), 0,
 				    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool,
-				    NULL);
+				    com);
 				AG_BindIntMp(btn, "state", &tool->selected,
 				    &OBJECT(vv)->lock);
 

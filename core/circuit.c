@@ -182,8 +182,7 @@ Init(void *p)
 
 	OBJECT(ckt)->flags |= AG_OBJECT_DEBUG_DATA;
 
-	ckt->flags = ES_CIRCUIT_SHOW_NODES|ES_CIRCUIT_SHOW_NODESYMS|
-	             ES_CIRCUIT_SHOW_NODENAMES;
+	ckt->flags = ES_CIRCUIT_SHOW_NODES|ES_CIRCUIT_SHOW_NODESYMS;
 	ckt->descr[0] = '\0';
 	ckt->authors[0] = '\0';
 	ckt->keywords[0] = '\0';
@@ -379,41 +378,39 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		VG_TextSubstObject(vt, ckt);
 
 	VG_FOREACH_NODE_CLASS(sb, ckt->vg, es_schem_block, "SchemBlock") {
-		if ((com = AG_ObjectFindChild(ckt, sb->name)) != NULL) {
-			sb->com = com;
-		} else {
-			AG_SetError("SchemBlock refers to unexisting "
-			            "component: \"%s\"", sb->name);
+		if ((com = AG_ObjectFindChild(ckt, sb->name)) == NULL) {
+			AG_SetError("SchemBlock: No such component: \"%s\"",
+			    sb->name);
 			return (-1);
 		}
+		sb->com = com;
 	}
 	VG_FOREACH_NODE_CLASS(sw, ckt->vg, es_schem_wire, "SchemWire") {
-		if ((com = AG_ObjectFindChild(ckt, sw->name)) != NULL) {
-			sw->wire = com;
-		} else {
-			AG_SetError("SchemWire refers to unexisting "
-			            "wire: \"%s\"", sw->name);
+		if ((com = AG_ObjectFindChild(ckt, sw->name)) == NULL) {
+			AG_SetError("SchemWire: No such wire: \"%s\"",
+			    sw->name);
 			return (-1);
 		}
+		sw->wire = com;
 	}
 	VG_FOREACH_NODE_CLASS(sp, ckt->vg, es_schem_port, "SchemPort") {
+		ES_Component *com;
+
 		if (sp->comName[0] == '\0' || sp->portName == -1) {
 			continue;
 		}
-		if ((com = AG_ObjectFindChild(ckt, sp->comName)) != NULL) {
-			sp->com = com;
-		} else {
+		if ((com = AG_ObjectFindChild(ckt, sp->comName)) == NULL) {
 			AG_SetError("SchemPort refers to unexisting "
 			            "component: \"%s\"", sp->name);
 			return (-1);
 		}
-		if (sp->portName < 1 || sp->portName > sp->com->nports) {
+		if (sp->portName < 1 || sp->portName > com->nports) {
 			AG_SetError("SchemPort refers to invalid "
 			            "port of %s: %d", sp->comName,
 				    sp->portName);
 			return (-1);
 		}
-		sp->port = &sp->com->ports[sp->portName];
+		sp->port = &com->ports[sp->portName];
 	}
 	
 	/* Symbol table */
@@ -642,7 +639,6 @@ ES_CircuitExportTXT(ES_Circuit *ckt, const char *path)
 	if (ckt->descr[0] != '\0') { fprintf(f, "# Description: %s\n", ckt->descr); }
 	if (ckt->authors[0] != '\0') { fprintf(f, "# Author(s): %s\n", ckt->authors); }
 	if (ckt->keywords[0] != '\0') { fprintf(f, "# Keywords: %s\n", ckt->keywords); }
-	fprintf(f, "# Flags: 0x%x\n", ckt->flags);
 	fprintf(f, "\n");
 
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {

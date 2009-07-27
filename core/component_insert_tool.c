@@ -56,8 +56,8 @@ HighlightConnections(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 		    port->sp, vv->pointSelRadius);
 		if (spNear != NULL) {
 			ES_SelectPort(port);
-			Snprintf(s, sizeof(s), "%d>[%s:%d] ",
-			    i, OBJECT(spNear->com)->name, spNear->port->n);
+			Snprintf(s, sizeof(s), "%d>[%s:%d] ", i,
+			    OBJECT(spNear->port->com)->name, spNear->port->n);
 		} else {
 			ES_UnselectPort(port);
 			Snprintf(s, sizeof(s), _("%d->(new) "), i);
@@ -76,6 +76,7 @@ static int
 ConnectComponent(ES_ComponentInsertTool *t, ES_Circuit *ckt, ES_Component *com)
 {
 	VG_View *vv = VGTOOL(t)->vgv;
+	VG *vg = ckt->vg;
 	VG_Vector portPos;
 	ES_Port *port, *portNear;
 	ES_SchemPort *spNear;
@@ -87,12 +88,9 @@ ConnectComponent(ES_ComponentInsertTool *t, ES_Circuit *ckt, ES_Component *com)
 	Debug(com, "Connecting to circuit: %s\n", OBJECT(ckt)->name);
 
 	/*
-	 * Query for SchemPorts nearest to the component "pins". Add the
-	 * appropriate branches, creating new nodes where no SchemPorts
-	 * are found.
-	 *
-	 * Components (such as Ground) can override this behavior using the
-	 * connect() operation.
+	 * Connect the component to the circuit. Add branches corresponding to
+	 * the overlapping SchemPorts. It is possible to override this
+	 * behavior in connect()
 	 */
 	COMPONENT_FOREACH_PORT(port, i, com) {
 		if (port->sp == NULL) {
@@ -120,6 +118,33 @@ ConnectComponent(ES_ComponentInsertTool *t, ES_Circuit *ckt, ES_Component *com)
 				    port);
 			}
 		}
+
+		/* Create implicit Wires between the ports. */
+		if (spNear != NULL) {
+			ES_Wire *w;
+			ES_SchemWire *sw;
+			ES_Port *P1, *P2;
+
+			w = ES_WireNew(ckt);
+			P1 = &COMPONENT(w)->ports[1];
+			P2 = &COMPONENT(w)->ports[2];
+			P1->node = port->node;
+			P2->node = port->node;
+			P1->sp = ES_SchemPortNew(vg->root, P1);
+			P2->sp = ES_SchemPortNew(vg->root, P2);
+			sw = ES_SchemWireNew(vg->root, P1->sp, P2->sp);
+			sw->wire = w;
+			ES_AttachSchemEntity(w, VGNODE(sw));
+			ES_AddBranch(ckt, port->node, P1);
+			ES_AddBranch(ckt, port->node, P2);
+			VG_Translate(P1->sp, portPos);
+			VG_Translate(P2->sp, portPos);
+
+			TAILQ_INSERT_TAIL(&ckt->components, COMPONENT(w),
+			    components);
+			COMPONENT(w)->flags |= ES_COMPONENT_CONNECTED;
+		}
+
 		ES_UnselectPort(port);
 	}
 
@@ -128,12 +153,12 @@ ConnectComponent(ES_ComponentInsertTool *t, ES_Circuit *ckt, ES_Component *com)
 	com->flags |= ES_COMPONENT_CONNECTED;
 	AG_PostEvent(ckt, com, "circuit-connected", NULL);
 	ES_CircuitModified(ckt);
+
 	ES_UnlockCircuit(ckt);
 	
 	ES_UnselectAllComponents(ckt, vv);
 	ES_SelectComponent(t->floatingCom, vv);
 	t->floatingCom = NULL;
-
 #if 0
 	/* Insert more instances... */
 	if (ES_InsertComponent(ckt, VGTOOL(t), model) == -1) {

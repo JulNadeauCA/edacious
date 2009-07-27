@@ -51,7 +51,7 @@ Init(void *p)
 
 	sp->flags = 0;
 	sp->name[0] = '\0';
-	sp->r = 1.5f;
+	sp->r = 1.2f;
 	sp->comName[0] = '\0';
 	sp->port = NULL;
 	sp->portName = -1;
