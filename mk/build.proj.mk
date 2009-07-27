@@ -52,14 +52,14 @@ PROJFILES?=	bsd:cb-gcc:: \
 		windows:vs2005:: \
 		windows:vs2008::
 
-CLEANFILES+=	${PREMAKEOUT} ${PROJINCLUDES}
+CLEANFILES+=	${PREMAKEOUT}
 
 proj-package:
 	@if [ "${PROJECT}" = "" ]; then \
 	    echo "cat Makefile | ${MKPROJFILES} > ${PREMAKEOUT}"; \
 	    cat Makefile | \
 	        env PROJTARGET="${PROJTARGET}" PROJOS="${PROJOS}" \
-		PROJFLAVOR="" PROJINCLUDES="${PROJINCLUDES}" \
+		PROJFLAVOR="" PROJINCLUDES="${TOP}/configure.lua" \
 	        ${MKPROJFILES} > ${PREMAKEOUT}; \
 	fi
 
@@ -88,13 +88,13 @@ proj:
 			rm -fR "${PROJCONFIGDIR}"; \
 		fi; \
 		echo "mkconfigure --emul-env=$$_tgtproj --emul-os=$$_tgtos \
-		    > configure.tmp"; \
+		    --output-lua=${TOP}/configure.lua > configure.tmp"; \
 		cat configure.in | \
 		    mkconfigure --emul-env=$$_tgtproj --emul-os=$$_tgtos \
-		    > configure.tmp; \
+		    --output-lua=${TOP}/configure.lua > configure.tmp; \
 		if [ $$? != 0 ]; then \
 			echo "mkconfigure failed"; \
-			rm -fR configure.tmp ${PROJINCLUDES}; \
+			rm -fR configure.tmp ${TOP}/configure.lua; \
 			exit 1; \
 		fi; \
 		echo "./configure.tmp $$_tgtopts --with-proj-generation"; \
@@ -106,7 +106,6 @@ proj:
 		fi; \
 		echo "${MAKE} proj-package-subdir"; \
 		env PROJTARGET="$$_tgtproj" PROJOS="$$_tgtos" \
-		    PROJINCLUDES="${PROJINCLUDES}" \
 		    ${MAKE} proj-package-subdir; \
 		\
 		if [ "${PROJCONFIGDIR}" != "" ]; then \
@@ -118,14 +117,13 @@ proj:
 		if [ "${PROJNOCLEAN}" = "no" ]; then \
 			echo "rm -f configure.tmp config.log"; \
 			rm -f configure.tmp config.log; \
-			echo >Makefile.config; \
 		fi; \
 		\
 	        echo "cat Makefile | ${MKPROJFILES} > ${PREMAKEOUT}"; \
 	        cat Makefile | \
 		    env PROJFLAVOR="$$_tgtflav" \
 		    PROJOS="$$_tgtos" \
-		    PROJINCLUDES="${PROJINCLUDES}" \
+		    PROJINCLUDES="${TOP}/configure.lua" \
 		    ${MKPROJFILES} > ${PREMAKEOUT}; \
 	        perl ${TOP}/mk/cmpfiles.pl; \
 	        echo "${PREMAKE} ${PREMAKEFLAGS} --file ${PREMAKEOUT} \
@@ -157,20 +155,14 @@ proj:
 		cat ${PROJFILELIST} | ${ZIP} ${ZIPFLAGS} \
 		    ${PROJDIR}/$$_tgtproj-$$_tgtos$$_tgtflav.zip -@;\
 		if [ "${PROJNOCLEAN}" = "no" ]; then \
-			echo "* Cleaning up"; \
+			echo "cat .projfiles.out | perl ${TOP}/mk/cleanfiles.pl"; \
 			cat .projfiles.out | perl ${TOP}/mk/cleanfiles.pl; \
+			echo "rm -fR ${PROJCONFIGDIR} ${PROJFILELIST}"; \
 			rm -fR ${PROJCONFIGDIR} ${PROJFILELIST}; \
-			rm -f .projfiles.out ${PROJINCLUDES}; \
+			echo "rm -f .projfiles.out ${TOP}/configure.lua"; \
+			rm -f .projfiles.out ${TOP}/configure.lua; \
 		fi; \
 	done
-	@if [ "${PROJNOCLEAN}" = "no" ]; then \
-		echo "${MAKE} proj-clean"; \
-		${MAKE} proj-clean; \
-	fi
 	@echo "* Done"
-
-proj-clean: proj-clean-subdir
-	@echo "rm -f ${PREMAKEOUT}"
-	@rm -f ${PREMAKEOUT}
 
 .PHONY: proj
