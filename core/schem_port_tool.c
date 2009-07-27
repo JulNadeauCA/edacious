@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2009 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,21 +33,22 @@
 
 typedef struct es_schem_select_tool {
 	VG_Tool _inherit;
+	int insPin;
 } ES_SchemPortTool;
 
 static void
-SetPortName(AG_Event *event)
+Init(void *p)
 {
-	ES_SchemPort *sp = AG_PTR(1);
-	char *s = AG_STRING(2);
+	ES_SchemPortTool *t = p;
 
-	Strlcpy(sp->name, s, sizeof(sp->name));
+	t->insPin = 0;
 }
 
 static int
 MouseButtonDown(void *p, VG_Vector vPos, int button)
 {
 	ES_SchemPortTool *t = p;
+	ES_Component *com = VGTOOL(t)->p;
 	VG_View *vv = VGTOOL(t)->vgv;
 	VG_Point *vp;
 	ES_SchemPort *sp;
@@ -56,12 +57,12 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 		return (0);
 	}
 	if ((vp = VG_NearestPoint(vv, vPos, NULL)) != NULL) {
-		sp = ES_SchemPortNew(vp);
-		AG_TextPromptString(_("Port name: "), SetPortName, "%p", sp);
+		sp = ES_SchemPortNew(vp, NULL);
 	} else {
-		sp = ES_SchemPortNew(vv->vg->root);
+		sp = ES_SchemPortNew(vv->vg->root, NULL);
 		VG_Translate(sp, vPos);
 	}
+	Strlcpy(sp->name, com->ports[t->insPin+1].name, sizeof(sp->name));
 	return (1);
 }
 
@@ -73,9 +74,11 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	VG_Point *vp;
 
 	if ((vp = VG_HighlightNearestPoint(vv, vPos, NULL)) != NULL) {
-		VG_Status(vv, _("Create port on Point%u"), VGNODE(vp)->handle);
+		VG_Status(vv, _("Create Pin #%d on Point%u"),
+		    t->insPin+1, VGNODE(vp)->handle);
 	} else {
-		VG_Status(vv, _("Create a port at %f,%f"), vPos.x, vPos.y);
+		VG_Status(vv, _("Create Pin #%d at %.2f,%.2f"),
+		    t->insPin+1, vPos.x, vPos.y);
 	}
 	return (0);
 }
@@ -95,6 +98,7 @@ del:
 			    !(vn->flags & VG_NODE_SELECTED)) {
 				continue;
 			}
+			VG_ClearEditAreas(vv);
 			if (VG_Delete(vn) == -1) {
 				vn->flags &= ~(VG_NODE_SELECTED);
 				VG_Status(vv, "%s", AG_GetError());
@@ -109,15 +113,34 @@ del:
 	return (0);
 }
 
+static void *
+Edit(void *p, VG_View *vv)
+{
+	ES_SchemPortTool *t = p;
+	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+	ES_Component *com = VGTOOL(t)->p;
+	ES_Port *port;
+	AG_Radio *rad;
+	int i;
+
+	AG_LabelNew(box, 0, _("Class: %s"), OBJECT(com)->cls->name);
+
+	rad = AG_RadioNewInt(box, AG_RADIO_EXPAND, NULL, &t->insPin);
+	COMPONENT_FOREACH_PORT(port, i, com) {
+		AG_RadioAddItem(rad, "%d (%s)", i, port->name);
+	}
+	return (box);
+}
+
 VG_ToolOps esSchemPortTool = {
 	N_("Port Editor"),
 	N_("Create connection points for the schematic."),
 	&esIconPortEditor,
 	sizeof(ES_SchemPortTool),
 	VG_NOSNAP,
-	NULL,
+	Init,
 	NULL,			/* destroy */
-	NULL,			/* edit */
+	Edit,
 	NULL,			/* predraw */
 	NULL,			/* postdraw */
 	NULL,			/* selected */
