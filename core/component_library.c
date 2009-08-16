@@ -350,13 +350,17 @@ InsertComponent(AG_Event *event)
 	AG_TlistItem *ti = AG_PTR(3);
 	ES_Component *comModel = ti->p1;
 	VG_Tool *insTool;
-	
+
 	if (strcmp(ti->cat, "component") != 0)
 		return;
 
 	if ((insTool = VG_ViewFindToolByOps(vv, &esComponentInsertTool)) == NULL) {
 		AG_TextMsgFromError();
 		return;
+	}
+	if (ckt->sim != NULL && ckt->sim->running) {
+		ES_SuspendSimulation(ckt);
+		VG_Status(vv, _("Simulation interrupted"));
 	}
 	VG_ViewSelectTool(vv, insTool, ckt);
 	if (VG_ToolCommandExec(insTool, "Insert",

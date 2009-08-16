@@ -164,6 +164,19 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 	return (0);
 }
 
+static void
+DeleteObject(VG_View *vv, void *p)
+{
+	AG_Object *obj = p;
+	ES_Circuit *ckt = AG_ObjectParent(obj);
+
+	if (ckt->sim != NULL && ckt->sim->running) {
+		VG_Status(vv, _("Simulation interrupted"));
+		ES_SuspendSimulation(ckt);
+	}
+	AG_ObjectDetach(obj);
+}
+
 static int
 KeyDown(void *p, int ksym, int kmod, int unicode)
 {
@@ -178,9 +191,9 @@ del:
 			if (vn->flags & VG_NODE_SELECTED) {
 				VG_ClearEditAreas(vv);
 				if (VG_NodeIsClass(vn, "SchemWire")) {
-					AG_ObjectDetach(SCHEM_WIRE(vn)->wire);
+					DeleteObject(vv, SCHEM_WIRE(vn)->wire);
 				} else if (VG_NodeIsClass(vn, "SchemBlock")) {
-					AG_ObjectDetach(SCHEM_BLOCK(vn)->com);
+					DeleteObject(vv, SCHEM_BLOCK(vn)->com);
 				} else {
 					if (VG_Delete(vn) == -1) {
 						vn->flags &= ~(VG_NODE_SELECTED);

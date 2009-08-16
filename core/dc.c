@@ -515,13 +515,15 @@ Edit(void *p, ES_Circuit *ckt)
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
 	ntab = AG_NotebookAddTab(nb, _("Continuous mode"), AG_BOX_VERT);
 	{
+		AG_Button *btn;
 		AG_Radio *rad;
 		int i;
 
-		AG_ButtonAct(ntab, AG_BUTTON_HFILL|AG_BUTTON_STICKY,
+		btn = AG_ButtonNewFn(ntab, AG_BUTTON_HFILL|AG_BUTTON_STICKY,
 		    _("Run simulation"),
 		    RunSimulation, "%p", sim);
-	
+		AG_BindInt(btn, "state", &SIM(sim)->running);
+
 		AG_SeparatorNew(ntab, AG_SEPARATOR_HORIZ);
 	
 		AG_NumericalNewUint(ntab, 0, NULL, _("Refresh rate (delay): "), &sim->ticksDelay);
