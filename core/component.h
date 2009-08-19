@@ -192,7 +192,7 @@ ES_SelectComponent(ES_Component *com, VG_View *vv)
 	    (wEdit = AGOBJECT_CLASS(com)->edit(com)) != NULL) {
 		VG_ClearEditAreas(vv);
 		AG_ObjectAttach(vv->editAreas[0], wEdit);
-		AG_WindowUpdate(AG_ParentWindow(vv->editAreas[0]));
+		AG_WidgetUpdate(vv->editAreas[0]);
 		AG_WidgetShownRecursive(vv->editAreas[0]);
 	}
 }
