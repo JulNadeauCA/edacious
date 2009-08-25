@@ -129,6 +129,7 @@ Edit(void *p, VG_View *vv)
 	COMPONENT_FOREACH_PORT(port, i, com) {
 		AG_RadioAddItem(rad, "%d (%s)", i, port->name);
 	}
+	AG_WidgetSetFocusable(rad, 0);
 	return (box);
 }
 

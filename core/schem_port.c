@@ -114,6 +114,7 @@ Draw(void *p, VG_View *vv)
 	}
 	if (sp->port == NULL && sp->name[0] != '\0') {
 		AG_PushTextState();
+		AG_TextFontPct(200);
 		AG_TextColorVideo32(VG_MapColorRGB(VGNODE(sp)->color));
 		VG_DrawText(vv,
 		    x+6, y+6, 180.0f,
