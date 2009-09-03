@@ -26,10 +26,10 @@ CHECK(getopt)
 CHECK(getpwuid)
 CHECK(getuid)
 
-CHECK(agar, 1.3.3)
-CHECK(agar-vg)
-CHECK(agar-dev)
-CHECK(agar-math)
+CHECK(agar, 1.3.4)
+CHECK(agar-vg, 1.3.4)
+CHECK(agar-dev, 1.3.4)
+CHECK(agar-math, 1.3.4)
 
 # For internal header definitions.
 C_DEFINE(_ES_INTERNAL)
