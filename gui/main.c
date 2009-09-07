@@ -54,7 +54,7 @@ static AG_Mutex objLock;
 static void
 SaveAndClose(AG_Object *obj, AG_Window *win)
 {
-	AG_ViewDetach(win);
+	AG_ObjectDetach(win);
 	AG_ObjectDelete(obj);
 }
 
@@ -70,7 +70,7 @@ SaveChangesReturn(AG_Event *event)
 	if (doSave) {
 		SaveAndClose(obj, win);
 	} else {
-		AG_ViewDetach(win);
+		AG_ObjectDetach(win);
 	}
 }
 
@@ -181,7 +181,7 @@ CloseObject(void *obj)
 	AGVIEW_FOREACH_WINDOW(win, agView) {
 		if ((V = AG_GetVariableLocked(win, "object")) != NULL) {
 			if (V->data.p == obj) {
-				AG_ViewDetach(win);
+				AG_ObjectDetach(win);
 			}
 			AG_UnlockVariable(V);
 		}
@@ -229,7 +229,7 @@ CreateComponentModel(AG_Event *event)
 		goto fail;
 	}
 	AG_PostEvent(NULL, com, "edit-open", NULL);
-	AG_ViewDetach(pWin);
+	AG_ObjectDetach(pWin);
 	return;
 fail:
 	AG_TextError(_("Could not create component: %s"), AG_GetError());
@@ -527,7 +527,7 @@ AbortQuit(AG_Event *event)
 	AG_Window *win = AG_PTR(1);
 
 	agTerminating = 0;
-	AG_ViewDetach(win);
+	AG_ObjectDetach(win);
 }
 
 static void
@@ -715,7 +715,7 @@ SelectedFont(AG_Event *event)
 	AG_TextWarning("default-font-changed",
 	    _("The default font has been changed.\n"
 	      "Please restart Edacious for this change to take effect."));
-	AG_ViewDetach(win);
+	AG_ObjectDetach(win);
 }
 
 static void

@@ -53,7 +53,7 @@ ES_SimDestroy(void *p)
 	ES_Sim *sim = p;
 
 	if (sim->win != NULL) {
-		AG_ViewDetach(sim->win);
+		AG_ObjectDetach(sim->win);
 	}
 	if (sim->ops->destroy != NULL) {
 		sim->ops->destroy(sim);

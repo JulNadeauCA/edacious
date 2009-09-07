@@ -63,7 +63,7 @@ ES_CircuitCloseObject(void *obj)
 	VIEW_FOREACH_WINDOW(win, agView) {
 		if ((V = AG_GetVariableLocked(win,"circuit-object")) != NULL) {
 			if (V->data.p == obj) {
-				AG_ViewDetach(win);
+				AG_ObjectDetach(win);
 			}
 			AG_UnlockVariable(V);
 		}
