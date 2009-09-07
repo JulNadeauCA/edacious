@@ -178,7 +178,7 @@ CloseObject(void *obj)
 	AG_Window *win;
 	AG_Variable *V;
 
-	TAILQ_FOREACH(win, &agView->windows, windows) {
+	AGVIEW_FOREACH_WINDOW(win, agView) {
 		if ((V = AG_GetVariableLocked(win, "object")) != NULL) {
 			if (V->data.p == obj) {
 				AG_ViewDetach(win);

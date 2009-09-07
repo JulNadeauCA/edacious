@@ -60,7 +60,7 @@ ES_CircuitCloseObject(void *obj)
 	AG_Window *win;
 	AG_Variable *V;
 
-	TAILQ_FOREACH(win, &agView->windows, windows) {
+	VIEW_FOREACH_WINDOW(win, agView) {
 		if ((V = AG_GetVariableLocked(win,"circuit-object")) != NULL) {
 			if (V->data.p == obj) {
 				AG_ViewDetach(win);
