@@ -9,7 +9,7 @@ REGISTER("--enable-threads",	"Thread safety [default: check]")
 
 HDEFINE(VERSION, "1.0-beta")
 HDEFINE(EDACIOUS_VERSION, "$VERSION")
-HDEFINE(RELEASE, "")
+HDEFINE(RELEASE, "UnrealSacrificeNightmare")
 
 MDEFINE(SHAREDIR, "$PREFIX/share/edacious")
 HDEFINE(SHAREDIR, "$PREFIX/share/edacious")
@@ -126,17 +126,20 @@ if [ "${enable_warnings}" != "no" ]; then
 	C_OPTION(-Wmissing-prototypes)
 fi
 if [ "${enable_debug}" = "yes" ]; then
+	C_DEFINE(ES_DEBUG)
 	HDEFINE(ES_DEBUG, "yes")
 	LD_OPTION(-g)
 else
 	HUNDEF(ES_DEBUG)
 fi
 if [ "${enable_fpdebug}" = "yes" ]; then
+	C_DEFINE(FP_DEBUG)
 	HDEFINE(FP_DEBUG, "yes")
 else
 	HUNDEF(FP_DEBUG)
 fi
 if [ "${enable_exprdebug}" = "yes" ]; then
+	C_DEFINE(EXPR_DEBUG)
 	HDEFINE(EXPR_DEBUG, "yes")
 else
 	HUNDEF(EXPR_DEBUG)
