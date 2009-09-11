@@ -62,10 +62,9 @@ LoadComponentFile(const char *path, AG_Object *objParent)
 		return (-1);
 	}
 	AG_CloseFile(ds);
-#if 0
-	Debug(objParent, "%s: Model for %s\n", ES_ShortFilename(path),
-	    oh.cs.hier);
-#endif
+
+	Debug(objParent, "%s: Model for %s\n", ES_ShortFilename(path), oh.cs.hier);
+
 	/*
 	 * Fetch class information for the model contained. If dynamic library
 	 * modules are required, they get linked at this stage.

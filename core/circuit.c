@@ -180,7 +180,7 @@ Init(void *p)
 {
 	ES_Circuit *ckt = p;
 
-	OBJECT(ckt)->flags |= AG_OBJECT_DEBUG_DATA;
+	/* OBJECT(ckt)->flags |= AG_OBJECT_DEBUG_DATA; */
 
 	ckt->flags = ES_CIRCUIT_SHOW_NODES|ES_CIRCUIT_SHOW_NODESYMS;
 	ckt->descr[0] = '\0';
@@ -192,13 +192,14 @@ Init(void *p)
 	ckt->vSrcs = NULL;
 	ckt->m = 0;
 	ckt->nodes = Malloc(sizeof(ES_Node *));
-	ckt->n = 1;
 	ckt->console = NULL;
 	ckt->extObjs = NULL;
 	ckt->nExtObjs = 0;
 	TAILQ_INIT(&ckt->layouts);
 	TAILQ_INIT(&ckt->syms);
 	TAILQ_INIT(&ckt->components);
+	
+	ckt->n = 1;
 	InitGround(ckt);
 
 	ckt->vg = VG_New(0);
@@ -284,10 +285,9 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	AG_CopyString(ckt->authors, ds, sizeof(ckt->authors));
 	AG_CopyString(ckt->keywords, ds, sizeof(ckt->keywords));
 	ckt->flags = AG_ReadUint32(ds);
-	
+
 	/* Component models */
 	count = (Uint)AG_ReadUint32(ds);
-	Debug(ckt, "Loading components (%u)\n", count);
 	for (i = 0; i < count; i++) {
 		char comName[AG_OBJECT_NAME_MAX];
 		char classSpec[AG_OBJECT_TYPE_MAX];
@@ -311,7 +311,9 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		}
 
 		/* Load the component instance. */
-		com = Malloc(comClass->size);
+		if ((com = AG_TryMalloc(comClass->size)) == NULL) {
+			return (-1);
+		}
 		AG_ObjectInit(com, comClass);
 		AG_ObjectSetName(com, "%s", comName);
 		if (AG_ObjectUnserialize(com, ds) == -1) {
@@ -320,26 +322,24 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		}
 		OBJECT(com)->flags |= AG_OBJECT_RESIDENT;
 		AG_ObjectAttach(ckt, com);
+		TAILQ_INSERT_TAIL(&ckt->components, com, components);
+		com->flags |= ES_COMPONENT_CONNECTED;
 	}
 
 	/* Circuit nodes and branches */
 	count = (Uint)AG_ReadUint32(ds);
-	Debug(ckt, "Loading nodes (%u)\n", count);
 	for (i = 0; i < count; i++) {
 		Uint nBranches, flags;
 		int name;
 
 		flags = (Uint)AG_ReadUint32(ds);
 		nBranches = (Uint)AG_ReadUint32(ds);
-		if (i == 0) {
-			name = 0;
-			FreeNode(ckt->nodes[0]);
-			InitGround(ckt);
-		} else {
+		if (i != 0) {
 			name = ES_AddNode(ckt);
 			ckt->nodes[name]->flags = flags & ~(CKTNODE_EXAM);
 		}
 
+		Debug(ckt, "Node %u has %u branches\n", i, nBranches);
 		for (j = 0; j < nBranches; j++) {
 			char comName[AG_OBJECT_PATH_MAX];
 			ES_Branch *br;
@@ -348,8 +348,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 			AG_CopyString(comName, ds, sizeof(comName));
 			AG_ReadUint32(ds);			/* Pad */
 			pPort = (Uint)AG_ReadUint32(ds);
-			Debug(ckt, "n%u: Branch to %s:%u\n", i, comName,
-			    pPort);
 			
 			if ((com = AG_ObjectFindChild(ckt, comName)) == NULL) {
 				AG_SetError("%s", AG_GetError());
@@ -370,7 +368,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	 * Load the circuit schematics and re-attach the schematic entities
 	 * with the actual circuit structures.
 	 */
-	Debug(ckt, "Loading schematic\n");
 	if (VG_Load(ckt->vg, ds) == -1) {
 		return (-1);
 	}
@@ -394,8 +391,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		sw->wire = com;
 	}
 	VG_FOREACH_NODE_CLASS(sp, ckt->vg, es_schem_port, "SchemPort") {
-		ES_Component *com;
-
 		if (sp->comName[0] == '\0' || sp->portName == -1) {
 			continue;
 		}
@@ -415,7 +410,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	
 	/* Symbol table */
 	count = (Uint)AG_ReadUint32(ds);
-	Debug(ckt, "Loading symbol table (%u)\n", count);
 	for (i = 0; i < count; i++) {
 		ES_Sym *sym;
 		
@@ -439,7 +433,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 
 	/* Component port assignments */
 	count = (Uint)AG_ReadUint32(ds);
-	Debug(ckt, "Loading component ports (%u)\n", count);
 	for (i = 0; i < count; i++) {
 		char comName[AG_OBJECT_NAME_MAX];
 		Uint j;
@@ -458,7 +451,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		
 		/* Load the port information. */
 		com->nports = (Uint)AG_ReadUint32(ds);
-		Debug(ckt, "Loading ports of %s (%u)\n", comName, com->nports);
 		COMPONENT_FOREACH_PORT(port, j, com) {
 			ES_Branch *br;
 			ES_Node *node;
@@ -474,9 +466,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 			port->node = portNode;
 			node = ckt->nodes[port->node];
 		
-			Debug(ckt, "Port %s:%d: name=\"%s\", node=%d\n",
-			    comName, j, port->name, port->node);
-
 			NODE_FOREACH_BRANCH(br, node) {
 				if (br->port->com == com &&
 				    br->port->n == port->n)
@@ -521,10 +510,10 @@ Save(void *p, AG_DataSource *ds)
 
 	/* Component models */
 	countOffs = AG_Tell(ds);
-	count = 0;
 	AG_WriteUint32(ds, 0);
+	count = 0;
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		printf("Saving component: %s (%s@%s)\n", OBJECT(com)->name,
+		Debug(ckt, "Saving component: %s (%s@%s)\n", OBJECT(com)->name,
 		    OBJECT_CLASS(com)->name, OBJECT_CLASS(com)->libs);
 
 		AG_WriteString(ds, OBJECT(com)->name);
@@ -555,13 +544,19 @@ Save(void *p, AG_DataSource *ds)
 	for (i = 0; i < ckt->n; i++) {
 		ES_Node *node = ckt->nodes[i];
 
+		Debug(ckt, "Saving node n%u (0x%x)\n", i, node->flags);
 		AG_WriteUint32(ds, (Uint32)node->flags);
 		countOffs = AG_Tell(ds);
 		count = 0;
 		AG_WriteUint32(ds, 0);
 		NODE_FOREACH_BRANCH(br, node) {
-			if (br->port == NULL || br->port->com == NULL ||
-			    COMPONENT_IS_FLOATING(br->port->com)) {
+			if (br->port == NULL ||
+			    br->port->com == NULL) {
+				Debug(ckt, "Skipping node n%u branch %u (NULL)\n", i, (Uint)count);
+				continue;
+			}
+			if (COMPONENT_IS_FLOATING(br->port->com)) {
+				Debug(ckt, "Skipping node n%u branch %u (Component is floating)\n", i, (Uint)count);
 				continue;
 			}
 			AG_WriteString(ds, OBJECT(br->port->com)->name);
