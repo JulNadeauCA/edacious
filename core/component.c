@@ -304,6 +304,8 @@ static void
 Init(void *obj)
 {
 	ES_Component *com = obj;
+	
+	/* OBJECT(com)->flags |= AG_OBJECT_DEBUG_DATA; */
 
 	com->flags = 0;
 	com->ckt = NULL;
@@ -514,6 +516,26 @@ ES_FindPort(void *p, const char *portname)
 	}
 	AG_SetError(_("%s: No such port: <%s>"), OBJECT(com)->name, portname);
 	return (NULL);
+}
+
+/* Select the specified component */
+void
+ES_SelectComponent(ES_Component *com, VG_View *vv)
+{
+	AG_Scrollview *sv;
+	void *wEdit;
+
+	com->flags |= ES_COMPONENT_SELECTED;
+
+	if (vv->nEditAreas > 0 && AGOBJECT_CLASS(com)->edit != NULL &&
+	    (wEdit = AGOBJECT_CLASS(com)->edit(com)) != NULL) {
+		VG_ClearEditAreas(vv);
+
+		sv = AG_ScrollviewNew(vv->editAreas[0], AG_SCROLLVIEW_EXPAND);
+		AG_ObjectAttach(sv, wEdit);
+		AG_WidgetUpdate(sv);
+		AG_WidgetShownRecursive(sv);
+	}
 }
 
 ES_ComponentClass esComponentClass = {

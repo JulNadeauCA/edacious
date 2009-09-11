@@ -145,8 +145,7 @@ typedef struct es_component {
 	    ((i) < (com)->npairs) && ((pair) = &(com)->pairs[i]); \
 	    (i)++)
 #define ESCOMPONENT_IS_FLOATING(com) \
-	(AG_OfClass((com),"ES_Circuit:ES_Component:*") && \
-	 !(ESCOMPONENT(com)->flags & ES_COMPONENT_CONNECTED))
+	(!(ESCOMPONENT(com)->flags & ES_COMPONENT_CONNECTED))
 
 #if defined(_ES_INTERNAL) || defined(_USE_EDACIOUS_CORE)
 # define COMPONENT(p) ESCOMPONENT(p)
@@ -179,23 +178,9 @@ void     ES_InitPorts(void *, const ES_Port *);
 Uint	 ES_PortNode(ES_Component *, int);
 int	 ES_PairIsInLoop(ES_Pair *, struct es_loop *, int *);
 ES_Port	*ES_FindPort(void *, const char *);
+void     ES_SelectComponent(ES_Component *, VG_View *);
 
 /* Select/unselect components. */
-static __inline__ void
-ES_SelectComponent(ES_Component *com, VG_View *vv)
-{
-	void *wEdit;
-
-	com->flags |= ES_COMPONENT_SELECTED;
-
-	if (vv->nEditAreas > 0 && AGOBJECT_CLASS(com)->edit != NULL &&
-	    (wEdit = AGOBJECT_CLASS(com)->edit(com)) != NULL) {
-		VG_ClearEditAreas(vv);
-		AG_ObjectAttach(vv->editAreas[0], wEdit);
-		AG_WidgetUpdate(vv->editAreas[0]);
-		AG_WidgetShownRecursive(vv->editAreas[0]);
-	}
-}
 static __inline__ void
 ES_UnselectComponent(ES_Component *com, VG_View *vv)
 {
