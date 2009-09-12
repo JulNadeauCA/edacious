@@ -69,7 +69,7 @@ HighlightConnections(VG_View *vv, ES_Layout *lo, ES_Component *com)
 		}
 		Strlcat(status, s, sizeof(status));
 	}
-	VG_Status(vv, "%s", status);
+	VG_StatusS(vv, status);
 }
 #endif
 
@@ -193,7 +193,7 @@ Insert(AG_Event *event)
 
 	/* Generate a unique package name */
 	AG_ObjectGenNamePfx(lo, "U", name, sizeof(name));
-	AG_ObjectSetName(pkg, "%s", name);
+	AG_ObjectSetNameS(pkg, name);
 
 	/* Attach to the circuit as a floating element. */
 	t->floatingPkg = pkg;

@@ -69,7 +69,8 @@ LoadSchemFile(const char *path, AG_Object *objParent)
 		AG_ObjectDelete(obj);
 		return (-1);
 	}
-	ES_SetObjectNameFromPath(obj, path);
+	AG_ObjectSetArchivePath(obj, path);
+	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
 	return (0);
 }
 
@@ -362,24 +363,27 @@ SaveSchem(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
 	char *path = AG_STRING(2);
+	const char *sname;
 
 	if (path[0] == '\0') {
+		sname = AG_ShortFilename(obj->archivePath);
 		if (AG_ObjectSave(obj) == -1) {
 			AG_TextMsgFromError();
 			return;
 		}
 		AG_TextTmsg(AG_MSG_INFO, 1250,
-		    _("Successfully saved schematic to %s"),
-		    ES_ShortFilename(obj->archivePath));
+		    _("Successfully saved schematic to %s"), sname);
 	} else {
+		sname = AG_ShortFilename(path);
 		if (AG_ObjectSaveToFile(obj, path) == -1) {
 			AG_TextMsgFromError();
 			return;
 		}
-		ES_SetObjectNameFromPath(obj, path);
+		AG_ObjectSetArchivePath(obj, path);
+		AG_ObjectSetNameS(obj, sname);
 		AG_TextTmsg(AG_MSG_INFO, 1250,
 		    _("Successfully saved schematic to %s"),
-		    ES_ShortFilename(path));
+		    sname);
 	}
 }
 

@@ -65,8 +65,6 @@ int	ES_UnloadModule(const char *);
 
 AG_Window *ES_OpenObject(void *);
 void       ES_CloseObject(void *);
-const char *ES_ShortFilename(const char *);
-void       ES_SetObjectNameFromPath(void *, const char *);
 __END_DECLS
 
 #include <edacious/core/core_close.h>

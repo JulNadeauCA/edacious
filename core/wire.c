@@ -46,7 +46,7 @@ ES_WireNew(ES_Circuit *ckt)
 	wire = Malloc(sizeof(ES_Wire));
 	AG_ObjectInit(wire, &esWireClass);
 	AG_ObjectGenNamePfx(ckt, esWireClass.pfx, name, sizeof(name));
-	AG_ObjectSetName(wire, "%s", name);
+	AG_ObjectSetNameS(wire, name);
 
 	/* Attach the wire object to the circuit as a floating component. */
 	ES_LockCircuit(ckt);

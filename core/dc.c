@@ -530,10 +530,8 @@ Edit(void *p, ES_Circuit *ckt)
 		AG_NumericalNewUint(ntab, 0, NULL, _("Max. iterations/step: "), &sim->itersMax);
 
 		rad = AG_RadioNewUint(ntab, 0, NULL, &sim->method);
-		for (i = 0; i < esIntegrationMethodCount; i++) {
-			AG_RadioAddItem(rad, "%s",
-			    _(esIntegrationMethods[i].desc));
-		}
+		for (i = 0; i < esIntegrationMethodCount; i++)
+			AG_RadioAddItemS(rad, _(esIntegrationMethods[i].desc));
 
 		AG_SeparatorNewHoriz(ntab);
 

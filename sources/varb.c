@@ -160,7 +160,7 @@ Edit(void *p)
 	AG_LabelNewPolledMT(box, 0, &OBJECT(va)->lock,
 	    _("Effective voltage: %[R]v"), &VSOURCE(va)->v);
 	
-	tb = AG_TextboxNew(box, 0, "v(t) = ");
+	tb = AG_TextboxNewS(box, 0, "v(t) = ");
 	AG_TextboxBindASCII(tb, va->exp, sizeof(va->exp));
 	AG_SeparatorNewHoriz(box);
 

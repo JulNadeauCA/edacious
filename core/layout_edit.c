@@ -65,12 +65,12 @@ PollDevicePkgs(AG_Event *event)
 		if (com->flags & ES_COMPONENT_SPECIAL) {
 			continue;
 		}
-		ti = AG_TlistAdd(tl, esIconComponent.s, "%s", OBJECT(com)->name);
+		ti = AG_TlistAddS(tl, esIconComponent.s, OBJECT(com)->name);
 		ti->depth = 0;
 		ti->cat = "component";
 		ti->p1 = com;
 		TAILQ_FOREACH(pkg, &com->pkgs, pkgs) {
-			ti = AG_TlistAdd(tl, esIconComponent.s, "%s", pkg->name);
+			ti = AG_TlistAddS(tl, esIconComponent.s, pkg->name);
 			ti->depth = 1;
 			ti->cat = "package";
 			ti->p1 = pkg;

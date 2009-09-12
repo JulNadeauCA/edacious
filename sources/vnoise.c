@@ -160,7 +160,7 @@ Edit(void *p)
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 	AG_Textbox *tb;
 
-	tb = AG_TextboxNew(box, 0, _("Random source: "));
+	tb = AG_TextboxNewS(box, 0, _("Random source: "));
 	AG_TextboxBindASCII(tb, vn->srcPath, sizeof(vn->srcPath));
 
 	M_NumericalNewReal(box, 0, "V", _("Min. voltage: "), &vn->vMin);

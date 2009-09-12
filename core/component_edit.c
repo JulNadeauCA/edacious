@@ -46,9 +46,9 @@ FindClasses(AG_Tlist *tl, AG_ObjectClass *cl, int depth)
 		depth--;
 		goto recurse;
 	}
-	it = AG_TlistAdd(tl,
+	it = AG_TlistAddS(tl,
 	    (clCom->icon != NULL) ? clCom->icon->s : NULL,
-	    "%s", clCom->name);
+	    clCom->name);
 	it->depth = depth;
 	it->p1 = cl;
 
@@ -194,7 +194,7 @@ LoadComponent(AG_Event *event)
 	ES_Component *com = AG_PTR(1);
 
 	if (AG_ObjectLoad(com) == -1)
-		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
+		AG_TextMsgFromError();
 }
 
 static void
@@ -203,7 +203,7 @@ SaveComponent(AG_Event *event)
 	ES_Component *com = AG_PTR(1);
 
 	if (AG_ObjectSave(com) == -1)
-		AG_TextMsg(AG_MSG_ERROR, "%s", AG_GetError());
+		AG_TextMsgFromError();
 }
 #endif
 
@@ -362,7 +362,7 @@ ES_ComponentMenu(ES_Component *com, VG_View *vv)
 			COMCLASS(com)->class_menu(com->ckt, mi);
 		}
 		AG_MenuSeparator(mi);
-		AG_MenuSection(mi, _("[All selections]"));
+		AG_MenuSectionS(mi, _("[All selections]"));
 		AG_MenuAction(mi, _("Delete selected"), agIconTrash.s,
 		    DeleteSelections, "%p, %p", com->ckt, vv);
 	}
@@ -401,13 +401,12 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 			    _("%s (suppressed)"),
 			    pob->name);
 		} else {
-			it = AG_TlistAdd(tl, esIconComponent.s,
-			    "%s", pob->name);
+			it = AG_TlistAddS(tl, esIconComponent.s, pob->name);
 		}
 		it->selected = (ESCOMPONENT(pob)->flags &
 		                ES_COMPONENT_SELECTED);
 	} else {
-		it = AG_TlistAdd(tl, NULL, "%s", pob->name);
+		it = AG_TlistAddS(tl, NULL, pob->name);
 	}
 
 	it->depth = depth;
@@ -573,7 +572,8 @@ ImportSchem(AG_Event *event)
 		AG_ObjectDestroy(scm);
 		return;
 	}
-	ES_SetObjectNameFromPath(scm, path);
+	AG_ObjectSetArchivePath(scm, path);
+	AG_ObjectSetNameS(scm, AG_ShortFilename(path));
 
 	TAILQ_INSERT_TAIL(&com->schems, scm, schems);
 
@@ -592,7 +592,7 @@ ImportSchemDlg(AG_Event *event)
 	AG_FileDlg *fd;
 
 	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, _("Import schematic..."));
+	AG_WindowSetCaptionS(win, _("Import schematic..."));
 	
 	fd = AG_FileDlgNewMRU(win, "edacious.mru.schems",
 	    AG_FILEDLG_LOAD|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
@@ -675,8 +675,7 @@ PollPackages(AG_Event *event)
 			ti = AG_TlistAdd(tl, esIconComponent.s, "%s (%s)",
 			    pkg->name, pkg->devName);
 		} else {
-			ti = AG_TlistAdd(tl, esIconComponent.s, "%s",
-			    pkg->name);
+			ti = AG_TlistAddS(tl, esIconComponent.s, pkg->name);
 		}
 		ti->p1 = pkg;
 	}
@@ -986,7 +985,7 @@ ES_ComponentEdit(void *obj)
 				AG_ObjectAttach(hPane->div[0], wEdit);
 			}
 			AG_LabelNewString(hPane->div[1], 0, _("Notes:"));
-			tb = AG_TextboxNew(hPane->div[1],
+			tb = AG_TextboxNewS(hPane->div[1],
 			    AG_TEXTBOX_EXPAND|AG_TEXTBOX_MULTILINE, NULL);
 		}
 	}
@@ -1016,8 +1015,8 @@ ES_ComponentEdit(void *obj)
 		AG_TlistSetCompareFn(tl, AG_TlistCompareStrings);
 		AG_TlistSetDblClickFn(tl, SelectPackage, "%p,%p", com, tblPins);
 
-		tb = AG_TextboxNew(vBox, AG_TEXTBOX_HFILL, _("Package: "));
-		tbDev = AG_TextboxNew(vBox, AG_TEXTBOX_HFILL, _("Device name: "));
+		tb = AG_TextboxNewS(vBox, AG_TEXTBOX_HFILL, _("Package: "));
+		tbDev = AG_TextboxNewS(vBox, AG_TEXTBOX_HFILL, _("Device name: "));
 		AG_ButtonNewFn(vBox, AG_BUTTON_HFILL, _("Add package"),
 		    AddPackage, "%p,%p,%p,%p", com, tb, tbDev, tblPins);
 	}

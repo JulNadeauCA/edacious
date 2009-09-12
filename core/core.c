@@ -294,30 +294,3 @@ ES_CloseObject(void *obj)
 	if (ObjectCloseFn != NULL)
 		ObjectCloseFn(obj);
 }
-
-const char *
-ES_ShortFilename(const char *name)
-{
-	char *s;
-
-	if ((s = strrchr(name, PATHSEPCHAR)) != NULL && s[1] != '\0') {
-		return (&s[1]);
-	} else {
-		return (name);
-	}
-}
-
-void
-ES_SetObjectNameFromPath(void *obj, const char *path)
-{
-	const char *c;
-
-	AG_ObjectSetArchivePath(obj, path);
-
-	if ((c = strrchr(path, PATHSEPCHAR)) != NULL && c[1] != '\0') {
-		AG_ObjectSetName(obj, "%s", &c[1]);
-	} else {
-		AG_ObjectSetName(obj, "%s", path);
-	}
-}
-

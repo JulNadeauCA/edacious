@@ -84,7 +84,7 @@ Draw(void *p, VG_Node *vn)
 	VG_Begin(vg, VG_TEXT);
 	VG_Vertex2(vg, 1.200, 0.000);
 	VG_TextAlignment(vg, VG_ALIGN_MC);
-	VG_TextPrintf(vg, "%s", OBJECT(sw)->name);
+	VG_TextString(vg, OBJECT(sw)->name);
 	VG_End(vg);
 }
 #endif

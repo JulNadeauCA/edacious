@@ -170,7 +170,7 @@ ES_CircuitNew(void *parent, const char *name)
 
 	ckt = Malloc(sizeof(ES_Circuit));
 	AG_ObjectInit(ckt, &esCircuitClass);
-	AG_ObjectSetName(ckt, "%s", name);
+	AG_ObjectSetNameS(ckt, name);
 	AG_ObjectAttach(parent, ckt);
 	return (ckt);
 }
@@ -315,7 +315,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 			return (-1);
 		}
 		AG_ObjectInit(com, comClass);
-		AG_ObjectSetName(com, "%s", comName);
+		AG_ObjectSetNameS(com, comName);
 		if (AG_ObjectUnserialize(com, ds) == -1) {
 			AG_ObjectDestroy(com);
 			return (-1);
@@ -350,7 +350,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 			pPort = (Uint)AG_ReadUint32(ds);
 			
 			if ((com = AG_ObjectFindChild(ckt, comName)) == NULL) {
-				AG_SetError("%s", AG_GetError());
 				return (-1);
 			}
 			if (pPort > com->nports) {

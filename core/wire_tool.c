@@ -148,7 +148,7 @@ ConnectWire(ES_WireTool *t, VG_Vector vPos)
 	return;
 fail:
 	ES_UnlockCircuit(ckt);
-	VG_Status(vv, "%s", AG_GetError());
+	VG_StatusS(vv, AG_GetError());
 }
 
 static void

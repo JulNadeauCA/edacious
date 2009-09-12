@@ -167,7 +167,7 @@ Edit(void *p, VG_View *vv)
 	    &sp->portName);
 	AG_SeparatorNewHoriz(box);
 #endif
-	tb = AG_TextboxNew(box, AG_TEXTBOX_HFILL, _("Symbol: "));
+	tb = AG_TextboxNewS(box, AG_TEXTBOX_HFILL, _("Symbol: "));
 	AG_TextboxBindUTF8(tb, sp->name, sizeof(sp->name));
 
 	AG_NumericalNewFlt(box, 0, NULL, _("Display radius: "), &sp->r);

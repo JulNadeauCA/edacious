@@ -140,7 +140,7 @@ OpenObject(void *p)
 		win = AGCLASS(&esComponentClass)->edit(obj);
 		AG_WindowSetCaption(win, _("Component model: %s"),
 		    (obj->archivePath != NULL) ?
-		    ES_ShortFilename(obj->archivePath) : obj->name);
+		    AG_ShortFilename(obj->archivePath) : obj->name);
 	} else {
 		if ((wEdit = obj->cls->edit(obj)) == NULL) {
 			AG_SetError("%s no edit()", obj->cls->name);
@@ -156,9 +156,9 @@ OpenObject(void *p)
 			    obj->cls->name);
 			return (NULL);
 		}
-		AG_WindowSetCaption(win, "%s",
+		AG_WindowSetCaptionS(win,
 		    (obj->archivePath != NULL) ?
-		    ES_ShortFilename(obj->archivePath) : obj->name);
+		    AG_ShortFilename(obj->archivePath) : obj->name);
 	}
 
 	AG_SetEvent(win, "window-close", SaveChangesDlg, "%p", obj);
@@ -245,7 +245,7 @@ NewComponentModelDlg(AG_Event *event)
 	AG_Box *hBox;
 
 	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, _("New component..."));
+	AG_WindowSetCaptionS(win, _("New component..."));
 	
 	AG_LabelNew(win, 0, _("Class: "));
 	tlHier = AG_TlistNewPolled(win, AG_TLIST_TREE|AG_TLIST_EXPAND,
@@ -282,10 +282,11 @@ LoadObject(AG_Event *event)
 		goto fail;
 	}
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
-		AG_SetError("%s: %s", ES_ShortFilename(path), AG_GetError());
+		AG_SetError("%s: %s", AG_ShortFilename(path), AG_GetError());
 		goto fail;
 	}
-	ES_SetObjectNameFromPath(obj, path);
+	AG_ObjectSetArchivePath(obj, path);
+	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
 
 	if (OpenObject(obj) == NULL) {
 		goto fail;
@@ -323,10 +324,11 @@ LoadComponentModel(AG_Event *event)
 		goto fail;
 	}
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
-		AG_SetError("%s: %s", ES_ShortFilename(path), AG_GetError());
+		AG_SetError("%s: %s", AG_ShortFilename(path), AG_GetError());
 		goto fail;
 	}
-	ES_SetObjectNameFromPath(obj, path);
+	AG_ObjectSetArchivePath(obj, path);
+	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
 
 	if (OpenObject(obj) == NULL) {
 		goto fail;
@@ -344,7 +346,7 @@ OpenDlg(AG_Event *event)
 	AG_FileDlg *fd;
 
 	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, _("Open..."));
+	AG_WindowSetCaptionS(win, _("Open..."));
 
 	fd = AG_FileDlgNewMRU(win, "edacious.mru.circuits",
 	    AG_FILEDLG_LOAD|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
@@ -373,12 +375,13 @@ SaveNativeObject(AG_Event *event)
 	AG_Window *wEdit;
 
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
-		AG_TextError("%s: %s", ES_ShortFilename(path), AG_GetError());
+		AG_TextError("%s: %s", AG_ShortFilename(path), AG_GetError());
 	}
-	ES_SetObjectNameFromPath(obj, path);
+	AG_ObjectSetArchivePath(obj, path);
+	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
 
 	if ((wEdit = AG_WindowFindFocused()) != NULL)
-		AG_WindowSetCaption(wEdit, "%s", ES_ShortFilename(path));
+		AG_WindowSetCaptionS(wEdit, AG_ShortFilename(path));
 }
 
 static void
@@ -564,11 +567,12 @@ Quit(AG_Event *event)
 		} else {
 			AG_Variable *Vdisable;
 
-			if ((win = AG_WindowNewNamed(AG_WINDOW_MODAL|AG_WINDOW_NOTITLE|
+			if ((win = AG_WindowNewNamedS(
+			    AG_WINDOW_MODAL|AG_WINDOW_NOTITLE|
 			    AG_WINDOW_NORESIZE, "QuitCallback")) == NULL) {
 				return;
 			}
-			AG_WindowSetCaption(win, _("Quit application?"));
+			AG_WindowSetCaptionS(win, _("Quit application?"));
 			AG_WindowSetPosition(win, AG_WINDOW_CENTER, 0);
 			AG_WindowSetSpacing(win, 8);
 
@@ -583,11 +587,11 @@ Quit(AG_Event *event)
 			AG_WindowShow(win);
 		}
 	} else {
-		if ((win = AG_WindowNewNamed(AG_WINDOW_MODAL|AG_WINDOW_NOTITLE|
+		if ((win = AG_WindowNewNamedS(AG_WINDOW_MODAL|AG_WINDOW_NOTITLE|
 		    AG_WINDOW_NORESIZE, "QuitCallback")) == NULL) {
 			return;
 		}
-		AG_WindowSetCaption(win, _("Exit application?"));
+		AG_WindowSetCaptionS(win, _("Exit application?"));
 		AG_WindowSetPosition(win, AG_WINDOW_CENTER, 0);
 		AG_WindowSetSpacing(win, 8);
 		AG_LabelNewString(win, 0,
@@ -726,7 +730,7 @@ SelectFontDlg(AG_Event *event)
 	AG_Box *hBox;
 
 	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, _("Font selection"));
+	AG_WindowSetCaptionS(win, _("Font selection"));
 
 	fs = AG_FontSelectorNew(win, AG_FONTSELECTOR_EXPAND);
 	AG_BindPointer(fs, "font", (void *)&agDefaultFont);

@@ -64,7 +64,7 @@ HighlightConnections(VG_View *vv, ES_Circuit *ckt, ES_Component *com)
 		}
 		Strlcat(status, s, sizeof(status));
 	}
-	VG_Status(vv, "%s", status);
+	VG_StatusS(vv, status);
 }
 
 /*
@@ -274,7 +274,7 @@ Insert(AG_Event *event)
 
 	/* Generate a unique component name */
 	AG_ObjectGenNamePfx(ckt, COMCLASS(comModel)->pfx, name, sizeof(name));
-	AG_ObjectSetName(com, "%s", name);
+	AG_ObjectSetNameS(com, name);
 
 	/* Attach to the circuit as a floating component. */
 	t->floatingCom = com;

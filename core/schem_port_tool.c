@@ -101,7 +101,7 @@ del:
 			VG_ClearEditAreas(vv);
 			if (VG_Delete(vn) == -1) {
 				vn->flags &= ~(VG_NODE_SELECTED);
-				VG_Status(vv, "%s", AG_GetError());
+				VG_StatusS(vv, AG_GetError());
 			} else {
 				nDel++;
 			}

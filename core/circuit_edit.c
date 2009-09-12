@@ -43,7 +43,7 @@ ES_CircuitOpenObject(void *p)
 	}
 	AG_WindowSetCaption(win, "<%s>: %s",
 	    (objParent->archivePath != NULL) ?
-	    ES_ShortFilename(objParent->archivePath) : objParent->name,
+	    AG_ShortFilename(objParent->archivePath) : objParent->name,
 	    obj->name);
 
 	AG_SetPointer(win, "object", objParent);
@@ -137,7 +137,7 @@ PollCircuitSources(AG_Event *event)
 
 	AG_TlistClear(tl);
 	for (i = 0; i < ckt->m; i++) {
-		it = AG_TlistAdd(tl, NULL, "%s", OBJECT(ckt->vSrcs[i])->name);
+		it = AG_TlistAddS(tl, NULL, OBJECT(ckt->vSrcs[i])->name);
 		it->p1 = ckt->vSrcs[i];
 	}
 	AG_TlistRestore(tl);
@@ -206,15 +206,15 @@ ShowProperties(AG_Event *event)
 	    OBJECT(ckt)->name);
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 40, 30);
 	
-	tb = AG_TextboxNew(win, AG_TEXTBOX_HFILL, _("Author: "));
+	tb = AG_TextboxNewS(win, AG_TEXTBOX_HFILL, _("Author: "));
 	AG_TextboxBindUTF8(tb, ckt->authors, sizeof(ckt->authors));
 
-	tb = AG_TextboxNew(win, AG_TEXTBOX_HFILL, _("Keywords: "));
+	tb = AG_TextboxNewS(win, AG_TEXTBOX_HFILL, _("Keywords: "));
 	AG_TextboxBindUTF8(tb, ckt->keywords, sizeof(ckt->keywords));
 
 	AG_LabelNew(win, 0, _("Description: "));
-	tb = AG_TextboxNew(win, AG_TEXTBOX_EXPAND|AG_TEXTBOX_MULTILINE|
-	                        AG_TEXTBOX_CATCH_TAB, NULL);
+	tb = AG_TextboxNewS(win, AG_TEXTBOX_EXPAND|AG_TEXTBOX_MULTILINE|
+	                         AG_TEXTBOX_CATCH_TAB, NULL);
 	AG_TextboxBindUTF8(tb, ckt->descr, sizeof(ckt->descr));
 	AG_WidgetFocus(tb);
 
@@ -287,13 +287,12 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 			    _("%s (suppressed)"),
 			    pob->name);
 		} else {
-			it = AG_TlistAdd(tl, esIconComponent.s,
-			    "%s", pob->name);
+			it = AG_TlistAddS(tl, esIconComponent.s, pob->name);
 		}
 		it->selected = (ESCOMPONENT(pob)->flags &
 		                ES_COMPONENT_SELECTED);
 	} else {
-		it = AG_TlistAdd(tl, NULL, "%s", pob->name);
+		it = AG_TlistAddS(tl, NULL, pob->name);
 	}
 
 	it->depth = depth;
@@ -412,7 +411,7 @@ PollLayouts(AG_Event *event)
 
 	AG_TlistBegin(tl);
 	TAILQ_FOREACH(lo, &ckt->layouts, layouts) {
-		ti = AG_TlistAdd(tl, NULL, "%s", OBJECT(lo)->name);
+		ti = AG_TlistAddS(tl, NULL, OBJECT(lo)->name);
 		ti->p1 = lo;
 	}
 	AG_TlistEnd(tl);
@@ -447,7 +446,7 @@ NewLayout(AG_Event *event)
 		return;
 	}
 	AG_ObjectGenName(ckt, &esLayoutClass, name, sizeof(name));
-	AG_ObjectSetName(lo, "%s", name);
+	AG_ObjectSetNameS(lo, name);
 
 	TAILQ_INSERT_TAIL(&ckt->layouts, lo, layouts);
 	AG_TlistRefresh(tlLayouts);

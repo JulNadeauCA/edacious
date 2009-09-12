@@ -38,7 +38,7 @@ ES_ScopeNew(ES_Circuit *ckt, const char *name)
 	
 	scope = Malloc(sizeof(ES_Scope));
 	AG_ObjectInit(scope, &esScopeClass);
-	AG_ObjectSetName(scope, "%s", name);
+	AG_ObjectSetNameS(scope, name);
 	AG_ObjectAttach(ckt, scope);
 
 	ES_AddSimulationObj(ckt, scope);
@@ -112,7 +112,7 @@ PollPlots(AG_Event *event)
 
 	AG_TlistClear(tl);
 	TAILQ_FOREACH(pl, &ptr->plots, plots) {
-		it = AG_TlistAdd(tl, NULL, "%s", pl->label_txt);
+		it = AG_TlistAddS(tl, NULL, pl->label_txt);
 		it->p1 = pl;
 		it->cat = "plot";
 	}
@@ -170,7 +170,7 @@ Edit(void *obj)
 	AG_Pane *vPane;
 
 	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, "%s", OBJECT(scope)->name);
+	AG_WindowSetCaptionS(win, OBJECT(scope)->name);
 	AG_WindowSetPosition(win, AG_WINDOW_UPPER_RIGHT, 0);
 
 	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
