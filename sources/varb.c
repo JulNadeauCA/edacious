@@ -142,7 +142,7 @@ UpdatePlot(AG_Event *event)
 		}
 		M_PlotReal(pl, v);
 #ifdef THREADS
-		SDL_Delay(5);
+		AG_Delay(5);
 #endif
 	}
 }

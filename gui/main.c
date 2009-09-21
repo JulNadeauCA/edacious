@@ -518,10 +518,7 @@ Save(AG_Event *event)
 static void
 ConfirmQuit(AG_Event *event)
 {
-	SDL_Event nev;
-
-	nev.type = SDL_USEREVENT;
-	SDL_PushEvent(&nev);
+	AG_QuitGUI();
 }
 
 static void
@@ -624,7 +621,7 @@ FileMenu(AG_Event *event)
 	AG_MenuItem *m = AG_SENDER();
 
 	AG_MenuActionKb(m, _("New circuit..."), esIconCircuit.s,
-	    SDLK_n, KMOD_CTRL,
+	    AG_KEY_N, AG_KEYMOD_CTRL,
 	    NewObject, "%p", &esCircuitClass);
 	AG_MenuAction(m, _("New component model..."), esIconComponent.s,
 	    NewComponentModelDlg, NULL);
@@ -636,14 +633,14 @@ FileMenu(AG_Event *event)
 	    NewObject, "%p", &esPackageClass);
 
 	AG_MenuActionKb(m, _("Open..."), agIconLoad.s,
-	    SDLK_o, KMOD_CTRL,
+	    AG_KEY_O, AG_KEYMOD_CTRL,
 	    OpenDlg, NULL);
 
 	AG_MutexLock(&objLock);
 	if (objFocus == NULL) { AG_MenuDisable(m); }
 
 	AG_MenuActionKb(m, _("Save"), agIconSave.s,
-	    SDLK_s, KMOD_CTRL,
+	    AG_KEY_S, AG_KEYMOD_CTRL,
 	    Save, "%p", objFocus);
 	AG_MenuAction(m, _("Save as..."), agIconSave.s,
 	    SaveAsDlg, "%p", objFocus);
@@ -682,7 +679,7 @@ FileMenu(AG_Event *event)
 #endif
 	AG_MenuSeparator(m);
 	AG_MenuActionKb(m, _("Quit"), agIconClose.s,
-	    SDLK_q, KMOD_CTRL,
+	    AG_KEY_Q, AG_KEYMOD_CTRL,
 	    Quit, NULL);
 }
 
@@ -748,9 +745,9 @@ EditMenu(AG_Event *event)
 	
 	AG_MutexLock(&objLock);
 	if (objFocus == NULL) { AG_MenuDisable(m); }
-	AG_MenuActionKb(m, _("Undo"), NULL, SDLK_z, KMOD_CTRL,
+	AG_MenuActionKb(m, _("Undo"), NULL, AG_KEY_Z, AG_KEYMOD_CTRL,
 	    Undo, "%p", objFocus);
-	AG_MenuActionKb(m, _("Redo"), NULL, SDLK_r, KMOD_CTRL,
+	AG_MenuActionKb(m, _("Redo"), NULL, AG_KEY_R, AG_KEYMOD_CTRL,
 	    Redo, "%p", objFocus);
 	if (objFocus == NULL) { AG_MenuEnable(m); }
 
@@ -838,8 +835,8 @@ main(int argc, char *argv[])
 	}
 	AG_SetRefreshRate(fps);
 	AG_SetVideoResizeCallback(VideoResize);
-	AG_BindGlobalKey(SDLK_ESCAPE, KMOD_NONE, QuitByKBD);
-	AG_BindGlobalKey(SDLK_F8, KMOD_NONE, AG_ViewCapture);
+	AG_BindGlobalKey(AG_KEY_ESCAPE, AG_KEYMOD_ANY, QuitByKBD);
+	AG_BindGlobalKey(AG_KEY_F8, AG_KEYMOD_ANY, AG_ViewCapture);
 
 	/*
 	 * Initialize the Edacious library. Unless -P was given, we preload

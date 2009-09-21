@@ -65,7 +65,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	ES_LayoutNode *lp1, *lp2;
 	
 	switch (button) {
-	case SDL_BUTTON_LEFT:
+	case AG_MOUSE_LEFT:
 		if (t->curTrace == NULL) {
 			lp1 = ES_LayoutNodeNew(vg->root);
 			lp2 = ES_LayoutNodeNew(vg->root);
@@ -76,7 +76,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			t->curTrace = NULL;
 		}
 		return (1);
-	case SDL_BUTTON_RIGHT:
+	case AG_MOUSE_RIGHT:
 		if (t->curTrace != NULL) {
 			VG_NodeDetach(t->curTrace);
 			VG_NodeDestroy(t->curTrace);
@@ -97,7 +97,7 @@ MouseButtonUp(void *p, VG_Vector vPos, int button)
 	ES_LayoutNode *spNear;
 
 	switch (button) {
-	case SDL_BUTTON_LEFT:
+	case AG_MOUSE_LEFT:
 		spNear = VG_PointProximityMax(vv, "LayoutNode", &vPos, NULL,
 		    t->curTrace, vv->pointSelRadius);
 		UpdateStatus(vv, spNear);

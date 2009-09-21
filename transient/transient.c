@@ -188,7 +188,7 @@ main(int argc, char *argv[])
 		if (doExit) {
 			break;
 		} else if (AG_TIMEOUTS_QUEUED()) {
-			AG_ProcessTimeouts(SDL_GetTicks());
+			AG_ProcessTimeouts(AG_GetTicks());
 		}
 	}
 

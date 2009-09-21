@@ -53,7 +53,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	VG_Point *vp;
 	ES_SchemPort *sp;
 
-	if (button != SDL_BUTTON_LEFT) {
+	if (button != AG_MOUSE_LEFT) {
 		return (0);
 	}
 	if ((vp = VG_NearestPoint(vv, vPos, NULL)) != NULL) {
@@ -91,7 +91,7 @@ KeyDown(void *p, int ksym, int kmod, int unicode)
 	VG_Node *vn;
 	Uint nDel = 0;
 
-	if (ksym == SDLK_DELETE || ksym == SDLK_BACKSPACE) {
+	if (ksym == AG_KEY_DELETE || ksym == AG_KEY_BACKSPACE) {
 del:
 		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
 			if (!VG_NodeIsClass(vn, "SchemPort") ||

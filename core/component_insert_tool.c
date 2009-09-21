@@ -187,7 +187,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	VG_View *vv = VGTOOL(t)->vgv;
 	
 	switch (button) {
-	case SDL_BUTTON_LEFT:
+	case AG_MOUSE_LEFT:
 		if (t->floatingCom != NULL) {
 			if (ConnectComponent(t, ckt, t->floatingCom) == -1){
 				AG_TextError("Connecting component: %s",
@@ -206,10 +206,10 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			}
 		}
 		break;
-	case SDL_BUTTON_MIDDLE:
+	case AG_MOUSE_MIDDLE:
 		if (t->floatingCom != NULL) {
 			VG_Node *vn;
-			SDLMod mod = SDL_GetModState();
+			AG_KeyMod mod = (AG_KeyMod)SDL_GetModState();
 
 			TAILQ_FOREACH(vn, &t->floatingCom->schemEnts, user) {
 				if (mod & KMOD_CTRL) {
@@ -220,7 +220,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 			}
 		}
 		break;
-	case SDL_BUTTON_RIGHT:
+	case AG_MOUSE_RIGHT:
 		RemoveFloatingComponent(t);
 		VG_ViewSelectTool(vv, NULL, ckt);
 		return (1);
@@ -311,7 +311,7 @@ Init(void *p)
 
 	VG_ToolCommandNew(t, "Insert", Insert);
 	tc = VG_ToolCommandNew(t, "AbortInsert", AbortInsert);
-	VG_ToolCommandKey(tc, KMOD_NONE, SDLK_ESCAPE);
+	VG_ToolCommandKey(tc, AG_KEYMOD_NONE, AG_KEY_ESCAPE);
 }
 
 static void *

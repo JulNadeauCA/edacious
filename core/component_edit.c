@@ -464,7 +464,7 @@ MouseButtonDown(AG_Event *event)
 	float y = AG_FLOAT(3);
 	VG_Node *vn;
 
-	if (button != SDL_BUTTON_RIGHT) {
+	if (button != AG_MOUSE_RIGHT) {
 		return;
 	}
 	if ((vn = ES_SchemNearest(vv, VGVECTOR(x,y))) != NULL) {
@@ -635,7 +635,7 @@ ViewMenu(AG_Event *event)
 	AG_MenuItem *mSchem;
 
 	AG_MenuActionKb(m, _("New view..."), esIconCircuit.s,
-	    SDLK_v, KMOD_CTRL,
+	    AG_KEY_V, AG_KEYMOD_CTRL,
 	    CreateView, "%p,%p", win, com);
 
 	AG_MenuSeparator(m);

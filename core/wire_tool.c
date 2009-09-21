@@ -174,7 +174,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	ES_Circuit *ckt = VGTOOL(t)->p;
 	
 	switch (button) {
-	case SDL_BUTTON_LEFT:
+	case AG_MOUSE_LEFT:
 		if (t->curWire == NULL) {
 			CreateWire(t, vPos);
 		} else {
@@ -182,7 +182,7 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 		}
 		ES_UnselectAllPorts(ckt);
 		return (1);
-	case SDL_BUTTON_RIGHT:
+	case AG_MOUSE_RIGHT:
 		if (t->curWire != NULL) {
 			AG_ObjectDetach(t->curWire);
 			AG_ObjectDestroy(t->curWire);
@@ -205,7 +205,7 @@ MouseButtonUp(void *p, VG_Vector vPos, int button)
 	ES_SchemPort *spNear;
 
 	switch (button) {
-	case SDL_BUTTON_LEFT:
+	case AG_MOUSE_LEFT:
 		ES_UnselectAllPorts(ckt);
 		spNear = VG_PointProximityMax(vv, "SchemPort", &vPos, NULL,
 		    t->curWire, vv->pointSelRadius);

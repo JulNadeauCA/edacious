@@ -147,7 +147,7 @@ ES_LayoutEdit(void *p)
 	mi = AG_MenuAddItem(menu, _("View"));
 	{
 		AG_MenuActionKb(mi, _("New view..."), esIconCircuit.s,
-		    SDLK_v, KMOD_CTRL,
+		    AG_KEY_V, AG_KEYMOD_CTRL,
 		    CreateView, "%p,%p", win, lo);
 
 		AG_MenuSeparator(mi);

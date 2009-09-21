@@ -235,7 +235,7 @@ MouseButtonDown(AG_Event *event)
 	float y = AG_FLOAT(3);
 	VG_Node *vn;
 
-	if (button != SDL_BUTTON_RIGHT) {
+	if (button != AG_MOUSE_RIGHT) {
 		return;
 	}
 	if ((vn = ES_SchemNearest(vv, VGVECTOR(x,y))) != NULL) {
@@ -512,7 +512,7 @@ ES_CircuitEdit(void *p)
 	mi = AG_MenuAddItem(menu, _("View"));
 	{
 		AG_MenuActionKb(mi, _("New view..."), esIconCircuit.s,
-		    SDLK_v, KMOD_CTRL,
+		    AG_KEY_V, AG_KEYMOD_CTRL,
 		    CreateView, "%p,%p", win, ckt);
 		AG_MenuAction(mi, _("Circuit topology..."), esIconMesh.s,
 		    ShowTopology, "%p,%p", win, ckt);

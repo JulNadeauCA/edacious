@@ -106,7 +106,7 @@ MouseButtonDown(void *p, VG_Vector v, int b)
 		return (0);
 	}
 	switch (b) {
-	case SDL_BUTTON_LEFT:
+	case AG_MOUSE_LEFT:
 		t->vLast = v;
 		if (VG_SELECT_MULTI(vv)) {
 			if (vn->flags & VG_NODE_SELECTED) {
@@ -144,7 +144,7 @@ MouseButtonUp(void *p, VG_Vector v, int b)
 {
 	ES_LayoutSelectTool *t = p;
 
-	if (b != SDL_BUTTON_LEFT) {
+	if (b != AG_MOUSE_LEFT) {
 		return (0);
 	}
 	t->flags &= ~(MOVING_ENTITIES);
@@ -225,7 +225,7 @@ KeyDown(void *p, int ksym, int kmod, int unicode)
 	VG_Node *vn;
 	Uint nDel = 0;
 
-	if (ksym == SDLK_DELETE || ksym == SDLK_BACKSPACE) {
+	if (ksym == AG_KEY_DELETE || ksym == AG_KEY_BACKSPACE) {
 del:
 		TAILQ_FOREACH(vn, &vv->vg->nodes, list) {
 			if (vn->flags & VG_NODE_SELECTED) {
