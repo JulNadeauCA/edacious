@@ -70,7 +70,7 @@ MouseMotion(void *p, VG_Vector vPos, VG_Vector vRel, int buttons)
 }
 
 static int
-KeyDown(void *p, int ksym, int kmod, int unicode)
+KeyDown(void *p, int ksym, int kmod, Uint32 unicode)
 {
 	ES_LayoutNodeTool *t = p;
 	VG_View *vv = VGTOOL(t)->vgv;

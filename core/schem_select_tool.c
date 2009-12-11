@@ -178,7 +178,7 @@ DeleteObject(VG_View *vv, void *p)
 }
 
 static int
-KeyDown(void *p, int ksym, int kmod, int unicode)
+KeyDown(void *p, int ksym, int kmod, Uint32 unicode)
 {
 	ES_SchemSelectTool *t = p;
 	VG_View *vv = VGTOOL(t)->vgv;

@@ -425,7 +425,9 @@ SchemMenu(AG_Event *event)
 	AG_MenuAction(pm->item, _("Save as..."), agIconSave.s,
 	    SaveSchemAsDlg, "%p", obj);
 	
-	AG_PopupShow(pm);
+	AG_PopupShowAt(pm,
+	    WIDGET(tl)->drv->mouse->x,
+	    WIDGET(tl)->drv->mouse->y);
 }
 
 ES_SchemLibraryEditor *

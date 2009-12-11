@@ -119,7 +119,7 @@ ES_LayoutEdit(void *p)
 	AG_Pane *hPane;
 	VG_View *vv;
 	AG_Menu *menu;
-	AG_MenuItem *mi, *mi2;
+	AG_MenuItem *m, *mSub;
 
 	win = AG_WindowNew(0);
 
@@ -132,31 +132,30 @@ ES_LayoutEdit(void *p)
 	VG_ViewSetScale(vv, 0);
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
-#if 0
-	mi = AG_MenuAddItem(menu, _("File"));
+	m = AG_MenuAddItem(menu, _("File"));
 	{
-		AG_MenuAction(mi, _("Properties..."), agIconGear.s,
-		    ShowProperties, "%p,%p,%p", win, lo, vv);
+		ES_FileMenu(m, lo);
 	}
-#endif
-	mi = AG_MenuAddItem(menu, _("Edit"));
+	m = AG_MenuAddItem(menu, _("Edit"));
 	{
-		mi2 = AG_MenuNode(mi, _("Snapping mode"), NULL);
-		VG_SnapMenu(mi2, vv);
+		ES_EditMenu(m, lo);
+		AG_MenuSeparator(m);
+		mSub = AG_MenuNode(m, _("Snapping mode"), NULL);
+		VG_SnapMenu(mSub, vv);
 	}
-	mi = AG_MenuAddItem(menu, _("View"));
+	m = AG_MenuAddItem(menu, _("View"));
 	{
-		AG_MenuActionKb(mi, _("New view..."), esIconCircuit.s,
+		AG_MenuActionKb(m, _("New view..."), esIconCircuit.s,
 		    AG_KEY_V, AG_KEYMOD_CTRL,
 		    CreateView, "%p,%p", win, lo);
 
-		AG_MenuSeparator(mi);
+		AG_MenuSeparator(m);
 
-		mi2 = AG_MenuNode(mi, _("Display"), esIconCircuit.s);
+		mSub = AG_MenuNode(m, _("Display"), esIconCircuit.s);
 		{
-			AG_MenuFlags(mi2, _("Grid"), vgIconSnapGrid.s,
+			AG_MenuFlags(mSub, _("Grid"), vgIconSnapGrid.s,
 			    &vv->flags, VG_VIEW_GRID, 0);
-			AG_MenuFlags(mi2, _("Construction geometry"),
+			AG_MenuFlags(mSub, _("Construction geometry"),
 			    esIconConstructionGeometry.s,
 			    &vv->flags, VG_VIEW_CONSTRUCTION, 0);
 		}
@@ -216,32 +215,32 @@ ES_LayoutEdit(void *p)
 		AG_WidgetFocus(vv);
 	}
 
-	mi = AG_MenuAddItem(menu, _("Tools"));
+	m = AG_MenuAddItem(menu, _("Tools"));
 	{
 		AG_MenuItem *mAction;
 		VG_ToolOps **pOps, *ops;
 		VG_Tool *tool;
 
-		AG_MenuToolbar(mi, tbRight);
+		AG_MenuToolbar(m, tbRight);
 		
 		/* Register Layout-specific tools */
 		for (pOps = &esLayoutTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, NULL);
-			mAction = AG_MenuAction(mi, ops->name,
+			mAction = AG_MenuAction(m, ops->name,
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, lo);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
 			    &OBJECT(vv)->lock);
 		}
 		
-		AG_MenuSeparator(mi);
+		AG_MenuSeparator(m);
 		
 		/* Register generic VG drawing tools */
 		for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, lo);
-			mAction = AG_MenuAction(mi, ops->name,
+			mAction = AG_MenuAction(m, ops->name,
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, lo);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
@@ -251,7 +250,7 @@ ES_LayoutEdit(void *p)
 		/* Register (but hide) the special "insert package" tool. */
 		VG_ViewRegTool(vv, &esPackageInsertTool, lo);
 
-		AG_MenuToolbar(mi, NULL);
+		AG_MenuToolbar(m, NULL);
 	}
 	
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);

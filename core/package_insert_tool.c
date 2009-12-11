@@ -129,10 +129,10 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 	case AG_MOUSE_MIDDLE:
 		if (t->floatingPkg != NULL) {
 			VG_Node *vn;
-			AG_KeyMod mod = (AG_KeyMod)SDL_GetModState();
+			AG_KeyMod mod = AG_GetModState(WIDGET(vv)->drv->kbd);
 
 			TAILQ_FOREACH(vn, &t->floatingPkg->layoutEnts, user) {
-				if (mod & KMOD_CTRL) {
+				if (mod & AG_KEYMOD_CTRL) {
 					VG_Rotate(vn, VG_PI/4.0f);
 				} else {
 					VG_Rotate(vn, VG_PI/2.0f);

@@ -24,6 +24,7 @@
  */
 
 #include "core.h"
+
 #include <string.h>
 #include <ctype.h>
 
@@ -72,9 +73,9 @@ M_Real esDummy = 0.0;
 #include "icons_data.h"
 
 AG_Object esVfsRoot;			/* General-purpose VFS */
-
-static AG_Window *(*ObjectOpenFn)(void *) = NULL;
-static void       (*ObjectCloseFn)(void *) = NULL;
+static void *objFocus = NULL;		/* For MDI-style interface */
+static AG_Menu *mdiMenu = NULL;		/* For MDI-style interface */
+static AG_Mutex objLock;
 
 /* Load an Edacious module and register all of its defined classes. */
 int
@@ -215,6 +216,7 @@ ES_CoreInit(Uint flags)
 	/* Initialize our general-purpose VFS. */
 	AG_ObjectInitStatic(&esVfsRoot, NULL);
 	AG_ObjectSetName(&esVfsRoot, "Edacious VFS");
+	AG_MutexInitRecursive(&objLock);
 
 	/* Register es_core's icons if a GUI is in use. */
 	if (agGUI)
@@ -239,6 +241,7 @@ ES_CoreInit(Uint flags)
 	ES_SchemLibraryInit();
 }
 
+/* Release resources allocated by the Edacious library. */
 void
 ES_CoreDestroy(void)
 {
@@ -262,35 +265,723 @@ ES_CoreDestroy(void)
 	AG_UnlockDSO();
 }
 
-/*
- * Configure a routine allowing the application to open an object for
- * GUI edition. Not thread safe.
- */
-void
-ES_SetObjectOpenHandler(AG_Window *(*fn)(void *))
+static void
+SaveAndClose(AG_Object *obj, AG_Window *win)
 {
-	ObjectOpenFn = fn;
+	AG_ObjectDetach(win);
+	AG_ObjectDelete(obj);
 }
 
-/*
- * Configure a routine allowing the application to clean up GUI resources
- * associated with an object. Not thread safe.
- */
-void
-ES_SetObjectCloseHandler(void (*fn)(void *))
+static void
+SaveChangesReturn(AG_Event *event)
 {
-	ObjectCloseFn = fn;
+	AG_Window *win = AG_PTR(1);
+	AG_Object *obj = AG_PTR(2);
+	int doSave = AG_INT(3);
+
+	AG_PostEvent(NULL, obj, "edit-close", NULL);
+
+	if (doSave) {
+		SaveAndClose(obj, win);
+	} else {
+		AG_ObjectDetach(win);
+	}
 }
 
+static void
+SaveChangesDlg(AG_Event *event)
+{
+	AG_Window *win = AG_SELF();
+	AG_Object *obj = AG_PTR(1);
+
+	if (!AG_ObjectChanged(obj)) {
+		SaveAndClose(obj, win);
+	} else {
+		AG_Button *bOpts[3];
+		AG_Window *wDlg;
+
+		wDlg = AG_TextPromptOptions(bOpts, 3,
+		    _("Save changes to %s?"), OBJECT(obj)->name);
+		AG_WindowAttach(win, wDlg);
+		
+		AG_ButtonText(bOpts[0], _("Save"));
+		AG_SetEvent(bOpts[0], "button-pushed", SaveChangesReturn,
+		    "%p,%p,%i", win, obj, 1);
+		AG_WidgetFocus(bOpts[0]);
+		AG_ButtonText(bOpts[1], _("Discard"));
+		AG_SetEvent(bOpts[1], "button-pushed", SaveChangesReturn,
+		    "%p,%p,%i", win, obj, 0);
+		AG_ButtonText(bOpts[2], _("Cancel"));
+		AG_SetEvent(bOpts[2], "button-pushed", AGWINDETACH(wDlg));
+	}
+}
+
+static void
+WindowGainedFocus(AG_Event *event)
+{
+	AG_Object *obj = AG_PTR(1);
+	const char **s;
+
+	AG_MutexLock(&objLock);
+	objFocus = NULL;
+	for (s = &esEditableClasses[0]; *s != NULL; s++) {
+		if (AG_OfClass(obj, *s)) {
+			objFocus = obj;
+			break;
+		}
+	}
+	AG_MutexUnlock(&objLock);
+}
+
+static void
+WindowLostFocus(AG_Event *event)
+{
+	AG_MutexLock(&objLock);
+	objFocus = NULL;
+	AG_MutexUnlock(&objLock);
+}
+
+/* Open a given object for edition. */
 AG_Window *
-ES_OpenObject(void *obj)
+ES_OpenObject(void *p)
 {
-	return (ObjectOpenFn != NULL) ? ObjectOpenFn(obj) : NULL;
+	AG_Object *obj = p;
+	AG_Window *win = NULL;
+	AG_Widget *wEdit;
+
+	/* Invoke edit(), which may return a Window or some other Widget. */
+	if (AG_OfClass(obj, "ES_Circuit:ES_Component:*")) {
+		win = AGCLASS(&esComponentClass)->edit(obj);
+		AG_WindowSetCaption(win, _("Component model: %s"),
+		    (obj->archivePath != NULL) ?
+		    AG_ShortFilename(obj->archivePath) : obj->name);
+	} else {
+		if ((wEdit = obj->cls->edit(obj)) == NULL) {
+			AG_SetError("%s no edit()", obj->cls->name);
+			return (NULL);
+		}
+		if (AG_OfClass(wEdit, "AG_Widget:AG_Window:*")) {
+			win = (AG_Window *)wEdit;
+		} else if (AG_OfClass(wEdit, "AG_Widget:*")) {
+			win = AG_WindowNew(0);
+			AG_ObjectAttach(win, wEdit);
+		} else {
+			AG_SetError("%s: edit() returned illegal object",
+			    obj->cls->name);
+			return (NULL);
+		}
+		AG_WindowSetCaptionS(win,
+		    (obj->archivePath != NULL) ?
+		    AG_ShortFilename(obj->archivePath) : obj->name);
+	}
+
+	AG_SetEvent(win, "window-close", SaveChangesDlg, "%p", obj);
+	AG_AddEvent(win, "window-gainfocus", WindowGainedFocus, "%p", obj);
+	AG_AddEvent(win, "window-lostfocus", WindowLostFocus, "%p", obj);
+	AG_AddEvent(win, "window-hidden", WindowLostFocus, "%p", obj);
+	AG_SetPointer(win, "object", obj);
+
+	AG_WindowShow(win);
+	return (win);
 }
 
+/*
+ * Close any edition window associated with a given Edacious object
+ * (window "object" property).
+ */
 void
 ES_CloseObject(void *obj)
 {
-	if (ObjectCloseFn != NULL)
-		ObjectCloseFn(obj);
+	AG_Driver *drv;
+	AG_Window *win;
+	AG_Variable *V;
+
+	/* XXX XXX agar-1.4 */
+	AGOBJECT_FOREACH_CHILD(drv, &agDrivers, ag_driver) {
+		AG_FOREACH_WINDOW(win, drv) {
+			if ((V = AG_GetVariableLocked(win, "object")) == NULL) {
+				continue;
+			}
+			if (V->data.p == obj) {
+				AG_ObjectDetach(win);
+			}
+			AG_UnlockVariable(V);
+		}
+	}
+}
+
+/* Create a new instance of a particular object class. */
+void
+ES_GUI_NewObject(AG_Event *event)
+{
+	AG_ObjectClass *cl = AG_PTR(1);
+	AG_Object *obj;
+
+	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cl)) == NULL) {
+		goto fail;
+	}
+	if (ES_OpenObject(obj) == NULL) {
+		goto fail;
+	}
+	AG_PostEvent(NULL, obj, "edit-open", NULL);
+	return;
+fail:
+	AG_TextError(_("Failed to create object: %s"), AG_GetError());
+	if (obj != NULL) { AG_ObjectDelete(obj); }
+}
+
+/* Create a new component model. */
+void
+ES_GUI_CreateComponentModel(AG_Event *event)
+{
+	AG_Window *winParent = AG_PTR(1);
+	AG_Tlist *tlClasses = AG_PTR(2);
+	AG_TlistItem *itClass;
+	ES_Component *com;
+
+	if ((itClass = AG_TlistSelectedItem(tlClasses)) == NULL) {
+		AG_TextError(_("Please select a parent class"));
+		return;
+	}
+	if ((com = AG_ObjectNew(&esVfsRoot, NULL, AGCLASS(itClass->p1)))
+	    == NULL) {
+		goto fail;
+	}
+	if (ES_OpenObject(com) == NULL) {
+		goto fail;
+	}
+	AG_PostEvent(NULL, com, "edit-open", NULL);
+	AG_ObjectDetach(winParent);
+	return;
+fail:
+	AG_TextError(_("Could not create component: %s"), AG_GetError());
+	if (com != NULL) { AG_ObjectDelete(com); }
+}
+
+/* Display the "File / New component" dialog. */
+void
+ES_GUI_NewComponentModelDlg(AG_Event *event)
+{
+	AG_Window *win;
+	AG_Tlist *tlHier;
+	AG_Box *hBox;
+
+	win = AG_WindowNew(0);
+	AG_WindowSetCaptionS(win, _("New component..."));
+
+	AG_LabelNewS(win, AG_LABEL_HFILL,
+	    _("Please select a class for the new component model."));
+	AG_SeparatorNewHoriz(win);
+
+	AG_LabelNew(win, 0, _("Class: "));
+	tlHier = AG_TlistNewPolled(win, AG_TLIST_TREE|AG_TLIST_EXPAND,
+	    ES_ComponentListClasses, NULL);
+
+	hBox = AG_BoxNewHoriz(win, AG_BOX_HOMOGENOUS|AG_BOX_FRAME|AG_BOX_HFILL);
+	AG_ButtonNewFn(hBox, 0, _("Create model"),
+	    ES_GUI_CreateComponentModel, "%p,%p", win, tlHier);
+	AG_ButtonNewFn(hBox, 0, _("Close"), AGWINDETACH(win));
+
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 33, 40);
+	AG_WindowShow(win);
+}
+
+#if 0
+static void
+EditDevice(AG_Event *event)
+{
+	AG_Object *dev = AG_PTR(1);
+
+	ES_OpenObject(dev);
+}
+#endif
+
+/* Load an object file from native Edacious format. */
+void
+ES_GUI_LoadObject(AG_Event *event)
+{
+	AG_ObjectClass *cl = AG_PTR(1);
+	char *path = AG_STRING(2);
+	AG_Object *obj;
+
+	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cl)) == NULL) {
+		goto fail;
+	}
+	if (AG_ObjectLoadFromFile(obj, path) == -1) {
+		AG_SetError("%s: %s", AG_ShortFilename(path), AG_GetError());
+		goto fail;
+	}
+	AG_ObjectSetArchivePath(obj, path);
+	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
+
+	if (ES_OpenObject(obj) == NULL) {
+		goto fail;
+	}
+	return;
+fail:
+	AG_TextError(_("Could not open object: %s"), AG_GetError());
+/*	if (obj != NULL) { AG_ObjectDelete(obj); } */
+}
+
+/* Load a component model file. */
+static void
+LoadComponentModel(AG_Event *event)
+{
+	AG_ObjectHeader oh;
+	AG_DataSource *ds;
+	char *path = AG_STRING(1);
+	AG_Object *obj;
+	AG_ObjectClass *cl;
+
+	if ((ds = AG_OpenFile(path, "rb")) == NULL) {
+		AG_TextMsgFromError();
+		return;
+	}
+	if (AG_ObjectReadHeader(ds, &oh) == -1) {
+		AG_CloseFile(ds);
+		goto fail;
+	}
+	AG_CloseFile(ds);
+
+	if ((cl = AG_LoadClass(oh.cs.hier)) == NULL) {
+		goto fail;
+	}
+	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cl)) == NULL) {
+		goto fail;
+	}
+	if (AG_ObjectLoadFromFile(obj, path) == -1) {
+		AG_SetError("%s: %s", AG_ShortFilename(path), AG_GetError());
+		goto fail;
+	}
+	AG_ObjectSetArchivePath(obj, path);
+	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
+
+	if (ES_OpenObject(obj) == NULL) {
+		goto fail;
+	}
+	return;
+fail:
+/*	if (obj != NULL) { AG_ObjectDelete(obj); } */
+	AG_TextMsgFromError();
+}
+
+void
+ES_GUI_OpenDlg(AG_Event *event)
+{
+	AG_Window *win;
+	AG_FileDlg *fd;
+
+	win = AG_WindowNew(0);
+	AG_WindowSetCaptionS(win, _("Open..."));
+
+	fd = AG_FileDlgNewMRU(win, "edacious.mru.circuits",
+	    AG_FILEDLG_LOAD|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
+	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
+
+	AG_FileDlgAddType(fd, _("Edacious circuit model"), "*.ecm",
+	    ES_GUI_LoadObject, "%p", &esCircuitClass);
+	AG_FileDlgAddType(fd, _("Edacious component model"), "*.em",
+	    LoadComponentModel, NULL);
+	AG_FileDlgAddType(fd, _("Edacious schematic"), "*.esh",
+	    ES_GUI_LoadObject, "%p", &esSchemClass);
+	AG_FileDlgAddType(fd, _("Edacious PCB layout"), "*.ecl",
+	    ES_GUI_LoadObject, "%p", &esLayoutClass);
+	AG_FileDlgAddType(fd, _("Edacious device package"), "*.edp",
+	    ES_GUI_LoadObject, "%p", &esPackageClass);
+
+	AG_WindowShow(win);
+}
+
+/* Save an object file in native Edacious format. */
+static void
+SaveNativeObject(AG_Event *event)
+{
+	AG_Object *obj = AG_PTR(1);
+	char *path = AG_STRING(2);
+	AG_Window *wEdit;
+
+	if (AG_ObjectSaveToFile(obj, path) == -1) {
+		AG_TextError("%s: %s", AG_ShortFilename(path), AG_GetError());
+	}
+	AG_ObjectSetArchivePath(obj, path);
+	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
+
+	if ((wEdit = AG_WindowFindFocused()) != NULL)
+		AG_WindowSetCaptionS(wEdit, AG_ShortFilename(path));
+}
+
+static void
+SaveLayoutToGedaPCB(AG_Event *event)
+{
+	/* TODO */
+	AG_TextError("Export to gEDA PCB not implemented yet");
+}
+
+static void
+SaveLayoutToGerber(AG_Event *event)
+{
+	/* TODO */
+	AG_TextError("Export to Gerber not implemented yet");
+}
+
+static void
+SaveLayoutToXGerber(AG_Event *event)
+{
+	/* TODO */
+	AG_TextError("Export to XGerber not implemented yet");
+}
+
+static void
+SaveCircuitToSPICE3(AG_Event *event)
+{
+	ES_Circuit *ckt = AG_PTR(1);
+	char *path = AG_STRING(2);
+	
+	if (ES_CircuitExportSPICE3(ckt, path) == -1)
+		AG_TextMsgFromError();
+}
+
+static void
+SaveCircuitToTXT(AG_Event *event)
+{
+	ES_Circuit *ckt = AG_PTR(1);
+	char *path = AG_STRING(2);
+
+	if (ES_CircuitExportTXT(ckt, path) == -1)
+		AG_TextMsgFromError();
+}
+
+static void
+SaveSchemToPDF(AG_Event *event)
+{
+	/* TODO */
+	AG_TextError("Export to PDF not implemented yet");
+}
+
+void
+ES_GUI_SaveAsDlg(AG_Event *event)
+{
+	char defDir[AG_PATHNAME_MAX];
+	AG_Object *obj = AG_PTR(1);
+	AG_Window *win;
+	AG_FileDlg *fd;
+	AG_FileType *ft;
+
+	if (obj == NULL) {
+		AG_TextError(_("No document is selected for saving."));
+		return;
+	}
+
+	AG_CopyCfgString("save-path", defDir, sizeof(defDir));
+
+	win = AG_WindowNew(0);
+	AG_WindowSetCaption(win, _("Save %s as..."), obj->name);
+
+	fd = AG_FileDlgNew(win, AG_FILEDLG_SAVE|AG_FILEDLG_CLOSEWIN|
+	                        AG_FILEDLG_EXPAND);
+	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
+
+	if (AG_OfClass(obj, "ES_Circuit:ES_Component:*")) {
+		AG_FileDlgSetDirectoryMRU(fd, "edacious.mru.components", defDir);
+		AG_FileDlgAddType(fd, _("Edacious component model"),
+		    "*.em",
+		    SaveNativeObject, "%p", obj);
+	} else if (AG_OfClass(obj, "ES_Circuit:*")) {
+		AG_FileDlgSetDirectoryMRU(fd, "edacious.mru.circuits", defDir);
+		AG_FileDlgAddType(fd, _("Edacious circuit model"),
+		    "*.ecm",
+		    SaveNativeObject, "%p", obj);
+		ft = AG_FileDlgAddType(fd, _("SPICE3 netlist"),
+		    "*.cir",
+		    SaveCircuitToSPICE3, "%p", obj);
+		AG_FileDlgAddType(fd, _("Text file"),
+		    "*.txt",
+		    SaveCircuitToTXT, "%p", obj);
+		/* ... */
+	} else if (AG_OfClass(obj, "ES_Layout:ES_Package:*")) {
+		AG_FileDlgSetDirectoryMRU(fd, "edacious.mru.packages", defDir);
+		AG_FileDlgAddType(fd, _("Edacious device package"),
+		    "*.edp",
+		    SaveNativeObject, "%p", obj);
+	} else if (AG_OfClass(obj, "ES_Layout:*")) {
+		AG_FileDlgSetDirectoryMRU(fd, "edacious.mru.layouts", defDir);
+		AG_FileDlgAddType(fd, _("Edacious PCB layout"),
+		    "*.ecl",
+		    SaveNativeObject, "%p", obj);
+		AG_FileDlgAddType(fd, _("gEDA PCB format"),
+		    "*.pcb",
+		    SaveLayoutToGedaPCB, "%p", obj);
+		AG_FileDlgAddType(fd, _("Gerber (RS-274D)"),
+		    "*.gbr,*.phd,*.spl,*.art",
+		    SaveLayoutToGerber, "%p", obj);
+		AG_FileDlgAddType(fd, _("Extended Gerber (RS-274X)"),
+		    "*.ger,*.gbl,*.gtl,*.gbs,*.gts,*.gbo,*.gto",
+		    SaveLayoutToXGerber, "%p", obj);
+	} else if (AG_OfClass(obj, "ES_Schem:*")) {
+		AG_FileDlgSetDirectoryMRU(fd, "edacious.mru.schems", defDir);
+		AG_FileDlgAddType(fd, _("Edacious schematic"),
+		    "*.esh",
+		    SaveNativeObject, "%p", obj);
+		AG_FileDlgAddType(fd, _("Portable Document Format"),
+		    "*.pdf",
+		    SaveSchemToPDF, "%p", obj);
+	}
+	AG_WindowShow(win);
+}
+
+void
+ES_GUI_Save(AG_Event *event)
+{
+	AG_Object *obj = AG_PTR(1);
+	
+	if (obj == NULL) {
+		AG_TextError(_("No document is selected for saving."));
+		return;
+	}
+
+	if (OBJECT(obj)->archivePath == NULL) {
+		ES_GUI_SaveAsDlg(event);
+		return;
+	}
+	if (AG_ObjectSave(obj) == -1) {
+		AG_TextError(_("Error saving object: %s"), AG_GetError());
+	} else {
+		AG_TextTmsg(AG_MSG_INFO, 1250, _("Saved %s successfully"),
+		    OBJECT(obj)->archivePath);
+	}
+}
+
+static void
+ConfirmQuit(AG_Event *event)
+{
+	AG_QuitGUI();
+}
+
+static void
+AbortQuit(AG_Event *event)
+{
+	AG_Window *win = AG_PTR(1);
+
+	agTerminating = 0;
+	AG_ObjectDetach(win);
+}
+
+void
+ES_GUI_Quit(AG_Event *event)
+{
+	AG_Object *vfsObj = NULL, *modelObj = NULL, *schemObj = NULL;
+	AG_Window *win;
+	AG_Checkbox *cb;
+	AG_Box *box;
+
+	if (agTerminating) {
+		ConfirmQuit(NULL);
+	}
+	agTerminating = 1;
+
+	OBJECT_FOREACH_CHILD(vfsObj, &esVfsRoot, ag_object) {
+		if (AG_ObjectChanged(vfsObj))
+			break;
+	}
+	OBJECT_FOREACH_CHILD(modelObj, &esComponentLibrary, ag_object) {
+		if (AG_ObjectChanged(modelObj))
+			break;
+	}
+	OBJECT_FOREACH_CHILD(schemObj, &esSchemLibrary, ag_object) {
+		if (AG_ObjectChanged(schemObj))
+			break;
+	}
+
+	if (vfsObj == NULL &&
+	    modelObj == NULL &&
+	    schemObj == NULL) {
+		if (!AG_GetInt(agConfig,"no-confirm-quit")) {
+			ConfirmQuit(NULL);
+		} else {
+			AG_Variable *Vdisable;
+
+			if ((win = AG_WindowNewNamedS(
+			    AG_WINDOW_MODAL|AG_WINDOW_NOTITLE|
+			    AG_WINDOW_NORESIZE, "QuitCallback")) == NULL) {
+				return;
+			}
+			AG_WindowSetCaptionS(win, _("Quit application?"));
+			AG_WindowSetPosition(win, AG_WINDOW_CENTER, 0);
+			AG_WindowSetSpacing(win, 8);
+
+			AG_LabelNewString(win, 0, _("Exit Edacious?"));
+			cb = AG_CheckboxNew(win, 0, _("Don't ask again"));
+			Vdisable = AG_SetInt(agConfig,"no-confirm-quit",0);
+			AG_BindInt(cb, "state", &Vdisable->data.i);
+
+			box = AG_BoxNewHorizNS(win, AG_VBOX_HFILL);
+			AG_ButtonNewFn(box, 0, _("Quit"), ConfirmQuit, NULL);
+			AG_WidgetFocus(AG_ButtonNewFn(box, 0, _("Cancel"), AbortQuit, "%p", win));
+			AG_WindowShow(win);
+		}
+	} else {
+		if ((win = AG_WindowNewNamedS(AG_WINDOW_MODAL|AG_WINDOW_NOTITLE|
+		    AG_WINDOW_NORESIZE, "QuitCallback")) == NULL) {
+			return;
+		}
+		AG_WindowSetCaptionS(win, _("Exit application?"));
+		AG_WindowSetPosition(win, AG_WINDOW_CENTER, 0);
+		AG_WindowSetSpacing(win, 8);
+		AG_LabelNewString(win, 0,
+		    _("There is at least one object with unsaved changes.  "
+	              "Exit application?"));
+		box = AG_BoxNewHorizNS(win, AG_VBOX_HFILL|AG_BOX_HOMOGENOUS);
+		AG_ButtonNewFn(box, 0, _("Discard changes"), ConfirmQuit, NULL);
+		AG_WidgetFocus(AG_ButtonNewFn(box, 0, _("Cancel"), AbortQuit, "%p", win));
+		AG_WindowShow(win);
+	}
+}
+
+#if 0
+static void
+VideoResize(Uint w, Uint h)
+{
+	AG_SetCfgUint("gui-width", w);
+	AG_SetCfgUint("gui-height", h);
+	(void)AG_ConfigSave();
+}
+#endif
+
+void
+ES_GUI_Undo(AG_Event *event)
+{
+	/* TODO */
+	printf("undo!\n");
+}
+
+void
+ES_GUI_Redo(AG_Event *event)
+{
+	/* TODO */
+	printf("redo!\n");
+}
+
+void
+ES_GUI_EditPreferences(AG_Event *event)
+{
+	DEV_ConfigShow();
+}
+
+static void
+SelectedFont(AG_Event *event)
+{
+	AG_Window *win = AG_PTR(1);
+
+	AG_SetCfgString("font.face", "%s", OBJECT(agDefaultFont)->name);
+	AG_SetCfgInt("font.size", agDefaultFont->size);
+	AG_SetCfgUint("font.flags", agDefaultFont->flags);
+	(void)AG_ConfigSave();
+
+	AG_TextWarning("default-font-changed",
+	    _("The default font has been changed.\n"
+	      "Please restart Edacious for this change to take effect."));
+	AG_ObjectDetach(win);
+}
+
+void
+ES_GUI_SelectFontDlg(AG_Event *event)
+{
+	AG_Window *win;
+	AG_FontSelector *fs;
+	AG_Box *hBox;
+
+	win = AG_WindowNew(0);
+	AG_WindowSetCaptionS(win, _("Font selection"));
+
+	fs = AG_FontSelectorNew(win, AG_FONTSELECTOR_EXPAND);
+	AG_BindPointer(fs, "font", (void *)&agDefaultFont);
+
+	hBox = AG_BoxNewHoriz(win, AG_BOX_HFILL|AG_BOX_HOMOGENOUS);
+	AG_ButtonNewFn(hBox, 0, _("OK"), SelectedFont, "%p", win);
+	AG_ButtonNewFn(hBox, 0, _("Cancel"), AG_WindowCloseGenEv, "%p", win);
+	AG_WindowShow(win);
+}
+
+/* Initialize MDI-style menu. */
+void
+ES_InitMenuMDI(void)
+{
+	mdiMenu = AG_MenuNewGlobal(0);
+	ES_FileMenu(AG_MenuAddItem(mdiMenu, _("File")), NULL);
+	ES_EditMenu(AG_MenuAddItem(mdiMenu, _("Edit")), NULL);
+#if defined(HAVE_AGAR_DEV) && defined(ES_DEBUG)
+	DEV_InitSubsystem(0);
+	DEV_ToolMenu(AG_MenuNode(mdiMenu->root, _("Debug"), NULL));
+#endif
+}
+
+/* Build a generic "File" menu. */
+void
+ES_FileMenu(AG_MenuItem *m, void *obj)
+{
+	if (obj == NULL)					/* MDI */
+		obj = objFocus;
+
+	AG_MenuActionKb(m, _("New circuit..."), esIconCircuit.s,
+	    AG_KEY_N, AG_KEYMOD_CTRL,
+	    ES_GUI_NewObject, "%p", &esCircuitClass);
+	AG_MenuAction(m, _("New component model..."), esIconComponent.s,
+	    ES_GUI_NewComponentModelDlg, NULL);
+	AG_MenuAction(m, _("New schematic..."), vgIconDrawing.s,
+	    ES_GUI_NewObject, "%p", &esSchemClass);
+	AG_MenuAction(m, _("New PCB layout..."), vgIconDrawing.s,
+	    ES_GUI_NewObject, "%p", &esLayoutClass);
+	AG_MenuAction(m, _("New device package..."), vgIconDrawing.s,
+	    ES_GUI_NewObject, "%p", &esPackageClass);
+	
+	AG_MenuSeparator(m);
+
+	AG_MenuActionKb(m, _("Open..."), agIconLoad.s,
+	    AG_KEY_O, AG_KEYMOD_CTRL,
+	    ES_GUI_OpenDlg, NULL);
+	AG_MenuActionKb(m, _("Save"), agIconSave.s,
+	    AG_KEY_S, AG_KEYMOD_CTRL,
+	    ES_GUI_Save, "%p", obj);
+	AG_MenuAction(m, _("Save as..."), agIconSave.s,
+	    ES_GUI_SaveAsDlg, "%p", obj);
+
+#if 0
+	node = AG_MenuNode(m, _("Devices"), NULL);
+	{
+		ES_Device *dev;
+		AG_MenuAction(node, _("Microcontroller..."), agIconDoc.s,
+		    ES_GUI_NewObject, "%p", &esMCU);
+		AG_MenuSeparator(node);
+		OBJECT_FOREACH_CLASS(dev, &esVfsRoot, es_device,
+		    "ES_Device:*") {
+			AG_MenuAction(node, OBJECT(dev)->name, agIconGear.s,
+			    EditDevice, "%p", dev);
+		}
+	}
+#endif
+
+	AG_MenuSeparator(m);
+	AG_MenuActionKb(m, _("Quit"), agIconClose.s,
+	    AG_KEY_Q, AG_KEYMOD_CTRL,
+	    ES_GUI_Quit, NULL);
+}
+
+/* Build a generic "Edit" menu. */
+void
+ES_EditMenu(AG_MenuItem *m, void *obj)
+{
+	if (obj == NULL)					/* MDI */
+		obj = objFocus;
+
+	AG_MenuActionKb(m, _("Undo"), agIconUp.s, AG_KEY_Z, AG_KEYMOD_CTRL,
+	    ES_GUI_Undo, "%p", obj);
+	AG_MenuActionKb(m, _("Redo"), agIconDown.s, AG_KEY_R, AG_KEYMOD_CTRL,
+	    ES_GUI_Redo, "%p", obj);
+	
+	AG_MenuSeparator(m);
+
+	AG_MenuAction(m, _("Select font..."), vgIconText.s,
+	    ES_GUI_SelectFontDlg, NULL);
+	AG_MenuAction(m, _("Preferences..."), agIconGear.s,
+	    ES_GUI_EditPreferences, NULL);
 }

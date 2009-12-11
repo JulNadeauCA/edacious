@@ -6,6 +6,7 @@
 #include <agar/core.h>
 #include <agar/gui.h>
 #include <agar/vg.h>
+#include <agar/dev.h>
 #include <agar/math/m.h>
 #include <agar/math/m_gui.h>
 
@@ -63,8 +64,24 @@ void	ES_SetObjectCloseHandler(void (*fn)(void *));
 int	ES_LoadModule(const char *);
 int	ES_UnloadModule(const char *);
 
+/* For GUI */
+void       ES_InitMenuMDI(void);
+void       ES_FileMenu(AG_MenuItem *, void *);
+void       ES_EditMenu(AG_MenuItem *, void *);
 AG_Window *ES_OpenObject(void *);
 void       ES_CloseObject(void *);
+void       ES_GUI_NewObject(AG_Event *);
+void       ES_GUI_LoadObject(AG_Event *);
+void       ES_GUI_CreateComponentModel(AG_Event *);
+void       ES_GUI_NewComponentModelDlg(AG_Event *);
+void       ES_GUI_OpenDlg(AG_Event *);
+void       ES_GUI_Save(AG_Event *);
+void       ES_GUI_SaveAsDlg(AG_Event *);
+void       ES_GUI_Quit(AG_Event *);
+void       ES_GUI_Undo(AG_Event *);
+void       ES_GUI_Redo(AG_Event *);
+void       ES_GUI_EditPreferences(AG_Event *);
+void       ES_GUI_SelectFontDlg(AG_Event *);
 __END_DECLS
 
 #include <edacious/core/core_close.h>

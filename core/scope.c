@@ -203,7 +203,7 @@ Edit(void *obj)
 		}
 	}
 	
-	AG_WindowSetGeometry(win, agView->w/2, 0, agView->w/2, agView->h/3);
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_TR, 60, 20);
 	return (win);
 }
 

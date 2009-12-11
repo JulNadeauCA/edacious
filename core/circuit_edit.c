@@ -53,15 +53,23 @@ ES_CircuitOpenObject(void *p)
 	return (win);
 }
 
-/* Close a circuit sub-object from edition */
+/*
+ * Close any edition window associated with a given circuit object
+ * (window "circuit-object" property).
+ */
 void
 ES_CircuitCloseObject(void *obj)
 {
+	AG_Driver *drv;
 	AG_Window *win;
 	AG_Variable *V;
-
-	VIEW_FOREACH_WINDOW(win, agView) {
-		if ((V = AG_GetVariableLocked(win,"circuit-object")) != NULL) {
+	
+	AGOBJECT_FOREACH_CHILD(drv, &agDrivers, ag_driver) {
+		AG_FOREACH_WINDOW(win, drv) {
+			if ((V = AG_GetVariableLocked(win,"circuit-object"))
+			    == NULL) {
+				continue;
+			}
 			if (V->data.p == obj) {
 				AG_ObjectDetach(win);
 			}
@@ -192,14 +200,12 @@ ShowTopology(AG_Event *event)
 static void
 ShowProperties(AG_Event *event)
 {
-	char path[AG_OBJECT_PATH_MAX];
 	AG_Window *pwin = AG_PTR(1);
 	ES_Circuit *ckt = AG_PTR(2);
 	AG_Window *win;
 	AG_Textbox *tb;
 	
-	AG_ObjectCopyName(ckt, path, sizeof(path));
-	if ((win = AG_WindowNewNamed(0, "settings-%s", path)) == NULL) {
+	if ((win = AG_WindowNew(0)) == NULL) {
 		return;
 	}
 	AG_WindowSetCaption(win, _("Circuit properties: %s"),
@@ -220,7 +226,7 @@ ShowProperties(AG_Event *event)
 
 	AG_ButtonNewFn(win, AG_BUTTON_HFILL, _("Close"), AGWINCLOSE(win));
 
-	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_BR, 30, 50);
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_BR, 30, 30);
 	AG_WindowAttach(pwin, win);
 	AG_WindowShow(win);
 }
@@ -360,7 +366,7 @@ ShowConsole(AG_Event *event)
 	AG_WidgetFocus(ckt->console);
 	AG_WindowAttach(pwin, win);
 
-	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_BL, 50, 30);
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_BL, 50, 20);
 	AG_WindowShow(win);
 }
 
@@ -485,7 +491,7 @@ ES_CircuitEdit(void *p)
 	AG_Pane *hPane, *vPane;
 	VG_View *vv;
 	AG_Menu *menu;
-	AG_MenuItem *mi, *mi2;
+	AG_MenuItem *m, *mSub;
 
 	win = AG_WindowNew(0);
 
@@ -499,67 +505,70 @@ ES_CircuitEdit(void *p)
 	VG_ViewSetScale(vv, 2);
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
-	mi = AG_MenuAddItem(menu, _("File"));
+	m = AG_MenuAddItem(menu, _("File"));
 	{
-		AG_MenuAction(mi, _("Properties..."), agIconGear.s,
+		ES_FileMenu(m, ckt);
+	}
+	m = AG_MenuAddItem(menu, _("Edit"));
+	{
+		mSub = AG_MenuNode(m, _("Snapping mode"), vgIconSnapEndpt.s);
+		VG_SnapMenu(mSub, vv);
+		AG_MenuSeparator(m);
+		ES_EditMenu(m, ckt);
+		AG_MenuAction(m, _("Circuit properties..."), agIconGear.s,
 		    ShowProperties, "%p,%p,%p", win, ckt, vv);
 	}
-	mi = AG_MenuAddItem(menu, _("Edit"));
+	m = AG_MenuAddItem(menu, _("View"));
 	{
-		mi2 = AG_MenuNode(mi, _("Snapping mode"), NULL);
-		VG_SnapMenu(mi2, vv);
-	}
-	mi = AG_MenuAddItem(menu, _("View"));
-	{
-		AG_MenuActionKb(mi, _("New view..."), esIconCircuit.s,
+		AG_MenuActionKb(m, _("New view..."), esIconCircuit.s,
 		    AG_KEY_V, AG_KEYMOD_CTRL,
 		    CreateView, "%p,%p", win, ckt);
-		AG_MenuAction(mi, _("Circuit topology..."), esIconMesh.s,
+		AG_MenuAction(m, _("Circuit topology..."), esIconMesh.s,
 		    ShowTopology, "%p,%p", win, ckt);
-		AG_MenuAction(mi, _("Log console..."), esIconConsole.s,
+		AG_MenuAction(m, _("Log console..."), esIconConsole.s,
 		    ShowConsole, "%p,%p", win, ckt);
 
-		AG_MenuSeparator(mi);
+		AG_MenuSeparator(m);
 
-		mi2 = AG_MenuNode(mi, _("Display"), esIconCircuit.s);
+		mSub = AG_MenuNode(m, _("Display"), esIconCircuit.s);
 		{
-			AG_MenuToolbar(mi2, tbTop);
-			AG_MenuFlags(mi2, _("Nodes annotations"),
+			AG_MenuToolbar(mSub, tbTop);
+			AG_MenuFlags(mSub, _("Nodes annotations"),
 			    esIconShowNodes.s,
 			    &ckt->flags, ES_CIRCUIT_SHOW_NODES, 0);
-			AG_MenuFlags(mi2, _("Node names/numbers"),
+			AG_MenuFlags(mSub, _("Node names/numbers"),
 			    esIconShowNodeNames.s,
 			    &ckt->flags, ES_CIRCUIT_SHOW_NODENAMES, 0);
-			AG_MenuToolbar(mi2, NULL);
+			AG_MenuToolbar(mSub, NULL);
 			AG_ToolbarSeparator(tbTop);
 
-			AG_MenuSeparator(mi2);
+			AG_MenuSeparator(mSub);
 
-			AG_MenuFlags(mi2, _("Grid"), vgIconSnapGrid.s,
+			AG_MenuFlags(mSub, _("Grid"), vgIconSnapGrid.s,
 			    &vv->flags, VG_VIEW_GRID, 0);
-			AG_MenuFlags(mi2, _("Construction geometry"),
+			AG_MenuFlags(mSub, _("Construction geometry"),
 			    esIconConstructionGeometry.s,
 			    &vv->flags, VG_VIEW_CONSTRUCTION, 0);
 #ifdef ES_DEBUG
-			AG_MenuFlags(mi2, _("Extents"), vgIconBlock.s,
+			AG_MenuFlags(mSub, _("Extents"), vgIconBlock.s,
 			    &vv->flags, VG_VIEW_EXTENTS, 0);
 #endif
 		}
 	}
 	
-	mi = AG_MenuAddItem(menu, _("Simulation"));
+	m = AG_MenuAddItem(menu, _("Simulation"));
 	{
 		extern const ES_SimOps *esSimOps[];
 		const ES_SimOps **pOps, *ops;
 
-		AG_MenuToolbar(mi, tbTop);
+		AG_MenuToolbar(m, tbTop);
 		for (pOps = &esSimOps[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
-			AG_MenuAction(mi, _(ops->name),
+			AG_MenuAction(m, _(ops->name),
 			    ops->icon ? ops->icon->s : NULL,
 			    SelectSimulation, "%p,%p,%p", ckt, ops, win);
 		}
-		AG_MenuToolbar(mi, NULL);
+		AG_MenuToolbar(m, NULL);
 		AG_ToolbarSeparator(tbTop);
 	}
 	
@@ -621,19 +630,19 @@ ES_CircuitEdit(void *p)
 		AG_WidgetFocus(vv);
 	}
 
-	mi = AG_MenuAddItem(menu, _("Tools"));
+	m = AG_MenuAddItem(menu, _("Tools"));
 	{
 		AG_MenuItem *mAction;
 		VG_ToolOps **pOps, *ops;
 		VG_Tool *tool;
 
-		AG_MenuToolbar(mi, tbRight);
+		AG_MenuToolbar(m, tbRight);
 	
 		/* Register Circuit-specific tools */
 		for (pOps = &esCircuitTools[0]; *pOps != NULL; pOps++) {
 			ops = *pOps;
 			tool = VG_ViewRegTool(vv, ops, ckt);
-			mAction = AG_MenuAction(mi, ops->name,
+			mAction = AG_MenuAction(m, ops->name,
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
@@ -644,7 +653,7 @@ ES_CircuitEdit(void *p)
 			}
 		}
 		
-		AG_MenuSeparator(mi);
+		AG_MenuSeparator(m);
 		
 		/* Register generic VG drawing tools */
 		for (pOps = &esVgTools[0]; *pOps != NULL; pOps++) {
@@ -653,7 +662,7 @@ ES_CircuitEdit(void *p)
 				continue;	/* Use alternate "select" */
 			}
 			tool = VG_ViewRegTool(vv, ops, ckt);
-			mAction = AG_MenuAction(mi, ops->name,
+			mAction = AG_MenuAction(m, ops->name,
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
@@ -665,17 +674,17 @@ ES_CircuitEdit(void *p)
 
 		VG_ViewButtondownFn(vv, MouseButtonDown, NULL);
 		
-		AG_MenuToolbar(mi, NULL);
+		AG_MenuToolbar(m, NULL);
 	}
 	
-	mi = AG_MenuAddItem(menu, _("Visualization"));
+	m = AG_MenuAddItem(menu, _("Visualization"));
 	{
-		AG_MenuToolbar(mi, tbTop);
-		AG_MenuAction(mi, _("New scope..."), esIconScope.s,
+		AG_MenuToolbar(m, tbTop);
+		AG_MenuAction(m, _("New scope..."), esIconScope.s,
 		    NewScope, "%p,%p", ckt, win);
-		AG_MenuToolbar(mi, NULL);
+		AG_MenuToolbar(m, NULL);
 	}
 	
-	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 60, 50);
 	return (win);
 }

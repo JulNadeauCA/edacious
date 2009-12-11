@@ -367,28 +367,31 @@ ES_ComponentMenu(ES_Component *com, VG_View *vv)
 		    DeleteSelections, "%p, %p", com->ckt, vv);
 	}
 
-	AG_PopupShow(pm);
+	AG_PopupShowAt(pm,
+	    WIDGET(vv)->drv->mouse->x,
+	    WIDGET(vv)->drv->mouse->y);
 }
 
-#if 0
+/* Create an extra VG view tied to a given parent window. */
 static void
-CreateView(AG_Event *event)
+CreateAlternateVGView(AG_Event *event)
 {
-	AG_Window *pWin = AG_PTR(1);
-	ES_Circuit *ckt = AG_PTR(2);
+	AG_Window *winParent = AG_PTR(1);
+	AG_Object *obj = AG_PTR(2);
+	VG_View *vvOrig = AG_PTR(3), *vvNew;
 	AG_Window *win;
-	VG_View *vv;
 
 	win = AG_WindowNew(0);
-	AG_WindowSetCaption(win, _("View of %s"), OBJECT(ckt)->name);
-	vv = VG_ViewNew(win, ckt->vg, VG_VIEW_EXPAND);
-	AG_WidgetFocus(vv);
-	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_TR, 60, 50);
-	AG_WindowAttach(pWin, win);
+	AG_WindowSetCaption(win, _("View of %s"), obj->name);
+
+	vvNew = VG_ViewNew(win, vvOrig->vg, VG_VIEW_EXPAND);
+	AG_WidgetFocus(vvNew);
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_TR, 50, 30);
+	AG_WindowAttach(winParent, win);
 	AG_WindowShow(win);
 }
-#endif
 
+/* Update the equivalent circuit component list. */
 static void
 FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 {
@@ -408,11 +411,9 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 	} else {
 		it = AG_TlistAddS(tl, NULL, pob->name);
 	}
-
 	it->depth = depth;
 	it->cat = "object";
 	it->p1 = pob;
-
 	if (!TAILQ_EMPTY(&pob->children)) {
 		it->flags |= AG_TLIST_HAS_CHILDREN;
 		if (pob == OBJECT(ckt))
@@ -424,7 +425,6 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 			FindObjects(tl, cob, depth+1, ckt);
 	}
 }
-
 static void
 PollObjects(AG_Event *event)
 {
@@ -438,6 +438,7 @@ PollObjects(AG_Event *event)
 	AG_TlistRestore(tl);
 }
 
+/* User has selected an equivalent circuit component. */
 static void
 SelectedObject(AG_Event *event)
 {
@@ -455,8 +456,9 @@ SelectedObject(AG_Event *event)
 	}
 }
 
+/* Click on equivalent circuit view */
 static void
-MouseButtonDown(AG_Event *event)
+CircuitMouseButtonDown(AG_Event *event)
 {
 	VG_View *vv =  AG_SELF();
 	int button = AG_INT(1);
@@ -480,7 +482,7 @@ MouseButtonDown(AG_Event *event)
 	}
 }
 
-/* Schematic selected */
+/* User has selected a schematic from the list. */
 static void
 SelectSchem(AG_Event *event)
 {
@@ -493,7 +495,7 @@ SelectSchem(AG_Event *event)
 	VG_Status(vv, _("Selected: %s"), ti->text);
 }
 
-/* Update current schematics list. */
+/* Update schematics list. */
 static void
 PollSchems(AG_Event *event)
 {
@@ -613,30 +615,19 @@ EvalRemoveButtonState(AG_Event *event)
 }
 #endif
 
-#if 0
+/* Generate the [View / Equivalent circuit] menu. */
 static void
-EditMenu(AG_Event *event)
+Menu_View_EquivalentCircuit(AG_Event *event)
 {
 	AG_MenuItem *m = AG_SENDER();
 	ES_Component *com = AG_PTR(1);
-	AG_Notebook *nb = AG_PTR(2);
-	AG_MenuItem *mSnap;
-
-	mSnap = AG_MenuNode(m, _("Snapping mode"), NULL);
-	VG_SnapMenu(mSnap, vv);
-}
-
-static void
-ViewMenu(AG_Event *event)
-{
-	AG_MenuItem *m = AG_SENDER();
-	ES_Component *com = AG_PTR(1);
-	AG_Notebook *nb = AG_PTR(2);
+	AG_Window *winParent = AG_PTR(2);
+	VG_View *vv = AG_PTR(3);
 	AG_MenuItem *mSchem;
 
-	AG_MenuActionKb(m, _("New view..."), esIconCircuit.s,
+	AG_MenuActionKb(m, _("New schematics view..."), esIconCircuit.s,
 	    AG_KEY_V, AG_KEYMOD_CTRL,
-	    CreateView, "%p,%p", win, com);
+	    CreateAlternateVGView, "%p,%p,%p", winParent, com, vv);
 
 	AG_MenuSeparator(m);
 
@@ -658,7 +649,6 @@ ViewMenu(AG_Event *event)
 		    &vv->flags, VG_VIEW_CONSTRUCTION, 0);
 	}
 }
-#endif
 
 /* Update the list of associated device packages. */
 static void
@@ -761,7 +751,9 @@ PackagePopup(AG_Event *event)
 	pm = AG_PopupNew(tl);
 	AG_MenuAction(pm->item, _("Delete"), agIconTrash.s,
 	    RemovePackage, "%p,%p", com, ti->p1);
-	AG_PopupShow(pm);
+	AG_PopupShowAt(pm,
+	    WIDGET(tl)->drv->mouse->x,
+	    WIDGET(tl)->drv->mouse->y);
 }
 
 void *
@@ -771,7 +763,8 @@ ES_ComponentEdit(void *obj)
 	ES_Circuit *ckt = obj;
 	AG_Pane *hPane;
 	AG_Window *win;
-/*	AG_Menu *menu; */
+	AG_Menu *menu;
+	AG_MenuItem *m, *mView;
 	AG_Notebook *nb;
 	AG_NotebookTab *nt;
 	VG_ToolOps **pOps, *ops;
@@ -780,15 +773,14 @@ ES_ComponentEdit(void *obj)
 	AG_Pane *vPane;
 
 	win = AG_WindowNew(0);
-	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
-
-#if 0
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
-	AG_MenuDynamicItem(menu->root, _("Edit"), NULL,
-	    EditMenu, "%p,%p", com, nb);
-	AG_MenuDynamicItem(menu->root, _("View"), NULL,
-	    ViewMenu, "%p,%p", com, nb);
-#endif
+	m = AG_MenuAddItem(menu, _("File"));
+	ES_FileMenu(m, com);
+	m = AG_MenuAddItem(menu, _("Edit"));
+	ES_EditMenu(m, com);
+	mView = AG_MenuAddItem(menu, _("View"));
+	
+	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
 
 	/*
 	 * Schematic block editor
@@ -800,7 +792,8 @@ ES_ComponentEdit(void *obj)
 		AG_Box *bCmds;
 		AG_Toolbar *tb;
 
-		vv = VG_ViewNew(NULL, NULL, VG_VIEW_EXPAND|VG_VIEW_GRID|VG_VIEW_CONSTRUCTION);
+		vv = VG_ViewNew(NULL, NULL, VG_VIEW_EXPAND|VG_VIEW_GRID|
+		                            VG_VIEW_CONSTRUCTION);
 		VG_ViewSetSnapMode(vv, VG_GRID);
 		VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 		VG_ViewSetGrid(vv, 0, VG_GRID_POINTS, 2, VG_GetColorRGB(100,100,100));
@@ -909,6 +902,10 @@ ES_ComponentEdit(void *obj)
 		VG_ViewSetSnapMode(vv, VG_GRID);
 		VG_ViewSetScale(vv, DEFAULT_CIRCUIT_SCALE);
 
+		AG_MenuDynamicItem(mView, _("Equivalent circuit"),
+		    esIconCircuit.s,
+		    Menu_View_EquivalentCircuit, "%p,%p,%p", com, win, vv);
+
 		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
 		ntab = AG_NotebookAddTab(nb, _("Library"), AG_BOX_VERT);
@@ -968,7 +965,7 @@ ES_ComponentEdit(void *obj)
 		/* Register (but hide) the special "insert component" tool. */
 		VG_ViewRegTool(vv, &esComponentInsertTool, ckt);
 
-		VG_ViewButtondownFn(vv, MouseButtonDown, NULL);
+		VG_ViewButtondownFn(vv, CircuitMouseButtonDown, NULL);
 	}
 
 	if (strcmp(OBJECT_CLASS(com)->hier, "ES_Circuit:ES_Component") != 0) {
@@ -1021,6 +1018,6 @@ ES_ComponentEdit(void *obj)
 		    AddPackage, "%p,%p,%p,%p", com, tb, tbDev, tblPins);
 	}
 
-	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 85, 85);
+	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 50, 40);
 	return (win);
 }

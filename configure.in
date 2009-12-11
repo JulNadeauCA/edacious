@@ -39,6 +39,7 @@ C_DEFINE(_USE_AGAR_STD)
 C_DEFINE(_USE_AGAR_CORE)
 C_DEFINE(_USE_AGAR_QUEUE)
 C_DEFINE(_USE_AGAR_GUI)
+C_DEFINE(_USE_AGAR_TYPES)
 
 # Import standard math functions (e.g., Sin()) provided by the
 # Agar-MATH library (without the "M_" prefix).

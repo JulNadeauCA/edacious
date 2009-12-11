@@ -2052,7 +2052,7 @@ int
 main(int argc, char *argv[])
 {
 	AG_InitCore("conf-test", 0);
-	AG_InitVideo(320, 240, 32, 0);
+	AG_InitGraphics(NULL);
 	AG_EventLoop();
 	AG_Quit();
 	return (0);
@@ -2956,6 +2956,12 @@ echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
 echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 CFLAGS="$CFLAGS -D_USE_AGAR_GUI"
 CXXFLAGS="$CXXFLAGS -D_USE_AGAR_GUI"
+echo "CFLAGS=$CFLAGS" >>Makefile.config
+echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
+echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
+echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
+CFLAGS="$CFLAGS -D_USE_AGAR_TYPES"
+CXXFLAGS="$CXXFLAGS -D_USE_AGAR_TYPES"
 echo "CFLAGS=$CFLAGS" >>Makefile.config
 echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
 echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config

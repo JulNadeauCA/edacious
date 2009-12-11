@@ -105,7 +105,7 @@ Draw(void *p, VG_View *vv)
 	    sp->port->com != NULL &&
 	    sp->port->com->ckt->flags & ES_CIRCUIT_SHOW_NODENAMES) {
 		AG_PushTextState();
-		AG_TextColorVideo32(VG_MapColorRGB(VGNODE(sp)->color));
+		AG_TextColor(VG_MapColorRGB(VGNODE(sp)->color));
 		Snprintf(text, sizeof(text), "n%d", sp->port->node);
 		VG_DrawText(vv,
 		    x+10, y+10, 180.0f,
@@ -115,7 +115,7 @@ Draw(void *p, VG_View *vv)
 	if (sp->port == NULL && sp->name[0] != '\0') {
 		AG_PushTextState();
 		AG_TextFontPct(200);
-		AG_TextColorVideo32(VG_MapColorRGB(VGNODE(sp)->color));
+		AG_TextColor(VG_MapColorRGB(VGNODE(sp)->color));
 		VG_DrawText(vv,
 		    x+6, y+6, 180.0f,
 		    sp->name);
