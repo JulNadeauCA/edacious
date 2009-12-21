@@ -200,8 +200,7 @@ ES_CoreInit(Uint flags)
 	VG_InitSubsystem();
 	M_InitSubsystem();
 
-	AG_RegisterNamespace("Edacious", "ES_",
-	    "http://edacious.hypertriton.com/");
+	AG_RegisterNamespace("Edacious", "ES_", "http://edacious.org/");
 
 	/* Register the base Agar object and VG entity classes. */
 	for (cls = &esCoreClasses[0]; *cls != NULL; cls++)

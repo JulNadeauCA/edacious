@@ -317,6 +317,7 @@ ES_VsourceVoltage(void *p, int p1, int p2)
 	return (p1 == 1 ? vs->v : -(vs->v));
 }
 
+#if 0
 static void
 PollLoops(AG_Event *event)
 {
@@ -350,22 +351,29 @@ PollLoops(AG_Event *event)
 	}
 	AG_TlistRestore(tl);
 }
+#endif
 
 static void *
 Edit(void *p)
 {
 	ES_Vsource *vs = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+	AG_Tlist *tl;
 
 	M_NumericalNewReal(box, 0, "V", _("Voltage: "), &vs->v);
 	
-	AG_SeparatorNewHoriz(box);
-
-	AG_LabelNewPolled(box, 0, _("Entry in e: %i"), &vs->vIdx);
-	AG_LabelNew(box, 0, _("Loops:"));
-	AG_TlistNewPolled(box, AG_TLIST_TREE|AG_TLIST_EXPAND,
-	    PollLoops, "%p", vs);
-	
+	if (COMCIRCUIT(vs) != NULL) {
+		AG_SeparatorNewHoriz(box);
+		AG_LabelNewPolled(box, AG_LABEL_HFILL,
+		    _("Entry in matrix: %i"), &vs->vIdx);
+#if 0
+		AG_SeparatorNewHoriz(box);
+		AG_LabelNew(box, 0, _("Voltage loops:"));
+		tl = AG_TlistNewPolled(box, AG_TLIST_TREE|AG_TLIST_EXPAND,
+		    PollLoops, "%p", vs);
+		AG_TlistSizeHint(tl, "< I(X) = 0.00000A   >", 5);
+#endif
+	}
 	return (box);
 }
 

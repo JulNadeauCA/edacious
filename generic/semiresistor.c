@@ -148,10 +148,12 @@ Edit(void *p)
 	
 	M_NumericalNewRealP(box, 0, "mohm/degC", "Tc1: ", &r->Tc1);
 	M_NumericalNewRealP(box, 0, "mohm/degC^2", "Tc2: ", &r->Tc2);
-	
-	AG_SeparatorNewHoriz(box);
 
-	AG_LabelNewPolledMT(box, 0, &OBJECT(r)->lock, "rEff: %[R]", &r->rEff);
+	if (COMCIRCUIT(r) != NULL) {
+		AG_SeparatorNewHoriz(box);
+		AG_LabelNewPolledMT(box, 0, &OBJECT(r)->lock,
+		    "rEff: %[R]", &r->rEff);
+	}
 	return (box);
 }
 

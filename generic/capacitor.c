@@ -242,8 +242,10 @@ Edit(void *p)
 	M_NumericalNewRealP(box, 0, "F", _("Capacitance: "), &c->C);
 	M_NumericalNewReal(box, 0, "V", _("Initial voltage: "), &c->V0);
 
-	AG_SeparatorNewHoriz(box);
-	AG_LabelNewPolled(box, 0, _("Entry in e: %i"), &c->vIdx);
+	if (COMCIRCUIT(c) != NULL) {
+		AG_SeparatorNewHoriz(box);
+		AG_LabelNewPolled(box, 0, _("Entry in e: %i"), &c->vIdx);
+	}
 
 	return (box);
 }

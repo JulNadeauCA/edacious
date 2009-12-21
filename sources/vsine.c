@@ -105,8 +105,10 @@ Edit(void *p)
 
 	M_NumericalNewReal(box, 0, "V", _("Peak voltage: "), &vs->vPeak);
 	M_NumericalNewRealPNZ(box, 0, "Hz", _("Frequency: "), &vs->f);
-	AG_LabelNewPolledMT(box, 0, &OBJECT(vs)->lock,
-	    _("Effective voltage: %[R]"), &VSOURCE(vs)->v);
+	if (COMCIRCUIT(vs) != NULL) {
+		AG_LabelNewPolledMT(box, 0, &OBJECT(vs)->lock,
+		    _("Effective voltage: %[R]"), &VSOURCE(vs)->v);
+	}
 	return (box);
 }
 
