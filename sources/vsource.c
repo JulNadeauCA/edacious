@@ -358,7 +358,7 @@ Edit(void *p)
 {
 	ES_Vsource *vs = p;
 	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
-	AG_Tlist *tl;
+/*	AG_Tlist *tl; */
 
 	M_NumericalNewReal(box, 0, "V", _("Voltage: "), &vs->v);
 	
