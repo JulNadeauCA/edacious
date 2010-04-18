@@ -91,21 +91,15 @@ main(int argc, char *argv[])
 		case '?':
 		default:
 			printf("Usage: %s [-vP] [-d agar-driver-spec] "
-			       "[-t font-spec] [-T font-path]", agProgName);
-			printf("\n");
-			return (0);
+			       "[-t font-spec] [-T font-path]\n", agProgName);
+			return (1);
 		}
 	}
 #endif /* HAVE_GETOPT */
 
-	if (!AG_CfgDefined("gui-width")) { AG_SetCfgUint("gui-width", 640); }
-	if (!AG_CfgDefined("gui-height")) { AG_SetCfgUint("gui-height", 480); }
-
-	/* Setup the display. */
 	if (AG_InitGraphics(driverSpec) == -1) {
 		goto fail;
 	}
-	/* AG_SetVideoResizeCallback(VideoResize); */
 	AG_BindGlobalKey(AG_KEY_ESCAPE, AG_KEYMOD_ANY, QuitByKBD);
 	AG_BindGlobalKey(AG_KEY_F8, AG_KEYMOD_ANY, AG_ViewCapture);
 
@@ -127,7 +121,6 @@ main(int argc, char *argv[])
 		if (ES_OpenObject(objNew) == NULL) {
 			goto fail;
 		}
-		AG_PostEvent(NULL, objNew, "edit-open", NULL);
 	}
 
 #ifdef HAVE_GETOPT
@@ -167,5 +160,6 @@ main(int argc, char *argv[])
 	return (0);
 fail:
 	fprintf(stderr, "%s\n", AG_GetError());
+	AG_Destroy();
 	return (1);
 }

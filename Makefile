@@ -86,3 +86,4 @@ deinstall-includes:
 .PHONY: install deinstall configure release install-includes deinstall-includes 
 
 include ${TOP}/mk/build.lib.mk
+include ${TOP}/mk/build.man.mk

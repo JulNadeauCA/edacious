@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2009 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2010 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -774,11 +774,11 @@ ES_ComponentEdit(void *obj)
 
 	win = AG_WindowNew(0);
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
-	m = AG_MenuAddItem(menu, _("File"));
+	m = AG_MenuNode(menu->root, _("File"), NULL);
 	ES_FileMenu(m, com);
-	m = AG_MenuAddItem(menu, _("Edit"));
+	m = AG_MenuNode(menu->root, _("Edit"), NULL);
 	ES_EditMenu(m, com);
-	mView = AG_MenuAddItem(menu, _("View"));
+	mView = AG_MenuNode(menu->root, _("View"), NULL);
 	
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
 
@@ -981,7 +981,7 @@ ES_ComponentEdit(void *obj)
 				AG_Widget *wEdit = OBJECT_CLASS(com)->edit(com);
 				AG_ObjectAttach(hPane->div[0], wEdit);
 			}
-			AG_LabelNewString(hPane->div[1], 0, _("Notes:"));
+			AG_LabelNewS(hPane->div[1], 0, _("Notes:"));
 			tb = AG_TextboxNewS(hPane->div[1],
 			    AG_TEXTBOX_EXPAND|AG_TEXTBOX_MULTILINE, NULL);
 		}

@@ -438,7 +438,7 @@ Start(void *p)
 	if (AG_TimeoutIsScheduled(ckt, &sim->toUpdate)) {
 		AG_DelTimeout(ckt, &sim->toUpdate);
 	}
-	AG_AddTimeout(ckt, &sim->toUpdate, sim->ticksDelay);
+	AG_ScheduleTimeout(ckt, &sim->toUpdate, sim->ticksDelay);
 	AG_UnlockTimeouts(ckt);
 
 	SIM(sim)->running = 1;

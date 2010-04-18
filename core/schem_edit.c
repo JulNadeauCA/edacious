@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2009 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2010 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -71,18 +71,18 @@ ES_SchemEdit(void *p)
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
 
-	m = AG_MenuAddItem(menu, _("File"));
+	m = AG_MenuNode(menu->root, _("File"), NULL);
 	{
 		ES_FileMenu(m, scm);
 	}
-	m = AG_MenuAddItem(menu, _("Edit"));
+	m = AG_MenuNode(menu->root, _("Edit"), NULL);
 	{
 		mSub = AG_MenuNode(m, _("Snapping mode"), NULL);
 		VG_SnapMenu(mSub, vv);
 		AG_MenuSeparator(m);
 		ES_EditMenu(m, scm);
 	}
-	m = AG_MenuAddItem(menu, _("View"));
+	m = AG_MenuNode(menu->root, _("View"), NULL);
 	{
 		AG_MenuActionKb(m, _("New view..."), esIconCircuit.s,
 		    AG_KEY_V, AG_KEYMOD_CTRL,
@@ -118,7 +118,7 @@ ES_SchemEdit(void *p)
 		AG_WidgetFocus(vv);
 	}
 
-	m = AG_MenuAddItem(menu, _("Tools"));
+	m = AG_MenuNode(menu->root, _("Tools"), NULL);
 	{
 		AG_MenuItem *mAction;
 		VG_ToolOps **pOps, *ops;

@@ -505,11 +505,11 @@ ES_CircuitEdit(void *p)
 	VG_ViewSetScale(vv, 2);
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
-	m = AG_MenuAddItem(menu, _("File"));
+	m = AG_MenuNode(menu->root, _("File"), NULL);
 	{
 		ES_FileMenu(m, ckt);
 	}
-	m = AG_MenuAddItem(menu, _("Edit"));
+	m = AG_MenuNode(menu->root, _("Edit"), NULL);
 	{
 		mSub = AG_MenuNode(m, _("Snapping mode"), vgIconSnapEndpt.s);
 		VG_SnapMenu(mSub, vv);
@@ -518,7 +518,7 @@ ES_CircuitEdit(void *p)
 		AG_MenuAction(m, _("Circuit properties..."), agIconGear.s,
 		    ShowProperties, "%p,%p,%p", win, ckt, vv);
 	}
-	m = AG_MenuAddItem(menu, _("View"));
+	m = AG_MenuNode(menu->root, _("View"), NULL);
 	{
 		AG_MenuActionKb(m, _("New view..."), esIconCircuit.s,
 		    AG_KEY_V, AG_KEYMOD_CTRL,
@@ -556,7 +556,7 @@ ES_CircuitEdit(void *p)
 		}
 	}
 	
-	m = AG_MenuAddItem(menu, _("Simulation"));
+	m = AG_MenuNode(menu->root, _("Simulation"), NULL);
 	{
 		extern const ES_SimOps *esSimOps[];
 		const ES_SimOps **pOps, *ops;
@@ -630,7 +630,7 @@ ES_CircuitEdit(void *p)
 		AG_WidgetFocus(vv);
 	}
 
-	m = AG_MenuAddItem(menu, _("Tools"));
+	m = AG_MenuNode(menu->root, _("Tools"), NULL);
 	{
 		AG_MenuItem *mAction;
 		VG_ToolOps **pOps, *ops;
@@ -677,7 +677,7 @@ ES_CircuitEdit(void *p)
 		AG_MenuToolbar(m, NULL);
 	}
 	
-	m = AG_MenuAddItem(menu, _("Visualization"));
+	m = AG_MenuNode(menu->root, _("Visualization"), NULL);
 	{
 		AG_MenuToolbar(m, tbTop);
 		AG_MenuAction(m, _("New scope..."), esIconScope.s,

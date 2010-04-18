@@ -172,7 +172,7 @@ Edit(void *p)
 
 	M_NumericalNewRealPNZ(box, 0, "ohm", _("ON resistance: "), &sw->Ron);
 	M_NumericalNewRealPNZ(box, 0, "ohm", _("OFF resistance: "), &sw->Roff);
-	AG_ButtonAct(box, AG_BUTTON_EXPAND, _("Toggle state"),
+	AG_ButtonNewFn(box, AG_BUTTON_EXPAND, _("Toggle state"),
 	    ToggleState, "%p", sw);
 	return (box);
 }

@@ -132,18 +132,18 @@ ES_LayoutEdit(void *p)
 	VG_ViewSetScale(vv, 0);
 
 	menu = AG_MenuNew(win, AG_MENU_HFILL);
-	m = AG_MenuAddItem(menu, _("File"));
+	m = AG_MenuNode(menu->root, _("File"), NULL);
 	{
 		ES_FileMenu(m, lo);
 	}
-	m = AG_MenuAddItem(menu, _("Edit"));
+	m = AG_MenuNode(menu->root, _("Edit"), NULL);
 	{
 		ES_EditMenu(m, lo);
 		AG_MenuSeparator(m);
 		mSub = AG_MenuNode(m, _("Snapping mode"), NULL);
 		VG_SnapMenu(mSub, vv);
 	}
-	m = AG_MenuAddItem(menu, _("View"));
+	m = AG_MenuNode(menu->root, _("View"), NULL);
 	{
 		AG_MenuActionKb(m, _("New view..."), esIconCircuit.s,
 		    AG_KEY_V, AG_KEYMOD_CTRL,
@@ -215,7 +215,7 @@ ES_LayoutEdit(void *p)
 		AG_WidgetFocus(vv);
 	}
 
-	m = AG_MenuAddItem(menu, _("Tools"));
+	m = AG_MenuNode(menu->root, _("Tools"), NULL);
 	{
 		AG_MenuItem *mAction;
 		VG_ToolOps **pOps, *ops;

@@ -315,6 +315,7 @@ SaveChangesDlg(AG_Event *event)
 	}
 }
 
+/* Update the objFocus pointer (only useful in MDI mode). */
 static void
 WindowGainedFocus(AG_Event *event)
 {
@@ -331,7 +332,6 @@ WindowGainedFocus(AG_Event *event)
 	}
 	AG_MutexUnlock(&objLock);
 }
-
 static void
 WindowLostFocus(AG_Event *event)
 {
@@ -379,6 +379,7 @@ ES_OpenObject(void *p)
 	AG_AddEvent(win, "window-lostfocus", WindowLostFocus, "%p", obj);
 	AG_AddEvent(win, "window-hidden", WindowLostFocus, "%p", obj);
 	AG_SetPointer(win, "object", obj);
+	AG_PostEvent(NULL, obj, "edit-open", NULL);
 
 	AG_WindowShow(win);
 	return (win);
@@ -422,7 +423,6 @@ ES_GUI_NewObject(AG_Event *event)
 	if (ES_OpenObject(obj) == NULL) {
 		goto fail;
 	}
-	AG_PostEvent(NULL, obj, "edit-open", NULL);
 	return;
 fail:
 	AG_TextError(_("Failed to create object: %s"), AG_GetError());
@@ -449,7 +449,6 @@ ES_GUI_CreateComponentModel(AG_Event *event)
 	if (ES_OpenObject(com) == NULL) {
 		goto fail;
 	}
-	AG_PostEvent(NULL, com, "edit-open", NULL);
 	AG_ObjectDetach(winParent);
 	return;
 fail:
@@ -808,7 +807,7 @@ ES_GUI_Quit(AG_Event *event)
 			AG_WindowSetPosition(win, AG_WINDOW_CENTER, 0);
 			AG_WindowSetSpacing(win, 8);
 
-			AG_LabelNewString(win, 0, _("Exit Edacious?"));
+			AG_LabelNewS(win, 0, _("Exit Edacious?"));
 			cb = AG_CheckboxNew(win, 0, _("Don't ask again"));
 			Vdisable = AG_SetInt(agConfig,"no-confirm-quit",0);
 			AG_BindInt(cb, "state", &Vdisable->data.i);
@@ -826,7 +825,7 @@ ES_GUI_Quit(AG_Event *event)
 		AG_WindowSetCaptionS(win, _("Exit application?"));
 		AG_WindowSetPosition(win, AG_WINDOW_CENTER, 0);
 		AG_WindowSetSpacing(win, 8);
-		AG_LabelNewString(win, 0,
+		AG_LabelNewS(win, 0,
 		    _("There is at least one object with unsaved changes.  "
 	              "Exit application?"));
 		box = AG_BoxNewHorizNS(win, AG_VBOX_HFILL|AG_BOX_HOMOGENOUS);
@@ -905,12 +904,15 @@ ES_GUI_SelectFontDlg(AG_Event *event)
 void
 ES_InitMenuMDI(void)
 {
-	mdiMenu = AG_MenuNewGlobal(0);
-	ES_FileMenu(AG_MenuAddItem(mdiMenu, _("File")), NULL);
-	ES_EditMenu(AG_MenuAddItem(mdiMenu, _("Edit")), NULL);
+	if ((mdiMenu = AG_MenuNewGlobal(0)) == NULL) {
+		AG_Verbose("App menu: %s\n", AG_GetError());
+		return;
+	}
+	ES_FileMenu(AG_MenuNode(mdiMenu->root, _("File"), NULL), NULL);
+	ES_EditMenu(AG_MenuNode(mdiMenu->root, _("Edit"), NULL), NULL);
 #if defined(HAVE_AGAR_DEV) && defined(ES_DEBUG)
 	DEV_InitSubsystem(0);
-	DEV_ToolMenu(AG_MenuNode(mdiMenu->root, _("Debug"), NULL));
+	DEV_ToolMenu(AG_MenuNode(mdiMenu->root, _("Debug")));
 #endif
 }
 

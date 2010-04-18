@@ -184,7 +184,7 @@ Edit(void *obj)
 			AG_Tlist *tl;
 			AG_MenuItem *m;
 
-			AG_LabelNewString(vPane->div[0], 0, _("Variables:"));
+			AG_LabelNewS(vPane->div[0], 0, _("Variables:"));
 			tl = AG_TlistNew(vPane->div[0], AG_TLIST_EXPAND|
 			                                AG_TLIST_POLL);
 			AG_TlistSizeHint(tl, "XXXXXXXXXXXXX", 2);
