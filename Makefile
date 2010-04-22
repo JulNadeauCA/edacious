@@ -8,7 +8,6 @@ SUBDIR=		core \
 		generic \
 		macro \
 		sources \
-		edacious-config \
 		gui \
 		ecminfo \
 		transient
@@ -23,8 +22,8 @@ clean: clean-subdir
 cleandir: cleandir-subdir
 depend: depend-subdir
 regress: regress-subdir
-install: install-includes install-subdir
-deinstall: deinstall-includes deinstall-subdir
+install: install-includes install-subdir install-config
+deinstall: deinstall-includes deinstall-subdir deinstall-config
 
 configure: configure.in
 	cat configure.in | mkconfigure > configure
@@ -83,7 +82,15 @@ deinstall-includes:
 		    | ${SUDO} ${SH}); \
 	fi
 
-.PHONY: install deinstall configure release install-includes deinstall-includes 
+install-config:
+	${SUDO} ${INSTALL_PROG} edacious-config "${BINDIR}"
+
+deinstall-config:
+	${SUDO} ${DEINSTALL_PROG} "${BINDIR}/edacious-config"
+
+.PHONY: install deinstall configure release
+.PHONY: install-includes deinstall-includes 
+.PHONY: install-config deinstall-config
 
 include ${TOP}/mk/build.lib.mk
 include ${TOP}/mk/build.man.mk
