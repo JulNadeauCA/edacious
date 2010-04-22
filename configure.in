@@ -1,5 +1,9 @@
 # Public domain
 
+PACKAGE("Edacious")
+VERSION("1.0-beta")
+RELEASE("Sepulchral and Frog-like")
+
 REGISTER("--enable-debug",	"General debugging [default: no]")
 REGISTER("--enable-fpdebug",	"Debug FP exceptions [default: no]")
 REGISTER("--enable-exprdebug",	"Debug expression parsing [default: no]")
@@ -7,9 +11,7 @@ REGISTER("--enable-warnings",	"Enable compiler warnings [default: no]")
 REGISTER("--enable-edition",	"Enable graphical editor [default: yes]")
 REGISTER("--enable-threads",	"Thread safety [default: check]")
 
-HDEFINE(VERSION, "1.0-beta")
 HDEFINE(EDACIOUS_VERSION, "$VERSION")
-HDEFINE(RELEASE, "UnrealSacrificeNightmare")
 
 MDEFINE(SHAREDIR, "$PREFIX/share/edacious")
 HDEFINE(SHAREDIR, "$PREFIX/share/edacious")
@@ -20,16 +22,17 @@ HDEFINE(MODULEDIR, "$PREFIX/lib/edacious")
 MDEFINE(INCLDIR, "$PREFIX/include/edacious")
 HDEFINE(INCLDIR, "$PREFIX/include/edacious")
 
-CHECK(cc)
+REQUIRE(cc)
 CHECK(sys_types)
 CHECK(getopt)
 CHECK(getpwuid)
 CHECK(getuid)
 
-CHECK(agar, 1.4.0)
-CHECK(agar-vg, 1.4.0)
-CHECK(agar-dev, 1.4.0)
-CHECK(agar-math, 1.4.0)
+# Require Agar
+REQUIRE(agar, 1.4.0)
+REQUIRE(agar-vg, 1.4.0)
+REQUIRE(agar-dev, 1.4.0)
+REQUIRE(agar-math, 1.4.0)
 
 # For internal header definitions.
 C_DEFINE(_ES_INTERNAL)
@@ -103,23 +106,6 @@ else
 	fi
 fi
 
-# Require Agar, VG and Math libraries.
-if [ "${HAVE_AGAR}" != "yes" ]; then
-	echo "This application requires the Agar library"
-	echo "(http://libagar.org/)"
-	exit 1
-fi
-if [ "${HAVE_AGAR_VG}" != "yes" ]; then
-	echo "This application requires the Agar-VG library"
-	echo "(http://libagar.org/)"
-	exit 1
-fi
-if [ "${HAVE_AGAR_MATH}" != "yes" ]; then
-	echo "This application requires the Agar-Math library"
-	echo "(http://libagar.org/)"
-	exit 1
-fi
-
 # Apply the compilation options.
 if [ "${enable_warnings}" != "no" ]; then
 	C_OPTION(-Wall)
@@ -146,9 +132,19 @@ else
 	HUNDEF(EXPR_DEBUG)
 fi
 
-# To avoid obstructing user code, we always use includes of the
-# form <edacious/foo/foo.h>.
-if [ "${with_proj_generation}" != "yes" ]; then
-	if [ ! -e "$SRC/edacious" ]; then (cd $SRC && ln -s . edacious); fi
-	if [ ! -e "edacious" ]; then ln -s . edacious; fi
-fi
+# Generate includes into ./include/edacious/.
+C_INCPREP(include,edacious)
+
+# We use both <foo.h> and <edacious/foo.h> in the sources.
+C_INCDIR($BLD/include)
+C_INCDIR($BLD/include/edacious)
+C_INCDIR_CONFIG($BLD/include/edacious/config)
+
+# Generate the "edacious-config" script.
+CONFIG_SCRIPT(edacious-config, "-I${INCLDIR} ${GETTEXT_CFLAGS}", "-L${LIBDIR} -les_core ${GETTEXT_LIBS}")
+
+echo "*"
+echo "* Configuration successful."
+echo "* Use \"make depend\" if you plan on editing the source code."
+echo "* Use \"make\" and \"make install\" to build and install Edacious."
+echo "*"
