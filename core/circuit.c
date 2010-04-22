@@ -337,6 +337,8 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		if (i != 0) {
 			name = ES_AddNode(ckt);
 			ckt->nodes[name]->flags = flags & ~(CKTNODE_EXAM);
+		} else {
+			name = 0;
 		}
 
 		Debug(ckt, "Node %u has %u branches\n", i, nBranches);
