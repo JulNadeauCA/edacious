@@ -41,10 +41,14 @@ facilitates testing on multiple machines using network filesystems.
     $ mkdir w-edacious
     $ cd w-edacious
 
-2) Run configure from the source directory with --srcdir.
+2) If configure was already executed from the source directory, make sure
+   to clean it up or the build will fail:
+    $ (cd ~/edacious-sources && make cleandir)
+
+3) Run configure from the source directory with --srcdir.
     $ ~/edacious-sources/configure --srcdir=$HOME/edacious-sources [...]
 
-3) Now build the libraries and executables as you normally would.
+4) Now build the libraries and executables as you normally would.
     $ make depend && make
     # make install
 
