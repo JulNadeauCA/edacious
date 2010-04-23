@@ -19,7 +19,7 @@ CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 
 all: all-subdir
 clean: clean-subdir
-cleandir: cleandir-subdir
+cleandir: cleandir-config cleandir-subdir
 depend: depend-subdir
 regress: regress-subdir
 install: install-includes install-subdir install-config
@@ -29,7 +29,14 @@ configure: configure.in
 	cat configure.in | mkconfigure > configure
 	chmod 755 configure
 
-release: cleandir
+cleandir-config:
+	rm -fR include config 
+	rm -f Makefile.config config.log configure.lua .projfiles.out .projfiles2.out
+	touch Makefile.config
+	find . -name premake.lua -exec rm -f {} \;
+
+release:
+	-${MAKE} cleandir
 	sh mk/dist.sh commit
 
 install-includes:
