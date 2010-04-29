@@ -15,7 +15,7 @@ ES_ComponentClass *esMacroClasses[] = {
 ES_Module esMacroModule = {
 	EDACIOUS_VERSION,
 	N_("Standard component macromodels"),
-	"http://edacious.hypertriton.com/",
+	"http://edacious.org/",
 	NULL, /* init */
 	NULL, /* destroy */
 	esMacroClasses,

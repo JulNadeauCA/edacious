@@ -17,7 +17,7 @@ ES_ComponentClass *esSourcesClasses[] = {
 ES_Module esSourcesModule = {
 	EDACIOUS_VERSION,
 	N_("Voltage and current sources"),
-	"http://edacious.hypertriton.com/",
+	"http://edacious.org/",
 	NULL, /* init */
 	NULL, /* destroy */
 	esSourcesClasses,

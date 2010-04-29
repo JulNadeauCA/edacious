@@ -23,7 +23,7 @@ ES_ComponentClass *esGenericClasses[] = {
 ES_Module esGenericModule = {
 	EDACIOUS_VERSION,
 	N_("Standard generic components"),
-	"http://edacious.hypertriton.com/",
+	"http://edacious.org/",
 	NULL, /* init */
 	NULL, /* destroy */
 	esGenericClasses,

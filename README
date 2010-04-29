@@ -9,7 +9,7 @@ command-line interfaces are provided.
 Availability
 ------------
 You can download the most recent Edacious version from the Edacious
-home page at http://edacious.hypertriton.com/.
+home page at http://edacious.org/.
 
 License
 -------
@@ -20,8 +20,8 @@ Portability
 Thanks to Agar, Edacious is portable to many different platforms,
 including FreeBSD, IRIX, Linux, MacOS Classic, MacOS X, NetBSD,
 OpenBSD and Windows. For the list of official ports, see:
-http://edacious.hypertriton.com/portable.html.
+http://edacious.org/portable.html.
 
 Acknowledgements
 ----------------
-See: http://edacious.hypertriton.com/credits.html
+See: http://edacious.org/credits.html
