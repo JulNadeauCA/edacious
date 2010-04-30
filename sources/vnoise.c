@@ -53,7 +53,12 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 		AG_SetError("%s: %s", vn->srcPath, strerror(errno));
 		return (-1);
 	}
-	fread(vn->buf, vn->bufSize, 1, vn->srcFd);
+	if (fread(vn->buf, vn->bufSize, 1, vn->srcFd) != 1) {
+		AG_SetError("Read error");
+		fclose(vn->srcFd);
+		vn->srcFd = NULL;
+		return (-1);
+	}
 	vn->bufPos = 0;
 	
 	VSOURCE(vn)->v = 0.0;
@@ -79,7 +84,9 @@ RefillBuffer(ES_VNoise *vn)
 	Uint32 bufNew[1024];
 	int i;
 
-	fread(bufNew, vn->bufSize, 1, vn->srcFd);
+	if (fread(bufNew, vn->bufSize, 1, vn->srcFd) != 1) {
+		ES_ComponentLog(vn, "%s: Read error", vn->srcPath);
+	}
 	for (i = 0; i < vn->bufSize/sizeof(Uint32); i++) {
 		vn->buf[i] *= bufNew[i];
 	}
