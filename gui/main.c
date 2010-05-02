@@ -42,7 +42,6 @@
 #include <unistd.h>
 
 #include <config/enable_nls.h>
-#include <config/have_getopt.h>
 #include <config/edacious_version.h>
 
 static void
@@ -57,6 +56,8 @@ main(int argc, char *argv[])
 	Uint coreFlags = ES_INIT_PRELOAD_ALL;
 	int c, i;
 	const char *driverSpec = NULL;
+	char *optArg = NULL;
+	int optInd;
 
 #ifdef ENABLE_NLS
 	bindtextdomain("edacious", LOCALEDIR);
@@ -67,10 +68,7 @@ main(int argc, char *argv[])
 		fprintf(stderr, "InitCore: %s\n", AG_GetError());
 		return (1);
 	}
-#ifdef HAVE_GETOPT
-	while ((c = getopt(argc, argv, "?vPd:t:T:")) != -1) {
-		extern char *optarg;
-
+	while ((c = AG_Getopt(argc, argv, "?vPd:t:T:", &optArg, &optInd)) != -1) {
 		switch (c) {
 		case 'v':
 			printf("Edacious %s\n", EDACIOUS_VERSION);
@@ -80,13 +78,13 @@ main(int argc, char *argv[])
 			coreFlags &= ~(ES_INIT_PRELOAD_ALL);
 			break;
 		case 'd':
-			driverSpec = optarg;
+			driverSpec = optArg;
 			break;
 		case 'T':
-			AG_SetString(agConfig, "font-path", optarg);
+			AG_SetString(agConfig, "font-path", optArg);
 			break;
 		case 't':
-			AG_TextParseFontSpec(optarg);
+			AG_TextParseFontSpec(optArg);
 			break;
 		case '?':
 		default:
@@ -95,7 +93,6 @@ main(int argc, char *argv[])
 			return (1);
 		}
 	}
-#endif /* HAVE_GETOPT */
 
 	if (AG_InitGraphics(driverSpec) == -1) {
 		goto fail;
@@ -123,11 +120,7 @@ main(int argc, char *argv[])
 		}
 	}
 
-#ifdef HAVE_GETOPT
-	for (i = optind; i < argc; i++) {
-#else
-	for (i = 1; i < argc; i++) {
-#endif
+	for (i = optInd; i < argc; i++) {
 		AG_Event ev;
 		char *ext;
 
@@ -155,7 +148,6 @@ main(int argc, char *argv[])
 	}
 
 	AG_EventLoop();
-	AG_ObjectDestroy(&esVfsRoot);
 	AG_Destroy();
 	return (0);
 fail:
