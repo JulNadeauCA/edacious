@@ -4,12 +4,14 @@ PACKAGE("Edacious")
 VERSION("1.0-beta")
 RELEASE("Sepulchral and Frog-like")
 
-REGISTER("--enable-debug",	"General debugging [default: no]")
-REGISTER("--enable-fpdebug",	"Debug FP exceptions [default: no]")
-REGISTER("--enable-exprdebug",	"Debug expression parsing [default: no]")
-REGISTER("--enable-warnings",	"Enable compiler warnings [default: no]")
-REGISTER("--enable-edition",	"Enable graphical editor [default: yes]")
-REGISTER("--enable-threads",	"Thread safety [default: check]")
+REGISTER("--enable-debug",		"General debugging [default: no]")
+REGISTER("--enable-fpdebug",		"Debug FP exceptions [default: no]")
+REGISTER("--enable-exprdebug",		"Debug expression parsing [default: no]")
+REGISTER("--enable-warnings",		"Enable compiler warnings [default: no]")
+REGISTER("--enable-edition",		"Enable graphical editor [default: yes]")
+REGISTER("--enable-threads",		"Enable multithreading [default: auto]")
+REGISTER("--with-pthreads[=PREFIX]",	"Specify libpthreads location [default: auto]")
+REGISTER("--with-agar[=PREFIX]", 	"Specify Agar location [default: auto]")
 
 HDEFINE(EDACIOUS_VERSION, "$VERSION")
 
@@ -29,10 +31,10 @@ CHECK(getpwuid)
 CHECK(getuid)
 
 # Require Agar
-REQUIRE(agar, 1.4.0)
-REQUIRE(agar-vg, 1.4.0)
-REQUIRE(agar-dev, 1.4.0)
-REQUIRE(agar-math, 1.4.0)
+REQUIRE(agar, 1.4.0, ${prefix_agar})
+REQUIRE(agar-vg, 1.4.0, ${prefix_agar})
+REQUIRE(agar-dev, 1.4.0, ${prefix_agar})
+REQUIRE(agar-math, 1.4.0, ${prefix_agar})
 
 # For internal header definitions.
 C_DEFINE(_ES_INTERNAL)
@@ -59,7 +61,7 @@ C_NO_SECURE_WARNINGS();
 # Enable threads support if POSIX threads are available.
 # XXX TODO: Check for threads support in installed Agar!
 if [ "${enable_threads}" != "no" ]; then
-	CHECK(pthreads)
+	CHECK(pthreads, 0, ${prefix_pthreads})
 	if [ "${HAVE_PTHREADS}" = "yes" ];
 	then
 		if [ "${HAVE_PTHREADS_XOPEN}" = "no" ]; then
