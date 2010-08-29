@@ -134,10 +134,8 @@ else
 	HUNDEF(EXPR_DEBUG)
 fi
 
-# Generate includes into ./include/edacious/.
-C_INCPREP(include,edacious)
-
-# We use both <foo.h> and <edacious/foo.h> in the sources.
+# Set up configure script output.
+C_INCPREP($BLD/include/edacious)
 C_INCDIR($BLD/include)
 C_INCDIR($BLD/include/edacious)
 C_INCDIR_CONFIG($BLD/include/edacious/config)
