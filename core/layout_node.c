@@ -30,7 +30,6 @@
 
 #include "core.h"
 #include <agar/gui/primitive.h>
-#include <agar/gui/opengl.h>
 #include <agar/core/limits.h>
 
 ES_LayoutNode *
