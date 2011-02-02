@@ -178,8 +178,7 @@ Edit(void *obj)
 		ptr = M_PlotterNew(hPane->div[1], M_PLOTTER_EXPAND);
 		scope->plotter = ptr;
 
-		vPane = AG_PaneNewVert(hPane->div[0],
-		    AG_PANE_EXPAND|AG_PANE_DIV|AG_PANE_FORCE_DIV);
+		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
 		{
 			AG_Tlist *tl;
 			AG_MenuItem *m;
