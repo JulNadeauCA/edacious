@@ -5,6 +5,7 @@ LIBDIR=		${MODULEDIR}
 LIB=		macro
 LIB_INSTALL=	Yes
 LIB_SHARED=	Yes
+LIB_MODULE=	Yes
 LIB_GUID=	"2ae2fd4c-0377-4bc3-aac5-3db97644fc6d"
 LIB_LINKS=	es_core ag_gui ag_core_static \
 		pthreads SDL opengl freetype

@@ -1,4 +1,4 @@
-# Generic make include for the command-line utilities.
+# Generic make include for all Edacious binaries.
 # ex:syn=make
 
 include ${TOP}/Makefile.config
@@ -9,9 +9,10 @@ PROG_LINKS=	es_core ag_math ag_core ag_gui ag_vg \
 
 all: ${PROG}
 
-CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
-LIBS=	-L${TOP}/core/.libs -les_core \
-	${AGAR_MATH_LIBS} ${AGAR_DEV_LIBS} ${AGAR_VG_LIBS} ${AGAR_LIBS}
+CFLAGS+=-I${INCLDIR} \
+	${AGAR_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_MATH_CFLAGS} ${AGAR_VG_CFLAGS}
+LIBS+=	-L${TOP}/core/.libs -les_core \
+	${AGAR_VG_LIBS} ${AGAR_MATH_LIBS} ${AGAR_DEV_LIBS} ${AGAR_LIBS}
 
 include ${TOP}/mk/build.prog.mk
 include ${TOP}/mk/build.man.mk

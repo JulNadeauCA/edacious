@@ -5,15 +5,17 @@ PROJECT=	"edacious"
 PROJINCLUDES=	configure.lua
 
 SUBDIR=		core \
-		generic \
-		macro \
-		sources \
 		gui \
 		ecminfo \
-		transient
+		transient \
+		generic \
+		macro \
+		sources
 
-INCPUB=		core generic macro sources
-INCDIRS=	core generic macro sources
+INCDIR=		core \
+		generic \
+		macro \
+		sources
 
 CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
 
@@ -42,37 +44,14 @@ release:
 install-includes:
 	${SUDO} ${INSTALL_INCL_DIR} ${INCLDIR}
 	${SUDO} ${INSTALL_INCL_DIR} ${INCLDIR}/edacious
-	@if [ "${SRC}" != "" ]; then \
-		(cd ${SRC} && for DIR in ${INCDIRS}; do \
-		    echo "mk/install-includes.sh $$DIR"; \
-		    ${SUDO} env \
-		        INSTALL_INCL_DIR="${INSTALL_INCL_DIR}" \
-		        INSTALL_INCL="${INSTALL_INCL}" \
-		        ${SH} mk/install-includes.sh $$DIR \
-			${INCLDIR}/edacious; \
-		done); \
-		echo "mk/install-includes.sh config"; \
-		${SUDO} env \
-		    INSTALL_INCL_DIR="${INSTALL_INCL_DIR}" \
-		    INSTALL_INCL="${INSTALL_INCL}" \
-		    ${SH} mk/install-includes.sh config ${INCLDIR}/edacious; \
-		(cd ${SRC} && for INC in ${INCPUB}; do \
-		    ${SUDO} ${INSTALL_INCL} ${SRC}/$$INC/$$INC.h \
-		        ${INCLDIR}/edacious/$$INC.h; \
-		done); \
-	else \
-		for DIR in ${INCDIRS} config; do \
-		    echo "mk/install-includes.sh $$DIR"; \
-		    ${SUDO} env \
-		    INSTALL_INCL_DIR="${INSTALL_INCL_DIR}" \
-		    INSTALL_INCL="${INSTALL_INCL}" \
-		    ${SH} mk/install-includes.sh $$DIR ${INCLDIR}/edacious; \
-		done; \
-		(for INC in ${INCPUB}; do \
-		    ${SUDO} ${INSTALL_INCL} $$INC/$$INC.h \
-		        ${INCLDIR}/edacious/$$INC.h; \
-		done); \
-	fi
+	@(cd include/edacious && for DIR in ${INCDIR} config; do \
+	    echo "mk/install-includes.sh $$DIR ${INCLDIR}/edacious"; \
+	    ${SUDO} env \
+	      INSTALL_INCL_DIR="${INSTALL_INCL_DIR}" \
+	      INSTALL_INCL="${INSTALL_INCL}" \
+	      ${SH} ${SRCDIR}/mk/install-includes.sh \
+	        $$DIR ${DESTDIR}${INCLDIR}/edacious; \
+	done)
 
 deinstall-includes:
 	${FIND} . -type f -name '*.h' -print \
@@ -99,5 +78,5 @@ deinstall-config:
 .PHONY: install-includes deinstall-includes 
 .PHONY: install-config deinstall-config
 
-include ${TOP}/mk/build.lib.mk
-include ${TOP}/mk/build.man.mk
+include ${TOP}/mk/build.subdir.mk
+include ${TOP}/mk/build.common.mk
