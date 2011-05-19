@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2006-2010 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -179,6 +179,8 @@ Edit(void *obj)
 		scope->plotter = ptr;
 
 		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
+		AG_PaneMoveDividerPct(vPane, 50);
+		AG_PaneResizeAction(vPane, AG_PANE_DIVIDE_EVEN);
 		{
 			AG_Tlist *tl;
 			AG_MenuItem *m;

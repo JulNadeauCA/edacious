@@ -573,6 +573,8 @@ ES_CircuitEdit(void *p)
 	}
 	
 	hPane = AG_PaneNewHoriz(win, AG_PANE_EXPAND);
+	AG_PaneMoveDividerPct(hPane, 30);
+	AG_PaneResizeAction(hPane, AG_PANE_EXPAND_DIV2);
 	{
 		AG_Notebook *nb;
 		AG_NotebookTab *nt;

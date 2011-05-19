@@ -367,9 +367,7 @@ ES_ComponentMenu(ES_Component *com, VG_View *vv)
 		    DeleteSelections, "%p, %p", com->ckt, vv);
 	}
 
-	AG_PopupShowAt(pm,
-	    WIDGET(vv)->drv->mouse->x,
-	    WIDGET(vv)->drv->mouse->y);
+	AG_PopupShow(pm);
 }
 
 /* Create an extra VG view tied to a given parent window. */
@@ -751,9 +749,7 @@ PackagePopup(AG_Event *event)
 	pm = AG_PopupNew(tl);
 	AG_MenuAction(pm->item, _("Delete"), agIconTrash.s,
 	    RemovePackage, "%p,%p", com, ti->p1);
-	AG_PopupShowAt(pm,
-	    WIDGET(tl)->drv->mouse->x,
-	    WIDGET(tl)->drv->mouse->y);
+	AG_PopupShow(pm);
 }
 
 void *
