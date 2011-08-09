@@ -14,3 +14,8 @@
 #  undef __END_DECLS
 # endif
 #endif /* !_ES_INTERNAL */
+
+#ifdef _ES_DEFINED_DECLSPEC
+# undef _ES_DEFINED_DECLSPEC
+# undef DECLSPEC
+#endif
