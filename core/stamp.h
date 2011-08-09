@@ -48,15 +48,16 @@
 #define GetElemI(k) ((k) == 0 ? &esDummy : M_VecGetElement(dc->z, (k)))
 #define GetElemV(k) GetElemI(k+SIM(dc)->ckt->n)
 
-__BEGIN_DECLS
-
-/* A dummy variable that will contain all stamps relating to the ground. */
-extern M_Real esDummy;
 typedef M_Real *StampConductanceData[4];
 typedef M_Real *StampCurrentSourceData[2];
 typedef M_Real *StampVCCSData[4];
 typedef M_Real *StampVoltageSourceData[5];
 typedef M_Real *StampTheveninData[6];
+
+__BEGIN_DECLS
+
+/* A dummy variable that will contain all stamps relating to the ground. */
+extern M_Real esDummy;
 
 /*
  * Conductance
