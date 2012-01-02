@@ -208,8 +208,8 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 		break;
 	case AG_MOUSE_MIDDLE:
 		if (t->floatingCom != NULL) {
+			AG_KeyMod mod = AG_GetModState(vv);
 			VG_Node *vn;
-			AG_KeyMod mod = AG_GetModState(WIDGET(vv)->drv->kbd);
 
 			TAILQ_FOREACH(vn, &t->floatingCom->schemEnts, user) {
 				if (mod & AG_KEYMOD_CTRL) {

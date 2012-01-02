@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2009-2012 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -128,8 +128,8 @@ MouseButtonDown(void *p, VG_Vector vPos, int button)
 		break;
 	case AG_MOUSE_MIDDLE:
 		if (t->floatingPkg != NULL) {
+			AG_KeyMod mod = AG_GetModState(vv);
 			VG_Node *vn;
-			AG_KeyMod mod = AG_GetModState(WIDGET(vv)->drv->kbd);
 
 			TAILQ_FOREACH(vn, &t->floatingPkg->layoutEnts, user) {
 				if (mod & AG_KEYMOD_CTRL) {
