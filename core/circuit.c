@@ -320,7 +320,6 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 			AG_ObjectDestroy(com);
 			return (-1);
 		}
-		OBJECT(com)->flags |= AG_OBJECT_RESIDENT;
 		AG_ObjectAttach(ckt, com);
 		TAILQ_INSERT_TAIL(&ckt->components, com, components);
 		com->flags |= ES_COMPONENT_CONNECTED;
