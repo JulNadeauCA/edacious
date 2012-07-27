@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2001-2009 Hypertriton, Inc. <http://hypertriton.com/>
+# Copyright (c) 2001-2012 Hypertriton, Inc. <http://hypertriton.com/>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,8 @@ GMONOUT?=	gmon.out
 WINRES?=
 
 CC?=		cc
+OBJC?=		cc
+CXX?=		c++
 ASM?=		nasm
 LEX?=		lex
 YACC?=		yacc
@@ -39,7 +41,7 @@ WINDRES?=
 CFLAGS?=	-O2 -g
 CPPFLAGS?=
 CXXFLAGS?=
-OBJCFLAGS?=	${CFLAGS}
+OBJCFLAGS?=
 ASMFLAGS?=	-g -w-orphan-labels
 LFLAGS?=
 LIBL?=		-ll
@@ -49,8 +51,13 @@ PROG_INSTALL?=	Yes
 PROG_TYPE?=	"CLI"
 PROG_GUID?=
 
+# Compat (DATADIR was formerly called SHAREDIR)
 SHARE?=none
 SHARESRC?=none
+SHAREDIR=${DATADIR}
+
+DATAFILES?=${SHARE}
+DATAFILES_SRC?=${SHARESRC}
 SRCS?=none
 OBJS?=none
 POBJS?=none
@@ -89,11 +96,11 @@ depend: depend-subdir
 .cpp.po:
 	${CXX} -pg -DPROF ${CXXFLAGS} ${CPPFLAGS} -o $@ -c $<
 
-# Compile C+Objective-C code into an object file
+# Compile Objective-C code into an object file
 .m.o:
-	${CC} ${OBJCFLAGS} ${CPPFLAGS} -o $@ -c $<
+	${OBJC} ${CFLAGS} ${OBJCFLAGS} ${CPPFLAGS} -o $@ -c $<
 .m.po:
-	${CC} -pg -DPROF ${OBJCFLAGS} ${CPPFLAGS} -o $@ -c $<
+	${OBJC} -pg -DPROF ${CFLAGS} ${OBJCFLAGS} ${CPPFLAGS} -o $@ -c $<
 
 # Compile assembly code into an object file
 .asm.o:
@@ -308,31 +315,31 @@ install-prog:
 	    echo "${INSTALL_PROG} ${PROG}${EXECSUFFIX} ${BINDIR}"; \
 	    ${SUDO} ${INSTALL_PROG} ${PROG}${EXECSUFFIX} ${DESTDIR}${BINDIR}; \
 	fi
-	@if [ "${SHARE}" != "none" ]; then \
-            if [ ! -d "${DESTDIR}${SHAREDIR}" ]; then \
-                echo "${INSTALL_DATA_DIR} ${SHAREDIR}"; \
-                ${SUDO} ${INSTALL_DATA_DIR} ${DESTDIR}${SHAREDIR}; \
+	@if [ "${DATAFILES}" != "none" ]; then \
+            if [ ! -d "${DESTDIR}${DATADIR}" ]; then \
+                echo "${INSTALL_DATA_DIR} ${DATADIR}"; \
+                ${SUDO} ${INSTALL_DATA_DIR} ${DESTDIR}${DATADIR}; \
             fi; \
-            for F in ${SHARE}; do \
-                echo "${INSTALL_DATA} $$F ${SHAREDIR}"; \
-                ${SUDO} ${INSTALL_DATA} $$F ${DESTDIR}${SHAREDIR}; \
+            for F in ${DATAFILES}; do \
+                echo "${INSTALL_DATA} $$F ${DATADIR}"; \
+                ${SUDO} ${INSTALL_DATA} $$F ${DESTDIR}${DATADIR}; \
             done; \
 	fi
-	@if [ "${SHARESRC}" != "none" ]; then \
-            if [ ! -d "${DESTDIR}${SHAREDIR}" ]; then \
-                echo "${INSTALL_DATA_DIR} ${SHAREDIR}"; \
-                ${SUDO} ${INSTALL_DATA_DIR} ${DESTDIR}${SHAREDIR}; \
+	@if [ "${DATAFILES_SRC}" != "none" ]; then \
+            if [ ! -d "${DESTDIR}${DATADIR}" ]; then \
+                echo "${INSTALL_DATA_DIR} ${DATADIR}"; \
+                ${SUDO} ${INSTALL_DATA_DIR} ${DESTDIR}${DATADIR}; \
             fi; \
 	    if [ "${SRC}" != "" ]; then \
-                for F in ${SHARESRC}; do \
-                    echo "${INSTALL_DATA} $$F ${SHAREDIR}"; \
+                for F in ${DATAFILES_SRC}; do \
+                    echo "${INSTALL_DATA} $$F ${DATADIR}"; \
                     ${SUDO} ${INSTALL_DATA} ${SRC}/${BUILDREL}/$$F \
-		    ${DESTDIR}${SHAREDIR}; \
+		    ${DESTDIR}${DATADIR}; \
                 done; \
 	    else \
-                for F in ${SHARESRC}; do \
-                    echo "${INSTALL_DATA} $$F ${SHAREDIR}"; \
-                    ${SUDO} ${INSTALL_DATA} $$F ${DESTDIR}${SHAREDIR}; \
+                for F in ${DATAFILES_SRC}; do \
+                    echo "${INSTALL_DATA} $$F ${DATADIR}"; \
+                    ${SUDO} ${INSTALL_DATA} $$F ${DESTDIR}${DATADIR}; \
                 done; \
 	    fi; \
 	fi
@@ -367,10 +374,16 @@ deinstall-prog:
 	    echo "${DEINSTALL_PROG} ${BINDIR}/${PROG}${EXECSUFFIX}"; \
 	    ${SUDO} ${DEINSTALL_PROG} ${DESTDIR}${BINDIR}/${PROG}${EXECSUFFIX}; \
 	fi
-	@if [ "${SHARE}" != "none" ]; then \
-	    for F in ${SHARE}; do \
-	        echo "${DEINSTALL_DATA} ${SHAREDIR}/$$F"; \
-	        ${SUDO} ${DEINSTALL_DATA} ${DESTDIR}${SHAREDIR}/$$F; \
+	@if [ "${DATAFILES}" != "none" ]; then \
+	    for F in ${DATAFILES}; do \
+	        echo "${DEINSTALL_DATA} ${DATADIR}/$$F"; \
+	        ${SUDO} ${DEINSTALL_DATA} ${DESTDIR}${DATADIR}/$$F; \
+	    done; \
+	fi
+	@if [ "${DATAFILES_SRC}" != "none" ]; then \
+	    for F in ${DATAFILES_SRC}; do \
+	        echo "${DEINSTALL_DATA} ${DATADIR}/$$F"; \
+	        ${SUDO} ${DEINSTALL_DATA} ${DESTDIR}${DATADIR}/$$F; \
 	    done; \
 	fi
 	@if [ "${CONF}" != "none" ]; then \

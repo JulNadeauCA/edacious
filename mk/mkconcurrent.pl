@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright (c) 2003-2007 Hypertriton, Inc. <http://hypertriton.com/>
+# Copyright (c) 2003-2012 Hypertriton, Inc. <http://hypertriton.com/>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -47,27 +47,28 @@ $BUILD = '';
 	'^cmpfiles\.pl$',
 	'^cleanfiles\.pl$',
 	'^gen-includes\.pl$',
+	'^gen-includelinks\.pl$',
 	'^gen-declspecs\.pl$',
 	'^install-manpages\.sh$',
 );
+my %V = ();
 
 sub Debug
 {
 	print STDERR @_, "\n";
 }
 
-sub ConvertMakefile
+# Return a Makefile's contents, with lines expanded and variables substituted.
+sub ProcessedMakefile ($$)
 {
-	my ($dir, $ndir, $ent) = @_;
+	my $path = shift;
+	my $dir = shift;
 
-	open(SRCMAKEFILE, "$dir/$ent") ||
-	    die "src: $dir/$ent: $!";
-	open(DSTMAKEFILE, ">$BUILD/$ndir/$ent") ||
-	    die "dest: $BUILD/$ndir/$ent: $!";
-
+	if (!open(MF, $path)) {
+		return ();
+	}
 	my @lines = ();
-	my $line = '';
-	foreach $_ (<SRCMAKEFILE>) {
+	foreach $_ (<MF>) {
 		chop;
 
 		if (/^(.+)\\$/) {			# Expansion
@@ -80,6 +81,54 @@ sub ConvertMakefile
 				push @lines, $_;
 			}
 		}
+	}
+	foreach $_ (@lines) {
+		if (/^\s*#/) { next; }
+		if (/^\t/) { next; }
+		s/\$\{(\w+)\}/$V{$1}/g;
+		if (/^\s*(\w+)\s*=\s*"(.+)"$/ ||
+		    /^\s*(\w+)\s*=\s*(.+)$/) {
+			$V{$1} = $2;
+		} elsif (/^\s*(\w+)\s*\+=\s*"(.+)"$/ ||
+		         /^\s*(\w+)\s*\+=\s*(.+)$/) {
+			if (exists($V{$1}) && $V{$1} ne '') {
+				$V{$1} .= ' '.$2;
+			} else {
+				$V{$1} = $2;
+			}
+		}
+		if (/^\s*include\s+(.+)$/) {
+			my $incl = $1;
+			if ($incl =~ /Makefile\.config$/) {
+				# Special case: configure-generated file
+				ProcessedMakefile($BUILD.'/'.$dir.'/'.$incl, $BUILD);
+			} else {
+				ProcessedMakefile($dir.'/'.$incl, $dir);
+			}
+		}
+	}
+	close(MF);
+
+#	if (open(FOUT, ">>processed.txt")) {
+#		print FOUT "======================= $path (in $dir) ====================================\n";
+#		print FOUT join("\n", @lines), "\n";
+#		close(FOUT);
+#	}
+	return (@lines);
+}
+
+sub ConvertMakefile
+{
+	my ($dir, $ndir, $ent) = @_;
+	my @lines;
+
+	open(DSTMAKEFILE, ">$BUILD/$ndir/$ent") ||
+	    die "dest: $BUILD/$ndir/$ent: $!";
+
+	%V = ();
+	@lines = ProcessedMakefile($dir.'/'.$ent, $dir);
+	unless (@lines) {
+		return;
 	}
 
 	print DSTMAKEFILE << "EOF";
@@ -179,14 +228,14 @@ EOF
 						push @deps,
 						    "$shobj: $SRC/$ndir/$src";
 						push @deps, << 'EOF';
-	${LIBTOOL} --mode=compile ${CC} ${LIBTOOLFLAGS} ${OBJCFLAGS} ${CPPFLAGS} -c $<
+	${LIBTOOL} --mode=compile ${OBJC} ${LIBTOOLFLAGS} ${CFLAGS} ${OBJCFLAGS} ${CPPFLAGS} -c $<
 
 EOF
 					} else {
 						push @deps,
 						    "$obj: $SRC/$ndir/$src";
 						push @deps, << 'EOF',
-	${CC} ${OBJCFLAGS} ${CPPFLAGS} -c $<
+	${CC} ${CFLAGS} ${OBJCFLAGS} ${CPPFLAGS} -c $<
 
 EOF
 					}
@@ -200,7 +249,7 @@ EOF
 	@(cat $< | \
 	  sed 's,\$$SYSCONFDIR,${SYSCONFDIR},' | \
 	  sed 's,\$$PREFIX,${PREFIX},' | \
-	  sed 's,\$$SHAREDIR,${SHAREDIR},' | \
+	  sed 's,\$$DATADIR,${DATADIR},' | \
 	  ${NROFF} -Tascii -mandoc > $@) || (rm -f $@; true)
 
 EOF
@@ -213,7 +262,7 @@ EOF
 	@(cat $< | \
 	  sed 's,\$$SYSCONFDIR,${SYSCONFDIR},' | \
 	  sed 's,\$$PREFIX,${PREFIX},' | \
-	  sed 's,\$$SHAREDIR,${SHAREDIR},' | \
+	  sed 's,\$$DATADIR,${DATADIR},' | \
 	  ${NROFF} -Tps -mandoc > $@) || (rm -f $@; true)
 
 EOF
@@ -289,7 +338,6 @@ EOF
 	}
 
 	close(DSTMAKEFILE);
-	close(SRCMAKEFILE);
 
 	# Prevent make from complaining.
 	open(DSTDEPEND, ">$BUILD/$ndir/.depend") or

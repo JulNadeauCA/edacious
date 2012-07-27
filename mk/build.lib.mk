@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2001-2011 Hypertriton, Inc. <http://hypertriton.com/>
+# Copyright (c) 2001-2012 Hypertriton, Inc. <http://hypertriton.com/>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,8 @@ LIB?=
 WINRES?=
 
 CC?=		cc
+OBJC?=		cc
+CXX?=		c++
 ASM?=		nasm
 LEX?=		lex
 YACC?=		yacc
@@ -40,7 +42,7 @@ RANLIB?=	ranlib
 CFLAGS?=
 CPPFLAGS?=
 CXXFLAGS?=
-OBJCFLAGS?=	${CFLAGS}
+OBJCFLAGS?=
 ASMFLAGS?=	-g -w-orphan-labels
 LFLAGS?=
 LIBL?=		-ll
@@ -65,10 +67,16 @@ LTCONFIG_LOG?=	./config.log
 LIBTOOLFLAGS?=
 LIBTOOLOPTS?=	--quiet
 LIBTOOLOPTS_CC?=
+LIBTOOLOPTS_OBJC?=
 LIBTOOLOPTS_CXX?=
 
+# Compat (DATADIR was formerly called SHAREDIR)
 SHARE?=none
 SHARESRC?=none
+SHAREDIR=${DATADIR}
+
+DATAFILES?=${SHARE}
+DATAFILES_SRC?=${SHARESRC}
 SRCS?=none
 OBJS?=none
 SHOBJS?=none
@@ -103,12 +111,12 @@ depend: depend-subdir
 
 # Compile Objective-C code into an object file
 .m.o:
-	${CC} ${OBJCFLAGS} ${CPPFLAGS} -o $@ -c $<
+	${OBJC} ${CFLAGS} ${OBJCFLAGS} ${CPPFLAGS} -o $@ -c $<
 .m.lo: ${LIBTOOL}
-	${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=compile \
-	    ${CC} ${LIBTOOLFLAGS} ${OBJCFLAGS} ${CPPFLAGS} -o $@ -c $<
+	${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_OBJC} --mode=compile \
+	    ${OBJC} ${LIBTOOLFLAGS} ${CFLAGS} ${OBJCFLAGS} ${CPPFLAGS} -o $@ -c $<
 .m.po:
-	${CC} -pg -DPROF ${OBJCFLAGS} ${CPPFLAGS} -o $@ -c $<
+	${OBJC} -pg -DPROF ${CFLAGS} ${OBJCFLAGS} ${CPPFLAGS} -o $@ -c $<
 
 # Compile C++ code into an object file
 .cc.o:
@@ -244,27 +252,27 @@ lib${LIB}.la: _lib_shobjs ${SHOBJS}
                 done; \
 	    	if [ "${LIB_SHARED}" = "Yes" ]; then \
 	    	    if [ "${LIB_MODULE}" = "Yes" ]; then \
-	                echo "${LIBTOOL} ${LIBTOOLOPTS} --mode=link \
+	                echo "${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=link \
 			    ${CC} -o lib${LIB}.la \
 			    -module \
 		            -rpath ${PREFIX}/lib \
 	                    -version-info ${LIB_MAJOR}:${LIB_MINOR}:0 \
 		            ${LDFLAGS} $$_shobjs \
 		            ${LIBS} ${LIB_XOBJS}"; \
-	                ${LIBTOOL} ${LIBTOOLOPTS} --mode=link \
+	                ${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=link \
 			    ${CC} -o lib${LIB}.la -module \
 		            -rpath ${PREFIX}/lib \
 		            -version-info ${LIB_MAJOR}:${LIB_MINOR}:0 \
 		            ${LDFLAGS} $$_shobjs \
 			    ${LIBS} ${LIB_XOBJS}; \
 		    else \
-	                echo "${LIBTOOL} ${LIBTOOLOPTS} --mode=link \
+	                echo "${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=link \
 			    ${CC} -o lib${LIB}.la \
 		            -rpath ${PREFIX}/lib \
 	                    -version-info ${LIB_MAJOR}:${LIB_MINOR}:0 \
 		            ${LDFLAGS} $$_shobjs \
 		            ${LIBS} ${LIB_XOBJS}"; \
-	                ${LIBTOOL} ${LIBTOOLOPTS} --mode=link \
+	                ${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=link \
 			    ${CC} -o lib${LIB}.la \
 		            -rpath ${PREFIX}/lib \
 		            -version-info ${LIB_MAJOR}:${LIB_MINOR}:0 \
@@ -272,43 +280,43 @@ lib${LIB}.la: _lib_shobjs ${SHOBJS}
 			    ${LIBS} ${LIB_XOBJS}; \
 		    fi; \
 		else \
-	            echo "${LIBTOOL} ${LIBTOOLOPTS} --mode=link \
+	            echo "${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=link \
 		        ${CC} -o lib${LIB}.la -static ${LDFLAGS} $$_shobjs \
 		        ${LIBS} ${LIB_XOBJS}"; \
-	            ${LIBTOOL} ${LIBTOOLOPTS} --mode=link \
+	            ${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=link \
 		        ${CC} -o lib${LIB}.la -static ${LDFLAGS} $$_shobjs \
 			${LIBS} ${LIB_XOBJS}; \
 		fi; \
 	    else \
 	    	if [ "${LIB_SHARED}" = "Yes" ]; then \
 	    	    if [ "${LIB_MODULE}" = "Yes" ]; then \
-	                echo "${LIBTOOL} ${LIBTOOLOPTS} --mode=link \
+	                echo "${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=link \
 			    ${CC} -o lib${LIB}.la -module -rpath ${PREFIX}/lib \
 	                    -version-info ${LIB_MAJOR}:${LIB_MINOR}:0 \
 		            ${LDFLAGS} ${SHOBJS} \
 		            ${LIBS} ${LIB_XOBJS}"; \
-	                ${LIBTOOL} ${LIBTOOLOPTS} --mode=link \
+	                ${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=link \
 			    ${CC} -o lib${LIB}.la -module -rpath ${PREFIX}/lib \
 		            -version-info ${LIB_MAJOR}:${LIB_MINOR}:0 \
 		            ${LDFLAGS} ${SHOBJS} \
 			    ${LIBS} ${LIB_XOBJS}; \
 		    else \
-	                echo "${LIBTOOL} ${LIBTOOLOPTS} --mode=link \
+	                echo "${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=link \
 			    ${CC} -o lib${LIB}.la -rpath ${PREFIX}/lib \
 	                    -version-info ${LIB_MAJOR}:${LIB_MINOR}:0 \
 		            ${LDFLAGS} ${SHOBJS} \
 		            ${LIBS} ${LIB_XOBJS}"; \
-	                ${LIBTOOL} ${LIBTOOLOPTS} --mode=link \
+	                ${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=link \
 			    ${CC} -o lib${LIB}.la -rpath ${PREFIX}/lib \
 		            -version-info ${LIB_MAJOR}:${LIB_MINOR}:0 \
 		            ${LDFLAGS} ${SHOBJS} \
 			    ${LIBS} ${LIB_XOBJS}; \
 		    fi; \
 	        else \
-	            echo "${LIBTOOL} ${LIBTOOLOPTS} --mode=link \
+	            echo "${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=link \
 		        ${CC} -o lib${LIB}.la -static ${LDFLAGS} ${SHOBJS} \
 		        ${LIBS} ${LIB_XOBJS}"; \
-	            ${LIBTOOL} ${LIBTOOLOPTS} --mode=link \
+	            ${LIBTOOL} ${LIBTOOLOPTS} ${LIBTOOLOPTS_CC} --mode=link \
 		        ${CC} -o lib${LIB}.la -static ${LDFLAGS} ${SHOBJS} \
 			${LIBS} ${LIB_XOBJS}; \
 		fi; \
@@ -415,31 +423,31 @@ install-lib: ${LIBTOOL_COOKIE}
 	        ${SUDO} ${INSTALL_LIB} lib${LIB}.a ${DESTDIR}${LIBDIR}; \
 	    fi; \
 	fi
-	@if [ "${SHARE}" != "none" ]; then \
-            if [ ! -d "${DESTDIR}${SHAREDIR}" ]; then \
-                echo "${INSTALL_DATA_DIR} ${SHAREDIR}"; \
-                ${SUDO} ${INSTALL_DATA_DIR} ${DESTDIR}${SHAREDIR}; \
+	@if [ "${DATAFILES}" != "none" ]; then \
+            if [ ! -d "${DESTDIR}${DATADIR}" ]; then \
+                echo "${INSTALL_DATA_DIR} ${DIR}"; \
+                ${SUDO} ${INSTALL_DATA_DIR} ${DESTDIR}${DATADIR}; \
             fi; \
-            for F in ${SHARE}; do \
-                echo "${INSTALL_DATA} $$F ${SHAREDIR}"; \
-                ${SUDO} ${INSTALL_DATA} $$F ${DESTDIR}${SHAREDIR}; \
+            for F in ${DATAFILES}; do \
+                echo "${INSTALL_DATA} $$F ${DATADIR}"; \
+                ${SUDO} ${INSTALL_DATA} $$F ${DESTDIR}${DATADIR}; \
             done; \
 	fi
-	@if [ "${SHARESRC}" != "none" ]; then \
-            if [ ! -d "${DESTDIR}${SHAREDIR}" ]; then \
-                echo "${INSTALL_DATA_DIR} ${SHAREDIR}"; \
-                ${SUDO} ${INSTALL_DATA_DIR} ${DESTDIR}${SHAREDIR}; \
+	@if [ "${DATAFILES_SRC}" != "none" ]; then \
+            if [ ! -d "${DESTDIR}${DATADIR}" ]; then \
+                echo "${INSTALL_DATA_DIR} ${DATADIR}"; \
+                ${SUDO} ${INSTALL_DATA_DIR} ${DESTDIR}${DATADIR}; \
             fi; \
 	    if [ "${SRC}" != "" ]; then \
-                for F in ${SHARESRC}; do \
-                    echo "${INSTALL_DATA} $$F ${SHAREDIR}"; \
+                for F in ${DATAFILES_SRC}; do \
+                    echo "${INSTALL_DATA} $$F ${DATADIR}"; \
                     ${SUDO} ${INSTALL_DATA} ${SRC}/${BUILDREL}/$$F \
-		    ${DESTDIR}${SHAREDIR}; \
+		    ${DESTDIR}${DATADIR}; \
                 done; \
 	    else \
-                for F in ${SHARESRC}; do \
-                    echo "${INSTALL_DATA} $$F ${SHAREDIR}"; \
-                    ${SUDO} ${INSTALL_DATA} $$F ${DESTDIR}${SHAREDIR}; \
+                for F in ${DATAFILES_SRC}; do \
+                    echo "${INSTALL_DATA} $$F ${DATADIR}"; \
+                    ${SUDO} ${INSTALL_DATA} $$F ${DESTDIR}${DATADIR}; \
                 done; \
 	    fi; \
 	fi
@@ -481,16 +489,16 @@ deinstall-lib: ${LIBTOOL_COOKIE}
 	        ${SUDO} ${DEINSTALL_LIB} ${DESTDIR}${LIBDIR}/lib${LIB}.a; \
 	    fi; \
 	fi
-	@if [ "${SHARE}" != "none" ]; then \
-	    for F in ${SHARE}; do \
-	        echo "${DEINSTALL_DATA} ${SHAREDIR}/$$F"; \
-	        ${SUDO} ${DEINSTALL_DATA} ${DESTDIR}${SHAREDIR}/$$F; \
+	@if [ "${DATAFILES}" != "none" ]; then \
+	    for F in ${DATAFILES}; do \
+	        echo "${DEINSTALL_DATA} ${DATADIR}/$$F"; \
+	        ${SUDO} ${DEINSTALL_DATA} ${DESTDIR}${DATADIR}/$$F; \
 	    done; \
 	fi
-	@if [ "${SHARESRC}" != "none" ]; then \
-	    for F in ${SHARESRC}; do \
-	        echo "${DEINSTALL_DATA} ${SHAREDIR}/$$F"; \
-	        ${SUDO} ${DEINSTALL_DATA} ${DESTDIR}${SHAREDIR}/$$F; \
+	@if [ "${DATAFILES_SRC}" != "none" ]; then \
+	    for F in ${DATAFILES_SRC}; do \
+	        echo "${DEINSTALL_DATA} ${DATADIR}/$$F"; \
+	        ${SUDO} ${DEINSTALL_DATA} ${DESTDIR}${DATADIR}/$$F; \
 	    done; \
 	fi
 	@if [ "${CONF}" != "none" ]; then \
@@ -516,8 +524,8 @@ ${LIBTOOL_COOKIE}: ${LTCONFIG} ${LTMAIN_SH} ${LTCONFIG_GUESS} ${LTCONFIG_SUB}
 	@if [ "${LIB}" != "" -a "${USE_LIBTOOL}" = "Yes" \
 	      -a "${LIBTOOL_BUNDLED}" = "yes" ]; then \
 	    echo "${SH} ${LTCONFIG} ${LTMAIN_SH} ${HOST}"; \
-	    env CC="${CC}" CXX="${CXX}" \
-	        CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" \
+	    env CC="${CC}" OBJC="${OBJC}" CXX="${CXX}" \
+	        CFLAGS="${CFLAGS}" OBJCFLAGS="${OBJCFLAGS}" CXXFLAGS="${CXXFLAGS}" \
 		${SH} ${LTCONFIG} ${LTMAIN_SH} ${HOST}; \
 	    if [ $? != 0 ]; then \
 	    	echo "${LTCONFIG} failed"; \
