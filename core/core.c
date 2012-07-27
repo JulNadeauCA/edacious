@@ -663,14 +663,13 @@ ES_GUI_SaveAsDlg(AG_Event *event)
 	AG_Object *obj = AG_PTR(1);
 	AG_Window *win;
 	AG_FileDlg *fd;
-	AG_FileType *ft;
 
 	if (obj == NULL) {
 		AG_TextError(_("No document is selected for saving."));
 		return;
 	}
 
-	AG_CopyCfgString("save-path", defDir, sizeof(defDir));
+	AG_GetString(agConfig, "save-path", defDir, sizeof(defDir));
 
 	win = AG_WindowNew(0);
 	AG_WindowSetCaption(win, _("Save %s as..."), obj->name);
@@ -689,7 +688,7 @@ ES_GUI_SaveAsDlg(AG_Event *event)
 		AG_FileDlgAddType(fd, _("Edacious circuit model"),
 		    "*.ecm",
 		    SaveNativeObject, "%p", obj);
-		ft = AG_FileDlgAddType(fd, _("SPICE3 netlist"),
+		AG_FileDlgAddType(fd, _("SPICE3 netlist"),
 		    "*.cir",
 		    SaveCircuitToSPICE3, "%p", obj);
 		AG_FileDlgAddType(fd, _("Text file"),
@@ -839,8 +838,8 @@ ES_GUI_Quit(AG_Event *event)
 static void
 VideoResize(Uint w, Uint h)
 {
-	AG_SetCfgUint("gui-width", w);
-	AG_SetCfgUint("gui-height", h);
+	AG_SetUint(agConfig,"gui-width", w);
+	AG_SetUint(agConfig,"gui-height", h);
 	(void)AG_ConfigSave();
 }
 #endif
@@ -870,9 +869,9 @@ SelectedFont(AG_Event *event)
 {
 	AG_Window *win = AG_PTR(1);
 
-	AG_SetCfgString("font.face", "%s", OBJECT(agDefaultFont)->name);
-	AG_SetCfgInt("font.size", agDefaultFont->size);
-	AG_SetCfgUint("font.flags", agDefaultFont->flags);
+	AG_SetString(agConfig, "font.face", OBJECT(agDefaultFont)->name);
+	AG_SetInt(agConfig, "font.size", agDefaultFont->size);
+	AG_SetUint(agConfig, "font.flags", agDefaultFont->flags);
 	(void)AG_ConfigSave();
 
 	AG_TextWarning("default-font-changed",
