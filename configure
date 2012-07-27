@@ -8,7 +8,7 @@
 #
 #     $ cat configure.in | mkconfigure > configure
 #
-# Copyright (c) 2001-2011 Hypertriton, Inc. <http://hypertriton.com/>
+# Copyright (c) 2001-2012 Hypertriton, Inc. <http://hypertriton.com/>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -75,11 +75,17 @@ do
 	--libdir=*)
 	    libdir=$optarg
 	    ;;
+	--moduledir=*)
+	    moduledir=$optarg
+	    ;;
+	--libexecdir=*)
+	    libexecdir=$optarg
+	    ;;
 	--datadir=*)
 	    datadir=$optarg
 	    ;;
-	--sharedir=*)
-	    datadir=$optarg
+	--statedir=* | --localstatedir=*)
+	    statedir=$optarg
 	    ;;
 	--localedir=*)
 	    localedir=$optarg
@@ -87,8 +93,7 @@ do
 	--mandir=*)
 	    mandir=$optarg
 	    ;;
-	--infodir=*)
-	    infodir=$optarg
+	--infodir=* | --datarootdir=* | --docdir=* | --htmldir=* | --dvidir=* | --pdfdir=* | --psdir=* | --sharedstatedir=* | --sbindir=*)
 	    ;;
 	--enable-*)
 	    option=`echo $arg | sed -e 's/--enable-//' -e 's/=.*//'`
@@ -201,12 +206,7 @@ if [ "${srcdir}" != "" ]; then
 		echo "*"
 		exit 1
 	fi
-	echo "* Separate build (source in ${srcdir})"
 	SRC=${srcdir}
-	${PERL} ${SRC}/mk/mkconcurrent.pl ${SRC}
-	if [ $? != 0 ]; then
-		exit 1;
-	fi
 else
 	SRC=`pwd`
 fi
@@ -353,24 +353,25 @@ echo ""
 echo "Usage: ./configure [options]"
 echo ""
 echo "Standard build options:"
-echo "    --bindir=DIR              Executables (for common users) [PREFIX/bin]"
+echo "    --bindir=DIR              Executables for common users [PREFIX/bin]"
 echo "    --build=STRING            Host environment for build [auto-detect]"
+echo "    --byte-order=STRING       Byte order for build (LE|BE) [auto-detect]"
 echo "    --cache=DIR               Cache ./configure results in directory [none]"
-echo "    --datadir=DIR             Data files (for programs) [PREFIX/share]"
+echo "    --datadir=DIR|NONE        Data files for program use [PREFIX/share]"
 echo "    --enable-nls              Multi-language support [no]"
-echo "    --exec-prefix=DIR         Installation base (MD files) [PREFIX]"
+echo "    --exec-prefix=DIR         Machine-dependent installation base [PREFIX]"
 echo "    --host=STRING             Cross-compile for target environment [BUILD]"
 echo "    --includes=STRING         Preprocess C headers (yes|no|link) [yes]"
-echo "    --infodir=DIR             Texinfo documentation [SHAREDIR/info]"
 echo "    --libdir=DIR              System libraries [PREFIX/lib]"
-echo "    --libexecdir=DIR          Executables (for programs) [PREFIX/libexec]"
-echo "    --localedir=DIR           Multi-language support locales [SHAREDIR/locale]"
+echo "    --libexecdir=DIR          Executables for program use [PREFIX/libexec]"
+echo "    --localedir=DIR           Multi-language support locales [DATADIR/locale]"
 echo "    --mandir=DIR              Manual page documentation [PREFIX/man]"
-echo "    --prefix=DIR              Installation base (MI files) [/usr/local]"
-echo "    --sbindir=DIR             Executables (for administrator) [PREFIX/sbin]"
+echo "    --moduledir=DIR|NONE      Dynamically loaded modules [PREFIX/lib]"
+echo "    --prefix=DIR              Installation base [/usr/local]"
 echo "    --srcdir=DIR              Source directory for concurrent build [.]"
-echo "    --sysconfdir=DIR          System configuration files [PREFIX/etc]"
-echo "    --testdir=DIR             Execute ./configure tests in directory [.]"
+echo "    --statedir=DIR|NONE       Modifiable single-machine data [PREFIX/var]"
+echo "    --sysconfdir=DIR|NONE     System configuration files [PREFIX/etc]"
+echo "    --testdir=DIR             Execute all tests in this directory [.]"
 echo "    --with-catman             Install cat files for manual pages [auto-detect]"
 echo "    --with-ctags              Generate ctags(1) tag files [no]"
 echo "    --with-docs               Generate printable documentation [no]"
@@ -378,13 +379,13 @@ echo "    --with-gettext            Use gettext for multi-language [auto-detect]
 echo "    --with-libtool            Specify path to libtool [auto-detect]"
 echo "    --with-manlinks           Add manual entries for every function [no]"
 echo "    --with-manpages           Generate Unix manual pages [yes]"
+echo ""
+echo "Edacious specific options:"
 echo "    --enable-debug            General debugging [default: no]"
 echo "    --enable-fpdebug          Debug FP exceptions [default: no]"
 echo "    --enable-exprdebug        Debug expression parsing [default: no]"
 echo "    --enable-warnings         Enable compiler warnings [default: no]"
 echo "    --enable-edition          Enable graphical editor [default: yes]"
-echo "    --enable-threads          Enable multithreading [default: auto]"
-echo "    --with-pthreads[=PREFIX]  Specify libpthreads location [default: auto]"
 echo "    --with-agar[=PREFIX]      Specify Agar location [default: auto]"
 exit 1
 fi;
@@ -527,10 +528,6 @@ HAVE_GETTEXT="no"
 echo "#undef ENABLE_NLS" >$BLD/include/edacious/config/enable_nls.h
 echo "hdefs[\"ENABLE_NLS\"] = nil" >>configure.lua
 fi;
-echo "ENABLE_NLS=$ENABLE_NLS" >>Makefile.config
-echo "mdefs[\"ENABLE_NLS\"] = \"$ENABLE_NLS\"" >>configure.lua
-echo "HAVE_GETTEXT=$HAVE_GETTEXT" >>Makefile.config
-echo "mdefs[\"HAVE_GETTEXT\"] = \"$HAVE_GETTEXT\"" >>configure.lua
 CTAGS=""
 if [ "${with_ctags}" = "yes" ]; then
 	for path in `echo $PATH | sed 's/:/ /g'`; do
@@ -553,6 +550,10 @@ if [ "${prefix_libtool}" != "" ]; then
 else
 	LIBTOOL=""
 	for path in `echo $PATH | sed 's/:/ /g'`; do
+		if [ -x "${path}/glibtool" ]; then
+			LIBTOOL="${path}/glibtool"
+			break
+		fi
 		if [ -x "${path}/libtool" ]; then
 			LIBTOOL="${path}/libtool"
 			break
@@ -562,7 +563,12 @@ else
 		LIBTOOL_BUNDLED="yes"
 		LIBTOOL=\${TOP}/mk/libtool/libtool
 	else
-		LIBTOOL_BUNDLED="no"
+		if [ "`libtool --version 2>/dev/null |grep GNU`" = "" ]; then
+			LIBTOOL_BUNDLED="yes"
+			LIBTOOL=\${TOP}/mk/libtool/libtool
+		else
+			LIBTOOL_BUNDLED="no"
+		fi
 	fi
 fi
 echo "LIBTOOL_BUNDLED=${LIBTOOL_BUNDLED}" >> Makefile.config
@@ -572,80 +578,9 @@ echo "#ifndef PREFIX" > $BLD/include/edacious/config/prefix.h
 echo "#define PREFIX \"$PREFIX\"" >> $BLD/include/edacious/config/prefix.h
 echo "#endif" >> $BLD/include/edacious/config/prefix.h
 echo "hdefs[\"PREFIX\"] = \"$PREFIX\"" >>configure.lua
-if [ "${localedir}" != "" ]; then
-	LOCALEDIR="${localedir}"
-else
-	LOCALEDIR="${SHAREDIR}/locale"
-fi
-echo "#ifndef LOCALEDIR" > $BLD/include/edacious/config/localedir.h
-echo "#define LOCALEDIR \"$LOCALEDIR\"" >> $BLD/include/edacious/config/localedir.h
-echo "#endif" >> $BLD/include/edacious/config/localedir.h
-echo "hdefs[\"LOCALEDIR\"] = \"$LOCALEDIR\"" >>configure.lua
-if [ "${mandir}" != "" ]; then
-	MANDIR="${mandir}"
-else
-	MANDIR="${PREFIX}/man"
-fi
-echo "#ifndef MANDIR" > $BLD/include/edacious/config/mandir.h
-echo "#define MANDIR \"$MANDIR\"" >> $BLD/include/edacious/config/mandir.h
-echo "#endif" >> $BLD/include/edacious/config/mandir.h
-echo "hdefs[\"MANDIR\"] = \"$MANDIR\"" >>configure.lua
-if [ "${sharedir}" != "" ]; then
-	SHAREDIR="${sharedir}"
-else
-	SHAREDIR="${PREFIX}/share"
-fi
-echo "#ifndef SHAREDIR" > $BLD/include/edacious/config/sharedir.h
-echo "#define SHAREDIR \"$SHAREDIR\"" >> $BLD/include/edacious/config/sharedir.h
-echo "#endif" >> $BLD/include/edacious/config/sharedir.h
-echo "hdefs[\"SHAREDIR\"] = \"$SHAREDIR\"" >>configure.lua
-if [ "${datadir}" != "" ]; then
-	DATADIR="${datadir}"
-else
-	DATADIR="${PREFIX}/share"
-fi
-echo "#ifndef DATADIR" > $BLD/include/edacious/config/datadir.h
-echo "#define DATADIR \"$DATADIR\"" >> $BLD/include/edacious/config/datadir.h
-echo "#endif" >> $BLD/include/edacious/config/datadir.h
-echo "hdefs[\"DATADIR\"] = \"$DATADIR\"" >>configure.lua
-if [ "${libdir}" != "" ]; then
-	LIBDIR="${libdir}"
-else
-	LIBDIR="${PREFIX}/lib"
-fi
-echo "#ifndef LIBDIR" > $BLD/include/edacious/config/libdir.h
-echo "#define LIBDIR \"$LIBDIR\"" >> $BLD/include/edacious/config/libdir.h
-echo "#endif" >> $BLD/include/edacious/config/libdir.h
-echo "hdefs[\"LIBDIR\"] = \"$LIBDIR\"" >>configure.lua
-if [ "${sbindir}" != "" ]; then
-	SBINDIR="${sbindir}"
-else
-	SBINDIR="${PREFIX}/sbin"
-fi
-echo "#ifndef SBINDIR" > $BLD/include/edacious/config/sbindir.h
-echo "#define SBINDIR \"$SBINDIR\"" >> $BLD/include/edacious/config/sbindir.h
-echo "#endif" >> $BLD/include/edacious/config/sbindir.h
-echo "hdefs[\"SBINDIR\"] = \"$SBINDIR\"" >>configure.lua
-if [ "${infodir}" != "" ]; then
-	INFODIR="${infodir}"
-else
-	INFODIR="${SHAREDIR}/info"
-fi
-echo "#ifndef INFODIR" > $BLD/include/edacious/config/infodir.h
-echo "#define INFODIR \"$INFODIR\"" >> $BLD/include/edacious/config/infodir.h
-echo "#endif" >> $BLD/include/edacious/config/infodir.h
-echo "hdefs[\"INFODIR\"] = \"$INFODIR\"" >>configure.lua
-if [ "${sysconfdir}" != "" ]; then
-	SYSCONFDIR="${sysconfdir}"
-else
-	SYSCONFDIR="${PREFIX}/etc"
-fi
-echo "#ifndef SYSCONFDIR" > $BLD/include/edacious/config/sysconfdir.h
-echo "#define SYSCONFDIR \"$SYSCONFDIR\"" >> $BLD/include/edacious/config/sysconfdir.h
-echo "#endif" >> $BLD/include/edacious/config/sysconfdir.h
-echo "hdefs[\"SYSCONFDIR\"] = \"$SYSCONFDIR\"" >>configure.lua
 if [ "${bindir}" != "" ]; then
 	BINDIR="${bindir}"
+	BINDIR_SPECIFIED="yes"
 else
 	BINDIR="${PREFIX}/bin"
 fi
@@ -653,8 +588,29 @@ echo "#ifndef BINDIR" > $BLD/include/edacious/config/bindir.h
 echo "#define BINDIR \"$BINDIR\"" >> $BLD/include/edacious/config/bindir.h
 echo "#endif" >> $BLD/include/edacious/config/bindir.h
 echo "hdefs[\"BINDIR\"] = \"$BINDIR\"" >>configure.lua
+if [ "${libdir}" != "" ]; then
+	LIBDIR="${libdir}"
+	LIBDIR_SPECIFIED="yes"
+else
+	LIBDIR="${PREFIX}/lib"
+fi
+echo "#ifndef LIBDIR" > $BLD/include/edacious/config/libdir.h
+echo "#define LIBDIR \"$LIBDIR\"" >> $BLD/include/edacious/config/libdir.h
+echo "#endif" >> $BLD/include/edacious/config/libdir.h
+echo "hdefs[\"LIBDIR\"] = \"$LIBDIR\"" >>configure.lua
+if [ "${moduledir}" != "" ]; then
+	MODULEDIR="${moduledir}"
+	MODULEDIR_SPECIFIED="yes"
+else
+	MODULEDIR="${PREFIX}/lib"
+fi
+echo "#ifndef MODULEDIR" > $BLD/include/edacious/config/moduledir.h
+echo "#define MODULEDIR \"$MODULEDIR\"" >> $BLD/include/edacious/config/moduledir.h
+echo "#endif" >> $BLD/include/edacious/config/moduledir.h
+echo "hdefs[\"MODULEDIR\"] = \"$MODULEDIR\"" >>configure.lua
 if [ "${libexecdir}" != "" ]; then
 	LIBEXECDIR="${libexecdir}"
+	LIBEXECDIR_SPECIFIED="yes"
 else
 	LIBEXECDIR="${PREFIX}/libexec"
 fi
@@ -662,32 +618,67 @@ echo "#ifndef LIBEXECDIR" > $BLD/include/edacious/config/libexecdir.h
 echo "#define LIBEXECDIR \"$LIBEXECDIR\"" >> $BLD/include/edacious/config/libexecdir.h
 echo "#endif" >> $BLD/include/edacious/config/libexecdir.h
 echo "hdefs[\"LIBEXECDIR\"] = \"$LIBEXECDIR\"" >>configure.lua
-if [ "${localstatedir}" != "" ]; then
-	LOCALSTATEDIR="${localstatedir}"
+if [ "${datadir}" != "" ]; then
+	DATADIR="${datadir}"
+	DATADIR_SPECIFIED="yes"
 else
-	LOCALSTATEDIR="${PREFIX}/var"
+	DATADIR="${PREFIX}/share"
 fi
-echo "#ifndef LOCALSTATEDIR" > $BLD/include/edacious/config/localstatedir.h
-echo "#define LOCALSTATEDIR \"$LOCALSTATEDIR\"" >> $BLD/include/edacious/config/localstatedir.h
-echo "#endif" >> $BLD/include/edacious/config/localstatedir.h
-echo "hdefs[\"LOCALSTATEDIR\"] = \"$LOCALSTATEDIR\"" >>configure.lua
+echo "#ifndef DATADIR" > $BLD/include/edacious/config/datadir.h
+echo "#define DATADIR \"$DATADIR\"" >> $BLD/include/edacious/config/datadir.h
+echo "#endif" >> $BLD/include/edacious/config/datadir.h
+echo "hdefs[\"DATADIR\"] = \"$DATADIR\"" >>configure.lua
+if [ "${statedir}" != "" ]; then
+	STATEDIR="${statedir}"
+	STATEDIR_SPECIFIED="yes"
+else
+	STATEDIR="${PREFIX}/var"
+fi
+echo "#ifndef STATEDIR" > $BLD/include/edacious/config/statedir.h
+echo "#define STATEDIR \"$STATEDIR\"" >> $BLD/include/edacious/config/statedir.h
+echo "#endif" >> $BLD/include/edacious/config/statedir.h
+echo "hdefs[\"STATEDIR\"] = \"$STATEDIR\"" >>configure.lua
+if [ "${sysconfdir}" != "" ]; then
+	SYSCONFDIR="${sysconfdir}"
+	SYSCONFDIR_SPECIFIED="yes"
+else
+	SYSCONFDIR="${PREFIX}/etc"
+fi
+echo "#ifndef SYSCONFDIR" > $BLD/include/edacious/config/sysconfdir.h
+echo "#define SYSCONFDIR \"$SYSCONFDIR\"" >> $BLD/include/edacious/config/sysconfdir.h
+echo "#endif" >> $BLD/include/edacious/config/sysconfdir.h
+echo "hdefs[\"SYSCONFDIR\"] = \"$SYSCONFDIR\"" >>configure.lua
+if [ "${localedir}" != "" ]; then
+	LOCALEDIR="${localedir}"
+	LOCALEDIR_SPECIFIED="yes"
+else
+	LOCALEDIR="${DATADIR}/locale"
+fi
+echo "#ifndef LOCALEDIR" > $BLD/include/edacious/config/localedir.h
+echo "#define LOCALEDIR \"$LOCALEDIR\"" >> $BLD/include/edacious/config/localedir.h
+echo "#endif" >> $BLD/include/edacious/config/localedir.h
+echo "hdefs[\"LOCALEDIR\"] = \"$LOCALEDIR\"" >>configure.lua
+if [ "${mandir}" != "" ]; then
+	MANDIR="${mandir}"
+	MANDIR_SPECIFIED="yes"
+else
+	MANDIR="${PREFIX}/man"
+fi
+echo "#ifndef MANDIR" > $BLD/include/edacious/config/mandir.h
+echo "#define MANDIR \"$MANDIR\"" >> $BLD/include/edacious/config/mandir.h
+echo "#endif" >> $BLD/include/edacious/config/mandir.h
+echo "hdefs[\"MANDIR\"] = \"$MANDIR\"" >>configure.lua
 PACKAGE="Edacious"
-echo "PACKAGE=$PACKAGE" >>Makefile.config
-echo "mdefs[\"PACKAGE\"] = \"$PACKAGE\"" >>configure.lua
 echo "#ifndef PACKAGE" > $BLD/include/edacious/config/package.h
 echo "#define PACKAGE \"$PACKAGE\"" >> $BLD/include/edacious/config/package.h
 echo "#endif" >> $BLD/include/edacious/config/package.h
 echo "hdefs[\"PACKAGE\"] = \"$PACKAGE\"" >>configure.lua
 VERSION="1.0-beta"
-echo "VERSION=$VERSION" >>Makefile.config
-echo "mdefs[\"VERSION\"] = \"$VERSION\"" >>configure.lua
 echo "#ifndef VERSION" > $BLD/include/edacious/config/version.h
 echo "#define VERSION \"$VERSION\"" >> $BLD/include/edacious/config/version.h
 echo "#endif" >> $BLD/include/edacious/config/version.h
 echo "hdefs[\"VERSION\"] = \"$VERSION\"" >>configure.lua
 RELEASE="Sepulchral and Frog-like"
-echo "RELEASE=$RELEASE" >>Makefile.config
-echo "mdefs[\"RELEASE\"] = \"$RELEASE\"" >>configure.lua
 echo "#ifndef RELEASE" > $BLD/include/edacious/config/release.h
 echo "#define RELEASE \"$RELEASE\"" >> $BLD/include/edacious/config/release.h
 echo "#endif" >> $BLD/include/edacious/config/release.h
@@ -697,38 +688,27 @@ echo "#ifndef EDACIOUS_VERSION" > $BLD/include/edacious/config/edacious_version.
 echo "#define EDACIOUS_VERSION \"$EDACIOUS_VERSION\"" >> $BLD/include/edacious/config/edacious_version.h
 echo "#endif" >> $BLD/include/edacious/config/edacious_version.h
 echo "hdefs[\"EDACIOUS_VERSION\"] = \"$EDACIOUS_VERSION\"" >>configure.lua
-SHAREDIR="$PREFIX/share/edacious"
-echo "SHAREDIR=$SHAREDIR" >>Makefile.config
-echo "mdefs[\"SHAREDIR\"] = \"$SHAREDIR\"" >>configure.lua
-SHAREDIR="$PREFIX/share/edacious"
-echo "#ifndef SHAREDIR" > $BLD/include/edacious/config/sharedir.h
-echo "#define SHAREDIR \"$SHAREDIR\"" >> $BLD/include/edacious/config/sharedir.h
-echo "#endif" >> $BLD/include/edacious/config/sharedir.h
-echo "hdefs[\"SHAREDIR\"] = \"$SHAREDIR\"" >>configure.lua
-LIBDIR="$PREFIX/lib"
-echo "LIBDIR=$LIBDIR" >>Makefile.config
-echo "mdefs[\"LIBDIR\"] = \"$LIBDIR\"" >>configure.lua
-LIBDIR="$PREFIX/lib"
-echo "#ifndef LIBDIR" > $BLD/include/edacious/config/libdir.h
-echo "#define LIBDIR \"$LIBDIR\"" >> $BLD/include/edacious/config/libdir.h
-echo "#endif" >> $BLD/include/edacious/config/libdir.h
-echo "hdefs[\"LIBDIR\"] = \"$LIBDIR\"" >>configure.lua
-MODULEDIR="$PREFIX/lib/edacious"
-echo "MODULEDIR=$MODULEDIR" >>Makefile.config
-echo "mdefs[\"MODULEDIR\"] = \"$MODULEDIR\"" >>configure.lua
-MODULEDIR="$PREFIX/lib/edacious"
+if [ "${DATADIR_SPECIFIED}" != "yes" ]; then
+DATADIR="$PREFIX/share/edacious"
+echo "#ifndef DATADIR" > $BLD/include/edacious/config/datadir.h
+echo "#define DATADIR \"$DATADIR\"" >> $BLD/include/edacious/config/datadir.h
+echo "#endif" >> $BLD/include/edacious/config/datadir.h
+echo "hdefs[\"DATADIR\"] = \"$DATADIR\"" >>configure.lua
+fi;
+if [ "${MODULEDIR_SPECIFIED}" != "yes" ]; then
+MODULEDIR="$LIBDIR/edacious"
 echo "#ifndef MODULEDIR" > $BLD/include/edacious/config/moduledir.h
 echo "#define MODULEDIR \"$MODULEDIR\"" >> $BLD/include/edacious/config/moduledir.h
 echo "#endif" >> $BLD/include/edacious/config/moduledir.h
 echo "hdefs[\"MODULEDIR\"] = \"$MODULEDIR\"" >>configure.lua
-INCLDIR="$PREFIX/include/edacious"
-echo "INCLDIR=$INCLDIR" >>Makefile.config
-echo "mdefs[\"INCLDIR\"] = \"$INCLDIR\"" >>configure.lua
+fi;
+if [ "${INCLDIR_SPECIFIED}" != "yes" ]; then
 INCLDIR="$PREFIX/include/edacious"
 echo "#ifndef INCLDIR" > $BLD/include/edacious/config/incldir.h
 echo "#define INCLDIR \"$INCLDIR\"" >> $BLD/include/edacious/config/incldir.h
 echo "#endif" >> $BLD/include/edacious/config/incldir.h
 echo "hdefs[\"INCLDIR\"] = \"$INCLDIR\"" >>configure.lua
+fi;
 $ECHO_N "checking for a C compiler..."
 $ECHO_N "checking for a C compiler..." >> config.log
 if [ "$CC" = "" ]; then
@@ -771,8 +751,8 @@ int main(int argc, char *argv[]) { return (0); }
 EOT
 	$CC -o conftest conftest.c 2>>config.log
 	if [ $? != 0 ]; then
-	    echo "no, the test failed to compile"
-	    echo "no, the test failed to compile" >> config.log
+	    echo "no"
+	    echo "no (test failed to compile)" >> config.log
 		HAVE_CC="no"
 	else
 		echo "yes"
@@ -780,34 +760,35 @@ EOT
 		HAVE_CC="yes"
 	fi
 
-	if [ "${EXECSUFFIX}" = "" ]; then
-		EXECSUFFIX=""
-		for OUTFILE in conftest.exe conftest conftest.*; do
-			if [ -f $OUTFILE ]; then
-				case $OUTFILE in
-				*.c | *.o | *.obj | *.bb | *.bbg | *.d | *.pdb | *.tds | *.xcoff | *.dSYM | *.xSYM )
-					;;
-				*.* )
-					EXECSUFFIX=`expr "$OUTFILE" : '[^.]*\(\..*\)'`
-					break ;;
-				* )
-					break ;;
-				esac;
-		    fi
-		done
-		if [ "$EXECSUFFIX" != "" ]; then
-			echo "Detected executable suffix: $EXECSUFFIX" >> config.log
-		fi
-echo "EXECSUFFIX=$EXECSUFFIX" >>Makefile.config
-echo "mdefs[\"EXECSUFFIX\"] = \"$EXECSUFFIX\"" >>configure.lua
+	if [ "${HAVE_CC}" = "yes" ]; then
+		if [ "${EXECSUFFIX}" = "" ]; then
+			EXECSUFFIX=""
+			for OUTFILE in conftest.exe conftest conftest.*; do
+				if [ -f $OUTFILE ]; then
+					case $OUTFILE in
+					*.c | *.cc | *.m | *.o | *.obj | *.bb | *.bbg | *.d | *.pdb | *.tds | *.xcoff | *.dSYM | *.xSYM )
+						;;
+					*.* )
+						EXECSUFFIX=`expr "$OUTFILE" : '[^.]*\(\..*\)'`
+						break ;;
+					* )
+						break ;;
+					esac;
+			    fi
+			done
+			if [ "$EXECSUFFIX" != "" ]; then
+				echo "Detected executable suffix: $EXECSUFFIX" >> config.log
+			fi
 echo "#ifndef EXECSUFFIX" > $BLD/include/edacious/config/execsuffix.h
 echo "#define EXECSUFFIX \"$EXECSUFFIX\"" >> $BLD/include/edacious/config/execsuffix.h
 echo "#endif" >> $BLD/include/edacious/config/execsuffix.h
 echo "hdefs[\"EXECSUFFIX\"] = \"$EXECSUFFIX\"" >>configure.lua
+		fi
 	fi
 	rm -f conftest.c conftest$EXECSUFFIX
 	TEST_CFLAGS=""
 fi
+if [ "${HAVE_CC}" = "yes" ]; then
 $ECHO_N "checking for compiler warning options..."
 $ECHO_N "checking for compiler warning options..." >> config.log
 MK_CACHED="No"
@@ -835,8 +816,6 @@ if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
 echo "yes"
 echo "yes" >> config.log
 HAVE_CC_WARNINGS="yes"
-echo "HAVE_CC_WARNINGS=$HAVE_CC_WARNINGS" >>Makefile.config
-echo "mdefs[\"HAVE_CC_WARNINGS\"] = \"$HAVE_CC_WARNINGS\"" >>configure.lua
 echo "#ifndef HAVE_CC_WARNINGS" > $BLD/include/edacious/config/have_cc_warnings.h
 echo "#define HAVE_CC_WARNINGS \"$HAVE_CC_WARNINGS\"" >> $BLD/include/edacious/config/have_cc_warnings.h
 echo "#endif" >> $BLD/include/edacious/config/have_cc_warnings.h
@@ -845,8 +824,6 @@ else
 echo "no"
 echo "no" >> config.log
 HAVE_CC_WARNINGS="no"
-echo "HAVE_CC_WARNINGS=$HAVE_CC_WARNINGS" >>Makefile.config
-echo "mdefs[\"HAVE_CC_WARNINGS\"] = \"$HAVE_CC_WARNINGS\"" >>configure.lua
 echo "#undef HAVE_CC_WARNINGS" >$BLD/include/edacious/config/have_cc_warnings.h
 echo "hdefs[\"HAVE_CC_WARNINGS\"] = nil" >>configure.lua
 fi;
@@ -858,58 +835,6 @@ rm -f conftest.c $testdir/conftest$EXECSUFFIX
 if [ "${HAVE_CC_WARNINGS}" = "yes" ]; then
 TEST_CFLAGS="-Wall -Werror"
 fi;
-$ECHO_N "checking for gcc..."
-$ECHO_N "checking for gcc..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_GCC" ]; then
-		HAVE_GCC=`cat ${cache}/ctest-HAVE_GCC`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_GCC`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-int main(int argc, char *argv[]) {
-#if !defined(__GNUC__)
-# error "Not GCC"
-#endif
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c " >>config.log
-	$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c  2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_GCC="yes"
-echo "HAVE_GCC=$HAVE_GCC" >>Makefile.config
-echo "mdefs[\"HAVE_GCC\"] = \"$HAVE_GCC\"" >>configure.lua
-echo "#ifndef HAVE_GCC" > $BLD/include/edacious/config/have_gcc.h
-echo "#define HAVE_GCC \"$HAVE_GCC\"" >> $BLD/include/edacious/config/have_gcc.h
-echo "#endif" >> $BLD/include/edacious/config/have_gcc.h
-echo "hdefs[\"HAVE_GCC\"] = \"$HAVE_GCC\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_GCC="no"
-echo "HAVE_GCC=$HAVE_GCC" >>Makefile.config
-echo "mdefs[\"HAVE_GCC\"] = \"$HAVE_GCC\"" >>configure.lua
-echo "#undef HAVE_GCC" >$BLD/include/edacious/config/have_gcc.h
-echo "hdefs[\"HAVE_GCC\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_GCC" > ${cache}/ctest-HAVE_GCC
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_GCC
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
 $ECHO_N "checking for IEEE754 floating point..."
 $ECHO_N "checking for IEEE754 floating point..." >> config.log
 MK_CACHED="No"
@@ -944,8 +869,6 @@ if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
 echo "yes"
 echo "yes" >> config.log
 HAVE_IEEE754="yes"
-echo "HAVE_IEEE754=$HAVE_IEEE754" >>Makefile.config
-echo "mdefs[\"HAVE_IEEE754\"] = \"$HAVE_IEEE754\"" >>configure.lua
 echo "#ifndef HAVE_IEEE754" > $BLD/include/edacious/config/have_ieee754.h
 echo "#define HAVE_IEEE754 \"$HAVE_IEEE754\"" >> $BLD/include/edacious/config/have_ieee754.h
 echo "#endif" >> $BLD/include/edacious/config/have_ieee754.h
@@ -954,8 +877,6 @@ else
 echo "no"
 echo "no" >> config.log
 HAVE_IEEE754="no"
-echo "HAVE_IEEE754=$HAVE_IEEE754" >>Makefile.config
-echo "mdefs[\"HAVE_IEEE754\"] = \"$HAVE_IEEE754\"" >>configure.lua
 echo "#undef HAVE_IEEE754" >$BLD/include/edacious/config/have_ieee754.h
 echo "hdefs[\"HAVE_IEEE754\"] = nil" >>configure.lua
 fi;
@@ -964,542 +885,6 @@ if [ "${cache}" != "" ]; then
 	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_IEEE754
 fi
 rm -f conftest.c $testdir/conftest$EXECSUFFIX
-$ECHO_N "checking aligned attribute..."
-$ECHO_N "checking aligned attribute..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_ALIGNED_ATTRIBUTE" ]; then
-		HAVE_ALIGNED_ATTRIBUTE=`cat ${cache}/ctest-HAVE_ALIGNED_ATTRIBUTE`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_ALIGNED_ATTRIBUTE`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-int main(int argc, char *argv[])
-{
-	struct s1 { int x,y,z; } __attribute__ ((aligned(16)));
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS -Wall -Werror -o $testdir/conftest conftest.c" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS -Wall -Werror -o $testdir/conftest conftest.c 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_ALIGNED_ATTRIBUTE="yes"
-echo "HAVE_ALIGNED_ATTRIBUTE=$HAVE_ALIGNED_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_ALIGNED_ATTRIBUTE\"] = \"$HAVE_ALIGNED_ATTRIBUTE\"" >>configure.lua
-echo "#ifndef HAVE_ALIGNED_ATTRIBUTE" > $BLD/include/edacious/config/have_aligned_attribute.h
-echo "#define HAVE_ALIGNED_ATTRIBUTE \"$HAVE_ALIGNED_ATTRIBUTE\"" >> $BLD/include/edacious/config/have_aligned_attribute.h
-echo "#endif" >> $BLD/include/edacious/config/have_aligned_attribute.h
-echo "hdefs[\"HAVE_ALIGNED_ATTRIBUTE\"] = \"$HAVE_ALIGNED_ATTRIBUTE\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_ALIGNED_ATTRIBUTE="no"
-echo "HAVE_ALIGNED_ATTRIBUTE=$HAVE_ALIGNED_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_ALIGNED_ATTRIBUTE\"] = \"$HAVE_ALIGNED_ATTRIBUTE\"" >>configure.lua
-echo "#undef HAVE_ALIGNED_ATTRIBUTE" >$BLD/include/edacious/config/have_aligned_attribute.h
-echo "hdefs[\"HAVE_ALIGNED_ATTRIBUTE\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_ALIGNED_ATTRIBUTE" > ${cache}/ctest-HAVE_ALIGNED_ATTRIBUTE
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_ALIGNED_ATTRIBUTE
-fi
-rm -f conftest.c $testdir/conftest
-$ECHO_N "checking bounded attribute..."
-$ECHO_N "checking bounded attribute..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_BOUNDED_ATTRIBUTE" ]; then
-		HAVE_BOUNDED_ATTRIBUTE=`cat ${cache}/ctest-HAVE_BOUNDED_ATTRIBUTE`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_BOUNDED_ATTRIBUTE`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-void foo(char *, int) __attribute__ ((__bounded__(__string__,1,2)));
-void foo(char *a, int c) { }
-int main(int argc, char *argv[])
-{
-	char buf[32];
-	foo(buf, sizeof(buf));
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c " >>config.log
-	$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c  2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_BOUNDED_ATTRIBUTE="yes"
-echo "HAVE_BOUNDED_ATTRIBUTE=$HAVE_BOUNDED_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_BOUNDED_ATTRIBUTE\"] = \"$HAVE_BOUNDED_ATTRIBUTE\"" >>configure.lua
-echo "#ifndef HAVE_BOUNDED_ATTRIBUTE" > $BLD/include/edacious/config/have_bounded_attribute.h
-echo "#define HAVE_BOUNDED_ATTRIBUTE \"$HAVE_BOUNDED_ATTRIBUTE\"" >> $BLD/include/edacious/config/have_bounded_attribute.h
-echo "#endif" >> $BLD/include/edacious/config/have_bounded_attribute.h
-echo "hdefs[\"HAVE_BOUNDED_ATTRIBUTE\"] = \"$HAVE_BOUNDED_ATTRIBUTE\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_BOUNDED_ATTRIBUTE="no"
-echo "HAVE_BOUNDED_ATTRIBUTE=$HAVE_BOUNDED_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_BOUNDED_ATTRIBUTE\"] = \"$HAVE_BOUNDED_ATTRIBUTE\"" >>configure.lua
-echo "#undef HAVE_BOUNDED_ATTRIBUTE" >$BLD/include/edacious/config/have_bounded_attribute.h
-echo "hdefs[\"HAVE_BOUNDED_ATTRIBUTE\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_BOUNDED_ATTRIBUTE" > ${cache}/ctest-HAVE_BOUNDED_ATTRIBUTE
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_BOUNDED_ATTRIBUTE
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
-$ECHO_N "checking const attribute..."
-$ECHO_N "checking const attribute..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_CONST_ATTRIBUTE" ]; then
-		HAVE_CONST_ATTRIBUTE=`cat ${cache}/ctest-HAVE_CONST_ATTRIBUTE`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_CONST_ATTRIBUTE`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-int foo(int) __attribute__ ((const));
-int foo(int x) { return (x*x); }
-int main(int argc, char *argv[])
-{
-	int x = foo(1);
-	return (x);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_CONST_ATTRIBUTE="yes"
-echo "HAVE_CONST_ATTRIBUTE=$HAVE_CONST_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_CONST_ATTRIBUTE\"] = \"$HAVE_CONST_ATTRIBUTE\"" >>configure.lua
-echo "#ifndef HAVE_CONST_ATTRIBUTE" > $BLD/include/edacious/config/have_const_attribute.h
-echo "#define HAVE_CONST_ATTRIBUTE \"$HAVE_CONST_ATTRIBUTE\"" >> $BLD/include/edacious/config/have_const_attribute.h
-echo "#endif" >> $BLD/include/edacious/config/have_const_attribute.h
-echo "hdefs[\"HAVE_CONST_ATTRIBUTE\"] = \"$HAVE_CONST_ATTRIBUTE\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_CONST_ATTRIBUTE="no"
-echo "HAVE_CONST_ATTRIBUTE=$HAVE_CONST_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_CONST_ATTRIBUTE\"] = \"$HAVE_CONST_ATTRIBUTE\"" >>configure.lua
-echo "#undef HAVE_CONST_ATTRIBUTE" >$BLD/include/edacious/config/have_const_attribute.h
-echo "hdefs[\"HAVE_CONST_ATTRIBUTE\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_CONST_ATTRIBUTE" > ${cache}/ctest-HAVE_CONST_ATTRIBUTE
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_CONST_ATTRIBUTE
-fi
-rm -f conftest.c $testdir/conftest
-$ECHO_N "checking deprecated attribute..."
-$ECHO_N "checking deprecated attribute..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_DEPRECATED_ATTRIBUTE" ]; then
-		HAVE_DEPRECATED_ATTRIBUTE=`cat ${cache}/ctest-HAVE_DEPRECATED_ATTRIBUTE`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_DEPRECATED_ATTRIBUTE`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-void foo(void) __attribute__ ((deprecated));
-void foo(void) { }
-
-int main(int argc, char *argv[])
-{
-/*	foo(); */
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_DEPRECATED_ATTRIBUTE="yes"
-echo "HAVE_DEPRECATED_ATTRIBUTE=$HAVE_DEPRECATED_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_DEPRECATED_ATTRIBUTE\"] = \"$HAVE_DEPRECATED_ATTRIBUTE\"" >>configure.lua
-echo "#ifndef HAVE_DEPRECATED_ATTRIBUTE" > $BLD/include/edacious/config/have_deprecated_attribute.h
-echo "#define HAVE_DEPRECATED_ATTRIBUTE \"$HAVE_DEPRECATED_ATTRIBUTE\"" >> $BLD/include/edacious/config/have_deprecated_attribute.h
-echo "#endif" >> $BLD/include/edacious/config/have_deprecated_attribute.h
-echo "hdefs[\"HAVE_DEPRECATED_ATTRIBUTE\"] = \"$HAVE_DEPRECATED_ATTRIBUTE\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_DEPRECATED_ATTRIBUTE="no"
-echo "HAVE_DEPRECATED_ATTRIBUTE=$HAVE_DEPRECATED_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_DEPRECATED_ATTRIBUTE\"] = \"$HAVE_DEPRECATED_ATTRIBUTE\"" >>configure.lua
-echo "#undef HAVE_DEPRECATED_ATTRIBUTE" >$BLD/include/edacious/config/have_deprecated_attribute.h
-echo "hdefs[\"HAVE_DEPRECATED_ATTRIBUTE\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_DEPRECATED_ATTRIBUTE" > ${cache}/ctest-HAVE_DEPRECATED_ATTRIBUTE
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_DEPRECATED_ATTRIBUTE
-fi
-rm -f conftest.c $testdir/conftest
-$ECHO_N "checking format attribute..."
-$ECHO_N "checking format attribute..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_FORMAT_ATTRIBUTE" ]; then
-		HAVE_FORMAT_ATTRIBUTE=`cat ${cache}/ctest-HAVE_FORMAT_ATTRIBUTE`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_FORMAT_ATTRIBUTE`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <stdarg.h>
-void foo1(char *, ...)
-     __attribute__((__format__ (printf, 1, 2)));
-void foo2(char *, ...)
-     __attribute__((__format__ (__printf__, 1, 2)))
-     __attribute__((__nonnull__ (1)));
-void foo1(char *a, ...) {}
-void foo2(char *a, ...) {}
-int main(int argc, char *argv[])
-{
-	foo1("foo %s", "bar");
-	foo2("foo %d", 1);
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c " >>config.log
-	$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c  2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_FORMAT_ATTRIBUTE="yes"
-echo "HAVE_FORMAT_ATTRIBUTE=$HAVE_FORMAT_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_FORMAT_ATTRIBUTE\"] = \"$HAVE_FORMAT_ATTRIBUTE\"" >>configure.lua
-echo "#ifndef HAVE_FORMAT_ATTRIBUTE" > $BLD/include/edacious/config/have_format_attribute.h
-echo "#define HAVE_FORMAT_ATTRIBUTE \"$HAVE_FORMAT_ATTRIBUTE\"" >> $BLD/include/edacious/config/have_format_attribute.h
-echo "#endif" >> $BLD/include/edacious/config/have_format_attribute.h
-echo "hdefs[\"HAVE_FORMAT_ATTRIBUTE\"] = \"$HAVE_FORMAT_ATTRIBUTE\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_FORMAT_ATTRIBUTE="no"
-echo "HAVE_FORMAT_ATTRIBUTE=$HAVE_FORMAT_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_FORMAT_ATTRIBUTE\"] = \"$HAVE_FORMAT_ATTRIBUTE\"" >>configure.lua
-echo "#undef HAVE_FORMAT_ATTRIBUTE" >$BLD/include/edacious/config/have_format_attribute.h
-echo "hdefs[\"HAVE_FORMAT_ATTRIBUTE\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_FORMAT_ATTRIBUTE" > ${cache}/ctest-HAVE_FORMAT_ATTRIBUTE
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_FORMAT_ATTRIBUTE
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
-$ECHO_N "checking nonnull attribute..."
-$ECHO_N "checking nonnull attribute..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_NONNULL_ATTRIBUTE" ]; then
-		HAVE_NONNULL_ATTRIBUTE=`cat ${cache}/ctest-HAVE_NONNULL_ATTRIBUTE`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_NONNULL_ATTRIBUTE`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-void foo(char *) __attribute__((__nonnull__ (1)));
-void foo(char *a) { }
-int main(int argc, char *argv[])
-{
-	foo("foo");
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS -Wall -Werror -o $testdir/conftest conftest.c" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS -Wall -Werror -o $testdir/conftest conftest.c 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_NONNULL_ATTRIBUTE="yes"
-echo "HAVE_NONNULL_ATTRIBUTE=$HAVE_NONNULL_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_NONNULL_ATTRIBUTE\"] = \"$HAVE_NONNULL_ATTRIBUTE\"" >>configure.lua
-echo "#ifndef HAVE_NONNULL_ATTRIBUTE" > $BLD/include/edacious/config/have_nonnull_attribute.h
-echo "#define HAVE_NONNULL_ATTRIBUTE \"$HAVE_NONNULL_ATTRIBUTE\"" >> $BLD/include/edacious/config/have_nonnull_attribute.h
-echo "#endif" >> $BLD/include/edacious/config/have_nonnull_attribute.h
-echo "hdefs[\"HAVE_NONNULL_ATTRIBUTE\"] = \"$HAVE_NONNULL_ATTRIBUTE\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_NONNULL_ATTRIBUTE="no"
-echo "HAVE_NONNULL_ATTRIBUTE=$HAVE_NONNULL_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_NONNULL_ATTRIBUTE\"] = \"$HAVE_NONNULL_ATTRIBUTE\"" >>configure.lua
-echo "#undef HAVE_NONNULL_ATTRIBUTE" >$BLD/include/edacious/config/have_nonnull_attribute.h
-echo "hdefs[\"HAVE_NONNULL_ATTRIBUTE\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_NONNULL_ATTRIBUTE" > ${cache}/ctest-HAVE_NONNULL_ATTRIBUTE
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_NONNULL_ATTRIBUTE
-fi
-rm -f conftest.c $testdir/conftest
-$ECHO_N "checking noreturn attribute..."
-$ECHO_N "checking noreturn attribute..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_NORETURN_ATTRIBUTE" ]; then
-		HAVE_NORETURN_ATTRIBUTE=`cat ${cache}/ctest-HAVE_NORETURN_ATTRIBUTE`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_NORETURN_ATTRIBUTE`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <unistd.h>
-#include <stdlib.h>
-void foo(void) __attribute__ ((noreturn));
-void foo(void) { _exit(0); }
-int main(int argc, char *argv[])
-{
-	foo();
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_NORETURN_ATTRIBUTE="yes"
-echo "HAVE_NORETURN_ATTRIBUTE=$HAVE_NORETURN_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_NORETURN_ATTRIBUTE\"] = \"$HAVE_NORETURN_ATTRIBUTE\"" >>configure.lua
-echo "#ifndef HAVE_NORETURN_ATTRIBUTE" > $BLD/include/edacious/config/have_noreturn_attribute.h
-echo "#define HAVE_NORETURN_ATTRIBUTE \"$HAVE_NORETURN_ATTRIBUTE\"" >> $BLD/include/edacious/config/have_noreturn_attribute.h
-echo "#endif" >> $BLD/include/edacious/config/have_noreturn_attribute.h
-echo "hdefs[\"HAVE_NORETURN_ATTRIBUTE\"] = \"$HAVE_NORETURN_ATTRIBUTE\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_NORETURN_ATTRIBUTE="no"
-echo "HAVE_NORETURN_ATTRIBUTE=$HAVE_NORETURN_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_NORETURN_ATTRIBUTE\"] = \"$HAVE_NORETURN_ATTRIBUTE\"" >>configure.lua
-echo "#undef HAVE_NORETURN_ATTRIBUTE" >$BLD/include/edacious/config/have_noreturn_attribute.h
-echo "hdefs[\"HAVE_NORETURN_ATTRIBUTE\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_NORETURN_ATTRIBUTE" > ${cache}/ctest-HAVE_NORETURN_ATTRIBUTE
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_NORETURN_ATTRIBUTE
-fi
-rm -f conftest.c $testdir/conftest
-$ECHO_N "checking packed attribute..."
-$ECHO_N "checking packed attribute..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_PACKED_ATTRIBUTE" ]; then
-		HAVE_PACKED_ATTRIBUTE=`cat ${cache}/ctest-HAVE_PACKED_ATTRIBUTE`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_PACKED_ATTRIBUTE`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-int main(int argc, char *argv[])
-{
-	struct s1 { char c; int x,y,z; } __attribute__ ((packed));
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS -Wall -Werror -o $testdir/conftest conftest.c" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS -Wall -Werror -o $testdir/conftest conftest.c 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_PACKED_ATTRIBUTE="yes"
-echo "HAVE_PACKED_ATTRIBUTE=$HAVE_PACKED_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_PACKED_ATTRIBUTE\"] = \"$HAVE_PACKED_ATTRIBUTE\"" >>configure.lua
-echo "#ifndef HAVE_PACKED_ATTRIBUTE" > $BLD/include/edacious/config/have_packed_attribute.h
-echo "#define HAVE_PACKED_ATTRIBUTE \"$HAVE_PACKED_ATTRIBUTE\"" >> $BLD/include/edacious/config/have_packed_attribute.h
-echo "#endif" >> $BLD/include/edacious/config/have_packed_attribute.h
-echo "hdefs[\"HAVE_PACKED_ATTRIBUTE\"] = \"$HAVE_PACKED_ATTRIBUTE\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_PACKED_ATTRIBUTE="no"
-echo "HAVE_PACKED_ATTRIBUTE=$HAVE_PACKED_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_PACKED_ATTRIBUTE\"] = \"$HAVE_PACKED_ATTRIBUTE\"" >>configure.lua
-echo "#undef HAVE_PACKED_ATTRIBUTE" >$BLD/include/edacious/config/have_packed_attribute.h
-echo "hdefs[\"HAVE_PACKED_ATTRIBUTE\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_PACKED_ATTRIBUTE" > ${cache}/ctest-HAVE_PACKED_ATTRIBUTE
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_PACKED_ATTRIBUTE
-fi
-rm -f conftest.c $testdir/conftest
-$ECHO_N "checking pure attribute..."
-$ECHO_N "checking pure attribute..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_PURE_ATTRIBUTE" ]; then
-		HAVE_PURE_ATTRIBUTE=`cat ${cache}/ctest-HAVE_PURE_ATTRIBUTE`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_PURE_ATTRIBUTE`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-int foo(int) __attribute__ ((pure));
-int foo(int x) { return (x*x); }
-int main(int argc, char *argv[])
-{
-	int x = foo(1);
-	return (x);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_PURE_ATTRIBUTE="yes"
-echo "HAVE_PURE_ATTRIBUTE=$HAVE_PURE_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_PURE_ATTRIBUTE\"] = \"$HAVE_PURE_ATTRIBUTE\"" >>configure.lua
-echo "#ifndef HAVE_PURE_ATTRIBUTE" > $BLD/include/edacious/config/have_pure_attribute.h
-echo "#define HAVE_PURE_ATTRIBUTE \"$HAVE_PURE_ATTRIBUTE\"" >> $BLD/include/edacious/config/have_pure_attribute.h
-echo "#endif" >> $BLD/include/edacious/config/have_pure_attribute.h
-echo "hdefs[\"HAVE_PURE_ATTRIBUTE\"] = \"$HAVE_PURE_ATTRIBUTE\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_PURE_ATTRIBUTE="no"
-echo "HAVE_PURE_ATTRIBUTE=$HAVE_PURE_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_PURE_ATTRIBUTE\"] = \"$HAVE_PURE_ATTRIBUTE\"" >>configure.lua
-echo "#undef HAVE_PURE_ATTRIBUTE" >$BLD/include/edacious/config/have_pure_attribute.h
-echo "hdefs[\"HAVE_PURE_ATTRIBUTE\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_PURE_ATTRIBUTE" > ${cache}/ctest-HAVE_PURE_ATTRIBUTE
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_PURE_ATTRIBUTE
-fi
-rm -f conftest.c $testdir/conftest
-$ECHO_N "checking warn_unused_result attribute..."
-$ECHO_N "checking warn_unused_result attribute..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_WARN_UNUSED_RESULT_ATTRIBUTE" ]; then
-		HAVE_WARN_UNUSED_RESULT_ATTRIBUTE=`cat ${cache}/ctest-HAVE_WARN_UNUSED_RESULT_ATTRIBUTE`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_WARN_UNUSED_RESULT_ATTRIBUTE`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-int foo(void) __attribute__ ((warn_unused_result));
-int foo(void) { return (1); }
-int main(int argc, char *argv[])
-{
-	int rv = foo();
-	return (rv);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_WARN_UNUSED_RESULT_ATTRIBUTE="yes"
-echo "HAVE_WARN_UNUSED_RESULT_ATTRIBUTE=$HAVE_WARN_UNUSED_RESULT_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_WARN_UNUSED_RESULT_ATTRIBUTE\"] = \"$HAVE_WARN_UNUSED_RESULT_ATTRIBUTE\"" >>configure.lua
-echo "#ifndef HAVE_WARN_UNUSED_RESULT_ATTRIBUTE" > $BLD/include/edacious/config/have_warn_unused_result_attribute.h
-echo "#define HAVE_WARN_UNUSED_RESULT_ATTRIBUTE \"$HAVE_WARN_UNUSED_RESULT_ATTRIBUTE\"" >> $BLD/include/edacious/config/have_warn_unused_result_attribute.h
-echo "#endif" >> $BLD/include/edacious/config/have_warn_unused_result_attribute.h
-echo "hdefs[\"HAVE_WARN_UNUSED_RESULT_ATTRIBUTE\"] = \"$HAVE_WARN_UNUSED_RESULT_ATTRIBUTE\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_WARN_UNUSED_RESULT_ATTRIBUTE="no"
-echo "HAVE_WARN_UNUSED_RESULT_ATTRIBUTE=$HAVE_WARN_UNUSED_RESULT_ATTRIBUTE" >>Makefile.config
-echo "mdefs[\"HAVE_WARN_UNUSED_RESULT_ATTRIBUTE\"] = \"$HAVE_WARN_UNUSED_RESULT_ATTRIBUTE\"" >>configure.lua
-echo "#undef HAVE_WARN_UNUSED_RESULT_ATTRIBUTE" >$BLD/include/edacious/config/have_warn_unused_result_attribute.h
-echo "hdefs[\"HAVE_WARN_UNUSED_RESULT_ATTRIBUTE\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_WARN_UNUSED_RESULT_ATTRIBUTE" > ${cache}/ctest-HAVE_WARN_UNUSED_RESULT_ATTRIBUTE
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_WARN_UNUSED_RESULT_ATTRIBUTE
-fi
-rm -f conftest.c $testdir/conftest
 $ECHO_N "checking for long double..."
 $ECHO_N "checking for long double..." >> config.log
 MK_CACHED="No"
@@ -1637,8 +1022,6 @@ if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
 echo "yes"
 echo "yes" >> config.log
 HAVE_CYGWIN="yes"
-echo "HAVE_CYGWIN=$HAVE_CYGWIN" >>Makefile.config
-echo "mdefs[\"HAVE_CYGWIN\"] = \"$HAVE_CYGWIN\"" >>configure.lua
 echo "#ifndef HAVE_CYGWIN" > $BLD/include/edacious/config/have_cygwin.h
 echo "#define HAVE_CYGWIN \"$HAVE_CYGWIN\"" >> $BLD/include/edacious/config/have_cygwin.h
 echo "#endif" >> $BLD/include/edacious/config/have_cygwin.h
@@ -1647,8 +1030,6 @@ else
 echo "no"
 echo "no" >> config.log
 HAVE_CYGWIN="no"
-echo "HAVE_CYGWIN=$HAVE_CYGWIN" >>Makefile.config
-echo "mdefs[\"HAVE_CYGWIN\"] = \"$HAVE_CYGWIN\"" >>configure.lua
 echo "#undef HAVE_CYGWIN" >$BLD/include/edacious/config/have_cygwin.h
 echo "hdefs[\"HAVE_CYGWIN\"] = nil" >>configure.lua
 fi;
@@ -1662,8 +1043,8 @@ $ECHO_N "checking for libtool --tag=CC retardation..." >> config.log
 cat << EOT > conftest.c
 int main(int argc, char *argv[]) { return (0); }
 EOT
-$LIBTOOL --quiet --mode=compile $CC --tag=CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest.o conftest.c 2>>config.log
-if [ $? == 0 ]; then
+$LIBTOOL --quiet --mode=compile --tag=CC $CC $CFLAGS $TEST_CFLAGS -o $testdir/conftest.o conftest.c 2>>config.log
+if [ "$?" = "0" ]; then
 echo "yes"
 echo "yes" >> config.log
 LIBTOOLOPTS_CC="--tag=CC"
@@ -1671,13 +1052,8 @@ else
 echo "no"
 echo "no" >> config.log
 fi;
-echo "LIBTOOLOPTS_CC=$LIBTOOLOPTS_CC" >>Makefile.config
-echo "mdefs[\"LIBTOOLOPTS_CC\"] = \"$LIBTOOLOPTS_CC\"" >>configure.lua
 rm -f conftest.c $testdir/conftest$EXECSUFFIX
-echo "CC=$CC" >>Makefile.config
-echo "mdefs[\"CC\"] = \"$CC\"" >>configure.lua
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
+fi;
 if [ "${HAVE_CC}" != "yes" ]; then
 echo "* "
 echo "* " >> config.log
@@ -1720,8 +1096,6 @@ if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
 echo "yes"
 echo "yes" >> config.log
 _MK_HAVE_SYS_TYPES_H="yes"
-echo "_MK_HAVE_SYS_TYPES_H=$_MK_HAVE_SYS_TYPES_H" >>Makefile.config
-echo "mdefs[\"_MK_HAVE_SYS_TYPES_H\"] = \"$_MK_HAVE_SYS_TYPES_H\"" >>configure.lua
 echo "#ifndef _MK_HAVE_SYS_TYPES_H" > $BLD/include/edacious/config/_mk_have_sys_types_h.h
 echo "#define _MK_HAVE_SYS_TYPES_H \"$_MK_HAVE_SYS_TYPES_H\"" >> $BLD/include/edacious/config/_mk_have_sys_types_h.h
 echo "#endif" >> $BLD/include/edacious/config/_mk_have_sys_types_h.h
@@ -1730,8 +1104,6 @@ else
 echo "no"
 echo "no" >> config.log
 _MK_HAVE_SYS_TYPES_H="no"
-echo "_MK_HAVE_SYS_TYPES_H=$_MK_HAVE_SYS_TYPES_H" >>Makefile.config
-echo "mdefs[\"_MK_HAVE_SYS_TYPES_H\"] = \"$_MK_HAVE_SYS_TYPES_H\"" >>configure.lua
 echo "#undef _MK_HAVE_SYS_TYPES_H" >$BLD/include/edacious/config/_mk_have_sys_types_h.h
 echo "hdefs[\"_MK_HAVE_SYS_TYPES_H\"] = nil" >>configure.lua
 fi;
@@ -1774,8 +1146,6 @@ if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
 echo "yes"
 echo "yes" >> config.log
 HAVE_64BIT="yes"
-echo "HAVE_64BIT=$HAVE_64BIT" >>Makefile.config
-echo "mdefs[\"HAVE_64BIT\"] = \"$HAVE_64BIT\"" >>configure.lua
 echo "#ifndef HAVE_64BIT" > $BLD/include/edacious/config/have_64bit.h
 echo "#define HAVE_64BIT \"$HAVE_64BIT\"" >> $BLD/include/edacious/config/have_64bit.h
 echo "#endif" >> $BLD/include/edacious/config/have_64bit.h
@@ -1784,8 +1154,6 @@ else
 echo "no"
 echo "no" >> config.log
 HAVE_64BIT="no"
-echo "HAVE_64BIT=$HAVE_64BIT" >>Makefile.config
-echo "mdefs[\"HAVE_64BIT\"] = \"$HAVE_64BIT\"" >>configure.lua
 echo "#undef HAVE_64BIT" >$BLD/include/edacious/config/have_64bit.h
 echo "hdefs[\"HAVE_64BIT\"] = nil" >>configure.lua
 fi;
@@ -1794,114 +1162,9 @@ if [ "${cache}" != "" ]; then
 	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_64BIT
 fi
 rm -f conftest.c $testdir/conftest$EXECSUFFIX
-$ECHO_N "checking for conflicting typedefs..."
-$ECHO_N "checking for conflicting typedefs..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-_MK_HAVE_UNSIGNED_TYPEDEFS" ]; then
-		_MK_HAVE_UNSIGNED_TYPEDEFS=`cat ${cache}/ctest-_MK_HAVE_UNSIGNED_TYPEDEFS`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-_MK_HAVE_UNSIGNED_TYPEDEFS`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <sys/types.h>
-int main(int argc, char *argv[]) {
-	Uchar foo = 1;
-	Uint bar = 1;
-	Ulong baz = 1;
-	return (foo != 1 || bar != 1 || baz != 1);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c " >>config.log
-	$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c  2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-_MK_HAVE_UNSIGNED_TYPEDEFS="yes"
-echo "_MK_HAVE_UNSIGNED_TYPEDEFS=$_MK_HAVE_UNSIGNED_TYPEDEFS" >>Makefile.config
-echo "mdefs[\"_MK_HAVE_UNSIGNED_TYPEDEFS\"] = \"$_MK_HAVE_UNSIGNED_TYPEDEFS\"" >>configure.lua
-echo "#ifndef _MK_HAVE_UNSIGNED_TYPEDEFS" > $BLD/include/edacious/config/_mk_have_unsigned_typedefs.h
-echo "#define _MK_HAVE_UNSIGNED_TYPEDEFS \"$_MK_HAVE_UNSIGNED_TYPEDEFS\"" >> $BLD/include/edacious/config/_mk_have_unsigned_typedefs.h
-echo "#endif" >> $BLD/include/edacious/config/_mk_have_unsigned_typedefs.h
-echo "hdefs[\"_MK_HAVE_UNSIGNED_TYPEDEFS\"] = \"$_MK_HAVE_UNSIGNED_TYPEDEFS\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-_MK_HAVE_UNSIGNED_TYPEDEFS="no"
-echo "_MK_HAVE_UNSIGNED_TYPEDEFS=$_MK_HAVE_UNSIGNED_TYPEDEFS" >>Makefile.config
-echo "mdefs[\"_MK_HAVE_UNSIGNED_TYPEDEFS\"] = \"$_MK_HAVE_UNSIGNED_TYPEDEFS\"" >>configure.lua
-echo "#undef _MK_HAVE_UNSIGNED_TYPEDEFS" >$BLD/include/edacious/config/_mk_have_unsigned_typedefs.h
-echo "hdefs[\"_MK_HAVE_UNSIGNED_TYPEDEFS\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$_MK_HAVE_UNSIGNED_TYPEDEFS" > ${cache}/ctest-_MK_HAVE_UNSIGNED_TYPEDEFS
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-_MK_HAVE_UNSIGNED_TYPEDEFS
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
 else
 echo "#undef HAVE_64BIT" >$BLD/include/edacious/config/have_64bit.h
 echo "hdefs[\"HAVE_64BIT\"] = nil" >>configure.lua
-$ECHO_N "checking for conflicting typedefs..."
-$ECHO_N "checking for conflicting typedefs..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-_MK_HAVE_UNSIGNED_TYPEDEFS" ]; then
-		_MK_HAVE_UNSIGNED_TYPEDEFS=`cat ${cache}/ctest-_MK_HAVE_UNSIGNED_TYPEDEFS`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-_MK_HAVE_UNSIGNED_TYPEDEFS`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-int main(int argc, char *argv[]) {
-	Uchar foo = 1;
-	Uint bar = 1;
-	Ulong baz = 1;
-	return (foo != 1 || bar != 1 || baz != 1);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c " >>config.log
-	$CC $CFLAGS $TEST_CFLAGS  -o $testdir/conftest conftest.c  2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-_MK_HAVE_UNSIGNED_TYPEDEFS="yes"
-echo "_MK_HAVE_UNSIGNED_TYPEDEFS=$_MK_HAVE_UNSIGNED_TYPEDEFS" >>Makefile.config
-echo "mdefs[\"_MK_HAVE_UNSIGNED_TYPEDEFS\"] = \"$_MK_HAVE_UNSIGNED_TYPEDEFS\"" >>configure.lua
-echo "#ifndef _MK_HAVE_UNSIGNED_TYPEDEFS" > $BLD/include/edacious/config/_mk_have_unsigned_typedefs.h
-echo "#define _MK_HAVE_UNSIGNED_TYPEDEFS \"$_MK_HAVE_UNSIGNED_TYPEDEFS\"" >> $BLD/include/edacious/config/_mk_have_unsigned_typedefs.h
-echo "#endif" >> $BLD/include/edacious/config/_mk_have_unsigned_typedefs.h
-echo "hdefs[\"_MK_HAVE_UNSIGNED_TYPEDEFS\"] = \"$_MK_HAVE_UNSIGNED_TYPEDEFS\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-_MK_HAVE_UNSIGNED_TYPEDEFS="no"
-echo "_MK_HAVE_UNSIGNED_TYPEDEFS=$_MK_HAVE_UNSIGNED_TYPEDEFS" >>Makefile.config
-echo "mdefs[\"_MK_HAVE_UNSIGNED_TYPEDEFS\"] = \"$_MK_HAVE_UNSIGNED_TYPEDEFS\"" >>configure.lua
-echo "#undef _MK_HAVE_UNSIGNED_TYPEDEFS" >$BLD/include/edacious/config/_mk_have_unsigned_typedefs.h
-echo "hdefs[\"_MK_HAVE_UNSIGNED_TYPEDEFS\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$_MK_HAVE_UNSIGNED_TYPEDEFS" > ${cache}/ctest-_MK_HAVE_UNSIGNED_TYPEDEFS
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-_MK_HAVE_UNSIGNED_TYPEDEFS
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
 fi;
 $ECHO_N "checking for the getopt() function..."
 $ECHO_N "checking for the getopt() function..." >> config.log
@@ -1986,7 +1249,7 @@ main(int argc, char *argv[])
 	uid_t uid = 0;
 
 	pwd = getpwuid(uid);
-	return (pwd != NULL);
+	return (pwd != NULL && pwd->pw_gecos != NULL && pwd->pw_class != NULL);
 }
 
 EOT
@@ -2071,47 +1334,45 @@ rm -f conftest.c $testdir/conftest$EXECSUFFIX
 $ECHO_N "checking for Agar (http://libagar.org/)..."
 $ECHO_N "checking for Agar (http://libagar.org/)..." >> config.log
 MK_EXEC_FOUND="No"
-MK_CACHED="No"
-MK_EXEC_UNIQUE="No"
-MK_EXEC_FOUND_PATH=""
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/exec-AGAR_VERSION" ]; then
-		AGAR_VERSION=`cat ${cache}/exec-AGAR_VERSION`
-		MK_EXEC_FOUND=`cat ${cache}/exec-found-AGAR_VERSION`
-		MK_EXEC_FOUND_PATH=`cat ${cache}/exec-found-path-AGAR_VERSION`
-		MK_CACHED="Yes"
+
+if [ "${prefix_agar}" != "" ]; then
+	if [ -e "${prefix_agar}/bin/agar-config" ]; then
+		AGAR_VERSION=`${prefix_agar}/bin/agar-config --version`
+		MK_EXEC_FOUND="Yes"
 	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	AGAR_VERSION=""
-	for path in `echo $PATH | sed 's/:/ /g'`; do
-		if [ -e "${path}/agar-config" ]; then
-			if [ "$MK_EXEC_FOUND" = "Yes" ]; then
-				echo "yes."
-				echo "* Warning: Multiple 'agar-config' exist in PATH (using $MK_EXEC_FOUND_PATH)"
-				echo "* Warning: Multiple 'agar-config' exist in PATH (using $MK_EXEC_FOUND_PATH)" >> config.log
+else
+	MK_CACHED="No"
+	if [ "${cache}" != "" ]; then
+		if [ -e "${cache}/exec-AGAR_VERSION" ]; then
+			AGAR_VERSION=`cat ${cache}/exec-AGAR_VERSION`
+			MK_EXEC_FOUND=`cat ${cache}/exec-found-AGAR_VERSION`
+			MK_CACHED="Yes"
+		fi
+	fi
+	if [ "${MK_CACHED}" = "No" ]; then
+		AGAR_VERSION=""
+		for path in `echo $PATH | sed 's/:/ /g'`; do
+			if [ -e "${path}/agar-config" ]; then
+				AGAR_VERSION=`${path}/agar-config --version`
+				MK_EXEC_FOUND="Yes"
 				break
 			fi
-			AGAR_VERSION=`${path}/agar-config --version`
-			MK_EXEC_FOUND="Yes"
-			MK_EXEC_FOUND_PATH="${path}/agar-config"
+		done
+		if [ "${cache}" != "" ]; then
+			echo "$AGAR_VERSION" > ${cache}/exec-AGAR_VERSION
+			echo $MK_EXEC_FOUND > ${cache}/exec-found-AGAR_VERSION
 		fi
-	done
-	if [ "${cache}" != "" ]; then
-		echo "$AGAR_VERSION" > ${cache}/exec-AGAR_VERSION
-		echo $MK_EXEC_FOUND > ${cache}/exec-found-AGAR_VERSION
-		echo $MK_EXEC_FOUND_PATH > ${cache}/exec-found-path-AGAR_VERSION
 	fi
 fi
 if [ "${AGAR_VERSION}" != "" ]; then
-if [ "" != "" ]; then
-echo "yes ($AGAR_VERSION in )"
-echo "yes ($AGAR_VERSION in )" >> config.log
+if [ "${prefix_agar}" != "" ]; then
+echo "yes ($AGAR_VERSION in ${prefix_agar})"
+echo "yes ($AGAR_VERSION in ${prefix_agar})" >> config.log
 else
 echo "yes ($AGAR_VERSION)"
 echo "yes ($AGAR_VERSION)" >> config.log
 fi;
-if [ "1.4.0" != "" ]; then
+if [ "1.4.2" != "" ]; then
 MK_VERSION_MAJOR=`echo "$AGAR_VERSION" |sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1/'`;
 MK_VERSION_MINOR=`echo "$AGAR_VERSION" |sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\2/'`;
 MK_VERSION_MICRO=`echo "$AGAR_VERSION" |sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\3/'`;
@@ -2128,7 +1389,7 @@ elif [ $MK_VERSION_MAJOR -eq 1 ]; then
 			if [ "$MK_VERSION_MICRO" = "" ]; then
 				MK_VERSION_OK="yes"
 			else
-				if [ $MK_VERSION_MICRO -ge 0 ]; then
+				if [ $MK_VERSION_MICRO -ge 2 ]; then
 					MK_VERSION_OK="yes"
 				fi
 			fi
@@ -2136,56 +1397,72 @@ elif [ $MK_VERSION_MAJOR -eq 1 ]; then
 	fi
 fi
 if [ "${MK_VERSION_OK}" != "yes" ]; then
-echo "Version 1.4.0 or greater is required (found $AGAR_VERSION)"
+echo "Version 1.4.2 or greater is required (found $AGAR_VERSION)"
 exit 1
 fi;
 fi;
 $ECHO_N "checking whether Agar works..."
 $ECHO_N "checking whether Agar works..." >> config.log
 MK_EXEC_FOUND="No"
-MK_CACHED="No"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/exec-AGAR_CFLAGS" ]; then
-		AGAR_CFLAGS=`cat ${cache}/exec-AGAR_CFLAGS`
-		MK_EXEC_FOUND=`cat ${cache}/exec-found-AGAR_CFLAGS`
-		MK_CACHED="Yes"
+
+if [ "${prefix_agar}" != "" ]; then
+	if [ -e "${prefix_agar}/bin/agar-config" ]; then
+		AGAR_CFLAGS=`${prefix_agar}/bin/agar-config --cflags`
+		MK_EXEC_FOUND="Yes"
 	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	AGAR_CFLAGS=""
-	for path in `echo $PATH | sed 's/:/ /g'`; do
-		if [ -e "${path}/agar-config" ]; then
-			AGAR_CFLAGS=`${path}/agar-config --cflags`
-			MK_EXEC_FOUND="Yes"
-			break
-		fi
-	done
+else
+	MK_CACHED="No"
 	if [ "${cache}" != "" ]; then
-		echo "$AGAR_CFLAGS" > ${cache}/exec-AGAR_CFLAGS
-		echo $MK_EXEC_FOUND > ${cache}/exec-found-AGAR_CFLAGS
+		if [ -e "${cache}/exec-AGAR_CFLAGS" ]; then
+			AGAR_CFLAGS=`cat ${cache}/exec-AGAR_CFLAGS`
+			MK_EXEC_FOUND=`cat ${cache}/exec-found-AGAR_CFLAGS`
+			MK_CACHED="Yes"
+		fi
+	fi
+	if [ "${MK_CACHED}" = "No" ]; then
+		AGAR_CFLAGS=""
+		for path in `echo $PATH | sed 's/:/ /g'`; do
+			if [ -e "${path}/agar-config" ]; then
+				AGAR_CFLAGS=`${path}/agar-config --cflags`
+				MK_EXEC_FOUND="Yes"
+				break
+			fi
+		done
+		if [ "${cache}" != "" ]; then
+			echo "$AGAR_CFLAGS" > ${cache}/exec-AGAR_CFLAGS
+			echo $MK_EXEC_FOUND > ${cache}/exec-found-AGAR_CFLAGS
+		fi
 	fi
 fi
 MK_EXEC_FOUND="No"
-MK_CACHED="No"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/exec-AGAR_LIBS" ]; then
-		AGAR_LIBS=`cat ${cache}/exec-AGAR_LIBS`
-		MK_EXEC_FOUND=`cat ${cache}/exec-found-AGAR_LIBS`
-		MK_CACHED="Yes"
+
+if [ "${prefix_agar}" != "" ]; then
+	if [ -e "${prefix_agar}/bin/agar-config" ]; then
+		AGAR_LIBS=`${prefix_agar}/bin/agar-config --libs`
+		MK_EXEC_FOUND="Yes"
 	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	AGAR_LIBS=""
-	for path in `echo $PATH | sed 's/:/ /g'`; do
-		if [ -e "${path}/agar-config" ]; then
-			AGAR_LIBS=`${path}/agar-config --libs`
-			MK_EXEC_FOUND="Yes"
-			break
-		fi
-	done
+else
+	MK_CACHED="No"
 	if [ "${cache}" != "" ]; then
-		echo "$AGAR_LIBS" > ${cache}/exec-AGAR_LIBS
-		echo $MK_EXEC_FOUND > ${cache}/exec-found-AGAR_LIBS
+		if [ -e "${cache}/exec-AGAR_LIBS" ]; then
+			AGAR_LIBS=`cat ${cache}/exec-AGAR_LIBS`
+			MK_EXEC_FOUND=`cat ${cache}/exec-found-AGAR_LIBS`
+			MK_CACHED="Yes"
+		fi
+	fi
+	if [ "${MK_CACHED}" = "No" ]; then
+		AGAR_LIBS=""
+		for path in `echo $PATH | sed 's/:/ /g'`; do
+			if [ -e "${path}/agar-config" ]; then
+				AGAR_LIBS=`${path}/agar-config --libs`
+				MK_EXEC_FOUND="Yes"
+				break
+			fi
+		done
+		if [ "${cache}" != "" ]; then
+			echo "$AGAR_LIBS" > ${cache}/exec-AGAR_LIBS
+			echo $MK_EXEC_FOUND > ${cache}/exec-found-AGAR_LIBS
+		fi
 	fi
 fi
 MK_CACHED="No"
@@ -2224,8 +1501,6 @@ if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
 echo "yes"
 echo "yes" >> config.log
 HAVE_AGAR="yes"
-echo "HAVE_AGAR=$HAVE_AGAR" >>Makefile.config
-echo "mdefs[\"HAVE_AGAR\"] = \"$HAVE_AGAR\"" >>configure.lua
 echo "#ifndef HAVE_AGAR" > $BLD/include/edacious/config/have_agar.h
 echo "#define HAVE_AGAR \"$HAVE_AGAR\"" >> $BLD/include/edacious/config/have_agar.h
 echo "#endif" >> $BLD/include/edacious/config/have_agar.h
@@ -2234,8 +1509,6 @@ else
 echo "no"
 echo "no" >> config.log
 HAVE_AGAR="no"
-echo "HAVE_AGAR=$HAVE_AGAR" >>Makefile.config
-echo "mdefs[\"HAVE_AGAR\"] = \"$HAVE_AGAR\"" >>configure.lua
 echo "#undef HAVE_AGAR" >$BLD/include/edacious/config/have_agar.h
 echo "hdefs[\"HAVE_AGAR\"] = nil" >>configure.lua
 fi;
@@ -2245,14 +1518,10 @@ if [ "${cache}" != "" ]; then
 fi
 rm -f conftest.c $testdir/conftest$EXECSUFFIX
 if [ "${HAVE_AGAR}" = "yes" ]; then
-echo "AGAR_CFLAGS=$AGAR_CFLAGS" >>Makefile.config
-echo "mdefs[\"AGAR_CFLAGS\"] = \"$AGAR_CFLAGS\"" >>configure.lua
 echo "#ifndef AGAR_CFLAGS" > $BLD/include/edacious/config/agar_cflags.h
 echo "#define AGAR_CFLAGS \"$AGAR_CFLAGS\"" >> $BLD/include/edacious/config/agar_cflags.h
 echo "#endif" >> $BLD/include/edacious/config/agar_cflags.h
 echo "hdefs[\"AGAR_CFLAGS\"] = \"$AGAR_CFLAGS\"" >>configure.lua
-echo "AGAR_LIBS=$AGAR_LIBS" >>Makefile.config
-echo "mdefs[\"AGAR_LIBS\"] = \"$AGAR_LIBS\"" >>configure.lua
 echo "#ifndef AGAR_LIBS" > $BLD/include/edacious/config/agar_libs.h
 echo "#define AGAR_LIBS \"$AGAR_LIBS\"" >> $BLD/include/edacious/config/agar_libs.h
 echo "#endif" >> $BLD/include/edacious/config/agar_libs.h
@@ -2266,9 +1535,9 @@ echo "hdefs[\"AGAR_LIBS\"] = nil" >>configure.lua
 AGAR_LIBS=""
 fi;
 else
-if [ "" != "" ]; then
-echo "no (not in )"
-echo "no (not in )" >> config.log
+if [ "${prefix_agar}" != "" ]; then
+echo "no (not in ${prefix_agar})"
+echo "no (not in ${prefix_agar})" >> config.log
 else
 echo "no"
 echo "no" >> config.log
@@ -2291,8 +1560,8 @@ fi;
 if [ "${MK_VERSION_OK}" != "yes" ]; then
 echo "* "
 echo "* " >> config.log
-echo "* This software requires agar version >= 1.4.0,"
-echo "* This software requires agar version >= 1.4.0," >> config.log
+echo "* This software requires agar version >= 1.4.2,"
+echo "* This software requires agar version >= 1.4.2," >> config.log
 echo "* please upgrade and try again."
 echo "* please upgrade and try again." >> config.log
 echo "* "
@@ -2341,7 +1610,7 @@ else
 echo "yes ($AGAR_VG_VERSION)"
 echo "yes ($AGAR_VG_VERSION)" >> config.log
 fi;
-if [ "1.4.0" != "" ]; then
+if [ "1.4.2" != "" ]; then
 MK_VERSION_MAJOR=`echo "$AGAR_VG_VERSION" |sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1/'`;
 MK_VERSION_MINOR=`echo "$AGAR_VG_VERSION" |sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\2/'`;
 MK_VERSION_MICRO=`echo "$AGAR_VG_VERSION" |sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\3/'`;
@@ -2358,7 +1627,7 @@ elif [ $MK_VERSION_MAJOR -eq 1 ]; then
 			if [ "$MK_VERSION_MICRO" = "" ]; then
 				MK_VERSION_OK="yes"
 			else
-				if [ $MK_VERSION_MICRO -ge 0 ]; then
+				if [ $MK_VERSION_MICRO -ge 2 ]; then
 					MK_VERSION_OK="yes"
 				fi
 			fi
@@ -2366,7 +1635,7 @@ elif [ $MK_VERSION_MAJOR -eq 1 ]; then
 	fi
 fi
 if [ "${MK_VERSION_OK}" != "yes" ]; then
-echo "Version 1.4.0 or greater is required (found $AGAR_VG_VERSION)"
+echo "Version 1.4.2 or greater is required (found $AGAR_VG_VERSION)"
 exit 1
 fi;
 fi;
@@ -2528,8 +1797,6 @@ if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
 echo "yes"
 echo "yes" >> config.log
 HAVE_AGAR_VG="yes"
-echo "HAVE_AGAR_VG=$HAVE_AGAR_VG" >>Makefile.config
-echo "mdefs[\"HAVE_AGAR_VG\"] = \"$HAVE_AGAR_VG\"" >>configure.lua
 echo "#ifndef HAVE_AGAR_VG" > $BLD/include/edacious/config/have_agar_vg.h
 echo "#define HAVE_AGAR_VG \"$HAVE_AGAR_VG\"" >> $BLD/include/edacious/config/have_agar_vg.h
 echo "#endif" >> $BLD/include/edacious/config/have_agar_vg.h
@@ -2538,8 +1805,6 @@ else
 echo "no"
 echo "no" >> config.log
 HAVE_AGAR_VG="no"
-echo "HAVE_AGAR_VG=$HAVE_AGAR_VG" >>Makefile.config
-echo "mdefs[\"HAVE_AGAR_VG\"] = \"$HAVE_AGAR_VG\"" >>configure.lua
 echo "#undef HAVE_AGAR_VG" >$BLD/include/edacious/config/have_agar_vg.h
 echo "hdefs[\"HAVE_AGAR_VG\"] = nil" >>configure.lua
 fi;
@@ -2549,14 +1814,10 @@ if [ "${cache}" != "" ]; then
 fi
 rm -f conftest.c $testdir/conftest$EXECSUFFIX
 if [ "${HAVE_AGAR_VG}" = "yes" ]; then
-echo "AGAR_VG_CFLAGS=$AGAR_VG_CFLAGS" >>Makefile.config
-echo "mdefs[\"AGAR_VG_CFLAGS\"] = \"$AGAR_VG_CFLAGS\"" >>configure.lua
 echo "#ifndef AGAR_VG_CFLAGS" > $BLD/include/edacious/config/agar_vg_cflags.h
 echo "#define AGAR_VG_CFLAGS \"$AGAR_VG_CFLAGS\"" >> $BLD/include/edacious/config/agar_vg_cflags.h
 echo "#endif" >> $BLD/include/edacious/config/agar_vg_cflags.h
 echo "hdefs[\"AGAR_VG_CFLAGS\"] = \"$AGAR_VG_CFLAGS\"" >>configure.lua
-echo "AGAR_VG_LIBS=$AGAR_VG_LIBS" >>Makefile.config
-echo "mdefs[\"AGAR_VG_LIBS\"] = \"$AGAR_VG_LIBS\"" >>configure.lua
 echo "#ifndef AGAR_VG_LIBS" > $BLD/include/edacious/config/agar_vg_libs.h
 echo "#define AGAR_VG_LIBS \"$AGAR_VG_LIBS\"" >> $BLD/include/edacious/config/agar_vg_libs.h
 echo "#endif" >> $BLD/include/edacious/config/agar_vg_libs.h
@@ -2597,8 +1858,8 @@ fi;
 if [ "${MK_VERSION_OK}" != "yes" ]; then
 echo "* "
 echo "* " >> config.log
-echo "* This software requires agar-vg version >= 1.4.0,"
-echo "* This software requires agar-vg version >= 1.4.0," >> config.log
+echo "* This software requires agar-vg version >= 1.4.2,"
+echo "* This software requires agar-vg version >= 1.4.2," >> config.log
 echo "* please upgrade and try again."
 echo "* please upgrade and try again." >> config.log
 echo "* "
@@ -2647,7 +1908,7 @@ else
 echo "yes ($AGAR_DEV_VERSION)"
 echo "yes ($AGAR_DEV_VERSION)" >> config.log
 fi;
-if [ "1.4.0" != "" ]; then
+if [ "1.4.2" != "" ]; then
 MK_VERSION_MAJOR=`echo "$AGAR_DEV_VERSION" |sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1/'`;
 MK_VERSION_MINOR=`echo "$AGAR_DEV_VERSION" |sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\2/'`;
 MK_VERSION_MICRO=`echo "$AGAR_DEV_VERSION" |sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\3/'`;
@@ -2664,7 +1925,7 @@ elif [ $MK_VERSION_MAJOR -eq 1 ]; then
 			if [ "$MK_VERSION_MICRO" = "" ]; then
 				MK_VERSION_OK="yes"
 			else
-				if [ $MK_VERSION_MICRO -ge 0 ]; then
+				if [ $MK_VERSION_MICRO -ge 2 ]; then
 					MK_VERSION_OK="yes"
 				fi
 			fi
@@ -2672,7 +1933,7 @@ elif [ $MK_VERSION_MAJOR -eq 1 ]; then
 	fi
 fi
 if [ "${MK_VERSION_OK}" != "yes" ]; then
-echo "Version 1.4.0 or greater is required (found $AGAR_DEV_VERSION)"
+echo "Version 1.4.2 or greater is required (found $AGAR_DEV_VERSION)"
 exit 1
 fi;
 fi;
@@ -2819,11 +2080,10 @@ if [ "${MK_CACHED}" = "No" ]; then
 
 int main(int argc, char *argv[]) {
 	AG_Object obj;
-	AG_Window *win;
 
 	AG_ObjectInitStatic(&obj, &agObjectClass);
 	DEV_InitSubsystem(0);
-	win = DEV_Browser(&obj);
+	DEV_Browser(&obj);
 	AG_ObjectDestroy(&obj);
 	return (0);
 }
@@ -2840,8 +2100,6 @@ if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
 echo "yes"
 echo "yes" >> config.log
 HAVE_AGAR_DEV="yes"
-echo "HAVE_AGAR_DEV=$HAVE_AGAR_DEV" >>Makefile.config
-echo "mdefs[\"HAVE_AGAR_DEV\"] = \"$HAVE_AGAR_DEV\"" >>configure.lua
 echo "#ifndef HAVE_AGAR_DEV" > $BLD/include/edacious/config/have_agar_dev.h
 echo "#define HAVE_AGAR_DEV \"$HAVE_AGAR_DEV\"" >> $BLD/include/edacious/config/have_agar_dev.h
 echo "#endif" >> $BLD/include/edacious/config/have_agar_dev.h
@@ -2850,8 +2108,6 @@ else
 echo "no"
 echo "no" >> config.log
 HAVE_AGAR_DEV="no"
-echo "HAVE_AGAR_DEV=$HAVE_AGAR_DEV" >>Makefile.config
-echo "mdefs[\"HAVE_AGAR_DEV\"] = \"$HAVE_AGAR_DEV\"" >>configure.lua
 echo "#undef HAVE_AGAR_DEV" >$BLD/include/edacious/config/have_agar_dev.h
 echo "hdefs[\"HAVE_AGAR_DEV\"] = nil" >>configure.lua
 fi;
@@ -2861,14 +2117,10 @@ if [ "${cache}" != "" ]; then
 fi
 rm -f conftest.c $testdir/conftest$EXECSUFFIX
 if [ "${HAVE_AGAR_DEV}" = "yes" ]; then
-echo "AGAR_DEV_CFLAGS=$AGAR_DEV_CFLAGS" >>Makefile.config
-echo "mdefs[\"AGAR_DEV_CFLAGS\"] = \"$AGAR_DEV_CFLAGS\"" >>configure.lua
 echo "#ifndef AGAR_DEV_CFLAGS" > $BLD/include/edacious/config/agar_dev_cflags.h
 echo "#define AGAR_DEV_CFLAGS \"$AGAR_DEV_CFLAGS\"" >> $BLD/include/edacious/config/agar_dev_cflags.h
 echo "#endif" >> $BLD/include/edacious/config/agar_dev_cflags.h
 echo "hdefs[\"AGAR_DEV_CFLAGS\"] = \"$AGAR_DEV_CFLAGS\"" >>configure.lua
-echo "AGAR_DEV_LIBS=$AGAR_DEV_LIBS" >>Makefile.config
-echo "mdefs[\"AGAR_DEV_LIBS\"] = \"$AGAR_DEV_LIBS\"" >>configure.lua
 echo "#ifndef AGAR_DEV_LIBS" > $BLD/include/edacious/config/agar_dev_libs.h
 echo "#define AGAR_DEV_LIBS \"$AGAR_DEV_LIBS\"" >> $BLD/include/edacious/config/agar_dev_libs.h
 echo "#endif" >> $BLD/include/edacious/config/agar_dev_libs.h
@@ -2909,8 +2161,8 @@ fi;
 if [ "${MK_VERSION_OK}" != "yes" ]; then
 echo "* "
 echo "* " >> config.log
-echo "* This software requires agar-dev version >= 1.4.0,"
-echo "* This software requires agar-dev version >= 1.4.0," >> config.log
+echo "* This software requires agar-dev version >= 1.4.2,"
+echo "* This software requires agar-dev version >= 1.4.2," >> config.log
 echo "* please upgrade and try again."
 echo "* please upgrade and try again." >> config.log
 echo "* "
@@ -2959,7 +2211,7 @@ else
 echo "yes ($AGAR_MATH_VERSION)"
 echo "yes ($AGAR_MATH_VERSION)" >> config.log
 fi;
-if [ "1.4.0" != "" ]; then
+if [ "1.4.2" != "" ]; then
 MK_VERSION_MAJOR=`echo "$AGAR_MATH_VERSION" |sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\1/'`;
 MK_VERSION_MINOR=`echo "$AGAR_MATH_VERSION" |sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\2/'`;
 MK_VERSION_MICRO=`echo "$AGAR_MATH_VERSION" |sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\).*/\3/'`;
@@ -2976,7 +2228,7 @@ elif [ $MK_VERSION_MAJOR -eq 1 ]; then
 			if [ "$MK_VERSION_MICRO" = "" ]; then
 				MK_VERSION_OK="yes"
 			else
-				if [ $MK_VERSION_MICRO -ge 0 ]; then
+				if [ $MK_VERSION_MICRO -ge 2 ]; then
 					MK_VERSION_OK="yes"
 				fi
 			fi
@@ -2984,7 +2236,7 @@ elif [ $MK_VERSION_MAJOR -eq 1 ]; then
 	fi
 fi
 if [ "${MK_VERSION_OK}" != "yes" ]; then
-echo "Version 1.4.0 or greater is required (found $AGAR_MATH_VERSION)"
+echo "Version 1.4.2 or greater is required (found $AGAR_MATH_VERSION)"
 exit 1
 fi;
 fi;
@@ -3149,8 +2401,6 @@ if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
 echo "yes"
 echo "yes" >> config.log
 HAVE_AGAR_MATH="yes"
-echo "HAVE_AGAR_MATH=$HAVE_AGAR_MATH" >>Makefile.config
-echo "mdefs[\"HAVE_AGAR_MATH\"] = \"$HAVE_AGAR_MATH\"" >>configure.lua
 echo "#ifndef HAVE_AGAR_MATH" > $BLD/include/edacious/config/have_agar_math.h
 echo "#define HAVE_AGAR_MATH \"$HAVE_AGAR_MATH\"" >> $BLD/include/edacious/config/have_agar_math.h
 echo "#endif" >> $BLD/include/edacious/config/have_agar_math.h
@@ -3159,8 +2409,6 @@ else
 echo "no"
 echo "no" >> config.log
 HAVE_AGAR_MATH="no"
-echo "HAVE_AGAR_MATH=$HAVE_AGAR_MATH" >>Makefile.config
-echo "mdefs[\"HAVE_AGAR_MATH\"] = \"$HAVE_AGAR_MATH\"" >>configure.lua
 echo "#undef HAVE_AGAR_MATH" >$BLD/include/edacious/config/have_agar_math.h
 echo "hdefs[\"HAVE_AGAR_MATH\"] = nil" >>configure.lua
 fi;
@@ -3170,14 +2418,10 @@ if [ "${cache}" != "" ]; then
 fi
 rm -f conftest.c $testdir/conftest$EXECSUFFIX
 if [ "${HAVE_AGAR_MATH}" = "yes" ]; then
-echo "AGAR_MATH_CFLAGS=$AGAR_MATH_CFLAGS" >>Makefile.config
-echo "mdefs[\"AGAR_MATH_CFLAGS\"] = \"$AGAR_MATH_CFLAGS\"" >>configure.lua
 echo "#ifndef AGAR_MATH_CFLAGS" > $BLD/include/edacious/config/agar_math_cflags.h
 echo "#define AGAR_MATH_CFLAGS \"$AGAR_MATH_CFLAGS\"" >> $BLD/include/edacious/config/agar_math_cflags.h
 echo "#endif" >> $BLD/include/edacious/config/agar_math_cflags.h
 echo "hdefs[\"AGAR_MATH_CFLAGS\"] = \"$AGAR_MATH_CFLAGS\"" >>configure.lua
-echo "AGAR_MATH_LIBS=$AGAR_MATH_LIBS" >>Makefile.config
-echo "mdefs[\"AGAR_MATH_LIBS\"] = \"$AGAR_MATH_LIBS\"" >>configure.lua
 echo "#ifndef AGAR_MATH_LIBS" > $BLD/include/edacious/config/agar_math_libs.h
 echo "#define AGAR_MATH_LIBS \"$AGAR_MATH_LIBS\"" >> $BLD/include/edacious/config/agar_math_libs.h
 echo "#endif" >> $BLD/include/edacious/config/agar_math_libs.h
@@ -3218,8 +2462,8 @@ fi;
 if [ "${MK_VERSION_OK}" != "yes" ]; then
 echo "* "
 echo "* " >> config.log
-echo "* This software requires agar-math version >= 1.4.0,"
-echo "* This software requires agar-math version >= 1.4.0," >> config.log
+echo "* This software requires agar-math version >= 1.4.2,"
+echo "* This software requires agar-math version >= 1.4.2," >> config.log
 echo "* please upgrade and try again."
 echo "* please upgrade and try again." >> config.log
 echo "* "
@@ -3229,843 +2473,39 @@ exit 1
 fi;
 CFLAGS="$CFLAGS -D_ES_INTERNAL"
 CXXFLAGS="$CXXFLAGS -D_ES_INTERNAL"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 CFLAGS="$CFLAGS -D_USE_AGAR_STD"
 CXXFLAGS="$CXXFLAGS -D_USE_AGAR_STD"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 CFLAGS="$CFLAGS -D_USE_AGAR_CORE"
 CXXFLAGS="$CXXFLAGS -D_USE_AGAR_CORE"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 CFLAGS="$CFLAGS -D_USE_AGAR_QUEUE"
 CXXFLAGS="$CXXFLAGS -D_USE_AGAR_QUEUE"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 CFLAGS="$CFLAGS -D_USE_AGAR_GUI"
 CXXFLAGS="$CXXFLAGS -D_USE_AGAR_GUI"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 CFLAGS="$CFLAGS -D_USE_AGAR_TYPES"
 CXXFLAGS="$CXXFLAGS -D_USE_AGAR_TYPES"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 CFLAGS="$CFLAGS -D_USE_AGAR_MATH"
 CXXFLAGS="$CXXFLAGS -D_USE_AGAR_MATH"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 CFLAGS="$CFLAGS -I$SRC"
 CXXFLAGS="$CXXFLAGS -I$SRC"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
-if [ "${enable_threads}" != "no" ]
- then
-$ECHO_N "checking for POSIX threads..."
-$ECHO_N "checking for POSIX threads..." >> config.log
-if [ "${prefix_pthreads}" != "" ]; then
-PTHREADS_CFLAGS="-I${prefix_pthreads}/include"
-PTHREADS_LIBS="-L${prefix_pthreads}/lib -lpthread"
-else
-PTHREADS_CFLAGS=""
-PTHREADS_LIBS="-lpthread"
-fi;
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_PTHREADS" ]; then
-		HAVE_PTHREADS=`cat ${cache}/ctest-HAVE_PTHREADS`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_PTHREADS`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <pthread.h>
-#include <signal.h>
-
-static void *start_routine(void *arg)
-{
-	return (NULL);
-}
-int main(int argc, char *argv[])
-{
-	pthread_mutex_t mutex;
-	pthread_t thread;
-	pthread_mutex_init(&mutex, NULL);
-	pthread_mutex_lock(&mutex);
-	pthread_mutex_unlock(&mutex);
-	pthread_mutex_destroy(&mutex);
-	pthread_create(&thread, NULL, start_routine, NULL);
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_LIBS}" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_LIBS} 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_PTHREADS="yes"
-echo "HAVE_PTHREADS=$HAVE_PTHREADS" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREADS\"] = \"$HAVE_PTHREADS\"" >>configure.lua
-echo "#ifndef HAVE_PTHREADS" > $BLD/include/edacious/config/have_pthreads.h
-echo "#define HAVE_PTHREADS \"$HAVE_PTHREADS\"" >> $BLD/include/edacious/config/have_pthreads.h
-echo "#endif" >> $BLD/include/edacious/config/have_pthreads.h
-echo "hdefs[\"HAVE_PTHREADS\"] = \"$HAVE_PTHREADS\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_PTHREADS="no"
-echo "HAVE_PTHREADS=$HAVE_PTHREADS" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREADS\"] = \"$HAVE_PTHREADS\"" >>configure.lua
-echo "#undef HAVE_PTHREADS" >$BLD/include/edacious/config/have_pthreads.h
-echo "hdefs[\"HAVE_PTHREADS\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_PTHREADS" > ${cache}/ctest-HAVE_PTHREADS
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_PTHREADS
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
-if [ "${HAVE_PTHREADS}" = "yes" ]; then
-CFLAGS="${CFLAGS} ${PTHREADS_CFLAGS}"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "PTHREADS_CFLAGS=$PTHREADS_CFLAGS" >>Makefile.config
-echo "mdefs[\"PTHREADS_CFLAGS\"] = \"$PTHREADS_CFLAGS\"" >>configure.lua
-echo "PTHREADS_LIBS=$PTHREADS_LIBS" >>Makefile.config
-echo "mdefs[\"PTHREADS_LIBS\"] = \"$PTHREADS_LIBS\"" >>configure.lua
-echo "#ifndef PTHREADS_CFLAGS" > $BLD/include/edacious/config/pthreads_cflags.h
-echo "#define PTHREADS_CFLAGS \"$PTHREADS_CFLAGS\"" >> $BLD/include/edacious/config/pthreads_cflags.h
-echo "#endif" >> $BLD/include/edacious/config/pthreads_cflags.h
-echo "hdefs[\"PTHREADS_CFLAGS\"] = \"$PTHREADS_CFLAGS\"" >>configure.lua
-echo "#ifndef PTHREADS_LIBS" > $BLD/include/edacious/config/pthreads_libs.h
-echo "#define PTHREADS_LIBS \"$PTHREADS_LIBS\"" >> $BLD/include/edacious/config/pthreads_libs.h
-echo "#endif" >> $BLD/include/edacious/config/pthreads_libs.h
-echo "hdefs[\"PTHREADS_LIBS\"] = \"$PTHREADS_LIBS\"" >>configure.lua
-else
-$ECHO_N "checking for -pthread..."
-$ECHO_N "checking for -pthread..." >> config.log
-PTHREADS_LIBS="-pthread"
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_PTHREADS" ]; then
-		HAVE_PTHREADS=`cat ${cache}/ctest-HAVE_PTHREADS`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_PTHREADS`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <pthread.h>
-#include <signal.h>
-
-static void *start_routine(void *arg)
-{
-	return (NULL);
-}
-int main(int argc, char *argv[])
-{
-	pthread_mutex_t mutex;
-	pthread_t thread;
-	pthread_mutex_init(&mutex, NULL);
-	pthread_mutex_lock(&mutex);
-	pthread_mutex_unlock(&mutex);
-	pthread_mutex_destroy(&mutex);
-	pthread_create(&thread, NULL, start_routine, NULL);
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_LIBS}" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_LIBS} 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_PTHREADS="yes"
-echo "HAVE_PTHREADS=$HAVE_PTHREADS" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREADS\"] = \"$HAVE_PTHREADS\"" >>configure.lua
-echo "#ifndef HAVE_PTHREADS" > $BLD/include/edacious/config/have_pthreads.h
-echo "#define HAVE_PTHREADS \"$HAVE_PTHREADS\"" >> $BLD/include/edacious/config/have_pthreads.h
-echo "#endif" >> $BLD/include/edacious/config/have_pthreads.h
-echo "hdefs[\"HAVE_PTHREADS\"] = \"$HAVE_PTHREADS\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_PTHREADS="no"
-echo "HAVE_PTHREADS=$HAVE_PTHREADS" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREADS\"] = \"$HAVE_PTHREADS\"" >>configure.lua
-echo "#undef HAVE_PTHREADS" >$BLD/include/edacious/config/have_pthreads.h
-echo "hdefs[\"HAVE_PTHREADS\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_PTHREADS" > ${cache}/ctest-HAVE_PTHREADS
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_PTHREADS
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
-if [ "${HAVE_PTHREADS}" = "yes" ]; then
-CFLAGS="${CFLAGS} ${PTHREADS_CFLAGS}"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "PTHREADS_CFLAGS=$PTHREADS_CFLAGS" >>Makefile.config
-echo "mdefs[\"PTHREADS_CFLAGS\"] = \"$PTHREADS_CFLAGS\"" >>configure.lua
-echo "PTHREADS_LIBS=$PTHREADS_LIBS" >>Makefile.config
-echo "mdefs[\"PTHREADS_LIBS\"] = \"$PTHREADS_LIBS\"" >>configure.lua
-echo "#ifndef PTHREADS_CFLAGS" > $BLD/include/edacious/config/pthreads_cflags.h
-echo "#define PTHREADS_CFLAGS \"$PTHREADS_CFLAGS\"" >> $BLD/include/edacious/config/pthreads_cflags.h
-echo "#endif" >> $BLD/include/edacious/config/pthreads_cflags.h
-echo "hdefs[\"PTHREADS_CFLAGS\"] = \"$PTHREADS_CFLAGS\"" >>configure.lua
-echo "#ifndef PTHREADS_LIBS" > $BLD/include/edacious/config/pthreads_libs.h
-echo "#define PTHREADS_LIBS \"$PTHREADS_LIBS\"" >> $BLD/include/edacious/config/pthreads_libs.h
-echo "#endif" >> $BLD/include/edacious/config/pthreads_libs.h
-echo "hdefs[\"PTHREADS_LIBS\"] = \"$PTHREADS_LIBS\"" >>configure.lua
-else
-PTHREADS_CFLAGS=""
-PTHREADS_LIBS=""
-$ECHO_N "checking for -pthread (common paths)..."
-$ECHO_N "checking for -pthread (common paths)..." >> config.log
-if [ -e  "${prefix_pthreads}/lib/pthread.h" ]; then
-PTHREADS_CFLAGS="-I${prefix_pthreads}/lib"
-fi;
-if [ -e  "/usr/include/pthreads/pthread.h" ]; then
-PTHREADS_CFLAGS="-I/usr/include/pthreads"
-fi;
-if [ -e  "/usr/local/include/pthread.h" ]; then
-PTHREADS_CFLAGS="-I/usr/local/include"
-fi;
-if [ -e  "/usr/local/include/pthreads/pthread.h" ]; then
-PTHREADS_CFLAGS="-I/usr/local/include/pthreads"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthread.a" ]; then
-PTHREADS_LIBS="-L${prefix_pthreads}/lib -lpthread"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGC1.a" ]; then
-PTHREADS_LIBS="-L${prefix_pthreads}/lib -lpthreadGC1"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGC1d.a" ]; then
-PTHREADS_LIBS="-L${prefix_pthreads}/lib -lpthreadGC1d"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGCE1.a" ]; then
-PTHREADS_LIBS="-L${prefix_pthreads}/lib -lpthreadGCE1"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGCE1d.a" ]; then
-PTHREADS_LIBS="-L${prefix_pthreads}/lib -lpthreadGCE1d"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGC2.a" ]; then
-PTHREADS_LIBS="-L${prefix_pthreads}/lib -lpthreadGC2"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGC2d.a" ]; then
-PTHREADS_LIBS="-L${prefix_pthreads}/lib -lpthreadGC2d"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGCE2.a" ]; then
-PTHREADS_LIBS="-L${prefix_pthreads}/lib -lpthreadGCE2"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGCE2d.a" ]; then
-PTHREADS_LIBS="-L${prefix_pthreads}/lib -lpthreadGCE2d"
-fi;
-if [ -e  "/usr/local/lib/libpthread.a" ]; then
-PTHREADS_LIBS="-L/usr/local/lib -lpthread"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGC1.a" ]; then
-PTHREADS_LIBS="-L/usr/local/lib -lpthreadGC1"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGC1d.a" ]; then
-PTHREADS_LIBS="-L/usr/local/lib -lpthreadGC1d"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGCE1.a" ]; then
-PTHREADS_LIBS="-L/usr/local/lib -lpthreadGCE1"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGCE1d.a" ]; then
-PTHREADS_LIBS="-L/usr/local/lib -lpthreadGCE1d"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGC2.a" ]; then
-PTHREADS_LIBS="-L/usr/local/lib -lpthreadGC2"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGC2d.a" ]; then
-PTHREADS_LIBS="-L/usr/local/lib -lpthreadGC2d"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGCE2.a" ]; then
-PTHREADS_LIBS="-L/usr/local/lib -lpthreadGCE2"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGCE2d.a" ]; then
-PTHREADS_LIBS="-L/usr/local/lib -lpthreadGCE2d"
-fi;
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_PTHREADS" ]; then
-		HAVE_PTHREADS=`cat ${cache}/ctest-HAVE_PTHREADS`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_PTHREADS`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <pthread.h>
-#include <signal.h>
-
-static void *start_routine(void *arg)
-{
-	return (NULL);
-}
-int main(int argc, char *argv[])
-{
-	pthread_mutex_t mutex;
-	pthread_t thread;
-	pthread_mutex_init(&mutex, NULL);
-	pthread_mutex_lock(&mutex);
-	pthread_mutex_unlock(&mutex);
-	pthread_mutex_destroy(&mutex);
-	pthread_create(&thread, NULL, start_routine, NULL);
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_LIBS}" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_LIBS} 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_PTHREADS="yes"
-echo "HAVE_PTHREADS=$HAVE_PTHREADS" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREADS\"] = \"$HAVE_PTHREADS\"" >>configure.lua
-echo "#ifndef HAVE_PTHREADS" > $BLD/include/edacious/config/have_pthreads.h
-echo "#define HAVE_PTHREADS \"$HAVE_PTHREADS\"" >> $BLD/include/edacious/config/have_pthreads.h
-echo "#endif" >> $BLD/include/edacious/config/have_pthreads.h
-echo "hdefs[\"HAVE_PTHREADS\"] = \"$HAVE_PTHREADS\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_PTHREADS="no"
-echo "HAVE_PTHREADS=$HAVE_PTHREADS" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREADS\"] = \"$HAVE_PTHREADS\"" >>configure.lua
-echo "#undef HAVE_PTHREADS" >$BLD/include/edacious/config/have_pthreads.h
-echo "hdefs[\"HAVE_PTHREADS\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_PTHREADS" > ${cache}/ctest-HAVE_PTHREADS
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_PTHREADS
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
-if [ "${HAVE_PTHREADS}" = "yes" ]; then
-CFLAGS="${CFLAGS} ${PTHREADS_CFLAGS}"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "PTHREADS_CFLAGS=$PTHREADS_CFLAGS" >>Makefile.config
-echo "mdefs[\"PTHREADS_CFLAGS\"] = \"$PTHREADS_CFLAGS\"" >>configure.lua
-echo "PTHREADS_LIBS=$PTHREADS_LIBS" >>Makefile.config
-echo "mdefs[\"PTHREADS_LIBS\"] = \"$PTHREADS_LIBS\"" >>configure.lua
-echo "#ifndef PTHREADS_CFLAGS" > $BLD/include/edacious/config/pthreads_cflags.h
-echo "#define PTHREADS_CFLAGS \"$PTHREADS_CFLAGS\"" >> $BLD/include/edacious/config/pthreads_cflags.h
-echo "#endif" >> $BLD/include/edacious/config/pthreads_cflags.h
-echo "hdefs[\"PTHREADS_CFLAGS\"] = \"$PTHREADS_CFLAGS\"" >>configure.lua
-echo "#ifndef PTHREADS_LIBS" > $BLD/include/edacious/config/pthreads_libs.h
-echo "#define PTHREADS_LIBS \"$PTHREADS_LIBS\"" >> $BLD/include/edacious/config/pthreads_libs.h
-echo "#endif" >> $BLD/include/edacious/config/pthreads_libs.h
-echo "hdefs[\"PTHREADS_LIBS\"] = \"$PTHREADS_LIBS\"" >>configure.lua
-fi;
-fi;
-fi;
-$ECHO_N "checking for the X/Open Threads Extension..."
-$ECHO_N "checking for the X/Open Threads Extension..." >> config.log
-case "${host}" in
-*-*-freebsd*)
-PTHREADS_XOPEN_CFLAGS=""
-;;
-*)
-PTHREADS_XOPEN_CFLAGS="-U_XOPEN_SOURCE -D_XOPEN_SOURCE=600"
-;;
-esac
-if [ "${prefix_pthreads}" != "" ]; then
-PTHREADS_XOPEN_LIBS="-L${prefix_pthreads}/lib -lpthread"
-else
-PTHREADS_XOPEN_LIBS="-lpthread"
-fi;
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_PTHREADS_XOPEN" ]; then
-		HAVE_PTHREADS_XOPEN=`cat ${cache}/ctest-HAVE_PTHREADS_XOPEN`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_PTHREADS_XOPEN`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <pthread.h>
-#include <signal.h>
-
-int main(int argc, char *argv[])
-{
-	pthread_mutex_t mutex;
-	pthread_mutexattr_t mutexattr;
-	pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&mutex, &mutexattr);
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_XOPEN_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_XOPEN_LIBS}" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_XOPEN_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_XOPEN_LIBS} 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_PTHREADS_XOPEN="yes"
-echo "HAVE_PTHREADS_XOPEN=$HAVE_PTHREADS_XOPEN" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREADS_XOPEN\"] = \"$HAVE_PTHREADS_XOPEN\"" >>configure.lua
-echo "#ifndef HAVE_PTHREADS_XOPEN" > $BLD/include/edacious/config/have_pthreads_xopen.h
-echo "#define HAVE_PTHREADS_XOPEN \"$HAVE_PTHREADS_XOPEN\"" >> $BLD/include/edacious/config/have_pthreads_xopen.h
-echo "#endif" >> $BLD/include/edacious/config/have_pthreads_xopen.h
-echo "hdefs[\"HAVE_PTHREADS_XOPEN\"] = \"$HAVE_PTHREADS_XOPEN\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_PTHREADS_XOPEN="no"
-echo "HAVE_PTHREADS_XOPEN=$HAVE_PTHREADS_XOPEN" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREADS_XOPEN\"] = \"$HAVE_PTHREADS_XOPEN\"" >>configure.lua
-echo "#undef HAVE_PTHREADS_XOPEN" >$BLD/include/edacious/config/have_pthreads_xopen.h
-echo "hdefs[\"HAVE_PTHREADS_XOPEN\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_PTHREADS_XOPEN" > ${cache}/ctest-HAVE_PTHREADS_XOPEN
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_PTHREADS_XOPEN
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
-if [ "${HAVE_PTHREADS_XOPEN}" = "yes" ]; then
-echo "PTHREADS_XOPEN_CFLAGS=$PTHREADS_XOPEN_CFLAGS" >>Makefile.config
-echo "mdefs[\"PTHREADS_XOPEN_CFLAGS\"] = \"$PTHREADS_XOPEN_CFLAGS\"" >>configure.lua
-echo "PTHREADS_XOPEN_LIBS=$PTHREADS_XOPEN_LIBS" >>Makefile.config
-echo "mdefs[\"PTHREADS_XOPEN_LIBS\"] = \"$PTHREADS_XOPEN_LIBS\"" >>configure.lua
-echo "#ifndef HAVE_PTHREADS_XOPEN" > $BLD/include/edacious/config/have_pthreads_xopen.h
-echo "#define HAVE_PTHREADS_XOPEN \"$HAVE_PTHREADS_XOPEN\"" >> $BLD/include/edacious/config/have_pthreads_xopen.h
-echo "#endif" >> $BLD/include/edacious/config/have_pthreads_xopen.h
-echo "hdefs[\"HAVE_PTHREADS_XOPEN\"] = \"$HAVE_PTHREADS_XOPEN\"" >>configure.lua
-echo "#ifndef PTHREADS_XOPEN_CFLAGS" > $BLD/include/edacious/config/pthreads_xopen_cflags.h
-echo "#define PTHREADS_XOPEN_CFLAGS \"$PTHREADS_XOPEN_CFLAGS\"" >> $BLD/include/edacious/config/pthreads_xopen_cflags.h
-echo "#endif" >> $BLD/include/edacious/config/pthreads_xopen_cflags.h
-echo "hdefs[\"PTHREADS_XOPEN_CFLAGS\"] = \"$PTHREADS_XOPEN_CFLAGS\"" >>configure.lua
-echo "#ifndef PTHREADS_XOPEN_LIBS" > $BLD/include/edacious/config/pthreads_xopen_libs.h
-echo "#define PTHREADS_XOPEN_LIBS \"$PTHREADS_XOPEN_LIBS\"" >> $BLD/include/edacious/config/pthreads_xopen_libs.h
-echo "#endif" >> $BLD/include/edacious/config/pthreads_xopen_libs.h
-echo "hdefs[\"PTHREADS_XOPEN_LIBS\"] = \"$PTHREADS_XOPEN_LIBS\"" >>configure.lua
-else
-PTHREADS_XOPEN_LIBS=""
-$ECHO_N "checking for the X/Open Threads Extension (common paths)..."
-$ECHO_N "checking for the X/Open Threads Extension (common paths)..." >> config.log
-if [ -e  "${prefix_pthreads}/lib/libpthread.a" ]; then
-PTHREADS_XOPEN_LIBS="-L${prefix_pthreads}/lib -lpthread"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGC1.a" ]; then
-PTHREADS_XOPEN_LIBS="-L${prefix_pthreads}/lib -lpthreadGC1"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGC1d.a" ]; then
-PTHREADS_XOPEN_LIBS="-L${prefix_pthreads}/lib -lpthreadGC1d"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGCE1.a" ]; then
-PTHREADS_XOPEN_LIBS="-L${prefix_pthreads}/lib -lpthreadGCE1"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGCE1d.a" ]; then
-PTHREADS_XOPEN_LIBS="-L${prefix_pthreads}/lib -lpthreadGCE1d"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGC2.a" ]; then
-PTHREADS_XOPEN_LIBS="-L${prefix_pthreads}/lib -lpthreadGC2"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGC2d.a" ]; then
-PTHREADS_XOPEN_LIBS="-L${prefix_pthreads}/lib -lpthreadGC2d"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGCE2.a" ]; then
-PTHREADS_XOPEN_LIBS="-L${prefix_pthreads}/lib -lpthreadGCE2"
-fi;
-if [ -e  "${prefix_pthreads}/lib/libpthreadGCE2d.a" ]; then
-PTHREADS_XOPEN_LIBS="-L${prefix_pthreads}/lib -lpthreadGCE2d"
-fi;
-if [ -e  "/usr/local/lib/libpthread.a" ]; then
-PTHREADS_XOPEN_LIBS="-L/usr/local/lib -lpthread"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGC1.a" ]; then
-PTHREADS_XOPEN_LIBS="-L/usr/local/lib -lpthreadGC1"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGC1d.a" ]; then
-PTHREADS_XOPEN_LIBS="-L/usr/local/lib -lpthreadGC1d"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGCE1.a" ]; then
-PTHREADS_XOPEN_LIBS="-L/usr/local/lib -lpthreadGCE1"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGCE1d.a" ]; then
-PTHREADS_XOPEN_LIBS="-L/usr/local/lib -lpthreadGCE1d"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGC2.a" ]; then
-PTHREADS_XOPEN_LIBS="-L/usr/local/lib -lpthreadGC2"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGC2d.a" ]; then
-PTHREADS_XOPEN_LIBS="-L/usr/local/lib -lpthreadGC2d"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGCE2.a" ]; then
-PTHREADS_XOPEN_LIBS="-L/usr/local/lib -lpthreadGCE2"
-fi;
-if [ -e  "/usr/local/lib/libpthreadGCE2d.a" ]; then
-PTHREADS_XOPEN_LIBS="-L/usr/local/lib -lpthreadGCE2d"
-fi;
-if [ -e  "${prefix_pthreads}/lib/pthread.h" ]; then
-PTHREADS_CFLAGS="-I${prefix_pthreads}/lib"
-fi;
-if [ -e  "/usr/include/pthreads/pthread.h" ]; then
-PTHREADS_CFLAGS="-I/usr/include/pthreads"
-fi;
-if [ -e  "/usr/local/include/pthread.h" ]; then
-PTHREADS_CFLAGS="-I/usr/local/include"
-fi;
-if [ -e  "/usr/local/include/pthreads/pthread.h" ]; then
-PTHREADS_CFLAGS="-I/usr/local/include/pthreads"
-fi;
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_PTHREADS_XOPEN" ]; then
-		HAVE_PTHREADS_XOPEN=`cat ${cache}/ctest-HAVE_PTHREADS_XOPEN`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_PTHREADS_XOPEN`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <pthread.h>
-#include <signal.h>
-
-int main(int argc, char *argv[])
-{
-	pthread_mutex_t mutex;
-	pthread_mutexattr_t mutexattr;
-	pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&mutex, &mutexattr);
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_XOPEN_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_XOPEN_LIBS}" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_XOPEN_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_XOPEN_LIBS} 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_PTHREADS_XOPEN="yes"
-echo "HAVE_PTHREADS_XOPEN=$HAVE_PTHREADS_XOPEN" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREADS_XOPEN\"] = \"$HAVE_PTHREADS_XOPEN\"" >>configure.lua
-echo "#ifndef HAVE_PTHREADS_XOPEN" > $BLD/include/edacious/config/have_pthreads_xopen.h
-echo "#define HAVE_PTHREADS_XOPEN \"$HAVE_PTHREADS_XOPEN\"" >> $BLD/include/edacious/config/have_pthreads_xopen.h
-echo "#endif" >> $BLD/include/edacious/config/have_pthreads_xopen.h
-echo "hdefs[\"HAVE_PTHREADS_XOPEN\"] = \"$HAVE_PTHREADS_XOPEN\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_PTHREADS_XOPEN="no"
-echo "HAVE_PTHREADS_XOPEN=$HAVE_PTHREADS_XOPEN" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREADS_XOPEN\"] = \"$HAVE_PTHREADS_XOPEN\"" >>configure.lua
-echo "#undef HAVE_PTHREADS_XOPEN" >$BLD/include/edacious/config/have_pthreads_xopen.h
-echo "hdefs[\"HAVE_PTHREADS_XOPEN\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_PTHREADS_XOPEN" > ${cache}/ctest-HAVE_PTHREADS_XOPEN
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_PTHREADS_XOPEN
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
-if [ "${HAVE_PTHREADS_XOPEN}" = "yes" ]; then
-echo "PTHREADS_XOPEN_CFLAGS=$PTHREADS_XOPEN_CFLAGS" >>Makefile.config
-echo "mdefs[\"PTHREADS_XOPEN_CFLAGS\"] = \"$PTHREADS_XOPEN_CFLAGS\"" >>configure.lua
-echo "PTHREADS_XOPEN_LIBS=$PTHREADS_XOPEN_LIBS" >>Makefile.config
-echo "mdefs[\"PTHREADS_XOPEN_LIBS\"] = \"$PTHREADS_XOPEN_LIBS\"" >>configure.lua
-echo "#ifndef HAVE_PTHREADS_XOPEN" > $BLD/include/edacious/config/have_pthreads_xopen.h
-echo "#define HAVE_PTHREADS_XOPEN \"$HAVE_PTHREADS_XOPEN\"" >> $BLD/include/edacious/config/have_pthreads_xopen.h
-echo "#endif" >> $BLD/include/edacious/config/have_pthreads_xopen.h
-echo "hdefs[\"HAVE_PTHREADS_XOPEN\"] = \"$HAVE_PTHREADS_XOPEN\"" >>configure.lua
-echo "#ifndef PTHREADS_XOPEN_CFLAGS" > $BLD/include/edacious/config/pthreads_xopen_cflags.h
-echo "#define PTHREADS_XOPEN_CFLAGS \"$PTHREADS_XOPEN_CFLAGS\"" >> $BLD/include/edacious/config/pthreads_xopen_cflags.h
-echo "#endif" >> $BLD/include/edacious/config/pthreads_xopen_cflags.h
-echo "hdefs[\"PTHREADS_XOPEN_CFLAGS\"] = \"$PTHREADS_XOPEN_CFLAGS\"" >>configure.lua
-echo "#ifndef PTHREADS_XOPEN_LIBS" > $BLD/include/edacious/config/pthreads_xopen_libs.h
-echo "#define PTHREADS_XOPEN_LIBS \"$PTHREADS_XOPEN_LIBS\"" >> $BLD/include/edacious/config/pthreads_xopen_libs.h
-echo "#endif" >> $BLD/include/edacious/config/pthreads_xopen_libs.h
-echo "hdefs[\"PTHREADS_XOPEN_LIBS\"] = \"$PTHREADS_XOPEN_LIBS\"" >>configure.lua
-else
-echo "#undef HAVE_PTHREADS_XOPEN" >$BLD/include/edacious/config/have_pthreads_xopen.h
-echo "hdefs[\"HAVE_PTHREADS_XOPEN\"] = nil" >>configure.lua
-fi;
-fi;
-$ECHO_N "checking for PTHREAD_MUTEX_RECURSIVE..."
-$ECHO_N "checking for PTHREAD_MUTEX_RECURSIVE..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_PTHREAD_MUTEX_RECURSIVE" ]; then
-		HAVE_PTHREAD_MUTEX_RECURSIVE=`cat ${cache}/ctest-HAVE_PTHREAD_MUTEX_RECURSIVE`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_PTHREAD_MUTEX_RECURSIVE`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <pthread.h>
-#include <signal.h>
-int main(int argc, char *argv[])
-{
-	pthread_mutex_t mutex;
-	pthread_mutexattr_t mutexattr;
-	pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
-	pthread_mutex_init(&mutex, &mutexattr);
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_LIBS}" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_LIBS} 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_PTHREAD_MUTEX_RECURSIVE="yes"
-echo "HAVE_PTHREAD_MUTEX_RECURSIVE=$HAVE_PTHREAD_MUTEX_RECURSIVE" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREAD_MUTEX_RECURSIVE\"] = \"$HAVE_PTHREAD_MUTEX_RECURSIVE\"" >>configure.lua
-echo "#ifndef HAVE_PTHREAD_MUTEX_RECURSIVE" > $BLD/include/edacious/config/have_pthread_mutex_recursive.h
-echo "#define HAVE_PTHREAD_MUTEX_RECURSIVE \"$HAVE_PTHREAD_MUTEX_RECURSIVE\"" >> $BLD/include/edacious/config/have_pthread_mutex_recursive.h
-echo "#endif" >> $BLD/include/edacious/config/have_pthread_mutex_recursive.h
-echo "hdefs[\"HAVE_PTHREAD_MUTEX_RECURSIVE\"] = \"$HAVE_PTHREAD_MUTEX_RECURSIVE\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_PTHREAD_MUTEX_RECURSIVE="no"
-echo "HAVE_PTHREAD_MUTEX_RECURSIVE=$HAVE_PTHREAD_MUTEX_RECURSIVE" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREAD_MUTEX_RECURSIVE\"] = \"$HAVE_PTHREAD_MUTEX_RECURSIVE\"" >>configure.lua
-echo "#undef HAVE_PTHREAD_MUTEX_RECURSIVE" >$BLD/include/edacious/config/have_pthread_mutex_recursive.h
-echo "hdefs[\"HAVE_PTHREAD_MUTEX_RECURSIVE\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_PTHREAD_MUTEX_RECURSIVE" > ${cache}/ctest-HAVE_PTHREAD_MUTEX_RECURSIVE
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_PTHREAD_MUTEX_RECURSIVE
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
-if [ "${HAVE_PTHREAD_MUTEX_RECURSIVE}" = "yes" ]; then
-echo "#ifndef HAVE_PTHREAD_MUTEX_RECURSIVE" > $BLD/include/edacious/config/have_pthread_mutex_recursive.h
-echo "#define HAVE_PTHREAD_MUTEX_RECURSIVE \"$HAVE_PTHREAD_MUTEX_RECURSIVE\"" >> $BLD/include/edacious/config/have_pthread_mutex_recursive.h
-echo "#endif" >> $BLD/include/edacious/config/have_pthread_mutex_recursive.h
-echo "hdefs[\"HAVE_PTHREAD_MUTEX_RECURSIVE\"] = \"$HAVE_PTHREAD_MUTEX_RECURSIVE\"" >>configure.lua
-else
-echo "#undef HAVE_PTHREAD_MUTEX_RECURSIVE" >$BLD/include/edacious/config/have_pthread_mutex_recursive.h
-echo "hdefs[\"HAVE_PTHREAD_MUTEX_RECURSIVE\"] = nil" >>configure.lua
-fi;
-$ECHO_N "checking for PTHREAD_MUTEX_RECURSIVE_NP..."
-$ECHO_N "checking for PTHREAD_MUTEX_RECURSIVE_NP..." >> config.log
-MK_CACHED="No"
-MK_COMPILE_STATUS="OK"
-if [ "${cache}" != "" ]; then
-	if [ -e "${cache}/ctest-HAVE_PTHREAD_MUTEX_RECURSIVE_NP" ]; then
-		HAVE_PTHREAD_MUTEX_RECURSIVE_NP=`cat ${cache}/ctest-HAVE_PTHREAD_MUTEX_RECURSIVE_NP`
-		MK_COMPILE_STATUS=`cat ${cache}/ctest-status-HAVE_PTHREAD_MUTEX_RECURSIVE_NP`
-		MK_CACHED="Yes"
-	fi
-fi
-if [ "${MK_CACHED}" = "No" ]; then
-	cat << EOT > conftest.c
-#include <pthread.h>
-#include <signal.h>
-int main(int argc, char *argv[])
-{
-	pthread_mutex_t mutex;
-	pthread_mutexattr_t mutexattr;
-	pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE_NP);
-	pthread_mutex_init(&mutex, &mutexattr);
-	return (0);
-}
-
-EOT
-	echo "$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_LIBS}" >>config.log
-	$CC $CFLAGS $TEST_CFLAGS ${PTHREADS_CFLAGS} -o $testdir/conftest conftest.c ${PTHREADS_LIBS} 2>>config.log
-	if [ $? != 0 ]; then
-		echo "-> failed ($?)" >> config.log
-		MK_COMPILE_STATUS="FAIL($?)"
-	fi
-fi
-if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
-echo "yes"
-echo "yes" >> config.log
-HAVE_PTHREAD_MUTEX_RECURSIVE_NP="yes"
-echo "HAVE_PTHREAD_MUTEX_RECURSIVE_NP=$HAVE_PTHREAD_MUTEX_RECURSIVE_NP" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREAD_MUTEX_RECURSIVE_NP\"] = \"$HAVE_PTHREAD_MUTEX_RECURSIVE_NP\"" >>configure.lua
-echo "#ifndef HAVE_PTHREAD_MUTEX_RECURSIVE_NP" > $BLD/include/edacious/config/have_pthread_mutex_recursive_np.h
-echo "#define HAVE_PTHREAD_MUTEX_RECURSIVE_NP \"$HAVE_PTHREAD_MUTEX_RECURSIVE_NP\"" >> $BLD/include/edacious/config/have_pthread_mutex_recursive_np.h
-echo "#endif" >> $BLD/include/edacious/config/have_pthread_mutex_recursive_np.h
-echo "hdefs[\"HAVE_PTHREAD_MUTEX_RECURSIVE_NP\"] = \"$HAVE_PTHREAD_MUTEX_RECURSIVE_NP\"" >>configure.lua
-else
-echo "no"
-echo "no" >> config.log
-HAVE_PTHREAD_MUTEX_RECURSIVE_NP="no"
-echo "HAVE_PTHREAD_MUTEX_RECURSIVE_NP=$HAVE_PTHREAD_MUTEX_RECURSIVE_NP" >>Makefile.config
-echo "mdefs[\"HAVE_PTHREAD_MUTEX_RECURSIVE_NP\"] = \"$HAVE_PTHREAD_MUTEX_RECURSIVE_NP\"" >>configure.lua
-echo "#undef HAVE_PTHREAD_MUTEX_RECURSIVE_NP" >$BLD/include/edacious/config/have_pthread_mutex_recursive_np.h
-echo "hdefs[\"HAVE_PTHREAD_MUTEX_RECURSIVE_NP\"] = nil" >>configure.lua
-fi;
-if [ "${cache}" != "" ]; then
-	echo "$HAVE_PTHREAD_MUTEX_RECURSIVE_NP" > ${cache}/ctest-HAVE_PTHREAD_MUTEX_RECURSIVE_NP
-	echo $MK_COMPILE_STATUS > ${cache}/ctest-status-HAVE_PTHREAD_MUTEX_RECURSIVE_NP
-fi
-rm -f conftest.c $testdir/conftest$EXECSUFFIX
-if [ "${HAVE_PTHREAD_MUTEX_RECURSIVE_NP}" = "yes" ]; then
-echo "#ifndef HAVE_PTHREAD_MUTEX_RECURSIVE_NP" > $BLD/include/edacious/config/have_pthread_mutex_recursive_np.h
-echo "#define HAVE_PTHREAD_MUTEX_RECURSIVE_NP \"$HAVE_PTHREAD_MUTEX_RECURSIVE_NP\"" >> $BLD/include/edacious/config/have_pthread_mutex_recursive_np.h
-echo "#endif" >> $BLD/include/edacious/config/have_pthread_mutex_recursive_np.h
-echo "hdefs[\"HAVE_PTHREAD_MUTEX_RECURSIVE_NP\"] = \"$HAVE_PTHREAD_MUTEX_RECURSIVE_NP\"" >>configure.lua
-else
-echo "#undef HAVE_PTHREAD_MUTEX_RECURSIVE_NP" >$BLD/include/edacious/config/have_pthread_mutex_recursive_np.h
-echo "hdefs[\"HAVE_PTHREAD_MUTEX_RECURSIVE_NP\"] = nil" >>configure.lua
-fi;
-	if [ "${HAVE_PTHREADS}" = "yes" ]
-	then
-		if [ "${HAVE_PTHREADS_XOPEN}" = "no" ]
- then
-		if [ "${HAVE_PTHREAD_MUTEX_RECURSIVE}" = "no" ]
- then
-		if [ "${HAVE_PTHREAD_MUTEX_RECURSIVE_NP}" = "no" ]
- then
-			if [ "${enable_threads}" = "yes" ]
- then
-				echo "*"
-				echo "* --enable-threads was given, but your"
-				echo "* pthreads library lacks support for"
-				echo "* recursive mutexes. Try running the"
-				echo "* configure script again without this"
-				echo "* option."
-				echo "*"
-				exit 1
-			fi
-		fi
-		fi
-		fi
-THREADS="1"
-echo "#ifndef THREADS" > $BLD/include/edacious/config/threads.h
-echo "#define THREADS \"$THREADS\"" >> $BLD/include/edacious/config/threads.h
-echo "#endif" >> $BLD/include/edacious/config/threads.h
-echo "hdefs[\"THREADS\"] = \"$THREADS\"" >>configure.lua
-	else
-		if [ "${enable_threads}" = "yes" ]
- then
-			echo "*"
-			echo "* --enable-threads was given, but no pthreads"
-			echo "* library was found on your system. Try running"
-			echo "* the configure script again without this option."
-			echo "*"
-			exit 1
-		fi
-	fi
-else
-echo "#undef THREADS" >$BLD/include/edacious/config/threads.h
-echo "hdefs[\"THREADS\"] = nil" >>configure.lua
-echo "#undef HAVE_PTHREADS" >$BLD/include/edacious/config/have_pthreads.h
-echo "hdefs[\"HAVE_PTHREADS\"] = nil" >>configure.lua
-echo "#undef HAVE_PTHREADS_XOPEN" >$BLD/include/edacious/config/have_pthreads_xopen.h
-echo "hdefs[\"HAVE_PTHREADS_XOPEN\"] = nil" >>configure.lua
-PTHREADS_CFLAGS=""
-echo "PTHREADS_CFLAGS=$PTHREADS_CFLAGS" >>Makefile.config
-echo "mdefs[\"PTHREADS_CFLAGS\"] = \"$PTHREADS_CFLAGS\"" >>configure.lua
-PTHREADS_LIBS=""
-echo "PTHREADS_LIBS=$PTHREADS_LIBS" >>Makefile.config
-echo "mdefs[\"PTHREADS_LIBS\"] = \"$PTHREADS_LIBS\"" >>configure.lua
-PTHREADS_XOPEN_CFLAGS=""
-echo "PTHREADS_XOPEN_CFLAGS=$PTHREADS_XOPEN_CFLAGS" >>Makefile.config
-echo "mdefs[\"PTHREADS_XOPEN_CFLAGS\"] = \"$PTHREADS_XOPEN_CFLAGS\"" >>configure.lua
-PTHREADS_XOPEN_LIBS=""
-echo "PTHREADS_XOPEN_LIBS=$PTHREADS_XOPEN_LIBS" >>Makefile.config
-echo "mdefs[\"PTHREADS_XOPEN_LIBS\"] = \"$PTHREADS_XOPEN_LIBS\"" >>configure.lua
-	if [ "${enable_warnings}" = "yes" ]
- then
-CFLAGS="$CFLAGS -Wno-unused"
-CXXFLAGS="$CXXFLAGS -Wno-unused"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
-	fi
-fi
 if [ "${enable_warnings}" != "no" ]
  then
 CFLAGS="$CFLAGS -Wall"
 CXXFLAGS="$CXXFLAGS -Wall"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 CFLAGS="$CFLAGS -Werror"
 CXXFLAGS="$CXXFLAGS -Werror"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 CFLAGS="$CFLAGS -Wmissing-prototypes"
 CXXFLAGS="$CXXFLAGS -Wmissing-prototypes"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 fi
 if [ "${enable_debug}" = "yes" ]
  then
 CFLAGS="$CFLAGS -DES_DEBUG"
 CXXFLAGS="$CXXFLAGS -DES_DEBUG"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 ES_DEBUG="yes"
 echo "#ifndef ES_DEBUG" > $BLD/include/edacious/config/es_debug.h
 echo "#define ES_DEBUG \"$ES_DEBUG\"" >> $BLD/include/edacious/config/es_debug.h
 echo "#endif" >> $BLD/include/edacious/config/es_debug.h
 echo "hdefs[\"ES_DEBUG\"] = \"$ES_DEBUG\"" >>configure.lua
 LDFLAGS="$LDFLAGS-g"
-echo "LDFLAGS=$LDFLAGS" >>Makefile.config
-echo "mdefs[\"LDFLAGS\"] = \"$LDFLAGS\"" >>configure.lua
 else
 echo "#undef ES_DEBUG" >$BLD/include/edacious/config/es_debug.h
 echo "hdefs[\"ES_DEBUG\"] = nil" >>configure.lua
@@ -4074,10 +2514,6 @@ if [ "${enable_fpdebug}" = "yes" ]
  then
 CFLAGS="$CFLAGS -DFP_DEBUG"
 CXXFLAGS="$CXXFLAGS -DFP_DEBUG"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 FP_DEBUG="yes"
 echo "#ifndef FP_DEBUG" > $BLD/include/edacious/config/fp_debug.h
 echo "#define FP_DEBUG \"$FP_DEBUG\"" >> $BLD/include/edacious/config/fp_debug.h
@@ -4091,10 +2527,6 @@ if [ "${enable_exprdebug}" = "yes" ]
  then
 CFLAGS="$CFLAGS -DEXPR_DEBUG"
 CXXFLAGS="$CXXFLAGS -DEXPR_DEBUG"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 EXPR_DEBUG="yes"
 echo "#ifndef EXPR_DEBUG" > $BLD/include/edacious/config/expr_debug.h
 echo "#define EXPR_DEBUG \"$EXPR_DEBUG\"" >> $BLD/include/edacious/config/expr_debug.h
@@ -4106,8 +2538,8 @@ echo "hdefs[\"EXPR_DEBUG\"] = nil" >>configure.lua
 fi
 if [ "${enable_nls}" = "yes" ]
  then
-$ECHO_N "checking for a gettext library..."
-$ECHO_N "checking for a gettext library..." >> config.log
+$ECHO_N "checking for a gettext library in libc..."
+$ECHO_N "checking for a gettext library in libc..." >> config.log
 GETTEXT_CFLAGS=""
 GETTEXT_LIBS=""
 MK_CACHED="No"
@@ -4129,7 +2561,7 @@ int main(int argc, char *argv[])
 	textdomain("foo");
 	s = gettext("string");
 	s = dgettext("foo","string");
-	return (0);
+	return (s != NULL);
 }
 
 EOT
@@ -4144,8 +2576,6 @@ if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
 echo "yes"
 echo "yes" >> config.log
 HAVE_GETTEXT="yes"
-echo "HAVE_GETTEXT=$HAVE_GETTEXT" >>Makefile.config
-echo "mdefs[\"HAVE_GETTEXT\"] = \"$HAVE_GETTEXT\"" >>configure.lua
 echo "#ifndef HAVE_GETTEXT" > $BLD/include/edacious/config/have_gettext.h
 echo "#define HAVE_GETTEXT \"$HAVE_GETTEXT\"" >> $BLD/include/edacious/config/have_gettext.h
 echo "#endif" >> $BLD/include/edacious/config/have_gettext.h
@@ -4154,8 +2584,6 @@ else
 echo "no"
 echo "no" >> config.log
 HAVE_GETTEXT="no"
-echo "HAVE_GETTEXT=$HAVE_GETTEXT" >>Makefile.config
-echo "mdefs[\"HAVE_GETTEXT\"] = \"$HAVE_GETTEXT\"" >>configure.lua
 echo "#undef HAVE_GETTEXT" >$BLD/include/edacious/config/have_gettext.h
 echo "hdefs[\"HAVE_GETTEXT\"] = nil" >>configure.lua
 fi;
@@ -4165,8 +2593,8 @@ if [ "${cache}" != "" ]; then
 fi
 rm -f conftest.c $testdir/conftest$EXECSUFFIX
 if [ "${HAVE_GETTEXT}" = "no" ]; then
-$ECHO_N "checking whether gettext requires -lintl..."
-$ECHO_N "checking whether gettext requires -lintl..." >> config.log
+$ECHO_N "checking for a gettext library in -lintl..."
+$ECHO_N "checking for a gettext library in -lintl..." >> config.log
 if [ "${prefix_gettext}" != "" ]; then
 if [ -e  "${prefix_gettext}/include/libintl.h" ]; then
 GETTEXT_CFLAGS="-I${prefix_gettext}/include"
@@ -4217,7 +2645,7 @@ int main(int argc, char *argv[])
 	textdomain("foo");
 	s = gettext("string");
 	s = dgettext("foo","string");
-	return (0);
+	return (s != NULL);
 }
 
 EOT
@@ -4232,8 +2660,6 @@ if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
 echo "yes"
 echo "yes" >> config.log
 HAVE_GETTEXT="yes"
-echo "HAVE_GETTEXT=$HAVE_GETTEXT" >>Makefile.config
-echo "mdefs[\"HAVE_GETTEXT\"] = \"$HAVE_GETTEXT\"" >>configure.lua
 echo "#ifndef HAVE_GETTEXT" > $BLD/include/edacious/config/have_gettext.h
 echo "#define HAVE_GETTEXT \"$HAVE_GETTEXT\"" >> $BLD/include/edacious/config/have_gettext.h
 echo "#endif" >> $BLD/include/edacious/config/have_gettext.h
@@ -4242,8 +2668,6 @@ else
 echo "no"
 echo "no" >> config.log
 HAVE_GETTEXT="no"
-echo "HAVE_GETTEXT=$HAVE_GETTEXT" >>Makefile.config
-echo "mdefs[\"HAVE_GETTEXT\"] = \"$HAVE_GETTEXT\"" >>configure.lua
 echo "#undef HAVE_GETTEXT" >$BLD/include/edacious/config/have_gettext.h
 echo "hdefs[\"HAVE_GETTEXT\"] = nil" >>configure.lua
 fi;
@@ -4253,14 +2677,10 @@ if [ "${cache}" != "" ]; then
 fi
 rm -f conftest.c $testdir/conftest$EXECSUFFIX
 if [ "${HAVE_GETTEXT}" = "yes" ]; then
-echo "GETTEXT_CFLAGS=$GETTEXT_CFLAGS" >>Makefile.config
-echo "mdefs[\"GETTEXT_CFLAGS\"] = \"$GETTEXT_CFLAGS\"" >>configure.lua
 echo "#ifndef GETTEXT_CFLAGS" > $BLD/include/edacious/config/gettext_cflags.h
 echo "#define GETTEXT_CFLAGS \"$GETTEXT_CFLAGS\"" >> $BLD/include/edacious/config/gettext_cflags.h
 echo "#endif" >> $BLD/include/edacious/config/gettext_cflags.h
 echo "hdefs[\"GETTEXT_CFLAGS\"] = \"$GETTEXT_CFLAGS\"" >>configure.lua
-echo "GETTEXT_LIBS=$GETTEXT_LIBS" >>Makefile.config
-echo "mdefs[\"GETTEXT_LIBS\"] = \"$GETTEXT_LIBS\"" >>configure.lua
 echo "#ifndef GETTEXT_LIBS" > $BLD/include/edacious/config/gettext_libs.h
 echo "#define GETTEXT_LIBS \"$GETTEXT_LIBS\"" >> $BLD/include/edacious/config/gettext_libs.h
 echo "#endif" >> $BLD/include/edacious/config/gettext_libs.h
@@ -4318,7 +2738,7 @@ int main(int argc, char *argv[])
 	textdomain("foo");
 	s = gettext("string");
 	s = dgettext("foo","string");
-	return (0);
+	return (s != NULL);
 }
 
 EOT
@@ -4333,8 +2753,6 @@ if [ "${MK_COMPILE_STATUS}" = "OK" ]; then
 echo "yes"
 echo "yes" >> config.log
 HAVE_GETTEXT="yes"
-echo "HAVE_GETTEXT=$HAVE_GETTEXT" >>Makefile.config
-echo "mdefs[\"HAVE_GETTEXT\"] = \"$HAVE_GETTEXT\"" >>configure.lua
 echo "#ifndef HAVE_GETTEXT" > $BLD/include/edacious/config/have_gettext.h
 echo "#define HAVE_GETTEXT \"$HAVE_GETTEXT\"" >> $BLD/include/edacious/config/have_gettext.h
 echo "#endif" >> $BLD/include/edacious/config/have_gettext.h
@@ -4343,8 +2761,6 @@ else
 echo "no"
 echo "no" >> config.log
 HAVE_GETTEXT="no"
-echo "HAVE_GETTEXT=$HAVE_GETTEXT" >>Makefile.config
-echo "mdefs[\"HAVE_GETTEXT\"] = \"$HAVE_GETTEXT\"" >>configure.lua
 echo "#undef HAVE_GETTEXT" >$BLD/include/edacious/config/have_gettext.h
 echo "hdefs[\"HAVE_GETTEXT\"] = nil" >>configure.lua
 fi;
@@ -4354,14 +2770,10 @@ if [ "${cache}" != "" ]; then
 fi
 rm -f conftest.c $testdir/conftest$EXECSUFFIX
 if [ "${HAVE_GETTEXT}" = "yes" ]; then
-echo "GETTEXT_CFLAGS=$GETTEXT_CFLAGS" >>Makefile.config
-echo "mdefs[\"GETTEXT_CFLAGS\"] = \"$GETTEXT_CFLAGS\"" >>configure.lua
 echo "#ifndef GETTEXT_CFLAGS" > $BLD/include/edacious/config/gettext_cflags.h
 echo "#define GETTEXT_CFLAGS \"$GETTEXT_CFLAGS\"" >> $BLD/include/edacious/config/gettext_cflags.h
 echo "#endif" >> $BLD/include/edacious/config/gettext_cflags.h
 echo "hdefs[\"GETTEXT_CFLAGS\"] = \"$GETTEXT_CFLAGS\"" >>configure.lua
-echo "GETTEXT_LIBS=$GETTEXT_LIBS" >>Makefile.config
-echo "mdefs[\"GETTEXT_LIBS\"] = \"$GETTEXT_LIBS\"" >>configure.lua
 echo "#ifndef GETTEXT_LIBS" > $BLD/include/edacious/config/gettext_libs.h
 echo "#define GETTEXT_LIBS \"$GETTEXT_LIBS\"" >> $BLD/include/edacious/config/gettext_libs.h
 echo "#endif" >> $BLD/include/edacious/config/gettext_libs.h
@@ -4427,16 +2839,8 @@ else
 fi
 CFLAGS="$CFLAGS -I$BLD/include"
 CXXFLAGS="$CXXFLAGS -I$BLD/include"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 CFLAGS="$CFLAGS -I$BLD/include/edacious"
 CXXFLAGS="$CXXFLAGS -I$BLD/include/edacious"
-echo "CFLAGS=$CFLAGS" >>Makefile.config
-echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
-echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
-echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
 config_script_out="edacious-config"
 config_script_cflags="-I${INCLDIR} ${GETTEXT_CFLAGS}"
 config_script_libs="-L${LIBDIR} -les_core ${GETTEXT_LIBS}"
@@ -4503,12 +2907,7 @@ while test \$# -gt 0; do
 		echo "$config_script_cflags"
 		;;
 	--libs | --static-libs)
-		if test x"\${prefix}" != x"/usr" ; then
-			libdirs="-L/usr/lib64"
-		else
-			libdirs=""
-		fi
-		echo "\$libdirs $config_script_libs"
+		echo "$config_script_libs"
 		;;
 	*)
 		echo "\${usage}" 1>&2
@@ -4518,8 +2917,95 @@ while test \$# -gt 0; do
 	shift
 done
 EOT
+echo "AGAR_MATH_CFLAGS=$AGAR_MATH_CFLAGS" >>Makefile.config
+echo "mdefs[\"AGAR_MATH_CFLAGS\"] = \"$AGAR_MATH_CFLAGS\"" >>configure.lua
+echo "CC=$CC" >>Makefile.config
+echo "mdefs[\"CC\"] = \"$CC\"" >>configure.lua
+echo "PACKAGE=$PACKAGE" >>Makefile.config
+echo "mdefs[\"PACKAGE\"] = \"$PACKAGE\"" >>configure.lua
+echo "LOCALEDIR=$LOCALEDIR" >>Makefile.config
+echo "mdefs[\"LOCALEDIR\"] = \"$LOCALEDIR\"" >>configure.lua
+echo "LIBEXECDIR=$LIBEXECDIR" >>Makefile.config
+echo "mdefs[\"LIBEXECDIR\"] = \"$LIBEXECDIR\"" >>configure.lua
+echo "CXXFLAGS=$CXXFLAGS" >>Makefile.config
+echo "mdefs[\"CXXFLAGS\"] = \"$CXXFLAGS\"" >>configure.lua
+echo "INCLDIR=$INCLDIR" >>Makefile.config
+echo "mdefs[\"INCLDIR\"] = \"$INCLDIR\"" >>configure.lua
+echo "DATADIR=$DATADIR" >>Makefile.config
+echo "mdefs[\"DATADIR\"] = \"$DATADIR\"" >>configure.lua
+echo "HAVE_AGAR_MATH=$HAVE_AGAR_MATH" >>Makefile.config
+echo "mdefs[\"HAVE_AGAR_MATH\"] = \"$HAVE_AGAR_MATH\"" >>configure.lua
+echo "HAVE_IEEE754=$HAVE_IEEE754" >>Makefile.config
+echo "mdefs[\"HAVE_IEEE754\"] = \"$HAVE_IEEE754\"" >>configure.lua
+echo "LDFLAGS=$LDFLAGS" >>Makefile.config
+echo "mdefs[\"LDFLAGS\"] = \"$LDFLAGS\"" >>configure.lua
+echo "HAVE_CC_WARNINGS=$HAVE_CC_WARNINGS" >>Makefile.config
+echo "mdefs[\"HAVE_CC_WARNINGS\"] = \"$HAVE_CC_WARNINGS\"" >>configure.lua
+echo "ENABLE_NLS=$ENABLE_NLS" >>Makefile.config
+echo "mdefs[\"ENABLE_NLS\"] = \"$ENABLE_NLS\"" >>configure.lua
+echo "HAVE_AGAR_VG=$HAVE_AGAR_VG" >>Makefile.config
+echo "mdefs[\"HAVE_AGAR_VG\"] = \"$HAVE_AGAR_VG\"" >>configure.lua
+echo "CFLAGS=$CFLAGS" >>Makefile.config
+echo "mdefs[\"CFLAGS\"] = \"$CFLAGS\"" >>configure.lua
+echo "MANDIR=$MANDIR" >>Makefile.config
+echo "mdefs[\"MANDIR\"] = \"$MANDIR\"" >>configure.lua
+echo "AGAR_VG_CFLAGS=$AGAR_VG_CFLAGS" >>Makefile.config
+echo "mdefs[\"AGAR_VG_CFLAGS\"] = \"$AGAR_VG_CFLAGS\"" >>configure.lua
+echo "HAVE_CYGWIN=$HAVE_CYGWIN" >>Makefile.config
+echo "mdefs[\"HAVE_CYGWIN\"] = \"$HAVE_CYGWIN\"" >>configure.lua
+echo "SYSCONFDIR=$SYSCONFDIR" >>Makefile.config
+echo "mdefs[\"SYSCONFDIR\"] = \"$SYSCONFDIR\"" >>configure.lua
+echo "STATEDIR=$STATEDIR" >>Makefile.config
+echo "mdefs[\"STATEDIR\"] = \"$STATEDIR\"" >>configure.lua
+echo "AGAR_DEV_LIBS=$AGAR_DEV_LIBS" >>Makefile.config
+echo "mdefs[\"AGAR_DEV_LIBS\"] = \"$AGAR_DEV_LIBS\"" >>configure.lua
+echo "AGAR_LIBS=$AGAR_LIBS" >>Makefile.config
+echo "mdefs[\"AGAR_LIBS\"] = \"$AGAR_LIBS\"" >>configure.lua
+echo "LIBTOOLOPTS_CC=$LIBTOOLOPTS_CC" >>Makefile.config
+echo "mdefs[\"LIBTOOLOPTS_CC\"] = \"$LIBTOOLOPTS_CC\"" >>configure.lua
+echo "LIBDIR=$LIBDIR" >>Makefile.config
+echo "mdefs[\"LIBDIR\"] = \"$LIBDIR\"" >>configure.lua
+echo "EXECSUFFIX=$EXECSUFFIX" >>Makefile.config
+echo "mdefs[\"EXECSUFFIX\"] = \"$EXECSUFFIX\"" >>configure.lua
+echo "AGAR_CFLAGS=$AGAR_CFLAGS" >>Makefile.config
+echo "mdefs[\"AGAR_CFLAGS\"] = \"$AGAR_CFLAGS\"" >>configure.lua
+echo "HAVE_GETTEXT=$HAVE_GETTEXT" >>Makefile.config
+echo "mdefs[\"HAVE_GETTEXT\"] = \"$HAVE_GETTEXT\"" >>configure.lua
+echo "AGAR_DEV_CFLAGS=$AGAR_DEV_CFLAGS" >>Makefile.config
+echo "mdefs[\"AGAR_DEV_CFLAGS\"] = \"$AGAR_DEV_CFLAGS\"" >>configure.lua
+echo "BINDIR=$BINDIR" >>Makefile.config
+echo "mdefs[\"BINDIR\"] = \"$BINDIR\"" >>configure.lua
+echo "GETTEXT_CFLAGS=$GETTEXT_CFLAGS" >>Makefile.config
+echo "mdefs[\"GETTEXT_CFLAGS\"] = \"$GETTEXT_CFLAGS\"" >>configure.lua
+echo "AGAR_MATH_LIBS=$AGAR_MATH_LIBS" >>Makefile.config
+echo "mdefs[\"AGAR_MATH_LIBS\"] = \"$AGAR_MATH_LIBS\"" >>configure.lua
+echo "GETTEXT_LIBS=$GETTEXT_LIBS" >>Makefile.config
+echo "mdefs[\"GETTEXT_LIBS\"] = \"$GETTEXT_LIBS\"" >>configure.lua
+echo "RELEASE=$RELEASE" >>Makefile.config
+echo "mdefs[\"RELEASE\"] = \"$RELEASE\"" >>configure.lua
+echo "HAVE_64BIT=$HAVE_64BIT" >>Makefile.config
+echo "mdefs[\"HAVE_64BIT\"] = \"$HAVE_64BIT\"" >>configure.lua
+echo "HAVE_AGAR=$HAVE_AGAR" >>Makefile.config
+echo "mdefs[\"HAVE_AGAR\"] = \"$HAVE_AGAR\"" >>configure.lua
+echo "MODULEDIR=$MODULEDIR" >>Makefile.config
+echo "mdefs[\"MODULEDIR\"] = \"$MODULEDIR\"" >>configure.lua
+echo "HAVE_AGAR_DEV=$HAVE_AGAR_DEV" >>Makefile.config
+echo "mdefs[\"HAVE_AGAR_DEV\"] = \"$HAVE_AGAR_DEV\"" >>configure.lua
+echo "VERSION=$VERSION" >>Makefile.config
+echo "mdefs[\"VERSION\"] = \"$VERSION\"" >>configure.lua
+echo "_MK_HAVE_SYS_TYPES_H=$_MK_HAVE_SYS_TYPES_H" >>Makefile.config
+echo "mdefs[\"_MK_HAVE_SYS_TYPES_H\"] = \"$_MK_HAVE_SYS_TYPES_H\"" >>configure.lua
+echo "AGAR_VG_LIBS=$AGAR_VG_LIBS" >>Makefile.config
+echo "mdefs[\"AGAR_VG_LIBS\"] = \"$AGAR_VG_LIBS\"" >>configure.lua
+if [ "${srcdir}" != "" ]; then
+	$ECHO_N "* Source is in ${srcdir}. Generating Makefiles..."
+	${PERL} ${SRC}/mk/mkconcurrent.pl ${SRC}
+	if [ $? != 0 ]; then
+		exit 1;
+	fi
+	echo "done"
+fi
 echo "*"
-echo "* Configuration successful."
-echo "* Use \"make depend\" if you plan on editing the source code."
-echo "* Use \"make\" and \"make install\" to build and install Edacious."
+echo "* Configuration successful. Use \"make depend all\" to compile,"
+echo "* and \"make install\" to install this software under $PREFIX."
 echo "*"
