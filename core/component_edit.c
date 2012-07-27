@@ -970,15 +970,13 @@ ES_ComponentEdit(void *obj)
 		 */
 		nt = AG_NotebookAddTab(nb, _("Model Parameters"), AG_BOX_VERT);
 		{
-			AG_Textbox *tb;
-	
 			hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
 			if (OBJECT_CLASS(com)->edit != NULL) {
 				AG_Widget *wEdit = OBJECT_CLASS(com)->edit(com);
 				AG_ObjectAttach(hPane->div[0], wEdit);
 			}
 			AG_LabelNewS(hPane->div[1], 0, _("Notes:"));
-			tb = AG_TextboxNewS(hPane->div[1],
+			AG_TextboxNewS(hPane->div[1],
 			    AG_TEXTBOX_EXPAND|AG_TEXTBOX_MULTILINE, NULL);
 		}
 	}

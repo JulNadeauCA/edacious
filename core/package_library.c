@@ -31,7 +31,7 @@
 
 #include <string.h>
 
-#include <config/sharedir.h>
+#include <config/datadir.h>
 #include <config/have_getpwuid.h>
 #include <config/have_getuid.h>
 
@@ -264,7 +264,7 @@ ES_PackageLibraryInit(void)
 	esPackageLibraryDirs = NULL;
 	esPackageLibraryDirCount = 0;
 	
-	Strlcpy(path, SHAREDIR, sizeof(path));
+	Strlcpy(path, DATADIR, sizeof(path));
 	Strlcat(path, "/Packages", sizeof(path));
 	printf("Registering package library dir: %s\n", path);
 	ES_PackageLibraryRegisterDir(path);

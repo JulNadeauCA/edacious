@@ -30,7 +30,6 @@
  */
 
 #include "core.h"
-#include <config/sharedir.h>
 
 static void
 FreeSchems(ES_Component *com)

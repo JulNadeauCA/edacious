@@ -31,7 +31,7 @@
 
 #include <string.h>
 
-#include <config/sharedir.h>
+#include <config/datadir.h>
 #include <config/have_getpwuid.h>
 #include <config/have_getuid.h>
 
@@ -268,7 +268,7 @@ ES_ComponentLibraryInit(void)
 	esComponentLibraryDirs = NULL;
 	esComponentLibraryDirCount = 0;
 	
-	Strlcpy(path, SHAREDIR, sizeof(path));
+	Strlcpy(path, DATADIR, sizeof(path));
 	Strlcat(path, "/Models", sizeof(path));
 	ES_ComponentLibraryRegisterDir(path);
 
