@@ -29,7 +29,10 @@
 
 #include <core/core.h>
 #include <core/interpreteur.h>
+
 #include "sources.h"
+
+#include <agar/config/ag_threads.h>
 
 PARAM params[] = { {"pi" , M_PI},
 		   {"t"  , 0.0}
@@ -141,7 +144,7 @@ UpdatePlot(AG_Event *event)
 			return;
 		}
 		M_PlotReal(pl, v);
-#ifdef THREADS
+#ifdef AG_THREADS
 		AG_Delay(5);
 #endif
 	}
@@ -169,10 +172,9 @@ Edit(void *p)
 	pl = M_PlotNew(ptr, M_PLOT_LINEAR);
 	M_PlotSetLabel(pl, "v(t)");
 	M_PlotSetScale(pl, 0.0, 16.0);
+
 	ev = AG_SetEvent(tb, "textbox-return", UpdatePlot, "%p,%p", pl, va);
-#ifdef THREADS
 	ev->flags |= AG_EVENT_ASYNC;
-#endif
 	AG_PostEvent(NULL, tb, "textbox-return", NULL);
 
 	return (box);
