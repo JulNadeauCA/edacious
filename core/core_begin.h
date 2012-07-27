@@ -1,14 +1,9 @@
 /*	Public domain	*/
 
 /* Internal header definitions */
-#undef _MK_HAVE_UNSIGNED_TYPEDEFS
-#include <edacious/config/_mk_have_unsigned_typedefs.h>
-#ifndef _MK_HAVE_UNSIGNED_TYPEDEFS
-# define _MK_HAVE_UNSIGNED_TYPEDEFS
-# define Uint unsigned int
-# define Uchar unsigned char
-# define Ulong unsigned long
-#endif
+#define Uint unsigned int
+#define Uchar unsigned char
+#define Ulong unsigned long
 
 #if !defined(__BEGIN_DECLS) || !defined(__END_DECLS)
 # define _ES_DEFINED_CDECLS
