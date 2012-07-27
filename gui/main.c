@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2003-2009 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2003-2012 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -68,7 +68,7 @@ main(int argc, char *argv[])
 		fprintf(stderr, "InitCore: %s\n", AG_GetError());
 		return (1);
 	}
-	while ((c = AG_Getopt(argc, argv, "?vPd:t:T:", &optArg, &optInd)) != -1) {
+	while ((c = AG_Getopt(argc, argv, "?vPd:t:", &optArg, &optInd)) != -1) {
 		switch (c) {
 		case 'v':
 			printf("Edacious %s\n", EDACIOUS_VERSION);
@@ -80,25 +80,22 @@ main(int argc, char *argv[])
 		case 'd':
 			driverSpec = optArg;
 			break;
-		case 'T':
-			AG_SetString(agConfig, "font-path", optArg);
-			break;
 		case 't':
 			AG_TextParseFontSpec(optArg);
 			break;
 		case '?':
 		default:
-			printf("Usage: %s [-vP] [-d agar-driver-spec] "
-			       "[-t font-spec] [-T font-path]\n", agProgName);
+			printf("Usage: %s [-vP] [-d agar-driver] [-t font,pts]\n",
+			    agProgName);
 			return (1);
 		}
 	}
-
 	if (AG_InitGraphics(driverSpec) == -1) {
 		goto fail;
 	}
 	AG_BindGlobalKey(AG_KEY_ESCAPE, AG_KEYMOD_ANY, QuitByKBD);
 	AG_BindGlobalKey(AG_KEY_F8, AG_KEYMOD_ANY, AG_ViewCapture);
+	AG_ConfigLoad();
 
 	/*
 	 * Initialize the Edacious library. Unless -P was given, we preload
@@ -148,10 +145,12 @@ main(int argc, char *argv[])
 	}
 
 	AG_EventLoop();
+	AG_ConfigSave();
 	AG_Destroy();
 	return (0);
 fail:
 	fprintf(stderr, "%s\n", AG_GetError());
+	AG_ConfigSave();
 	AG_Destroy();
 	return (1);
 }
