@@ -637,11 +637,10 @@ ES_CircuitExportTXT(ES_Circuit *ckt, const char *path)
 	fprintf(f, "\n");
 
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
+		AG_Variable *V;
 		fprintf(f, "%s %s {\n", OBJECT(com)->cls->hier,
 		    OBJECT(com)->name);
-		for (i = 0; i < OBJECT(com)->nVars; i++) {
-			AG_Variable *V = &OBJECT(com)->vars[i];
-
+		TAILQ_FOREACH(V, &OBJECT(com)->vars, vars) {
 			AG_PrintVariable(buf, sizeof(buf), V);
 			fprintf(f, "\t%s %s = %s\n",
 			    agVariableTypes[V->type].name,
@@ -737,7 +736,7 @@ ES_DelNode(ES_Circuit *ckt, int n)
 		}
 		FreeNode(ckt->nodes[n]);
 		memmove(&ckt->nodes[n], &ckt->nodes[n+1],
-		    (ckt->n - n) * sizeof(ES_Node *));
+		    (ckt->n - n - 1) * sizeof(ES_Node *));
 	} else {
 		FreeNode(ckt->nodes[n]);
 	}

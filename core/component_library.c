@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2015 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -253,7 +253,7 @@ ES_ComponentLibraryUnregisterDir(const char *path)
 	free(esComponentLibraryDirs[i]);
 	if (i < esComponentLibraryDirCount-1) {
 		memmove(&esComponentLibraryDirs[i], &esComponentLibraryDirs[i+1],
-		    (esComponentLibraryDirCount-1)*sizeof(char *));
+		    (esComponentLibraryDirCount-i-1)*sizeof(char *));
 	}
 	esComponentLibraryDirCount--;
 }
@@ -445,15 +445,16 @@ ComponentMenu(AG_Event *event)
 	if (!AG_OfClass(obj, "ES_Circuit:ES_Component:*"))
 		return;
 	
-	pm = AG_PopupNew(tl);
+	if ((pm = AG_PopupNew(tl)) == NULL)
+		return;
 
 	AG_MenuAction(pm->item, _("Edit component model..."), esIconComponent.s,
 	    EditComponent, "%p", obj);
+
 	AG_MenuSeparator(pm->item);
-	AG_MenuAction(pm->item, _("Save"), agIconSave.s,
-	    SaveComponent, "%p,%s", obj, "");
-	AG_MenuAction(pm->item, _("Save as..."), agIconSave.s,
-	    SaveComponentAsDlg, "%p", obj);
+
+	AG_MenuAction(pm->item, _("Save"),       agIconSave.s, SaveComponent, "%p,%s", obj, "");
+	AG_MenuAction(pm->item, _("Save as..."), agIconSave.s, SaveComponentAsDlg, "%p", obj);
 	
 	AG_PopupShow(pm);
 }

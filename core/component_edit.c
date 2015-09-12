@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2010 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2015 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -276,7 +276,7 @@ void
 ES_ComponentMenu(ES_Component *com, VG_View *vv)
 {
 	AG_PopupMenu *pm;
-	AG_MenuItem *mi, *mi2;
+	AG_MenuItem *mRoot, *mi;
 	Uint nsel = 0;
 	ES_Component *com2;
 	int common_class = 1;
@@ -290,80 +290,73 @@ ES_ComponentMenu(ES_Component *com, VG_View *vv)
 		nsel++;
 	}
 
-	pm = AG_PopupNew(vv);
-	mi = pm->item;
+	if ((pm = AG_PopupNew(vv)) == NULL) {
+		return;
+	}
+	mRoot = pm->root;
 	{
 		extern VG_ToolOps esWireTool;
 
-		AG_MenuState(mi, (vv->curtool == NULL) ||
-		                 (vv->curtool->ops != &esSchemSelectTool));
-		AG_MenuAction(mi, _("Select tool"), esIconSelectArrow.s,
+		AG_MenuState(mRoot, (vv->curtool == NULL) ||
+		                    (vv->curtool->ops != &esSchemSelectTool));
+		AG_MenuAction(mRoot, _("Select tool"), esIconSelectArrow.s,
 		    SelectCircuitTool, "%p,%p,%p", vv, com->ckt,
 		    &esSchemSelectTool);
 
-		AG_MenuState(mi, (vv->curtool == NULL) ||
-		                 (vv->curtool->ops != &esWireTool));
-		AG_MenuAction(mi, _("Wire tool"), esIconInsertWire.s,
+		AG_MenuState(mRoot, (vv->curtool == NULL) ||
+		                    (vv->curtool->ops != &esWireTool));
+		AG_MenuAction(mRoot, _("Wire tool"), esIconInsertWire.s,
 		    SelectCircuitTool, "%p,%p,%p", vv, com->ckt,
 		    &esWireTool);
 
-		AG_MenuState(mi, 1);
-		AG_MenuSeparator(mi);
+		AG_MenuState(mRoot, 1);
+		AG_MenuSeparator(mRoot);
 	}
 
-	AG_MenuSection(mi, _("[Component: %s]"), OBJECT(com)->name);
+	AG_MenuSection(mRoot, _("[Component: %s]"), OBJECT(com)->name);
 
-	mi2 = AG_MenuNode(mi, _("Transform"), esIconRotate.s);
+	mi = AG_MenuNode(mRoot, _("Transform"), esIconRotate.s);
 	{
-		AG_MenuAction(mi2, _("Rotate 90\xc2\xb0 CW"),
-		    esIconRotate.s,
-		    Rotate, "%p,%f", com, M_PI/2.0f);
-		AG_MenuAction(mi2, _("Rotate 90\xc2\xb0 CCW"),
-		    esIconRotate.s,
-		    Rotate, "%p,%f", com, -M_PI/2.0f);
-		AG_MenuSeparator(mi2);
-		AG_MenuAction(mi2, _("Rotate 45\xc2\xb0 CW"),
-		    esIconRotate.s,
-		    Rotate, "%p,%f", com, M_PI/4.0f);
-		AG_MenuAction(mi2, _("Rotate 45\xc2\xb0 CCW"),
-		    esIconRotate.s,
-		    Rotate, "%p,%f", com, -M_PI/4.0f);
-		AG_MenuSeparator(mi2);
-		AG_MenuAction(mi2, _("Flip horizontally"), esIconFlipHoriz.s,
-		    FlipHoriz, "%p", com);
-		AG_MenuAction(mi2, _("Flip vertically"), esIconFlipVert.s,
-		    FlipVert, "%p", com);
+		AG_MenuAction(mi, _("Rotate 90\xc2\xb0 CW"),  esIconRotate.s, Rotate, "%p,%f", com, M_PI/2.0f);
+		AG_MenuAction(mi, _("Rotate 90\xc2\xb0 CCW"), esIconRotate.s, Rotate, "%p,%f", com, -M_PI/2.0f);
+		AG_MenuSeparator(mi);
+		AG_MenuAction(mi, _("Rotate 45\xc2\xb0 CW"),  esIconRotate.s, Rotate, "%p,%f", com, M_PI/4.0f);
+		AG_MenuAction(mi, _("Rotate 45\xc2\xb0 CCW"), esIconRotate.s, Rotate, "%p,%f", com, -M_PI/4.0f);
+		AG_MenuSeparator(mi);
+		AG_MenuAction(mi, _("Flip horizontally"), esIconFlipHoriz.s, FlipHoriz, "%p", com);
+		AG_MenuAction(mi, _("Flip vertically"), esIconFlipVert.s,    FlipVert, "%p", com);
 	}
 	
-	AG_MenuAction(mi, _("Delete"), agIconTrash.s,
+	AG_MenuAction(mRoot, _("Delete"), agIconTrash.s,
 	    Delete, "%p,%p", com, vv);
 	if (com->flags & ES_COMPONENT_SUPPRESSED) {
-		AG_MenuState(mi, 1);
-		AG_MenuAction(mi, _("Unsuppress"), esIconStartSim.s,
+		AG_MenuState(mRoot, 1);
+		AG_MenuAction(mRoot, _("Unsuppress"), esIconStartSim.s,
 		    UnsuppressComponent, "%p,%p", com, vv);
-		AG_MenuState(mi, 0);
+		AG_MenuState(mRoot, 0);
 	} else {
-		AG_MenuAction(mi, _("Suppress"), esIconStopSim.s,
+		AG_MenuAction(mRoot, _("Suppress"), esIconStopSim.s,
 		    SuppressComponent, "%p,%p", com, vv);
 	}
 
-	AG_MenuSeparator(mi);
-	AG_MenuAction(mi, _("Port information..."), esIconPortEditor.s,
+	AG_MenuSeparator(mRoot);
+
+	AG_MenuAction(mRoot, _("Port information..."), esIconPortEditor.s,
 	    PortInfo, "%p,%p", com, vv);
 
 	if (COMCLASS(com)->instance_menu != NULL) {
-		AG_MenuSeparator(mi);
-		COMCLASS(com)->instance_menu(com, mi);
+		AG_MenuSeparator(mRoot);
+		COMCLASS(com)->instance_menu(com, mRoot);
 	}
 	if (nsel > 1) {
 		if (common_class && COMCLASS(com)->class_menu != NULL) {
-			AG_MenuSeparator(mi);
-			AG_MenuSection(mi, _("[Class: %s]"), clCom->name);
-			COMCLASS(com)->class_menu(com->ckt, mi);
+			AG_MenuSeparator(mRoot);
+			AG_MenuSection(mRoot, _("[Class: %s]"), clCom->name);
+			COMCLASS(com)->class_menu(com->ckt, mRoot);
 		}
-		AG_MenuSeparator(mi);
-		AG_MenuSectionS(mi, _("[All selections]"));
-		AG_MenuAction(mi, _("Delete selected"), agIconTrash.s,
+		AG_MenuSeparator(mRoot);
+		AG_MenuSectionS(mRoot, _("[All selections]"));
+		AG_MenuAction(mRoot, _("Delete selected"), agIconTrash.s,
 		    DeleteSelections, "%p, %p", com->ckt, vv);
 	}
 
@@ -746,9 +739,10 @@ PackagePopup(AG_Event *event)
 	ES_Component *com = AG_PTR(1);
 	AG_PopupMenu *pm;
 
-	pm = AG_PopupNew(tl);
-	AG_MenuAction(pm->item, _("Delete"), agIconTrash.s,
-	    RemovePackage, "%p,%p", com, ti->p1);
+	if ((pm = AG_PopupNew(tl)) == NULL) {
+		return;
+	}
+	AG_MenuAction(pm->root, _("Delete"), agIconTrash.s, RemovePackage, "%p,%p", com, ti->p1);
 	AG_PopupShow(pm);
 }
 

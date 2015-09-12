@@ -238,7 +238,7 @@ ES_SchemLibraryUnregisterDir(const char *path)
 	free(esSchemLibraryDirs[i]);
 	if (i < esSchemLibraryDirCount-1) {
 		memmove(&esSchemLibraryDirs[i], &esSchemLibraryDirs[i+1],
-		    (esSchemLibraryDirCount-1)*sizeof(char *));
+		    (esSchemLibraryDirCount-i-1)*sizeof(char *));
 	}
 	esSchemLibraryDirCount--;
 }
@@ -415,15 +415,16 @@ SchemMenu(AG_Event *event)
 	if (!AG_OfClass(obj, "ES_Schem:*"))
 		return;
 	
-	pm = AG_PopupNew(tl);
+	if ((pm = AG_PopupNew(tl)) == NULL)
+		return;
 
 	AG_MenuAction(pm->item, _("Edit schematic..."), esIconCircuit.s,
 	    EditSchem, "%p", obj);
+
 	AG_MenuSeparator(pm->item);
-	AG_MenuAction(pm->item, _("Save"), agIconSave.s,
-	    SaveSchem, "%p,%s", obj, "");
-	AG_MenuAction(pm->item, _("Save as..."), agIconSave.s,
-	    SaveSchemAsDlg, "%p", obj);
+
+	AG_MenuAction(pm->item, _("Save"),       agIconSave.s, SaveSchem, "%p,%s", obj, "");
+	AG_MenuAction(pm->item, _("Save as..."), agIconSave.s, SaveSchemAsDlg, "%p", obj);
 	
 	AG_PopupShow(pm);
 }

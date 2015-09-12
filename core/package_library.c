@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2009-2015 Hypertriton, Inc. <http://hypertriton.com/>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -249,7 +249,7 @@ ES_PackageLibraryUnregisterDir(const char *path)
 	free(esPackageLibraryDirs[i]);
 	if (i < esPackageLibraryDirCount-1) {
 		memmove(&esPackageLibraryDirs[i], &esPackageLibraryDirs[i+1],
-		    (esPackageLibraryDirCount-1)*sizeof(char *));
+		    (esPackageLibraryDirCount-i-1)*sizeof(char *));
 	}
 	esPackageLibraryDirCount--;
 }
@@ -415,16 +415,17 @@ PackageMenu(AG_Event *event)
 
 	if (!AG_OfClass(obj, "ES_Layout:ES_Package:*"))
 		return;
-	
-	pm = AG_PopupNew(tl);
 
-	AG_MenuAction(pm->item, _("Edit package model..."), esIconComponent.s,
+	if ((pm = AG_PopupNew(tl)) != NULL)
+		return;
+
+	AG_MenuAction(pm->root, _("Edit package model..."), esIconComponent.s,
 	    EditPackage, "%p", obj);
-	AG_MenuSeparator(pm->item);
-	AG_MenuAction(pm->item, _("Save"), agIconSave.s,
-	    SavePackage, "%p,%s", obj, "");
-	AG_MenuAction(pm->item, _("Save as..."), agIconSave.s,
-	    SavePackageAsDlg, "%p", obj);
+
+	AG_MenuSeparator(pm->root);
+
+	AG_MenuAction(pm->root, _("Save"),       agIconSave.s, SavePackage, "%p,%s", obj, "");
+	AG_MenuAction(pm->root, _("Save as..."), agIconSave.s, SavePackageAsDlg, "%p", obj);
 	
 	AG_PopupShow(pm);
 }

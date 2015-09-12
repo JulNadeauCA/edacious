@@ -870,7 +870,7 @@ SelectedFont(AG_Event *event)
 	AG_Window *win = AG_PTR(1);
 
 	AG_SetString(agConfig, "font.face", OBJECT(agDefaultFont)->name);
-	AG_SetInt(agConfig, "font.size", agDefaultFont->size);
+	AG_SetInt(agConfig, "font.size", agDefaultFont->spec.size);
 	AG_SetUint(agConfig, "font.flags", agDefaultFont->flags);
 	(void)AG_ConfigSave();
 
