@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Copyright (c) 2003-2012 Hypertriton, Inc. <http://hypertriton.com/>
+# Copyright (c) 2003-2014 Hypertriton, Inc. <http://hypertriton.com/>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,12 +31,14 @@ $COOKIE = ".mkconcurrent_$$";
 @DIRS = ();
 $BUILD = '';
 @MKFILES = (
-	'Makefile.proj',
-	'Makefile.prog',
+	'Makefile\.(prog|proj|in)',
 	'\.mk$',
 	'\.inc$',
+	'\.m4$',
+	'^README$',
 	'^mkdep$',
 	'^install-includes.sh$',
+	'^install-sh$',
 	'^config\.(guess|sub)$',
 	'^configure$',
 	'^configure\.in$',
@@ -245,27 +247,27 @@ EOF
 					push @deps,
 					    "$obj.cat$1: $SRC/$ndir/$src";
 					push @deps, << 'EOF';
-	@echo "${NROFF} -Tascii -mandoc $< > $@"
+	@echo "${MANDOC} -Tascii $< > $@"
 	@(cat $< | \
 	  sed 's,\$$SYSCONFDIR,${SYSCONFDIR},' | \
 	  sed 's,\$$PREFIX,${PREFIX},' | \
 	  sed 's,\$$DATADIR,${DATADIR},' | \
-	  ${NROFF} -Tascii -mandoc > $@) || (rm -f $@; true)
+	  ${MANDOC} -Tascii > $@) || (rm -f $@; true)
 
 EOF
-					# Nroff -> PostScript
-					# -> Sync with build.man.mk.
-					push @deps,
-					    "$obj.ps$1: $SRC/$ndir/$src";
-					push @deps, << 'EOF';
-	@echo "${NROFF} -Tps -mandoc $< > $@"
-	@(cat $< | \
-	  sed 's,\$$SYSCONFDIR,${SYSCONFDIR},' | \
-	  sed 's,\$$PREFIX,${PREFIX},' | \
-	  sed 's,\$$DATADIR,${DATADIR},' | \
-	  ${NROFF} -Tps -mandoc > $@) || (rm -f $@; true)
+					foreach my $fmt ('ps', 'pdf', 'html') {
+						push @deps,
+						    "$obj.$fmt$1: $SRC/$ndir/$src";
+						push @deps, << "EOF";
+	@echo "\${MANDOC} -T$fmt \$< > \$@"
+	@(cat \$< | \
+	  sed 's,\$\$SYSCONFDIR,\${SYSCONFDIR},' | \
+	  sed 's,\$\$PREFIX,\${PREFIX},' | \
+	  sed 's,\$\$DATADIR,\${DATADIR},' | \
+	  ${MANDOC} -T$fmt > \$@) || (rm -f \$@; true)
 
 EOF
+					}
 				} elsif ($type =~ /MOS/) {
 					# Portable object -> machine object
 					# -> Sync with build.po.mk.
@@ -282,7 +284,7 @@ EOF
 				}
 			}
 		}
-		if (/^\s*(SRCS|MAN\d|XCF|TTF|POS)\s*=\s*(.+)$/) {
+		if (/^\s*(SRCS|MAN\d|TTF|POS)\s*=\s*(.+)$/) {
 			my $type = $1;
 			my $srclist = $2;
 
