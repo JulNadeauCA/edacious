@@ -1022,7 +1022,7 @@ ES_DelBranch(ES_Circuit *ckt, int n, ES_Branch *br)
 	TAILQ_REMOVE(&node->branches, br, branches);
 	Free(br);
 #ifdef ES_DEBUG
-	if ((node->nBranches - 1) < 0) { Fatal("--nBranches < 0"); }
+	if (node->nBranches == 0) { Fatal("--nBranches < 0"); }
 #endif
 	node->nBranches--;
 }

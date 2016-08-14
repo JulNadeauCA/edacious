@@ -87,10 +87,9 @@ PollSrcs(AG_Event *event)
 	ES_Circuit *ckt = AG_PTR(1);
 	AG_TlistItem *it;
 	AG_Variable *V;
-	Uint i;
 
 	AG_TlistClear(tl);
-	AGOBJECT_FOREACH_VARIABLE(V, i, ckt) {
+	TAILQ_FOREACH(V, &OBJECT(ckt)->vars, vars) {
 		AG_LockVariable(V);
 		AG_EvalVariable(ckt, V);
 		AG_PrintVariable(pval, sizeof(pval), V);

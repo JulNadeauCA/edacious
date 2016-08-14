@@ -547,7 +547,7 @@ DeleteSchem(AG_Event *event)
 }
 
 /* Import a schematic from file. */
-static void
+static int
 ImportSchem(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
@@ -556,14 +556,12 @@ ImportSchem(AG_Event *event)
 	ES_Schem *scm;
 
 	if ((scm = AG_ObjectNew(&esVfsRoot, NULL, &esSchemClass)) == NULL) {
-		AG_TextMsgFromError();
-		return;
+		return (-1);
 	}
 	if (AG_ObjectLoadFromFile(scm, path) == -1) {
-		AG_TextMsgFromError();
 		AG_ObjectDetach(scm);
 		AG_ObjectDestroy(scm);
-		return;
+		return (-1);
 	}
 	AG_ObjectSetArchivePath(scm, path);
 	AG_ObjectSetNameS(scm, AG_ShortFilename(path));
@@ -573,6 +571,7 @@ ImportSchem(AG_Event *event)
 	VG_ViewSetVG(vv, scm->vg);
 	VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 	VG_Status(vv, _("Imported: %s"), OBJECT(scm)->name);
+	return (0);
 }
 
 /* "Import schematic" button pressed. */

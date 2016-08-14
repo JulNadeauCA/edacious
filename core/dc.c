@@ -198,10 +198,10 @@ CyclePreviousSolutions(ES_SimDC *sim)
 
 /* Simulation timestep. */
 static Uint32
-StepMNA(void *obj, Uint32 ival, void *arg)
+StepMNA(AG_Timer *tm, AG_Event *event)
 {
-	ES_Circuit *ckt = obj;
-	ES_SimDC *sim = arg;
+	ES_Circuit *ckt = AG_SELF();
+	ES_SimDC *sim = AG_PTR(1);
 	ES_Component *com;
 	Uint retries;
 	int i;
@@ -308,9 +308,7 @@ stepbegin:
 	if (SIM(sim)->running) {
 		return (sim->ticksDelay);
 	} else {
-		AG_LockTimeouts(ckt);
-		AG_DelTimeout(ckt, &sim->toUpdate);
-		AG_UnlockTimeouts(ckt);
+		AG_DelTimer(ckt, &sim->toUpdate);
 	}
 	return (0);
 halt:
@@ -351,8 +349,8 @@ Init(void *p)
 	sim->stepsToKeep = 0;
 	sim->xPrevIter = M_VecNew(0);
 	sim->groundNode = NULL;
-	
-	AG_SetTimeout(&sim->toUpdate, StepMNA, sim, AG_CANCEL_ONDETACH);
+
+	AG_InitTimer(&sim->toUpdate, "stepMNA", 0);
 	ClearStats(sim);
 }
 
@@ -434,12 +432,13 @@ Start(void *p)
 	sim->deltaTPrevSteps[0] = sim->deltaT;
 	
 	/* Schedule the call to StepMNA*/
-	AG_LockTimeouts(ckt);
-	if (AG_TimeoutIsScheduled(ckt, &sim->toUpdate)) {
-		AG_DelTimeout(ckt, &sim->toUpdate);
+	AG_LockTimers(ckt);
+	if (AG_TimerIsRunning(ckt, &sim->toUpdate)) {
+		AG_DelTimer(ckt, &sim->toUpdate);
 	}
-	AG_ScheduleTimeout(ckt, &sim->toUpdate, sim->ticksDelay);
-	AG_UnlockTimeouts(ckt);
+	AG_AddTimer(ckt, &sim->toUpdate, sim->ticksDelay,
+	    StepMNA, "%p", sim);
+	AG_UnlockTimers(ckt);
 
 	SIM(sim)->running = 1;
 	/* Invoke the general-purpose "simulation begin" callback. */

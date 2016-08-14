@@ -187,7 +187,7 @@ main(int argc, char *argv[])
 	for (;;) {
 		if (doExit) {
 			break;
-		} else if (AG_TIMEOUTS_QUEUED()) {
+		} else if (!TAILQ_EMPTY(&agTimerObjQ)) {
 			AG_ProcessTimeouts(AG_GetTicks());
 		}
 	}

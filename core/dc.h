@@ -5,7 +5,7 @@ typedef struct es_sim_dc {
 
 	enum es_integration_method method;	/* Method of integration used */
 	
-	AG_Timeout toUpdate;	/* Timer for simulation updates */
+	AG_Timer toUpdate;	/* Timer for simulation updates */
 	M_Real Telapsed;        /* Simulated elapsed time (s) */
 	M_Real deltaT;          /* Simulated time since last iteration (s) */
 	Uint   ticksDelay;	/* Simulation speed (delay ms) */

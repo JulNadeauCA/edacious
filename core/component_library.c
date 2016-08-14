@@ -393,28 +393,29 @@ static void
 SaveComponent(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
+
+	if (AG_ObjectSave(obj) == -1) {
+		AG_TextMsgFromError();
+		return;
+	}
+	AG_TextTmsg(AG_MSG_INFO, 1250, _("Model saved successfully"));
+}
+
+static int
+SaveComponentAs(AG_Event *event)
+{
+	AG_Object *obj = AG_PTR(1);
 	char *path = AG_STRING(2);
 	const char *sname;
 
-	if (path[0] == '\0') {
-		sname = AG_ShortFilename(obj->archivePath);
-		if (AG_ObjectSave(obj) == -1) {
-			AG_TextMsgFromError();
-			return;
-		}
-		AG_TextTmsg(AG_MSG_INFO, 1250,
-		    _("Successfully saved model to %s"), sname);
-	} else {
-		sname = AG_ShortFilename(path);
-		if (AG_ObjectSaveToFile(obj, path) == -1) {
-			AG_TextMsgFromError();
-			return;
-		}
-		AG_ObjectSetArchivePath(obj, path);
-		AG_ObjectSetNameS(obj, sname);
-		AG_TextTmsg(AG_MSG_INFO, 1250,
-		    _("Successfully saved model to %s"), sname);
+	sname = AG_ShortFilename(path);
+	if (AG_ObjectSaveToFile(obj, path) == -1) {
+		return (-1);
 	}
+	AG_ObjectSetArchivePath(obj, path);
+	AG_ObjectSetNameS(obj, sname);
+	AG_TextTmsg(AG_MSG_INFO, 1250, _("Successfully saved model to %s"), sname);
+	return (0);
 }
 
 static void
@@ -431,7 +432,7 @@ SaveComponentAsDlg(AG_Event *event)
 	    AG_FILEDLG_SAVE|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 	AG_FileDlgAddType(fd, _("Edacious Component Model"), "*.em",
-	    SaveComponent, "%p", obj);
+	    SaveComponentAs, "%p", obj);
 	AG_WindowShow(win);
 }
 

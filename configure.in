@@ -1,7 +1,7 @@
 # Public domain
 
 PACKAGE("Edacious")
-VERSION("1.0-beta")
+VERSION("1.0")
 RELEASE("Edacious, Sepulchral and Frog-Like")
 
 REGISTER_SECTION("Edacious specific options:")
@@ -14,9 +14,9 @@ REGISTER("--with-agar[=PREFIX]", 	"Specify Agar location [default: auto]")
 
 HDEFINE(EDACIOUS_VERSION, "$VERSION")
 
-DEFAULT_DIR(DATADIR, "$PREFIX/share/edacious")
-DEFAULT_DIR(MODULEDIR, "$LIBDIR/edacious")
-DEFAULT_DIR(INCLDIR, "$PREFIX/include/edacious")
+DEFAULT_DIR(DATADIR, "${PREFIX}/share/edacious")
+DEFAULT_DIR(MODULEDIR, "${LIBDIR}/edacious")
+DEFAULT_DIR(INCLDIR, "${PREFIX}/include/edacious")
 
 REQUIRE(cc)
 CHECK(sys_types)
@@ -25,10 +25,10 @@ CHECK(getpwuid)
 CHECK(getuid)
 
 # Require Agar
-REQUIRE(agar, 1.4.2, ${prefix_agar})
-REQUIRE(agar-vg, 1.4.2, ${prefix_agar})
-REQUIRE(agar-dev, 1.4.2, ${prefix_agar})
-REQUIRE(agar-math, 1.4.2, ${prefix_agar})
+REQUIRE(agar, 1.5.0, ${prefix_agar})
+REQUIRE(agar-vg, 1.5.0, ${prefix_agar})
+REQUIRE(agar-dev, 1.5.0, ${prefix_agar})
+REQUIRE(agar-math, 1.5.0, ${prefix_agar})
 
 # For internal header definitions.
 C_DEFINE(_ES_INTERNAL)
@@ -48,9 +48,9 @@ C_DEFINE(_USE_AGAR_MATH)
 C_INCDIR($SRC)
 
 # Disable improper warnings.
-C_NO_SECURE_WARNINGS();
-#C_EXTRA_WARNINGS();
-#C_FATAL_WARNINGS();
+C_NO_SECURE_WARNINGS()
+#C_EXTRA_WARNINGS()
+#C_FATAL_WARNINGS()
 
 # Apply the compilation options.
 if [ "${enable_warnings}" != "no" ]; then
@@ -61,7 +61,7 @@ fi
 if [ "${enable_debug}" = "yes" ]; then
 	C_DEFINE(ES_DEBUG)
 	HDEFINE(ES_DEBUG, "yes")
-	LD_OPTION(-g)
+	MDEFINE(CFLAGS, "${CFLAGS} -g")
 else
 	HUNDEF(ES_DEBUG)
 fi
@@ -87,6 +87,8 @@ if [ "${enable_nls}" = "yes" ]; then
 		echo "*"
 		exit 1
 	fi
+else
+	HUNDEF(HAVE_GETTEXT, GETTEXT_CFLAGS, GETTEXT_LIBS)
 fi
 
 # Set up configure script output.

@@ -86,7 +86,7 @@ static void
 Draw(void *p, VG_View *vv)
 {
 	ES_SchemPort *sp = p;
-	char text[16];
+/*	char text[16]; */
 	int x, y;
 	float r;
 
@@ -101,6 +101,8 @@ Draw(void *p, VG_View *vv)
 		AG_DrawCircle(vv, x, y, (int)(r*vv->scale),
 		    VG_MapColorRGB(VGNODE(sp)->color));
 	}
+#if 0
+	/* XXX VG_DrawText */
 	if (sp->port != NULL &&
 	    sp->port->com != NULL &&
 	    sp->port->com->ckt->flags & ES_CIRCUIT_SHOW_NODENAMES) {
@@ -121,6 +123,7 @@ Draw(void *p, VG_View *vv)
 		    sp->name);
 		AG_PopTextState();
 	}
+#endif
 }
 
 static void

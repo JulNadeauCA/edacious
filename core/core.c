@@ -76,6 +76,7 @@ AG_Object esVfsRoot;			/* General-purpose VFS */
 static void *objFocus = NULL;		/* For MDI-style interface */
 static AG_Menu *mdiMenu = NULL;		/* For MDI-style interface */
 static AG_Mutex objLock;
+static int appTerminating = 0;
 
 /* Load an Edacious module and register all of its defined classes. */
 int
@@ -495,7 +496,7 @@ EditDevice(AG_Event *event)
 #endif
 
 /* Load an object file from native Edacious format. */
-void
+int
 ES_GUI_LoadObject(AG_Event *event)
 {
 	AG_ObjectClass *cl = AG_PTR(1);
@@ -503,7 +504,7 @@ ES_GUI_LoadObject(AG_Event *event)
 	AG_Object *obj;
 
 	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cl)) == NULL) {
-		goto fail;
+		return (-1);
 	}
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
 		AG_SetError("%s: %s", AG_ShortFilename(path), AG_GetError());
@@ -511,18 +512,17 @@ ES_GUI_LoadObject(AG_Event *event)
 	}
 	AG_ObjectSetArchivePath(obj, path);
 	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
-
 	if (ES_OpenObject(obj) == NULL) {
 		goto fail;
 	}
-	return;
+	return (0);
 fail:
-	AG_TextError(_("Could not open object: %s"), AG_GetError());
-/*	if (obj != NULL) { AG_ObjectDelete(obj); } */
+	AG_ObjectDestroy(obj);
+	return (-1);
 }
 
 /* Load a component model file. */
-static void
+static int
 LoadComponentModel(AG_Event *event)
 {
 	AG_ObjectHeader oh;
@@ -532,20 +532,19 @@ LoadComponentModel(AG_Event *event)
 	AG_ObjectClass *cl;
 
 	if ((ds = AG_OpenFile(path, "rb")) == NULL) {
-		AG_TextMsgFromError();
-		return;
+		return (-1);
 	}
 	if (AG_ObjectReadHeader(ds, &oh) == -1) {
 		AG_CloseFile(ds);
-		goto fail;
+		return (-1);
 	}
 	AG_CloseFile(ds);
 
 	if ((cl = AG_LoadClass(oh.cs.hier)) == NULL) {
-		goto fail;
+		return (-1);
 	}
 	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cl)) == NULL) {
-		goto fail;
+		return (-1);
 	}
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
 		AG_SetError("%s: %s", AG_ShortFilename(path), AG_GetError());
@@ -557,10 +556,10 @@ LoadComponentModel(AG_Event *event)
 	if (ES_OpenObject(obj) == NULL) {
 		goto fail;
 	}
-	return;
+	return (0);
 fail:
-/*	if (obj != NULL) { AG_ObjectDelete(obj); } */
-	AG_TextMsgFromError();
+	AG_ObjectDestroy(obj);
+	return (-1);
 }
 
 void
@@ -591,7 +590,7 @@ ES_GUI_OpenDlg(AG_Event *event)
 }
 
 /* Save an object file in native Edacious format. */
-static void
+static int
 SaveNativeObject(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
@@ -599,61 +598,65 @@ SaveNativeObject(AG_Event *event)
 	AG_Window *wEdit;
 
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
-		AG_TextError("%s: %s", AG_ShortFilename(path), AG_GetError());
+		return (-1);
 	}
 	AG_ObjectSetArchivePath(obj, path);
 	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
 
-	if ((wEdit = AG_WindowFindFocused()) != NULL)
+	if ((wEdit = AG_WindowFindFocused()) != NULL) {
 		AG_WindowSetCaptionS(wEdit, AG_ShortFilename(path));
+	}
+	return (0);
 }
 
-static void
+static int
 SaveLayoutToGedaPCB(AG_Event *event)
 {
 	/* TODO */
-	AG_TextError("Export to gEDA PCB not implemented yet");
+	AG_SetError("Export to gEDA PCB not implemented yet");
+	return (-1);
 }
 
-static void
+static int
 SaveLayoutToGerber(AG_Event *event)
 {
 	/* TODO */
-	AG_TextError("Export to Gerber not implemented yet");
+	AG_SetError("Export to Gerber not implemented yet");
+	return (-1);
 }
 
-static void
+static int
 SaveLayoutToXGerber(AG_Event *event)
 {
 	/* TODO */
-	AG_TextError("Export to XGerber not implemented yet");
+	AG_SetError("Export to XGerber not implemented yet");
+	return (-1);
 }
 
-static void
+static int
 SaveCircuitToSPICE3(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
 	char *path = AG_STRING(2);
 	
-	if (ES_CircuitExportSPICE3(ckt, path) == -1)
-		AG_TextMsgFromError();
+	return ES_CircuitExportSPICE3(ckt, path);
 }
 
-static void
+static int
 SaveCircuitToTXT(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
 	char *path = AG_STRING(2);
 
-	if (ES_CircuitExportTXT(ckt, path) == -1)
-		AG_TextMsgFromError();
+	return ES_CircuitExportTXT(ckt, path);
 }
 
-static void
+static int
 SaveSchemToPDF(AG_Event *event)
 {
 	/* TODO */
-	AG_TextError("Export to PDF not implemented yet");
+	AG_SetError("Export to PDF not implemented yet");
+	return (-1);
 }
 
 void
@@ -759,7 +762,7 @@ AbortQuit(AG_Event *event)
 {
 	AG_Window *win = AG_PTR(1);
 
-	agTerminating = 0;
+	appTerminating = 0;
 	AG_ObjectDetach(win);
 }
 
@@ -771,10 +774,10 @@ ES_GUI_Quit(AG_Event *event)
 	AG_Checkbox *cb;
 	AG_Box *box;
 
-	if (agTerminating) {
+	if (appTerminating) {
 		ConfirmQuit(NULL);
 	}
-	agTerminating = 1;
+	appTerminating = 1;
 
 	OBJECT_FOREACH_CHILD(vfsObj, &esVfsRoot, ag_object) {
 		if (AG_ObjectChanged(vfsObj))
