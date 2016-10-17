@@ -133,6 +133,25 @@ Edit(void *p, VG_View *vv)
 	return (box);
 }
 
+static void
+PostDraw(void *p, VG_View *vv)
+{
+	ES_SchemPortTool *t = p;
+	VG_Point *pNear;
+	VG_Vector v = VGTOOL(t)->vCursor;
+	int x, y;
+
+	if ((pNear = VG_NearestPoint(vv, v, NULL))) {
+		v = VG_Pos(pNear);
+	} else {
+		v = VGTOOL(t)->vCursor;
+	}
+	VG_GetViewCoords(vv, v, &x,&y);
+	AG_DrawCircle(vv, x,y, 3, VG_MapColorRGB(vv->vg->selectionColor));
+	AG_DrawCircle(vv, x,y, 4, VG_MapColorRGB(vv->vg->selectionColor));
+	AG_DrawCircle(vv, x,y, 5, VG_MapColorRGB(vv->vg->selectionColor));
+}
+
 VG_ToolOps esSchemPortTool = {
 	N_("Port Editor"),
 	N_("Create connection points for the schematic."),
@@ -143,7 +162,7 @@ VG_ToolOps esSchemPortTool = {
 	NULL,			/* destroy */
 	Edit,
 	NULL,			/* predraw */
-	NULL,			/* postdraw */
+	PostDraw,
 	NULL,			/* selected */
 	NULL,			/* deselected */
 	MouseMotion,
