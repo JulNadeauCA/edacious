@@ -718,7 +718,7 @@ ES_DelNode(ES_Circuit *ckt, int n)
 	Debug(ckt, _("Deleting node n%d\n"), n);
 #ifdef ES_DEBUG
 	if (n == 0 || n >= ckt->n)
-		Fatal("Cannot delete n%d (max %u)", n, ckt->n);
+		Fatal("ES_DelNode index");
 #endif
 	if (n != ckt->n-1) {
 		/* Update the Branch port pointers. */
@@ -933,8 +933,7 @@ ES_Node *
 ES_GetNode(ES_Circuit *ckt, int n)
 {
 	if (n < 0 || n >= ckt->n) {
-		Fatal("%s:%d: Bad node (Circuit=%d)", OBJECT(ckt)->name, n,
-		    ckt->n);
+		Fatal("ES_GetNode");
 	}
 	return (ckt->nodes[n]);
 }

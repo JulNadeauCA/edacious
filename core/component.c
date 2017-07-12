@@ -240,7 +240,7 @@ OnDetach(AG_Event *event)
 		    vn->ops->name, vn->handle);
 		ES_DetachSchemEntity(com, vn);
 		if (VG_Delete(vn) == -1)
-			AG_FatalError("Deleting node: %s", AG_GetError());
+			AG_FatalError(AG_GetError());
 	}
 
 del_branches:
@@ -492,11 +492,10 @@ Uint
 ES_PortNode(ES_Component *com, int port)
 {
 	if (port > com->nports) {
-		Fatal("%s: Bad port %d/%u", OBJECT(com)->name, port,
-		    com->nports);
+		Fatal("ES_PortNode");
 	}
 	if (com->ports[port].node < 0 || com->ports[port].node >= com->ckt->n) {
-		Fatal("%s:%d: Bad node (Component)", OBJECT(com)->name, port);
+		Fatal("ES_PortNode");
 	}
 	return (com->ports[port].node);
 }
