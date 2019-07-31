@@ -185,7 +185,12 @@ Insert(AG_Event *event)
 		return;
 	}
 	AG_ObjectInit(pkg, &esPackageClass);
-	if (AG_ObjectLoadFromFile(pkg, OBJECT(pkgModel)->archivePath) == -1) {
+	if (!AG_Defined(pkgModel,"archive-path")) {
+		AG_TextMsgFromError();
+		return;
+	}
+	if (AG_ObjectLoadFromFile(pkg,
+	    AG_GetStringP(pkgModel,"archive-path")) == -1) {
 		AG_TextMsgFromError();
 		AG_ObjectDestroy(pkg);
 		return;

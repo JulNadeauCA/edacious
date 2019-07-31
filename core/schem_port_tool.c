@@ -139,6 +139,7 @@ PostDraw(void *p, VG_View *vv)
 	ES_SchemPortTool *t = p;
 	VG_Point *pNear;
 	VG_Vector v = VGTOOL(t)->vCursor;
+	AG_Color c;
 	int x, y;
 
 	if ((pNear = VG_NearestPoint(vv, v, NULL))) {
@@ -147,9 +148,10 @@ PostDraw(void *p, VG_View *vv)
 		v = VGTOOL(t)->vCursor;
 	}
 	VG_GetViewCoords(vv, v, &x,&y);
-	AG_DrawCircle(vv, x,y, 3, VG_MapColorRGB(vv->vg->selectionColor));
-	AG_DrawCircle(vv, x,y, 4, VG_MapColorRGB(vv->vg->selectionColor));
-	AG_DrawCircle(vv, x,y, 5, VG_MapColorRGB(vv->vg->selectionColor));
+	c = VG_MapColorRGB(vv->vg->selectionColor);
+	AG_DrawCircle(vv, x,y, 3, &c);
+	AG_DrawCircle(vv, x,y, 4, &c);
+	AG_DrawCircle(vv, x,y, 5, &c);
 }
 
 VG_ToolOps esSchemPortTool = {

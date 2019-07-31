@@ -151,7 +151,7 @@ Edit(void *p)
 
 	if (COMCIRCUIT(r) != NULL) {
 		AG_SeparatorNewHoriz(box);
-		AG_LabelNewPolledMT(box, 0, &OBJECT(r)->lock,
+		AG_LabelNewPolledMT(box, 0, &OBJECT(r)->pvt.lock,
 		    "rEff: %[R]", &r->rEff);
 	}
 	return (box);

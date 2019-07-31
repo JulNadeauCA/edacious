@@ -161,7 +161,7 @@ M_Real      ES_BranchCurrentPrevStep(ES_Circuit *, int, int);
 void        ES_ResumeSimulation(ES_Circuit *);
 void        ES_SuspendSimulation(ES_Circuit *);
 struct es_sim *ES_SetSimulationMode(ES_Circuit *, const struct es_sim_ops *);
-void        ES_AddSimulationObj(ES_Circuit *, void *);
+void        ES_AddSimulationObj(ES_Circuit *, const char *, void *);
 void        ES_CircuitModified(ES_Circuit *);
 void        ES_DestroySimulation(ES_Circuit *);
 

@@ -90,11 +90,13 @@ Draw(void *p, VG_View *vv)
 	ES_SchemWire *sw = p;
 	VG_Vector v1 = VG_Pos(sw->p1);
 	VG_Vector v2 = VG_Pos(sw->p2);
+	AG_Color c;
 	int x1, y1, x2, y2;
 	
 	VG_GetViewCoords(vv, v1, &x1, &y1);
 	VG_GetViewCoords(vv, v2, &x2, &y2);
-	AG_DrawLine(vv, x1,y1, x2,y2, VG_MapColorRGB(VGNODE(sw)->color));
+	c = VG_MapColorRGB(VGNODE(sw)->color);
+	AG_DrawLine(vv, x1,y1, x2,y2, &c);
 }
 
 static void

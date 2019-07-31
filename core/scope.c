@@ -41,8 +41,7 @@ ES_ScopeNew(ES_Circuit *ckt, const char *name)
 	AG_ObjectSetNameS(scope, name);
 	AG_ObjectAttach(ckt, scope);
 
-	ES_AddSimulationObj(ckt, scope);
-	AG_ObjectAddDep(scope, ckt, 0);
+	ES_AddSimulationObj(ckt, name, scope);
 	scope->ckt = ckt;
 	return (scope);
 }
@@ -91,7 +90,7 @@ PollSrcs(AG_Event *event)
 	AG_TlistClear(tl);
 	TAILQ_FOREACH(V, &OBJECT(ckt)->vars, vars) {
 		AG_LockVariable(V);
-		AG_EvalVariable(ckt, V);
+/*		AG_EvalVariable(ckt, V); */
 		AG_PrintVariable(pval, sizeof(pval), V);
 		AG_UnlockVariable(V);
 
@@ -153,9 +152,11 @@ AddPlotFromDerivative(AG_Event *event)
 static void
 ShowPlotSettings(AG_Event *event)
 {
-	M_Plot *pl = AG_TLIST_ITEM(1);
+	AG_TlistItem *it = AG_TLIST_ITEM_PTR(1);
+	M_Plot *pl;
 
-	M_PlotSettings(pl);
+	if ((pl = it->p1) != NULL)
+		M_PlotSettings(pl);
 }
 
 static void *

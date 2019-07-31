@@ -223,10 +223,11 @@ static void
 PostDraw(void *p, VG_View *vv)
 {
 	VG_Tool *t = p;
+	AG_Color c = VG_MapColorRGB(vv->vg->selectionColor);
 	int x, y;
 
 	VG_GetViewCoords(vv, t->vCursor, &x,&y);
-	AG_DrawCircle(vv, x,y, 3, VG_MapColorRGB(vv->vg->selectionColor));
+	AG_DrawCircle(vv, x,y, 3, &c);
 }
 
 static int

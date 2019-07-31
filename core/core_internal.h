@@ -42,4 +42,3 @@
 
 #define Fatal AG_FatalError
 #define Snprintf AG_Snprintf
-#define Vsnprintf AG_Vsnprintf

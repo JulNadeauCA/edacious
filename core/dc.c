@@ -456,9 +456,11 @@ Stop(void *p)
 {
 	ES_SimDC *sim = p;
 	ES_Circuit *ckt = SIM(sim)->ckt;
-	AG_LockTimeouts(ckt);
-	AG_DelTimeout(ckt, &sim->toUpdate);
-	AG_UnlockTimeouts(ckt);
+
+	AG_LockTimers(ckt);
+	AG_DelTimer(ckt, &sim->toUpdate);
+	AG_UnlockTimers(ckt);
+
 	StopSimulation(sim);
 }
 
@@ -506,58 +508,58 @@ Edit(void *p, ES_Circuit *ckt)
 	ES_SimDC *sim = p;
 	AG_Window *win;
 	AG_Notebook *nb;
-	AG_NotebookTab *ntab;
+	AG_NotebookTab *nt;
 	M_Matview *mv;
 
 	win = AG_WindowNew(AG_WINDOW_NOCLOSE);
 
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
-	ntab = AG_NotebookAddTab(nb, _("Continuous mode"), AG_BOX_VERT);
+	nt = AG_NotebookAdd(nb, _("Continuous mode"), AG_BOX_VERT);
 	{
 		AG_Button *btn;
 		AG_Radio *rad;
 		int i;
 
-		btn = AG_ButtonNewFn(ntab, AG_BUTTON_HFILL|AG_BUTTON_STICKY,
+		btn = AG_ButtonNewFn(nt, AG_BUTTON_HFILL|AG_BUTTON_STICKY,
 		    _("Run simulation"),
 		    RunSimulation, "%p", sim);
 		AG_BindInt(btn, "state", &SIM(sim)->running);
 
-		AG_SeparatorNew(ntab, AG_SEPARATOR_HORIZ);
+		AG_SeparatorNew(nt, AG_SEPARATOR_HORIZ);
 	
-		AG_NumericalNewUint(ntab, 0, NULL, _("Refresh rate (delay): "), &sim->ticksDelay);
-		AG_NumericalNewUint(ntab, 0, NULL, _("Max. iterations/step: "), &sim->itersMax);
+		AG_NumericalNewUint(nt, 0, NULL, _("Refresh rate (delay): "), &sim->ticksDelay);
+		AG_NumericalNewUint(nt, 0, NULL, _("Max. iterations/step: "), &sim->itersMax);
 
-		rad = AG_RadioNewUint(ntab, 0, NULL, &sim->method);
+		rad = AG_RadioNewUint(nt, 0, NULL, &sim->method);
 		for (i = 0; i < esIntegrationMethodCount; i++)
 			AG_RadioAddItemS(rad, _(esIntegrationMethods[i].desc));
 
-		AG_SeparatorNewHoriz(ntab);
+		AG_SeparatorNewHoriz(nt);
 
-		AG_LabelNewPolled(ntab, 0, _("Simulated time: %[T]"),
+		AG_LabelNewPolled(nt, 0, _("Simulated time: %[T]"),
 		    &sim->Telapsed);
-		AG_LabelNewPolled(ntab, 0, _("Timesteps: %[T] - %[T]"),
+		AG_LabelNewPolled(nt, 0, _("Timesteps: %[T] - %[T]"),
 		    &sim->stepLow, &sim->stepHigh);
-		AG_LabelNewPolled(ntab, 0, _("Iterations: %u-%u"),
+		AG_LabelNewPolled(nt, 0, _("Iterations: %u-%u"),
 		    &sim->itersLow, &sim->itersHigh);
 	}
 	
-	ntab = AG_NotebookAddTab(nb, _("Equations"), AG_BOX_VERT);
-	AG_LabelNew(ntab, 0, "A:");
-	mv = M_MatviewNew(ntab, sim->A, 0);
+	nt = AG_NotebookAdd(nb, _("Equations"), AG_BOX_VERT);
+	AG_LabelNew(nt, 0, "A:");
+	mv = M_MatviewNew(nt, sim->A, 0);
 	M_MatviewSizeHint(mv, "-0.000", 4, 4);
 	M_MatviewSetNumericalFmt(mv, "%.02f");
-	AG_LabelNewPolled(ntab, 0, "z: %[V]", &sim->z);
-	AG_LabelNewPolled(ntab, 0, "x: %[V]", &sim->x);
+	AG_LabelNewPolled(nt, 0, "z: %[V]", &sim->z);
+	AG_LabelNewPolled(nt, 0, "x: %[V]", &sim->x);
 
 #if 0
-	ntab = AG_NotebookAddTab(nb, "[z]", AG_BOX_VERT);
-	mv = M_MatviewNew(ntab, sim->z, 0);
+	nt = AG_NotebookAdd(nb, "[z]", AG_BOX_VERT);
+	mv = M_MatviewNew(nt, sim->z, 0);
 	M_MatviewSizeHint(mv, "-0000.0000", 10, 5);
 	M_MatviewSetNumericalFmt(mv, "%.04f");
 	
-	ntab = AG_NotebookAddTab(nb, "[x]", AG_BOX_VERT);
-	mv = M_MatviewNew(ntab, sim->x, 0);
+	nt = AG_NotebookAdd(nb, "[x]", AG_BOX_VERT);
+	mv = M_MatviewNew(nt, sim->x, 0);
 	M_MatviewSizeHint(mv, "-0000.0000", 10, 5);
 	M_MatviewSetNumericalFmt(mv, "%.04f");
 #endif

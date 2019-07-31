@@ -73,11 +73,12 @@ static void
 Draw(void *p, VG_View *vv)
 {
 	ES_LayoutNode *ln = p;
+	AG_Color c;
 	int x, y;
 
 	VG_GetViewCoords(vv, VG_Pos(ln), &x, &y);
-	AG_DrawCircle(vv, x, y, (int)(1.0f*vv->scale),
-	    VG_MapColorRGB(VGNODE(ln)->color));
+	c = VG_MapColorRGB(VGNODE(ln)->color);
+	AG_DrawCircle(vv, x, y, (int)(1.0f*vv->scale), &c);
 }
 
 static void

@@ -99,6 +99,7 @@ Draw(void *p, VG_View *vv)
 	ES_LayoutBlock *lb = p;
 	AG_Rect rDraw;
 	VG_Vector a, b;
+	AG_Color c;
 
 	if (lb->com->flags & (ES_COMPONENT_SELECTED|ES_COMPONENT_HIGHLIGHTED)) {
 		Extent(lb, vv, &a, &b);
@@ -110,13 +111,16 @@ Draw(void *p, VG_View *vv)
 		rDraw.w = (b.x - a.x)*vv->scale;
 		rDraw.h = (b.y - a.y)*vv->scale;
 		if (lb->com->flags & ES_COMPONENT_SELECTED) {
-			AG_DrawRectBlended(vv, rDraw,
-			    AG_ColorRGBA(0,255,0,64),
-			    AG_ALPHA_SRC);
+			AG_ColorRGBA_8(&c, 0,255,0,64),
+			AG_DrawRectBlended(vv, &rDraw, &c,
+			    AG_ALPHA_SRC,
+			    AG_ALPHA_ONE_MINUS_SRC);
 		}
 		if (lb->com->flags & ES_COMPONENT_HIGHLIGHTED) {
-			AG_DrawRectOutline(vv, rDraw,
-			    VG_MapColorRGB(VGNODE(lb)->color));
+			AG_Color c;
+
+			c = VG_MapColorRGB(VGNODE(lb)->color);
+			AG_DrawRectOutline(vv, &rDraw, &c);
 		}
 	}
 }

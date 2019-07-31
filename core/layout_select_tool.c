@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2009 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2019 Julien Nadeau Carriere <vedge@csoft.net>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -252,12 +252,13 @@ static void
 PostDraw(void *p, VG_View *vv)
 {
 	ES_LayoutSelectTool *t = p;
+	AG_Color c;
 	int x, y;
 
 	if (t->vnMouseOver != NULL) {
 		VG_GetViewCoords(vv, VG_Pos(t->vnMouseOver), &x,&y);
-		AG_DrawCircle(vv, x,y, 3,
-		    VG_MapColorRGB(vv->vg->selectionColor));
+		c = VG_MapColorRGB(vv->vg->selectionColor);
+		AG_DrawCircle(vv, x,y, 3, &c);
 	}
 }
 

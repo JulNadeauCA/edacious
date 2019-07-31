@@ -89,6 +89,7 @@ Draw(void *p, VG_View *vv)
 /*	char text[16]; */
 	int x, y;
 	float r;
+	AG_Color c;
 
 	VG_GetViewCoords(vv, VG_Pos(sp), &x, &y);
 	if (sp->port == NULL || sp->port->com == NULL ||
@@ -98,8 +99,9 @@ Draw(void *p, VG_View *vv)
 		} else {
 			r = sp->r;
 		}
-		AG_DrawCircle(vv, x, y, (int)(r*vv->scale),
-		    VG_MapColorRGB(VGNODE(sp)->color));
+		c = VG_MapColorRGB(VGNODE(sp)->color);
+		AG_DrawCircle(vv, x, y, (int)(r*vv->scale), &c);
+		    
 	}
 #if 0
 	/* XXX VG_DrawText */

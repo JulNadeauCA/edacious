@@ -37,12 +37,12 @@
 
 #include <unistd.h>
 
-int showProps = 0;
+int showProps = 1;
 
 static void
 printusage(void)
 {
-	fprintf(stderr, "Usage: ecminfo [-p] [file]\n");
+	fprintf(stderr, "Usage: ecminfo [-P] [file]\n");
 	exit(1);
 }
 
@@ -61,8 +61,8 @@ main(int argc, char *argv[])
 		extern char *optarg;
 
 		switch (c) {
-		case 'p':
-			showProps = 1;
+		case 'P':
+			showProps = 0;
 			break;
 		case '?':
 		case 'h':
@@ -93,13 +93,12 @@ main(int argc, char *argv[])
 
 		if (showProps) {
 			AG_Variable *V;
-			Uint i;
 			char s[1024];
 
 			printf("\tProperties:\n");
-			AGOBJECT_FOREACH_VARIABLE(V, i, ckt) {
+			TAILQ_FOREACH(V, &AGOBJECT(ckt)->vars, vars) {
 				AG_LockVariable(V);
-				AG_EvalVariable(ckt, V);
+/*				AG_EvalVariable(ckt, V); */
 				AG_PrintVariable(s, sizeof(s), V);
 				printf("\t\t%s = %s\n", V->name, s);
 				AG_UnlockVariable(V);

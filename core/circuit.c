@@ -150,12 +150,14 @@ ES_CircuitModified(ES_Circuit *ckt)
 	AG_ObjectFreeVariables(OBJECT(ckt));
 #endif
 	for (i = 1; i < ckt->n; i++) {
-		Snprintf(key, sizeof(key), "v%u", i);
-		M_BindRealFn(ckt, key, NodeVoltageFn, "%p,%i", ckt, i);
+		Snprintf(key, sizeof(key), "v%u-fn", i);
+		AG_SetPointer(ckt, key, NodeVoltageFn);
+/*		M_BindRealFn(ckt, key, NodeVoltageFn, "%p,%i", ckt, i); */
 	}
 	for (i = 0; i < ckt->m; i++) {
-		Snprintf(key, sizeof(key), "I%u", i);
-		M_BindRealFn(ckt, key, BranchCurrentFn, "%p,%i", ckt, i);
+		Snprintf(key, sizeof(key), "I%u-fn", i);
+		AG_SetPointer(ckt, key, BranchCurrentFn);
+/*		M_BindRealFn(ckt, key, BranchCurrentFn, "%p,%i", ckt, i); */
 	}
 	
 	/* Notify the component models of the change. */
@@ -514,15 +516,18 @@ Save(void *p, AG_DataSource *ds)
 	count = 0;
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
 		Debug(ckt, "Saving component: %s (%s@%s)\n", OBJECT(com)->name,
-		    OBJECT_CLASS(com)->name, OBJECT_CLASS(com)->libs);
+		    OBJECT_CLASS(com)->name,
+		    OBJECT_CLASS(com)->pvt.libs);
 
 		AG_WriteString(ds, OBJECT(com)->name);
 	
-		if (OBJECT_CLASS(com)->libs[0] != '\0') {   /* Append "@libs" */
+		if (OBJECT_CLASS(com)->pvt.libs[0] != '\0') { /* Append @libs */
 			char s[AG_OBJECT_TYPE_MAX];
+
 			Strlcpy(s, OBJECT_CLASS(com)->hier, sizeof(s));
 			Strlcat(s, "@", sizeof(s));
-			Strlcat(s, OBJECT_CLASS(com)->libs, sizeof(s));
+			Strlcat(s, OBJECT_CLASS(com)->pvt.libs, sizeof(s));
+
 			AG_WriteString(ds, s);
 		} else {
 			AG_WriteString(ds, OBJECT_CLASS(com)->hier);
@@ -725,11 +730,13 @@ ES_DelNode(ES_Circuit *ckt, int n)
 		for (i = n; i < ckt->n; i++) {
 			NODE_FOREACH_BRANCH(br, ckt->nodes[i]) {
 				if (br->port != NULL && br->port->com != NULL) {
+#if 0
 					ES_ComponentLog(br->port->com,
 					    _("Updating branch: %s: "
 					      "n%d -> n%d"),
 					    br->port->name,
 					    br->port->node, i-1);
+#endif
 					br->port->node = i-1;
 				}
 			}
@@ -1097,12 +1104,12 @@ ES_CircuitLog(void *p, const char *fmt, ...)
 
 /* Attach an external simulation object to the circuit. */
 void
-ES_AddSimulationObj(ES_Circuit *ckt, void *obj)
+ES_AddSimulationObj(ES_Circuit *ckt, const char *refName, void *obj)
 {
 	ckt->extObjs = Realloc(ckt->extObjs, (ckt->nExtObjs+1) * 
 	                                     sizeof(AG_Object *));
 	ckt->extObjs[ckt->nExtObjs++] = obj;
-	AG_ObjectAddDep(ckt, obj, 0);
+	AG_BindObject(ckt, refName, obj);		/* Add dependency */
 }
 
 AG_ObjectClass esCircuitClass = {

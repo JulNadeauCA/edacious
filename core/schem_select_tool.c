@@ -168,7 +168,7 @@ static void
 DeleteObject(VG_View *vv, void *p)
 {
 	AG_Object *obj = p;
-	ES_Circuit *ckt = AG_ObjectParent(obj);
+	ES_Circuit *ckt = (ES_Circuit *)AG_ObjectParent(obj);
 
 	if (ckt->sim != NULL && ckt->sim->running) {
 		VG_Status(vv, _("Simulation interrupted"));

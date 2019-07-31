@@ -11,7 +11,7 @@ all: ${PROG}
 
 CFLAGS+=-I${INCLDIR} \
 	${AGAR_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_MATH_CFLAGS} ${AGAR_VG_CFLAGS}
-LIBS+=	-L${TOP}/core/.libs -les_core \
+LIBS+=	-L${TOP}/core -les_core \
 	${AGAR_VG_LIBS} ${AGAR_MATH_LIBS} ${AGAR_DEV_LIBS} ${AGAR_LIBS}
 
 include ${TOP}/mk/build.prog.mk

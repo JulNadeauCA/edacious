@@ -20,6 +20,7 @@ SRCS=	sources.c \
 	vsweep.c
 
 CFLAGS+=${AGAR_MATH_CFLAGS} ${AGAR_DEV_CFLAGS} ${AGAR_VG_CFLAGS} ${AGAR_CFLAGS}
+LIBS=   ${AGAR_MATH_LIBS} ${AGAR_DEV_LIBS} ${AGAR_VG_LIBS} ${AGAR_LIBS}
 
 include ${TOP}/mk/build.lib.mk
 include ${TOP}/mk/build.man.mk

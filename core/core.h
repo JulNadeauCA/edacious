@@ -71,7 +71,7 @@ void       ES_EditMenu(AG_MenuItem *, void *);
 AG_Window *ES_OpenObject(void *);
 void       ES_CloseObject(void *);
 void       ES_GUI_NewObject(AG_Event *);
-int        ES_GUI_LoadObject(AG_Event *);
+void       ES_GUI_LoadObject(AG_Event *);
 void       ES_GUI_CreateComponentModel(AG_Event *);
 void       ES_GUI_NewComponentModelDlg(AG_Event *);
 void       ES_GUI_OpenDlg(AG_Event *);

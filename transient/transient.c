@@ -176,7 +176,7 @@ main(int argc, char *argv[])
 	
 	/* Create a "monitor" object to receive notification events. */
 	mon = AG_ObjectNew(NULL, "mon", &agObjectClass);
-	ES_AddSimulationObj(ckt, mon);
+	ES_AddSimulationObj(ckt, "Monitor", mon);
 	AG_SetEvent(mon, "circuit-step-begin", Step, "%p", sim);
 
 	if (showHeader)

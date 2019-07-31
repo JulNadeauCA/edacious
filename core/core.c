@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2009 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2019 Julien Nadeau Carriere <vedge@csoft.net>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -353,8 +353,8 @@ ES_OpenObject(void *p)
 	if (AG_OfClass(obj, "ES_Circuit:ES_Component:*")) {
 		win = AGCLASS(&esComponentClass)->edit(obj);
 		AG_WindowSetCaption(win, _("Component model: %s"),
-		    (obj->archivePath != NULL) ?
-		    AG_ShortFilename(obj->archivePath) : obj->name);
+		    AG_Defined(obj,"archive-path") ? 
+		    AG_ShortFilename(AG_GetStringP(obj,"archive-path")) : obj->name);
 	} else {
 		if ((wEdit = obj->cls->edit(obj)) == NULL) {
 			AG_SetError("%s no edit()", obj->cls->name);
@@ -371,8 +371,8 @@ ES_OpenObject(void *p)
 			return (NULL);
 		}
 		AG_WindowSetCaptionS(win,
-		    (obj->archivePath != NULL) ?
-		    AG_ShortFilename(obj->archivePath) : obj->name);
+		    AG_Defined(obj,"archive-path") ?
+		    AG_ShortFilename(AG_GetStringP(obj,"archive-path")) : obj->name);
 	}
 
 	AG_SetEvent(win, "window-close", SaveChangesDlg, "%p", obj);
@@ -400,13 +400,15 @@ ES_CloseObject(void *obj)
 	/* XXX XXX agar-1.4 */
 	AGOBJECT_FOREACH_CHILD(drv, &agDrivers, ag_driver) {
 		AG_FOREACH_WINDOW(win, drv) {
-			if ((V = AG_GetVariableLocked(win, "object")) == NULL) {
+			if ((V = AG_AccessVariable(win, "object")) == NULL) {
 				continue;
 			}
 			if (V->data.p == obj) {
+				AG_UnlockVariable(V);
 				AG_ObjectDetach(win);
+			} else {
+				AG_UnlockVariable(V);
 			}
-			AG_UnlockVariable(V);
 		}
 	}
 }
@@ -473,12 +475,15 @@ ES_GUI_NewComponentModelDlg(AG_Event *event)
 	AG_SeparatorNewHoriz(win);
 
 	AG_LabelNew(win, 0, _("Class: "));
-	tlHier = AG_TlistNewPolled(win, AG_TLIST_TREE|AG_TLIST_EXPAND,
-	    ES_ComponentListClasses, NULL);
+	tlHier = AG_TlistNewPolled(win, AG_TLIST_TREE | AG_TLIST_EXPAND,
+	                           ES_ComponentListClasses, NULL);
 
-	hBox = AG_BoxNewHoriz(win, AG_BOX_HOMOGENOUS|AG_BOX_FRAME|AG_BOX_HFILL);
+	hBox = AG_BoxNewHoriz(win, AG_BOX_HOMOGENOUS | AG_BOX_FRAME |
+	                           AG_BOX_HFILL);
+
 	AG_ButtonNewFn(hBox, 0, _("Create model"),
 	    ES_GUI_CreateComponentModel, "%p,%p", win, tlHier);
+
 	AG_ButtonNewFn(hBox, 0, _("Close"), AGWINDETACH(win));
 
 	AG_WindowSetGeometryAlignedPct(win, AG_WINDOW_MC, 33, 40);
@@ -496,70 +501,72 @@ EditDevice(AG_Event *event)
 #endif
 
 /* Load an object file from native Edacious format. */
-int
+void
 ES_GUI_LoadObject(AG_Event *event)
 {
 	AG_ObjectClass *cl = AG_PTR(1);
-	char *path = AG_STRING(2);
+	const char *path = AG_STRING(2);
 	AG_Object *obj;
 
 	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cl)) == NULL) {
-		return (-1);
+		AG_TextMsgFromError();
+		return;
 	}
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
 		AG_SetError("%s: %s", AG_ShortFilename(path), AG_GetError());
 		goto fail;
 	}
-	AG_ObjectSetArchivePath(obj, path);
+	AG_SetString(obj, "archive-path", path);
 	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
 	if (ES_OpenObject(obj) == NULL) {
 		goto fail;
 	}
-	return (0);
+	return;
 fail:
+	AG_TextMsgFromError();
 	AG_ObjectDestroy(obj);
-	return (-1);
 }
 
 /* Load a component model file. */
-static int
+static void
 LoadComponentModel(AG_Event *event)
 {
+	const char *path = AG_STRING(1);
 	AG_ObjectHeader oh;
 	AG_DataSource *ds;
-	char *path = AG_STRING(1);
 	AG_Object *obj;
 	AG_ObjectClass *cl;
 
 	if ((ds = AG_OpenFile(path, "rb")) == NULL) {
-		return (-1);
+		goto fail;
 	}
 	if (AG_ObjectReadHeader(ds, &oh) == -1) {
 		AG_CloseFile(ds);
-		return (-1);
+		goto fail;
 	}
 	AG_CloseFile(ds);
 
 	if ((cl = AG_LoadClass(oh.cs.hier)) == NULL) {
-		return (-1);
+		goto fail;
 	}
 	if ((obj = AG_ObjectNew(&esVfsRoot, NULL, cl)) == NULL) {
-		return (-1);
+		goto fail;
 	}
 	if (AG_ObjectLoadFromFile(obj, path) == -1) {
 		AG_SetError("%s: %s", AG_ShortFilename(path), AG_GetError());
-		goto fail;
+		goto fail_obj;
 	}
-	AG_ObjectSetArchivePath(obj, path);
+	AG_SetString(obj, "archive-path", path);
 	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
 
 	if (ES_OpenObject(obj) == NULL) {
-		goto fail;
+		goto fail_obj;
 	}
-	return (0);
-fail:
+	return;
+fail_obj:
 	AG_ObjectDestroy(obj);
-	return (-1);
+fail:
+	AG_TextMsgFromError();
 }
 
 void
@@ -572,7 +579,8 @@ ES_GUI_OpenDlg(AG_Event *event)
 	AG_WindowSetCaptionS(win, _("Open..."));
 
 	fd = AG_FileDlgNewMRU(win, "edacious.mru.circuits",
-	    AG_FILEDLG_LOAD|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
+	    AG_FILEDLG_LOAD | AG_FILEDLG_CLOSEWIN | AG_FILEDLG_EXPAND);
+
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 
 	AG_FileDlgAddType(fd, _("Edacious circuit model"), "*.ecm",
@@ -590,7 +598,7 @@ ES_GUI_OpenDlg(AG_Event *event)
 }
 
 /* Save an object file in native Edacious format. */
-static int
+static void
 SaveNativeObject(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
@@ -598,65 +606,45 @@ SaveNativeObject(AG_Event *event)
 	AG_Window *wEdit;
 
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
-		return (-1);
+		AG_TextMsgFromError();
+		return;
 	}
-	AG_ObjectSetArchivePath(obj, path);
+	AG_SetString(obj, "archive-path", path);
 	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
 
-	if ((wEdit = AG_WindowFindFocused()) != NULL) {
+	if ((wEdit = AG_WindowFindFocused()) != NULL)
 		AG_WindowSetCaptionS(wEdit, AG_ShortFilename(path));
-	}
-	return (0);
 }
 
-static int
-SaveLayoutToGedaPCB(AG_Event *event)
-{
-	/* TODO */
-	AG_SetError("Export to gEDA PCB not implemented yet");
-	return (-1);
-}
-
-static int
-SaveLayoutToGerber(AG_Event *event)
-{
-	/* TODO */
-	AG_SetError("Export to Gerber not implemented yet");
-	return (-1);
-}
-
-static int
-SaveLayoutToXGerber(AG_Event *event)
-{
-	/* TODO */
-	AG_SetError("Export to XGerber not implemented yet");
-	return (-1);
-}
-
-static int
+static void
 SaveCircuitToSPICE3(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
-	char *path = AG_STRING(2);
+	const char *path = AG_STRING(2);
 	
-	return ES_CircuitExportSPICE3(ckt, path);
+	if (ES_CircuitExportSPICE3(ckt, path) == -1) {
+		AG_TextMsgFromError();
+		return;
+	}
+	AG_TextTmsg(AG_MSG_INFO, 1250,
+	    _("Exported %s successfully to %s"),
+	    OBJECT(ckt)->name, AG_ShortFilename(path));
 }
 
-static int
+static void
 SaveCircuitToTXT(AG_Event *event)
 {
 	ES_Circuit *ckt = AG_PTR(1);
-	char *path = AG_STRING(2);
+	const char *path = AG_STRING(2);
 
-	return ES_CircuitExportTXT(ckt, path);
-}
-
-static int
-SaveSchemToPDF(AG_Event *event)
-{
-	/* TODO */
-	AG_SetError("Export to PDF not implemented yet");
-	return (-1);
+	if (ES_CircuitExportTXT(ckt, path) == -1) {
+		AG_TextMsgFromError();
+		return;
+	}
+	AG_TextTmsg(AG_MSG_INFO, 1250,
+	    _("Exported %s successfully to %s"),
+	    OBJECT(ckt)->name, AG_ShortFilename(path));
+	
 }
 
 void
@@ -708,6 +696,7 @@ ES_GUI_SaveAsDlg(AG_Event *event)
 		AG_FileDlgAddType(fd, _("Edacious PCB layout"),
 		    "*.ecl",
 		    SaveNativeObject, "%p", obj);
+#if 0
 		AG_FileDlgAddType(fd, _("gEDA PCB format"),
 		    "*.pcb",
 		    SaveLayoutToGedaPCB, "%p", obj);
@@ -717,14 +706,17 @@ ES_GUI_SaveAsDlg(AG_Event *event)
 		AG_FileDlgAddType(fd, _("Extended Gerber (RS-274X)"),
 		    "*.ger,*.gbl,*.gtl,*.gbs,*.gts,*.gbo,*.gto",
 		    SaveLayoutToXGerber, "%p", obj);
+#endif
 	} else if (AG_OfClass(obj, "ES_Schem:*")) {
 		AG_FileDlgSetDirectoryMRU(fd, "edacious.mru.schems", defDir);
 		AG_FileDlgAddType(fd, _("Edacious schematic"),
 		    "*.esh",
 		    SaveNativeObject, "%p", obj);
+#if 0
 		AG_FileDlgAddType(fd, _("Portable Document Format"),
 		    "*.pdf",
 		    SaveSchemToPDF, "%p", obj);
+#endif
 	}
 	AG_WindowShow(win);
 }
@@ -739,7 +731,7 @@ ES_GUI_Save(AG_Event *event)
 		return;
 	}
 
-	if (OBJECT(obj)->archivePath == NULL) {
+	if (!AG_Defined(obj,"archive-path")) {
 		ES_GUI_SaveAsDlg(event);
 		return;
 	}
@@ -747,7 +739,7 @@ ES_GUI_Save(AG_Event *event)
 		AG_TextError(_("Error saving object: %s"), AG_GetError());
 	} else {
 		AG_TextTmsg(AG_MSG_INFO, 1250, _("Saved %s successfully"),
-		    OBJECT(obj)->archivePath);
+		    AG_GetStringP(obj,"archive-path"));
 	}
 }
 

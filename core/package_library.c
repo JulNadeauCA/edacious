@@ -35,6 +35,7 @@
 #include <config/have_getpwuid.h>
 #include <config/have_getuid.h>
 
+/* XXX TODO use agar 1.6 AG_User interface. */
 #if defined(HAVE_GETPWUID) && defined(HAVE_GETUID)
 #include <pwd.h>
 #endif
@@ -79,7 +80,7 @@ LoadPackageFile(const char *path, AG_Object *objParent)
 		AG_ObjectDelete(obj);
 		return (-1);
 	}
-	AG_ObjectSetArchivePath(obj, path);
+	AG_SetString(obj, "archive-path", path);
 	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
 	return (0);
 }
@@ -269,6 +270,7 @@ ES_PackageLibraryInit(void)
 	printf("Registering package library dir: %s\n", path);
 	ES_PackageLibraryRegisterDir(path);
 
+/* XXX TODO use agar 1.6 AG_User interface. */
 #if defined(HAVE_GETPWUID) && defined(HAVE_GETUID)
 	{
 		struct passwd *pwd = getpwuid(getuid());
@@ -333,7 +335,7 @@ PollLibrary(AG_Event *event)
 	AG_LockVFS(esPackageLibrary);
 
 	ti = FindPackages(tl, OBJECT(esPackageLibrary), 0);
-	ti->flags |= AG_TLIST_EXPANDED;
+	ti->flags |= AG_TLIST_ITEM_EXPANDED;
 
 	AG_UnlockVFS(esPackageLibrary);
 	AG_TlistRestore(tl);
@@ -363,7 +365,6 @@ static void
 SavePackage(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
-	const char *sname = AG_ShortFilename(obj->archivePath);
 
 	if (AG_ObjectSave(obj) == -1) {
 		AG_TextMsgFromError();
@@ -371,24 +372,25 @@ SavePackage(AG_Event *event)
 	}
 	AG_TextTmsg(AG_MSG_INFO, 1250,
 	    _("Successfully saved package model to %s"),
-	    sname);
+	    AG_ShortFilename(AG_GetStringP(obj,"archive-path")));
 }
 
-static int
+static void
 SavePackageAs(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
 	char *path = AG_STRING(2);
-	const char *sname = AG_ShortFilename(path);
 
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
-		return (-1);
+		AG_TextMsgFromError();
+		return;
 	}
-	AG_ObjectSetArchivePath(obj, path);
-	AG_ObjectSetNameS(obj, sname);
+	AG_SetString(obj, "archive-path", path);
+	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
+
 	AG_TextTmsg(AG_MSG_INFO, 1250,
-	    _("Successfully saved package model to %s"), sname);
-	return (0);
+	    _("Successfully saved package model to %s"),
+	    AG_ShortFilename(path));
 }
 
 static void
@@ -398,14 +400,18 @@ SavePackageAsDlg(AG_Event *event)
 	AG_Window *win;
 	AG_FileDlg *fd;
 
-	win = AG_WindowNew(0);
+	if ((win = AG_WindowNew(0)) == NULL) {
+		return;
+	}
 	AG_WindowSetCaption(win, _("Save %s as..."), obj->name);
 
 	fd = AG_FileDlgNewMRU(win, "edacious.mru.packages",
-	    AG_FILEDLG_SAVE|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
+	    AG_FILEDLG_SAVE | AG_FILEDLG_CLOSEWIN | AG_FILEDLG_EXPAND);
+
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 	AG_FileDlgAddType(fd, _("Edacious device package"), "*.edp",
 	    SavePackageAs, "%p", obj);
+
 	AG_WindowShow(win);
 }
 
@@ -445,17 +451,20 @@ ES_PackageLibraryEditorNew(void *parent, VG_View *vv, ES_Layout *lo,
 
 	box = AG_BoxNewVert(parent, AG_BOX_EXPAND);
 
-	tl = AG_TlistNewPolled(box, AG_TLIST_TREE|AG_TLIST_EXPAND,
+	tl = AG_TlistNewPolled(box, AG_TLIST_TREE | AG_TLIST_EXPAND,
 	    PollLibrary, NULL);
+
 	AG_WidgetSetFocusable(tl, 0);
 	AG_TlistSetRefresh(tl, -1);
 	AG_TlistSizeHint(tl, "XXXXXXXXXXXXXXXXXXX", 10);
 	AG_TlistSetPopupFn(tl, PackageMenu, NULL);
+
 	evSel = AG_SetEvent(tl, "tlist-dblclick", insFn, NULL);
 	AG_EVENT_GET_ARGS(evSel, fmt);
 
 	btn = AG_ButtonNewFn(box, AG_BUTTON_HFILL, _("Refresh list"),
 	    RefreshLibrary, "%p", tl);
+
 	AG_WidgetSetFocusable(btn, 0);
 
 	AG_EventArgs(&ev, "%p", tl);

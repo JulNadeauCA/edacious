@@ -69,7 +69,7 @@ LoadSchemFile(const char *path, AG_Object *objParent)
 		AG_ObjectDelete(obj);
 		return (-1);
 	}
-	AG_ObjectSetArchivePath(obj, path);
+	AG_SetString(obj, "archive-path", path);
 	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
 	return (0);
 }
@@ -321,7 +321,7 @@ PollLibrary(AG_Event *event)
 	AG_LockVFS(esSchemLibrary);
 
 	ti = FindSchems(tl, OBJECT(esSchemLibrary), 0);
-	ti->flags |= AG_TLIST_EXPANDED;
+	ti->flags |= AG_TLIST_ITEM_EXPANDED;
 
 	AG_UnlockVFS(esSchemLibrary);
 	AG_TlistRestore(tl);
@@ -362,30 +362,32 @@ static void
 SaveSchem(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
-	const char *sname = AG_ShortFilename(obj->archivePath);
+	const char *name = AG_ShortFilename(AG_GetStringP(obj,"archive-path"));
 
 	if (AG_ObjectSave(obj) == -1) {
 		AG_TextMsgFromError();
 		return;
 	}
 	AG_TextTmsg(AG_MSG_INFO, 1250,
-	    _("Successfully saved schematic to %s"), sname);
+	    _("Successfully saved schematic to %s"), name);
 }
 
-static int
+static void
 SaveSchemAs(AG_Event *event)
 {
 	AG_Object *obj = AG_PTR(1);
 	char *path = AG_STRING(2);
-	const char *sname = AG_ShortFilename(path);
+	const char *name = AG_ShortFilename(path);
 
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
-		return (-1);
+		AG_TextMsgFromError();
+		return;
 	}
-	AG_ObjectSetArchivePath(obj, path);
-	AG_ObjectSetNameS(obj, sname);
-	AG_TextTmsg(AG_MSG_INFO, 1250, _("Successfully saved schematic to %s"), sname);
-	return (0);
+	AG_SetString(obj, "archive-path", path);
+	AG_ObjectSetNameS(obj, name);
+
+	AG_TextTmsg(AG_MSG_INFO, 1250,
+	    _("Successfully saved schematic to %s"), name);
 }
 
 static void
@@ -395,11 +397,12 @@ SaveSchemAsDlg(AG_Event *event)
 	AG_Window *win;
 	AG_FileDlg *fd;
 
-	win = AG_WindowNew(0);
+	if ((win = AG_WindowNew(0)) == NULL) {
+		return;
+	}
 	AG_WindowSetCaption(win, _("Save %s as..."), obj->name);
-
 	fd = AG_FileDlgNewMRU(win, "edacious.mru.schems",
-	    AG_FILEDLG_SAVE|AG_FILEDLG_CLOSEWIN|AG_FILEDLG_EXPAND);
+	    AG_FILEDLG_SAVE | AG_FILEDLG_CLOSEWIN | AG_FILEDLG_EXPAND);
 	AG_FileDlgSetOptionContainer(fd, AG_BoxNewVert(win, AG_BOX_HFILL));
 	AG_FileDlgAddType(fd, _("Edacious schematic"), "*.esh",
 	    SaveSchemAs, "%p", obj);
@@ -419,13 +422,13 @@ SchemMenu(AG_Event *event)
 	if ((pm = AG_PopupNew(tl)) == NULL)
 		return;
 
-	AG_MenuAction(pm->item, _("Edit schematic..."), esIconCircuit.s,
+	AG_MenuAction(pm->root, _("Edit schematic..."), esIconCircuit.s,
 	    EditSchem, "%p", obj);
 
-	AG_MenuSeparator(pm->item);
+	AG_MenuSeparator(pm->root);
 
-	AG_MenuAction(pm->item, _("Save"),       agIconSave.s, SaveSchem, "%p,%s", obj, "");
-	AG_MenuAction(pm->item, _("Save as..."), agIconSave.s, SaveSchemAsDlg, "%p", obj);
+	AG_MenuAction(pm->root, _("Save"),       agIconSave.s, SaveSchem, "%p,%s", obj, "");
+	AG_MenuAction(pm->root, _("Save as..."), agIconSave.s, SaveSchemAsDlg, "%p", obj);
 	
 	AG_PopupShow(pm);
 }

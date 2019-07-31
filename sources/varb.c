@@ -160,7 +160,7 @@ Edit(void *p)
 	AG_Textbox *tb;
 	AG_Event *ev;
 
-	AG_LabelNewPolledMT(box, 0, &OBJECT(va)->lock,
+	AG_LabelNewPolledMT(box, 0, &OBJECT(va)->pvt.lock,
 	    _("Effective voltage: %[R]v"), &VSOURCE(va)->v);
 	
 	tb = AG_TextboxNewS(box, 0, "v(t) = ");

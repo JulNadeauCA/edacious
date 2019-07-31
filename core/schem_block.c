@@ -101,24 +101,30 @@ Draw(void *p, VG_View *vv)
 	ES_SchemBlock *sb = p;
 	AG_Rect rDraw;
 	VG_Vector a, b;
+	AG_Color c;
 
-	if (sb->com->flags & (ES_COMPONENT_SELECTED|ES_COMPONENT_HIGHLIGHTED)) {
+	if (sb->com->flags & (ES_COMPONENT_SELECTED | ES_COMPONENT_HIGHLIGHTED)) {
+		const float wPixel4 = vv->wPixel*4.0f;
+
 		Extent(sb, vv, &a, &b);
-		a.x -= vv->wPixel*4;
-		a.y -= vv->wPixel*4;
-		b.x += vv->wPixel*4;
-		b.y += vv->wPixel*4;
+		a.x -= wPixel4;
+		a.y -= wPixel4;
+		b.x += wPixel4;
+		b.y += wPixel4;
 		VG_GetViewCoords(vv, a, &rDraw.x, &rDraw.y);
 		rDraw.w = (b.x - a.x)*vv->scale;
 		rDraw.h = (b.y - a.y)*vv->scale;
 		if (sb->com->flags & ES_COMPONENT_SELECTED) {
-			AG_DrawRectBlended(vv, rDraw,
-			    AG_ColorRGBA(0,255,0,64),
-			    AG_ALPHA_SRC);
+			AG_ColorRGBA_8(&c, 0,255,0, 64);
+			AG_DrawRectBlended(vv, &rDraw, &c,
+			    AG_ALPHA_SRC,
+			    AG_ALPHA_ONE_MINUS_SRC);
 		}
 		if (sb->com->flags & ES_COMPONENT_HIGHLIGHTED) {
-			AG_DrawRectOutline(vv, rDraw,
-			    VG_MapColorRGB(VGNODE(sb)->color));
+			AG_Color c;
+
+			c = VG_MapColorRGB(VGNODE(sb)->color);
+			AG_DrawRectOutline(vv, &rDraw, &c);
 		}
 	}
 }

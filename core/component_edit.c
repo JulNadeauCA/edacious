@@ -53,9 +53,9 @@ FindClasses(AG_Tlist *tl, AG_ObjectClass *cl, int depth)
 	it->p1 = cl;
 
 	if (AG_ClassIsNamed(cl, "ES_Circuit:ES_Component")) {
-		it->flags |= AG_TLIST_EXPANDED;
+		it->flags |= AG_TLIST_ITEM_EXPANDED;
 	}
-	if (!TAILQ_EMPTY(&cl->sub)) {
+	if (!TAILQ_EMPTY(&cl->pvt.sub)) {
 		it->flags |= AG_TLIST_HAS_CHILDREN;
 	}
 	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
@@ -64,7 +64,7 @@ FindClasses(AG_Tlist *tl, AG_ObjectClass *cl, int depth)
 	}
 	return (it);
 recurse:
-	TAILQ_FOREACH(clSub, &cl->sub, subclasses) {
+	TAILQ_FOREACH(clSub, &cl->pvt.sub, pvt.subclasses) {
 		(void)FindClasses(tl, clSub, depth+1);
 	}
 	return (it);
@@ -75,7 +75,7 @@ ES_ComponentListClasses(AG_Event *event)
 	AG_Tlist *tl = AG_SELF();
 
 	AG_TlistClear(tl);
-	FindClasses(tl, agClassTree, 0);
+	FindClasses(tl, &agObjectClass, 0);
 	AG_TlistRestore(tl);
 }
 
@@ -408,7 +408,7 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 	if (!TAILQ_EMPTY(&pob->children)) {
 		it->flags |= AG_TLIST_HAS_CHILDREN;
 		if (pob == OBJECT(ckt))
-			it->flags |= AG_TLIST_VISIBLE_CHILDREN;
+			it->flags |= AG_TLIST_ITEM_EXPANDED;
 	}
 	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
 	    AG_TlistVisibleChildren(tl, it)) {
@@ -530,10 +530,11 @@ static void
 DeleteSchem(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
-	ES_Schem *scm = AG_TLIST_ITEM(2);
+	AG_TlistItem *it = AG_TLIST_ITEM_PTR(2);
 	VG_View *vv = AG_PTR(3);
+	ES_Schem *scm;
 
-	if (scm == NULL)
+	if ((scm = it->p1) == NULL)
 		return;
 
 	AG_ObjectLock(vv);
@@ -547,7 +548,7 @@ DeleteSchem(AG_Event *event)
 }
 
 /* Import a schematic from file. */
-static int
+static void
 ImportSchem(AG_Event *event)
 {
 	ES_Component *com = AG_PTR(1);
@@ -556,14 +557,14 @@ ImportSchem(AG_Event *event)
 	ES_Schem *scm;
 
 	if ((scm = AG_ObjectNew(&esVfsRoot, NULL, &esSchemClass)) == NULL) {
-		return (-1);
+		goto fail;
 	}
 	if (AG_ObjectLoadFromFile(scm, path) == -1) {
 		AG_ObjectDetach(scm);
 		AG_ObjectDestroy(scm);
-		return (-1);
+		goto fail;
 	}
-	AG_ObjectSetArchivePath(scm, path);
+	AG_SetString(scm, "archive-path", path);
 	AG_ObjectSetNameS(scm, AG_ShortFilename(path));
 
 	TAILQ_INSERT_TAIL(&com->schems, scm, schems);
@@ -571,7 +572,9 @@ ImportSchem(AG_Event *event)
 	VG_ViewSetVG(vv, scm->vg);
 	VG_ViewSetScale(vv, DEFAULT_SCHEM_SCALE);
 	VG_Status(vv, _("Imported: %s"), OBJECT(scm)->name);
-	return (0);
+	return;
+fail:
+	AG_TextMsgFromError();
 }
 
 /* "Import schematic" button pressed. */
@@ -609,19 +612,19 @@ EvalRemoveButtonState(AG_Event *event)
 static void
 Menu_View_EquivalentCircuit(AG_Event *event)
 {
-	AG_MenuItem *m = AG_SENDER();
 	ES_Component *com = AG_PTR(1);
 	AG_Window *winParent = AG_PTR(2);
 	VG_View *vv = AG_PTR(3);
+	AG_MenuItem *mi = AG_PTR(4);
 	AG_MenuItem *mSchem;
 
-	AG_MenuActionKb(m, _("New schematics view..."), esIconCircuit.s,
+	AG_MenuActionKb(mi, _("New schematics view..."), esIconCircuit.s,
 	    AG_KEY_V, AG_KEYMOD_CTRL,
 	    CreateAlternateVGView, "%p,%p,%p", winParent, com, vv);
 
-	AG_MenuSeparator(m);
+	AG_MenuSeparator(mi);
 
-	mSchem = AG_MenuNode(m, _("Schematic"), esIconCircuit.s);
+	mSchem = AG_MenuNode(mi, _("Schematic"), esIconCircuit.s);
 	{
 		AG_MenuFlags(mSchem, _("Nodes annotations"),
 		    esIconShowNodes.s,
@@ -774,7 +777,7 @@ ES_ComponentEdit(void *obj)
 	/*
 	 * Schematic block editor
 	 */
-	nt = AG_NotebookAddTab(nb, _("Schematics"), AG_BOX_HORIZ);
+	nt = AG_NotebookAdd(nb, _("Schematics"), AG_BOX_HORIZ);
 	{
 		VG_View *vv;
 		AG_Tlist *tlSchems;
@@ -847,7 +850,7 @@ ES_ComponentEdit(void *obj)
 				    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool,
 				    com);
 				AG_BindIntMp(btn, "state", &tool->selected,
-				    &OBJECT(vv)->lock);
+				    &OBJECT(vv)->pvt.lock);
 
 				if (ops == &esSchemSelectTool) {
 					VG_ViewSetDefaultTool(vv, tool);
@@ -868,7 +871,7 @@ ES_ComponentEdit(void *obj)
 				    VG_ViewSelectToolEv, "%p,%p,%p",
 				    vv, tool, com);
 				AG_BindIntMp(btn, "state", &tool->selected,
-				    &OBJECT(vv)->lock);
+				    &OBJECT(vv)->pvt.lock);
 			}
 		}
 	}
@@ -876,12 +879,12 @@ ES_ComponentEdit(void *obj)
 	/*
 	 * Equivalent circuit editor
 	 */
-	nt = AG_NotebookAddTab(nb, _("Equivalent Circuit"), AG_BOX_VERT);
+	nt = AG_NotebookAdd(nb, _("Equivalent Circuit"), AG_BOX_VERT);
 	hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
 	{
 		VG_View *vv;
 		AG_Notebook *nb;
-		AG_NotebookTab *ntab;
+		AG_NotebookTab *nt;
 		ES_ComponentLibraryEditor *led;
 		AG_Tlist *tl;
 		AG_Box *hBox;
@@ -897,18 +900,21 @@ ES_ComponentEdit(void *obj)
 
 		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
-		ntab = AG_NotebookAddTab(nb, _("Library"), AG_BOX_VERT);
+		nt = AG_NotebookAdd(nb, _("Library"), AG_BOX_VERT);
 		{
-			led = ES_ComponentLibraryEditorNew(ntab, vv, ckt, 0);
+			led = ES_ComponentLibraryEditorNew(nt, vv, ckt, 0);
 			AG_WidgetSetFocusable(led, 0);
 		}
-		ntab = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
+		nt = AG_NotebookAdd(nb, _("Objects"), AG_BOX_VERT);
 		{
-			tl = AG_TlistNewPolled(ntab,
-			    AG_TLIST_POLL|AG_TLIST_TREE|AG_TLIST_EXPAND|AG_TLIST_NOSELSTATE,
+			tl = AG_TlistNewPolled(nt,
+			    AG_TLIST_POLL | AG_TLIST_TREE | AG_TLIST_EXPAND |
+			    AG_TLIST_NOSELSTATE,
 			    PollObjects, "%p", ckt);
+
 			AG_SetEvent(tl, "tlist-changed",
 			    SelectedObject, "%p", vv);
+
 			AG_WidgetSetFocusable(tl, 0);
 		}
 		VG_AddEditArea(vv, vPane->div[1]);
@@ -927,7 +933,7 @@ ES_ComponentEdit(void *obj)
 			    (ops->icon ? ops->icon->s : NULL), 0,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 			AG_BindIntMp(btn, "state", &tool->selected,
-			    &OBJECT(vv)->lock);
+			    &OBJECT(vv)->pvt.lock);
 
 			if (ops == &esSchemSelectTool) {
 				VG_ViewSetDefaultTool(vv, tool);
@@ -948,7 +954,7 @@ ES_ComponentEdit(void *obj)
 			    (ops->icon ? ops->icon->s : NULL), 0,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, com);
 			AG_BindIntMp(btn, "state", &tool->selected,
-			    &OBJECT(vv)->lock);
+			    &OBJECT(vv)->pvt.lock);
 		}
 		
 		/* Register (but hide) the special "insert component" tool. */
@@ -961,7 +967,7 @@ ES_ComponentEdit(void *obj)
 		/*
 		 * Model parameters editor
 		 */
-		nt = AG_NotebookAddTab(nb, _("Model Parameters"), AG_BOX_VERT);
+		nt = AG_NotebookAdd(nb, _("Model Parameters"), AG_BOX_VERT);
 		{
 			hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
 			if (OBJECT_CLASS(com)->edit != NULL) {
@@ -977,7 +983,7 @@ ES_ComponentEdit(void *obj)
 	/*
 	 * Package list
 	 */
-	nt = AG_NotebookAddTab(nb, _("Packages"), AG_BOX_VERT);
+	nt = AG_NotebookAdd(nb, _("Packages"), AG_BOX_VERT);
 	hPane = AG_PaneNewHoriz(nt, AG_PANE_EXPAND);
 	{
 		AG_Tlist *tl;

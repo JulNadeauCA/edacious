@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2019 Julien Nadeau Carriere <vedge@csoft.net>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -89,11 +89,13 @@ Draw(void *p, VG_View *vv)
 	ES_LayoutTrace *lt = p;
 	VG_Vector v1 = VG_Pos(lt->p1);
 	VG_Vector v2 = VG_Pos(lt->p2);
+	AG_Color c;
 	int x1, y1, x2, y2;
 	
 	VG_GetViewCoords(vv, v1, &x1, &y1);
 	VG_GetViewCoords(vv, v2, &x2, &y2);
-	AG_DrawLine(vv, x1,y1, x2,y2, VG_MapColorRGB(VGNODE(lt)->color));
+	c = VG_MapColorRGB(VGNODE(lt)->color);
+	AG_DrawLine(vv, x1,y1, x2,y2, &c);
 }
 
 static void

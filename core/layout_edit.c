@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2009-2019 Julien Nadeau Carriere <vedge@csoft.net>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -173,7 +173,7 @@ ES_LayoutEdit(void *p)
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
 		
 		if (lo->ckt != NULL) {
-			nt = AG_NotebookAddTab(nb, _("Devices"), AG_BOX_VERT);
+			nt = AG_NotebookAdd(nb, _("Devices"), AG_BOX_VERT);
 			tl = AG_TlistNewPolled(nt,
 			    AG_TLIST_TREE|AG_TLIST_EXPAND|AG_TLIST_NOSELSTATE,
 			    PollDevicePkgs, "%p", lo);
@@ -183,7 +183,7 @@ ES_LayoutEdit(void *p)
 			AG_TlistSetDblClickFn(tl,
 			    InsertDevicePkg, "%p,%p", vv, lo);
 		}
-		nt = AG_NotebookAddTab(nb, _("Layers"), AG_BOX_VERT);
+		nt = AG_NotebookAdd(nb, _("Layers"), AG_BOX_VERT);
 		{
 			tl = AG_TlistNewPolled(nt,
 			    AG_TLIST_TREE|AG_TLIST_EXPAND|AG_TLIST_NOSELSTATE,
@@ -231,7 +231,7 @@ ES_LayoutEdit(void *p)
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, lo);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
-			    &OBJECT(vv)->lock);
+			    &OBJECT(vv)->pvt.lock);
 		}
 		
 		AG_MenuSeparator(m);
@@ -244,7 +244,7 @@ ES_LayoutEdit(void *p)
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, lo);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
-			    &OBJECT(vv)->lock);
+			    &OBJECT(vv)->pvt.lock);
 		}
 		
 		/* Register (but hide) the special "insert package" tool. */

@@ -267,7 +267,12 @@ Insert(AG_Event *event)
 		goto fail;
 	}
 	AG_ObjectInit(com, COMCLASS(comModel));
-	if (AG_ObjectLoadFromFile(com, OBJECT(comModel)->archivePath) == -1) {
+
+	if (!AG_Defined(comModel,"archive-path")) {
+		goto fail;
+	}
+	if (AG_ObjectLoadFromFile(com,
+	    AG_GetStringP(comModel,"archive-path")) == -1) {
 		AG_ObjectDestroy(com);
 		goto fail;
 	}

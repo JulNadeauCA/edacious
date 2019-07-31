@@ -133,7 +133,7 @@ ES_SchemEdit(void *p)
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, scm);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
-			    &OBJECT(vv)->lock);
+			    &OBJECT(vv)->pvt.lock);
 			if (ops == &vgSelectTool) {
 				VG_ViewSetDefaultTool(vv, tool);
 				VG_ViewSelectTool(vv, tool, scm);

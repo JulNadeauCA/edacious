@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2015 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2019 Julien Nadeau Carriere <vedge@csoft.net>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -82,7 +82,7 @@ LoadComponentFile(const char *path, AG_Object *objParent)
 		AG_ObjectDelete(obj);
 		return (-1);
 	}
-	AG_ObjectSetArchivePath(obj, path);
+	AG_SetString(obj, "archive-path", path);
 	AG_ObjectSetNameS(obj, AG_ShortFilename(path));
 	return (0);
 }
@@ -337,7 +337,7 @@ PollLibrary(AG_Event *event)
 	AG_LockVFS(esComponentLibrary);
 
 	ti = FindComponents(tl, OBJECT(esComponentLibrary), 0);
-	ti->flags |= AG_TLIST_EXPANDED;
+	ti->flags |= AG_TLIST_ITEM_EXPANDED;
 
 	AG_UnlockVFS(esComponentLibrary);
 	AG_TlistRestore(tl);
@@ -346,9 +346,9 @@ PollLibrary(AG_Event *event)
 static void
 InsertComponent(AG_Event *event)
 {
-	VG_View *vv = AG_PTR(1);
+	VG_View *vv = VG_VIEW_PTR(1);
 	ES_Circuit *ckt = AG_PTR(2);
-	AG_TlistItem *ti = AG_PTR(3);
+	AG_TlistItem *ti = AG_TLIST_ITEM_PTR(3);
 	ES_Component *comModel = ti->p1;
 	VG_Tool *insTool;
 
@@ -372,7 +372,7 @@ InsertComponent(AG_Event *event)
 static void
 RefreshLibrary(AG_Event *event)
 {
-	AG_Tlist *tl = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_PTR(1);
 
 	if (ES_ComponentLibraryLoad() == -1) {
 		AG_TextMsgFromError();
@@ -384,7 +384,7 @@ RefreshLibrary(AG_Event *event)
 static void
 EditComponent(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(1);
 
 	(void)ES_OpenObject(obj);
 }
@@ -392,7 +392,7 @@ EditComponent(AG_Event *event)
 static void
 SaveComponent(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(1);
 
 	if (AG_ObjectSave(obj) == -1) {
 		AG_TextMsgFromError();
@@ -401,27 +401,27 @@ SaveComponent(AG_Event *event)
 	AG_TextTmsg(AG_MSG_INFO, 1250, _("Model saved successfully"));
 }
 
-static int
+static void
 SaveComponentAs(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
-	char *path = AG_STRING(2);
-	const char *sname;
+	AG_Object *obj = AG_OBJECT_PTR(1);
+	const char *path = AG_STRING(2);
+	const char *s;
 
-	sname = AG_ShortFilename(path);
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
-		return (-1);
+		AG_TextMsgFromError();
+		return;
 	}
-	AG_ObjectSetArchivePath(obj, path);
-	AG_ObjectSetNameS(obj, sname);
-	AG_TextTmsg(AG_MSG_INFO, 1250, _("Successfully saved model to %s"), sname);
-	return (0);
+	AG_SetString(obj, "archive-path", path);
+	s = AG_ShortFilename(path);
+	AG_ObjectSetNameS(obj, s);
+	AG_TextTmsg(AG_MSG_INFO, 1250, _("Successfully saved model to %s"), s);
 }
 
 static void
 SaveComponentAsDlg(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(1);
 	AG_Window *win;
 	AG_FileDlg *fd;
 
@@ -449,13 +449,13 @@ ComponentMenu(AG_Event *event)
 	if ((pm = AG_PopupNew(tl)) == NULL)
 		return;
 
-	AG_MenuAction(pm->item, _("Edit component model..."), esIconComponent.s,
+	AG_MenuAction(pm->root, _("Edit component model..."), esIconComponent.s,
 	    EditComponent, "%p", obj);
 
-	AG_MenuSeparator(pm->item);
+	AG_MenuSeparator(pm->root);
 
-	AG_MenuAction(pm->item, _("Save"),       agIconSave.s, SaveComponent, "%p,%s", obj, "");
-	AG_MenuAction(pm->item, _("Save as..."), agIconSave.s, SaveComponentAsDlg, "%p", obj);
+	AG_MenuAction(pm->root, _("Save"),       agIconSave.s, SaveComponent, "%p,%s", obj, "");
+	AG_MenuAction(pm->root, _("Save as..."), agIconSave.s, SaveComponentAsDlg, "%p", obj);
 	
 	AG_PopupShow(pm);
 }

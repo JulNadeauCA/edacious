@@ -34,7 +34,7 @@ AG_Window *
 ES_CircuitOpenObject(void *p)
 {
 	AG_Object *obj = p;
-	AG_Object *objParent = AG_ObjectParent(obj);
+	AG_Object *par = AG_ObjectParent(obj);
 	AG_Window *win;
 
 	if ((win = AGOBJECT_CLASS(obj)->edit(obj)) == NULL) {
@@ -42,11 +42,11 @@ ES_CircuitOpenObject(void *p)
 		return (NULL);
 	}
 	AG_WindowSetCaption(win, "<%s>: %s",
-	    (objParent->archivePath != NULL) ?
-	    AG_ShortFilename(objParent->archivePath) : objParent->name,
+	    AG_Defined(par,"archive-path") ?
+	    AG_ShortFilename(AG_GetStringP(par,"archive-path")) : par->name,
 	    obj->name);
 
-	AG_SetPointer(win, "object", objParent);
+	AG_SetPointer(win, "object", par);
 	AG_SetPointer(win, "circuit-object", obj);
 	
 	AG_WindowShow(win);
@@ -66,14 +66,15 @@ ES_CircuitCloseObject(void *obj)
 	
 	AGOBJECT_FOREACH_CHILD(drv, &agDrivers, ag_driver) {
 		AG_FOREACH_WINDOW(win, drv) {
-			if ((V = AG_GetVariableLocked(win,"circuit-object"))
-			    == NULL) {
+			if (!(V = AG_AccessVariable(win,"circuit-object"))) {
 				continue;
 			}
 			if (V->data.p == obj) {
+				AG_UnlockVariable(V);
 				AG_ObjectDetach(win);
+			} else {
+				AG_UnlockVariable(V);
 			}
-			AG_UnlockVariable(V);
 		}
 	}
 }
@@ -159,7 +160,7 @@ ShowTopology(AG_Event *event)
 	ES_Circuit *ckt = AG_PTR(2);
 	AG_Window *win;
 	AG_Notebook *nb;
-	AG_NotebookTab *ntab;
+	AG_NotebookTab *nt;
 	AG_Tlist *tl;
 	
 	if ((win = AG_WindowNewNamed(0, "%s-topology", OBJECT(ckt)->name))
@@ -169,25 +170,25 @@ ShowTopology(AG_Event *event)
 	AG_WindowSetCaption(win, _("%s: Circuit topology"), OBJECT(ckt)->name);
 	
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
-	ntab = AG_NotebookAddTab(nb, _("Nodes"), AG_BOX_VERT);
+	nt = AG_NotebookAdd(nb, _("Nodes"), AG_BOX_VERT);
 	{
-		AG_LabelNewPolledMT(ntab, 0, &OBJECT(ckt)->lock,
+		AG_LabelNewPolledMT(nt, 0, &OBJECT(ckt)->pvt.lock,
 		    _("%u nodes, %u vsources, %u loops"),
 		    &ckt->n, &ckt->m, &ckt->l);
-		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_TREE|
+		tl = AG_TlistNew(nt, AG_TLIST_POLL|AG_TLIST_TREE|
 		                       AG_TLIST_EXPAND);
 		AG_SetEvent(tl, "tlist-poll", PollCircuitNodes, "%p", ckt);
 	}
 	
-	ntab = AG_NotebookAddTab(nb, _("Loops"), AG_BOX_VERT);
+	nt = AG_NotebookAdd(nb, _("Loops"), AG_BOX_VERT);
 	{
-		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_EXPAND);
+		tl = AG_TlistNew(nt, AG_TLIST_POLL|AG_TLIST_EXPAND);
 		AG_SetEvent(tl, "tlist-poll", PollCircuitLoops, "%p", ckt);
 	}
 	
-	ntab = AG_NotebookAddTab(nb, _("Sources"), AG_BOX_VERT);
+	nt = AG_NotebookAdd(nb, _("Sources"), AG_BOX_VERT);
 	{
-		tl = AG_TlistNew(ntab, AG_TLIST_POLL|AG_TLIST_EXPAND);
+		tl = AG_TlistNew(nt, AG_TLIST_POLL|AG_TLIST_EXPAND);
 		AG_SetEvent(tl, "tlist-poll", PollCircuitSources, "%p", ckt);
 	}
 	
@@ -308,7 +309,7 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 	if (!TAILQ_EMPTY(&pob->children)) {
 		it->flags |= AG_TLIST_HAS_CHILDREN;
 		if (pob == OBJECT(ckt))
-			it->flags |= AG_TLIST_VISIBLE_CHILDREN;
+			it->flags |= AG_TLIST_ITEM_EXPANDED;
 	}
 	if ((it->flags & AG_TLIST_HAS_CHILDREN) &&
 	    AG_TlistVisibleChildren(tl, it)) {
@@ -584,12 +585,12 @@ ES_CircuitEdit(void *p)
 
 		vPane = AG_PaneNewVert(hPane->div[0], AG_PANE_EXPAND);
 		nb = AG_NotebookNew(vPane->div[0], AG_NOTEBOOK_EXPAND);
-		nt = AG_NotebookAddTab(nb, _("Library"), AG_BOX_VERT);
+		nt = AG_NotebookAdd(nb, _("Library"), AG_BOX_VERT);
 		{
 			led = ES_ComponentLibraryEditorNew(nt, vv, ckt, 0);
 			AG_WidgetSetFocusable(led, 0);
 		}
-		nt = AG_NotebookAddTab(nb, _("Objects"), AG_BOX_VERT);
+		nt = AG_NotebookAdd(nb, _("Objects"), AG_BOX_VERT);
 		{
 			tl = AG_TlistNewPolled(nt,
 			    AG_TLIST_TREE|AG_TLIST_EXPAND|AG_TLIST_NOSELSTATE,
@@ -599,7 +600,7 @@ ES_CircuitEdit(void *p)
 			    SelectedObject, "%p", vv);
 			AG_WidgetSetFocusable(tl, 0);
 		}
-		nt = AG_NotebookAddTab(nb, _("PCBs"), AG_BOX_VERT);
+		nt = AG_NotebookAdd(nb, _("PCBs"), AG_BOX_VERT);
 		{
 			tl = AG_TlistNewPolled(nt, AG_TLIST_TREE|AG_TLIST_EXPAND,
 			    PollLayouts, "%p", ckt);
@@ -648,7 +649,7 @@ ES_CircuitEdit(void *p)
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
-			    &OBJECT(vv)->lock);
+			    &OBJECT(vv)->pvt.lock);
 			if (ops == &esSchemSelectTool) {
 				VG_ViewSetDefaultTool(vv, tool);
 				VG_ViewSelectTool(vv, tool, ckt);
@@ -668,7 +669,7 @@ ES_CircuitEdit(void *p)
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
-			    &OBJECT(vv)->lock);
+			    &OBJECT(vv)->pvt.lock);
 		}
 
 		/* Register (but hide) the special "insert component" tool. */

@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
  * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
- * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
+ * Copyright (c) 2005-2019 Julien Nadeau Carriere (vedge@csoft.net)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -532,7 +532,7 @@ ES_SelectComponent(ES_Component *com, VG_View *vv)
 		sv = AG_ScrollviewNew(vv->editAreas[0], AG_SCROLLVIEW_EXPAND);
 		AG_ObjectAttach(sv, wEdit);
 		AG_WidgetUpdate(sv);
-		AG_WidgetShownRecursive(sv);
+		AG_WidgetShowAll(sv);
 	}
 }
 
