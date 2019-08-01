@@ -68,8 +68,7 @@ Destroy(void *obj)
 {
 	ES_Layout *lo = obj;
 
-	VG_Destroy(lo->vg);
-	free(lo->vg);
+	AG_ObjectDestroy(lo->vg);
 }
 
 static int
@@ -77,10 +76,7 @@ Load(void *obj, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_Layout *lo = obj;
 	
-	if (VG_Load(lo->vg, ds) == -1)
-		return (-1);
-	
-	return (0);
+	return AG_ObjectUnserialize(lo->vg, ds);
 }
 
 static int
@@ -88,8 +84,7 @@ Save(void *obj, AG_DataSource *ds)
 {
 	ES_Layout *lo = obj;
 
-	VG_Save(lo->vg, ds);
-	return (0);
+	return AG_ObjectSerialize(lo->vg, ds);
 }
 
 AG_ObjectClass esLayoutClass = {

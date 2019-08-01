@@ -275,6 +275,7 @@ static int
 Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_Circuit *ckt = p;
+	VG *vg = ckt->vg;
 	ES_Component *com;
 	Uint i, j, count;
 	ES_SchemBlock *sb;
@@ -370,13 +371,13 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 	 * Load the circuit schematics and re-attach the schematic entities
 	 * with the actual circuit structures.
 	 */
-	if (VG_Load(ckt->vg, ds) == -1) {
+	if (AG_ObjectUnserialize(vg, ds) == -1) {
 		return (-1);
 	}
-	VG_FOREACH_NODE_CLASS(vt, ckt->vg, vg_text, "Text")
+	VG_FOREACH_NODE_CLASS(vt, vg, vg_text, "Text")
 		VG_TextSubstObject(vt, ckt);
 
-	VG_FOREACH_NODE_CLASS(sb, ckt->vg, es_schem_block, "SchemBlock") {
+	VG_FOREACH_NODE_CLASS(sb, vg, es_schem_block, "SchemBlock") {
 		if ((com = AG_ObjectFindChild(ckt, sb->name)) == NULL) {
 			AG_SetError("SchemBlock: No such component: \"%s\"",
 			    sb->name);
@@ -384,7 +385,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		}
 		sb->com = com;
 	}
-	VG_FOREACH_NODE_CLASS(sw, ckt->vg, es_schem_wire, "SchemWire") {
+	VG_FOREACH_NODE_CLASS(sw, vg, es_schem_wire, "SchemWire") {
 		if ((com = AG_ObjectFindChild(ckt, sw->name)) == NULL) {
 			AG_SetError("SchemWire: No such wire: \"%s\"",
 			    sw->name);
@@ -392,7 +393,7 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 		}
 		sw->wire = com;
 	}
-	VG_FOREACH_NODE_CLASS(sp, ckt->vg, es_schem_port, "SchemPort") {
+	VG_FOREACH_NODE_CLASS(sp, vg, es_schem_port, "SchemPort") {
 		if (sp->comName[0] == '\0' || sp->portName == -1) {
 			continue;
 		}
@@ -573,7 +574,8 @@ Save(void *p, AG_DataSource *ds)
 	}
 	
 	/* Circuit schematics */
-	VG_Save(ckt->vg, ds);
+	if (AG_ObjectSerialize(ckt->vg, ds) == -1)
+		return (-1);
 
 	/* Symbol table */
 	countOffs = AG_Tell(ds);
@@ -1050,7 +1052,7 @@ Destroy(void *p)
 	ES_Circuit *ckt = p;
 
 	Free(ckt->extObjs);
-	VG_Destroy(ckt->vg);
+	AG_ObjectDestroy(ckt->vg);
 }
 
 /* Select the simulation mode. */

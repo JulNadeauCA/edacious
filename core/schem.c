@@ -61,19 +61,15 @@ Destroy(void *obj)
 {
 	ES_Schem *scm = obj;
 
-	VG_Destroy(scm->vg);
-	free(scm->vg);
+	AG_ObjectDestroy(scm->vg);
 }
 
 static int
 Load(void *obj, AG_DataSource *ds, const AG_Version *ver)
 {
 	ES_Schem *scm = obj;
-	
-	if (VG_Load(scm->vg, ds) == -1)
-		return (-1);
-	
-	return (0);
+
+	return AG_ObjectUnserialize(scm->vg, ds);
 }
 
 static int
@@ -81,8 +77,7 @@ Save(void *obj, AG_DataSource *ds)
 {
 	ES_Schem *scm = obj;
 
-	VG_Save(scm->vg, ds);
-	return (0);
+	return AG_ObjectSerialize(scm->vg, ds);
 }
 
 /* Return the entity nearest to vPos. */
