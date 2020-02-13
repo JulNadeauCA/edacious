@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2009 Julien Nadeau (vedge@hypertriton.com)
+ * Copyright (c) 2004-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -71,14 +71,18 @@ ES_DigitalStepIter(void *p, ES_SimDC *dc)
 void
 ES_DigitalSetVccPort(void *p, int port)
 {
-	DIGITAL(p)->VccPort = port;
+	ESDIGITAL(p)->VccPort = port;
 }
 
 void
 ES_DigitalSetGndPort(void *p, int port)
 {
-	DIGITAL(p)->GndPort = port;
+	ESDIGITAL(p)->GndPort = port;
 }
+
+#define PAIR_MATCHES(pair,a,b) \
+	((pair->p1->n == (a) && pair->p2->n == (b)) || \
+	 (pair->p2->n == (a) && pair->p1->n == (b)))
 
 int
 ES_LogicOutput(void *p, const char *portname, ES_LogicState nState)
@@ -110,6 +114,8 @@ ES_LogicOutput(void *p, const char *portname, ES_LogicState nState)
 	    nState == ES_HIGH ? "HIGH" : "HI-Z");
 	return (0);
 }
+
+#undef PAIR_MATCHES
 
 int
 ES_LogicInput(void *p, const char *portname)
@@ -173,8 +179,8 @@ Init(void *obj)
 static void
 PollPairs(AG_Event *event)
 {
-	AG_Table *t = AG_SELF();
-	ES_Digital *dig = AG_PTR(1);
+	AG_Table *t = AG_TABLE_SELF();
+	ES_Digital *dig = ES_DIGITAL_PTR(1);
 	int i;
 
 	AG_TableBegin(t);

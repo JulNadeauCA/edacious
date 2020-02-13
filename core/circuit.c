@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2009 Julien Nadeau (vedge@hypertriton.com)
+ * Copyright (c) 2006-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,7 +55,7 @@ ES_SuspendSimulation(ES_Circuit *ckt)
 static void
 Detached(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_SELF();
+	ES_Circuit *ckt = ES_CIRCUIT_SELF();
 
 	ES_DestroySimulation(ckt);
 }
@@ -64,30 +64,30 @@ Detached(AG_Event *event)
 static void
 EditOpen(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_SELF();
+	ES_Circuit *ckt = ES_CIRCUIT_SELF();
 	ES_Component *com;
 
 	CIRCUIT_FOREACH_COMPONENT(com, ckt)
-		AG_PostEvent(ckt, com, "circuit-shown", NULL);
+		AG_PostEvent(com, "circuit-shown", NULL);
 }
 
 static void
 EditClose(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_SELF();
+	ES_Circuit *ckt = ES_CIRCUIT_SELF();
 	ES_Component *com;
 
 	ES_DestroySimulation(ckt);
 	CIRCUIT_FOREACH_COMPONENT(com, ckt)
-		AG_PostEvent(ckt, com, "circuit-hidden", NULL);
+		AG_PostEvent(com, "circuit-hidden", NULL);
 }
 
 /* Update the voltage entries in the Circuit's property table. */
 static M_Real
 NodeVoltageFn(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
-	int v = AG_INT(2);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
+	const int v = AG_INT(2);
 
 	return ES_NodeVoltage(ckt, v);
 }
@@ -96,8 +96,8 @@ NodeVoltageFn(AG_Event *event)
 static M_Real
 BranchCurrentFn(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
-	int i = AG_INT(2);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
+	const int i = AG_INT(2);
 
 	return ES_BranchCurrent(ckt, i);
 }
@@ -162,7 +162,7 @@ ES_CircuitModified(ES_Circuit *ckt)
 	
 	/* Notify the component models of the change. */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt)
-		AG_PostEvent(ckt, com, "circuit-modified", NULL);
+		AG_PostEvent(com, "circuit-modified", NULL);
 }
 
 ES_Circuit *
@@ -486,8 +486,8 @@ Load(void *p, AG_DataSource *ds, const AG_Version *ver)
 
 	/* Notify components */
 	CIRCUIT_FOREACH_COMPONENT(com, ckt) {
-		AG_PostEvent(ckt, com, "circuit-connected", NULL);
-		AG_PostEvent(ckt, com, "circuit-shown", NULL);
+		AG_PostEvent(com, "circuit-connected", NULL);
+		AG_PostEvent(com, "circuit-shown", NULL);
 	}
 
 	ES_CircuitModified(ckt);

@@ -1,7 +1,7 @@
 /*
+ * Copyright (c) 2005-2020 Julien Nadeau Carriere (vedge@hypertriton.com)
  * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
  * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
- * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -78,9 +78,15 @@ SolveMNA(ES_SimDC *sim, ES_Circuit *ckt)
 static void
 StopSimulation(ES_SimDC *sim)
 {
+	ES_Circuit *ckt = SIM(sim)->ckt;
+
+	AG_OBJECT_ISA(ckt, "ES_Circuit:*");
+
 	SIM(sim)->running = 0;
+
 	ES_SimLog(sim, _("Simulation stopped at %fs."), sim->Telapsed);
-	AG_PostEvent(NULL, SIM(sim)->ckt, "circuit-sim-end", "%p", sim);
+
+	AG_PostEvent(ckt, "circuit-sim-end", "%p", sim);
 }
 
 /*
@@ -200,7 +206,7 @@ CyclePreviousSolutions(ES_SimDC *sim)
 static Uint32
 StepMNA(AG_Timer *tm, AG_Event *event)
 {
-	ES_Circuit *ckt = AG_SELF();
+	ES_Circuit *ckt = ES_CIRCUIT_SELF();
 	ES_SimDC *sim = AG_PTR(1);
 	ES_Component *com;
 	Uint retries;
@@ -212,7 +218,7 @@ StepMNA(AG_Timer *tm, AG_Event *event)
 
 	/* Notify the simulation objects of the beginning timestep. */
 	for (i = 0; i < ckt->nExtObjs; i++)
-		AG_PostEvent(ckt, ckt->extObjs[i], "circuit-step-begin", NULL);
+		AG_PostEvent(ckt->extObjs[i], "circuit-step-begin", NULL);
 
 stepbegin:
 	sim->inputStep = 0;
@@ -288,7 +294,7 @@ stepbegin:
 	
 	/* Notify the simulation objects of the completed timestep. */
 	for (i = 0; i < ckt->nExtObjs; i++)
-		AG_PostEvent(ckt, ckt->extObjs[i], "circuit-step-end", NULL);
+		AG_PostEvent(ckt->extObjs[i], "circuit-step-end", NULL);
 
 	/* Keep solution */
 	CyclePreviousSolutions(sim);
@@ -333,7 +339,6 @@ Init(void *p)
 	ES_SimDC *sim = p;
 
 	ES_SimInit(sim, &esSimDcOps);
-	//mMatOps = &mMatOps_FPU;
 
 	sim->method = BE;
 	sim->itersMax = 1000;
@@ -396,6 +401,8 @@ Start(void *p)
 	ES_Circuit *ckt = SIM(sim)->ckt;
 	ES_Component *com;
 
+	AG_OBJECT_ISA(ckt, "ES_Circuit:*");
+
 	/* Initialize vectors/matrices with proper size */
 	InitMatrices(sim, ckt);
 
@@ -431,18 +438,17 @@ Start(void *p)
 	M_VecCopy(sim->xPrevSteps[0], sim->x);
 	sim->deltaTPrevSteps[0] = sim->deltaT;
 	
-	/* Schedule the call to StepMNA*/
+	/* Schedule the call to StepMNA() */
 	AG_LockTimers(ckt);
 	if (AG_TimerIsRunning(ckt, &sim->toUpdate)) {
 		AG_DelTimer(ckt, &sim->toUpdate);
 	}
-	AG_AddTimer(ckt, &sim->toUpdate, sim->ticksDelay,
-	    StepMNA, "%p", sim);
+	AG_AddTimer(ckt, &sim->toUpdate, sim->ticksDelay, StepMNA,"%p",sim);
 	AG_UnlockTimers(ckt);
 
 	SIM(sim)->running = 1;
 	/* Invoke the general-purpose "simulation begin" callback. */
-	AG_PostEvent(NULL, ckt, "circuit-sim-begin", "%p", sim);
+	AG_PostEvent(ckt, "circuit-sim-begin", "%p", sim);
 
 	ES_SimLog(sim, _("Simulation started"));
 	return;
@@ -457,10 +463,9 @@ Stop(void *p)
 	ES_SimDC *sim = p;
 	ES_Circuit *ckt = SIM(sim)->ckt;
 
-	AG_LockTimers(ckt);
-	AG_DelTimer(ckt, &sim->toUpdate);
-	AG_UnlockTimers(ckt);
+	AG_OBJECT_ISA(ckt, "ES_Circuit:*");
 
+	AG_DelTimer(ckt, &sim->toUpdate);
 	StopSimulation(sim);
 }
 
@@ -491,7 +496,7 @@ static void
 RunSimulation(AG_Event *event)
 {
 	ES_Sim *sim = AG_PTR(1);
-	int state = AG_INT(2);
+	const int state = AG_INT(2);
 
 	sim->ckt->simlock = 0;
 
@@ -592,7 +597,9 @@ BranchCurrent(void *p, int k)
 {
 	ES_SimDC *sim = p;
 	ES_Circuit *ckt = SIM(sim)->ckt;
-	int i = ckt->n + k;
+	const int i = ckt->n + k;
+
+	AG_OBJECT_ISA(ckt, "ES_Circuit:*");
 
 	return (i >= 0) && (sim->x->m > i) ? M_VecGet(sim->x,i) : 0.0;
 }

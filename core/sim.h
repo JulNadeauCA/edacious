@@ -26,9 +26,15 @@ typedef struct es_sim {
 	int running;			/* Continous simulation in process */
 } ES_Sim;
 
-#define SIM(p) ((ES_Sim *)p)
+#define ESSIM(p) ((ES_Sim *)(p))
+
+#ifdef _ES_INTERNAL
+#define SIM(p) ((ES_Sim *)(p))
+#endif
 
 __BEGIN_DECLS
+extern const ES_SimOps *esSimOps[];
+
 void ES_SimInit(void *, const ES_SimOps *);
 void ES_SimDestroy(void *);
 void ES_SimEdit(AG_Event *);

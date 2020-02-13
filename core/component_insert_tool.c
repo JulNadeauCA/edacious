@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2009 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2004-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -151,7 +151,7 @@ ConnectComponent(ES_ComponentInsertTool *t, ES_Circuit *ckt, ES_Component *com)
 	/* Connect to the circuit. The component is no longer floating. */
 	TAILQ_INSERT_TAIL(&ckt->components, com, components);
 	com->flags |= ES_COMPONENT_CONNECTED;
-	AG_PostEvent(ckt, com, "circuit-connected", NULL);
+	AG_PostEvent(com, "circuit-connected", NULL);
 	ES_CircuitModified(ckt);
 
 	ES_UnlockCircuit(ckt);
@@ -255,8 +255,8 @@ Insert(AG_Event *event)
 {
 	char name[AG_OBJECT_NAME_MAX];
 	ES_ComponentInsertTool *t = AG_PTR(1);
-	ES_Circuit *ckt = AG_PTR(2);
-	ES_Component *comModel = AG_PTR(3), *com;
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(2);
+	ES_Component *comModel = ES_COMPONENT_PTR(3), *com;
 	VG_View *vv = VGTOOL(t)->vgv;
 
 	ES_LockCircuit(ckt);
@@ -285,7 +285,7 @@ Insert(AG_Event *event)
 	t->floatingCom = com;
 	AG_ObjectAttach(ckt, com);
 	ES_SelectComponent(com, vv);
-	AG_PostEvent(ckt, com, "circuit-shown", NULL);
+	AG_PostEvent(com, "circuit-shown", NULL);
 
 	AG_WidgetFocus(vv);
 	ES_UnlockCircuit(ckt);

@@ -1,7 +1,7 @@
 /*	Public domain	*/
 
 typedef struct es_vsource {
-	struct es_component _inherit;
+	struct es_component _inherit;		/* ES_Component -> ES_Vsource */
 	int vIdx;				/* Index into e */
 	M_Real v;				/* Effective voltage */
 	StampVoltageSourceData s;
@@ -11,10 +11,14 @@ typedef struct es_vsource {
 	Uint nlstack;
 } ES_Vsource;
 
-#define ES_VSOURCE(com) ((struct es_vsource *)(com))
-#ifdef _ES_INTERNAL
-# define VSOURCE(com) ES_VSOURCE(com)
-#endif
+#define ESVSOURCE(p)             ((ES_Vsource *)(p))
+#define ESCVSOURCE(obj)          ((const ES_Vsource *)(obj))
+#define ES_VSOURCE_SELF()          ESVSOURCE( AG_OBJECT(0,"ES_Circuit:ES_Component:ES_Vsource:*") )
+#define ES_VSOURCE_PTR(n)          ESVSOURCE( AG_OBJECT((n),"ES_Circuit:ES_Component:ES_Vsource:*") )
+#define ES_VSOURCE_NAMED(n)        ESVSOURCE( AG_OBJECT_NAMED((n),"ES_Circuit:ES_Component:ES_Vsource:*") )
+#define ES_CONST_VSOURCE_SELF()   ESCVSOURCE( AG_CONST_OBJECT(0,"ES_Circuit:ES_Component:ES_Vsource:*") )
+#define ES_CONST_VSOURCE_PTR(n)   ESCVSOURCE( AG_CONST_OBJECT((n),"ES_Circuit:ES_Component:ES_Vsource:*") )
+#define ES_CONST_VSOURCE_NAMED(n) ESCVSOURCE( AG_CONST_OBJECT_NAMED((n),"ES_Circuit:ES_Component:ES_Vsource:*") )
 
 __BEGIN_DECLS
 extern ES_ComponentClass esVsourceClass;

@@ -51,7 +51,7 @@ ES_WireNew(ES_Circuit *ckt)
 	/* Attach the wire object to the circuit as a floating component. */
 	ES_LockCircuit(ckt);
 	AG_ObjectAttach(ckt, wire);
-	AG_PostEvent(ckt, wire, "circuit-shown", NULL);
+	AG_PostEvent(wire, "circuit-shown", NULL);
 	ES_UnlockCircuit(ckt);
 
 	return (wire);

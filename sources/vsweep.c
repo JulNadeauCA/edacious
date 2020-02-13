@@ -1,7 +1,7 @@
 /*
+ * Copyright (c) 2008-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
  * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
- * Copyright (c) 2008-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,25 +42,21 @@ const ES_Port esVSweepPorts[] = {
 static __inline__ void
 Stamp(ES_VSweep *vsw, ES_SimDC *dc)
 {
-	StampVoltageSource(VSOURCE(vsw)->v, VSOURCE(vsw)->s);
+	StampVoltageSource(ESVSOURCE(vsw)->v, ESVSOURCE(vsw)->s);
 }
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSweep *vsw = obj;
-	ES_Vsource *vs = VSOURCE(vsw);
-
-	Uint k = PNODE(vsw,1);
-	Uint j = PNODE(vsw,2);
+	ES_Vsource *vs = ESVSOURCE(vsw);
+	const Uint k = PNODE(vsw,1);
+	const Uint j = PNODE(vsw,2);
 
 	vs->v = vsw->v1;
 	InitStampVoltageSource(k,j, vs->vIdx, vs->s, dc);
-
 	Stamp(vsw,dc);
-
 	vsw->vPrev = vs->v;
-
 	return (0);
 }
 
@@ -68,8 +64,7 @@ static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSweep *vsw = obj;
-	ES_Vsource *vs = VSOURCE(vsw);
-
+	ES_Vsource *vs = ESVSOURCE(vsw);
 	Uint curCycle;
 
 	curCycle = dc->Telapsed / vsw->t;
@@ -77,7 +72,8 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 		vs->v = 0.0;
 	else {
 		/* fraction representing the progress in the current cycle */
-		M_Real relProgress = dc->Telapsed / vsw->t - curCycle;
+		const M_Real relProgress = dc->Telapsed / vsw->t - curCycle;
+
 		vs->v = vsw->v1 + (vsw->v2 - vsw->v1) * relProgress;
 	}
 
@@ -120,8 +116,9 @@ static void *
 Edit(void *p)
 {
 	ES_VSweep *vsw = p;
-	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+	AG_Box *box;
 
+	box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
 	M_NumericalNewReal(box, 0, "V", _("Start voltage: "), &vsw->v1);
 	M_NumericalNewReal(box, 0, "V", _("End voltage: "), &vsw->v2);
 	M_NumericalNewReal(box, 0, "s", _("Duration: "), &vsw->t);

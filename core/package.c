@@ -41,7 +41,7 @@ ES_PackageNew(ES_Circuit *ckt)
 	}
 	AG_ObjectInit(pkg, &esPackageClass);
 	AG_ObjectAttach(ckt, pkg);
-	LAYOUT(pkg)->ckt = ckt;
+	ESLAYOUT(pkg)->ckt = ckt;
 	return (pkg);
 }
 

@@ -1565,7 +1565,10 @@ echo '* This software requires a C compiler'
 echo '# * This software requires a C compiler' >>config.log
 echo '* '
 echo '# * ' >>config.log
-echo "Required dependency cc not found"
+echo "***"
+echo "*** ERROR: Required dependency cc not found"
+echo "*** Failed! See ./config.log for more details."
+echo "***"
 exit 1
 fi
 $ECHO_N 'checking for <sys/types.h>...'
@@ -2164,7 +2167,9 @@ main(int argc, char *argv[])
 {
 	AG_InitCore("conf-test", 0);
 	AG_InitGraphics(AG_NULL);
+#ifdef AG_EVENT_LOOP
 	AG_EventLoop();
+#endif
 	AG_Quit();
 	return (0);
 }
@@ -2239,7 +2244,10 @@ echo '* WWW: http://libagar.org'
 echo '# * WWW: http://libagar.org' >>config.log
 echo '* '
 echo '# * ' >>config.log
-echo "Required dependency agar not found"
+echo "***"
+echo "*** ERROR: Required dependency agar not found"
+echo "*** Failed! See ./config.log for more details."
+echo "***"
 exit 1
 fi
 if [ "${MK_VERSION_OK}" != "yes" ]; then
@@ -2253,7 +2261,10 @@ echo '* WWW: http://libagar.org'
 echo '# * WWW: http://libagar.org' >>config.log
 echo '* '
 echo '# * ' >>config.log
-echo "Required dependency agar version mismatch"
+echo "***"
+echo "*** ERROR: Required dependency agar version mismatch"
+echo "*** Failed! See ./config.log for more details."
+echo "***"
 exit 1
 fi
 $ECHO_N 'checking for Agar-VG...'
@@ -2442,8 +2453,14 @@ cat << EOT >conftest$$.c
 #include <agar/vg.h>
 
 int main(int argc, char *argv[]) {
-	VG vg;
-	VG_Init(&vg, 0);
+	VG *vg;
+	AG_InitCore(NULL, 0);
+	VG_InitSubsystem();
+	if ((vg = VG_New(0)) != NULL) {
+		AG_ObjectDestroy(vg);
+	}
+	VG_DestroySubsystem();
+	AG_Quit();
 	return (0);
 }
 EOT
@@ -2517,7 +2534,10 @@ echo '* WWW: http://libagar.org'
 echo '# * WWW: http://libagar.org' >>config.log
 echo '* '
 echo '# * ' >>config.log
-echo "Required dependency agar-vg not found"
+echo "***"
+echo "*** ERROR: Required dependency agar-vg not found"
+echo "*** Failed! See ./config.log for more details."
+echo "***"
 exit 1
 fi
 if [ "${MK_VERSION_OK}" != "yes" ]; then
@@ -2531,7 +2551,10 @@ echo '* WWW: http://libagar.org'
 echo '# * WWW: http://libagar.org' >>config.log
 echo '* '
 echo '# * ' >>config.log
-echo "Required dependency agar-vg version mismatch"
+echo "***"
+echo "*** ERROR: Required dependency agar-vg version mismatch"
+echo "*** Failed! See ./config.log for more details."
+echo "***"
 exit 1
 fi
 $ECHO_N 'checking for Agar-DEV...'
@@ -2796,7 +2819,10 @@ echo '* WWW: http://libagar.org'
 echo '# * WWW: http://libagar.org' >>config.log
 echo '* '
 echo '# * ' >>config.log
-echo "Required dependency agar-dev not found"
+echo "***"
+echo "*** ERROR: Required dependency agar-dev not found"
+echo "*** Failed! See ./config.log for more details."
+echo "***"
 exit 1
 fi
 if [ "${MK_VERSION_OK}" != "yes" ]; then
@@ -2810,7 +2836,10 @@ echo '* WWW: http://libagar.org'
 echo '# * WWW: http://libagar.org' >>config.log
 echo '* '
 echo '# * ' >>config.log
-echo "Required dependency agar-dev version mismatch"
+echo "***"
+echo "*** ERROR: Required dependency agar-dev version mismatch"
+echo "*** Failed! See ./config.log for more details."
+echo "***"
 exit 1
 fi
 $ECHO_N 'checking for Agar-Math...'
@@ -3077,7 +3106,10 @@ echo '* WWW: http://libagar.org'
 echo '# * WWW: http://libagar.org' >>config.log
 echo '* '
 echo '# * ' >>config.log
-echo "Required dependency agar-math not found"
+echo "***"
+echo "*** ERROR: Required dependency agar-math not found"
+echo "*** Failed! See ./config.log for more details."
+echo "***"
 exit 1
 fi
 if [ "${MK_VERSION_OK}" != "yes" ]; then
@@ -3091,7 +3123,10 @@ echo '* WWW: http://libagar.org'
 echo '# * WWW: http://libagar.org' >>config.log
 echo '* '
 echo '# * ' >>config.log
-echo "Required dependency agar-math version mismatch"
+echo "***"
+echo "*** ERROR: Required dependency agar-math version mismatch"
+echo "*** Failed! See ./config.log for more details."
+echo "***"
 exit 1
 fi
 CFLAGS="$CFLAGS -D_USE_AGAR_STD"
@@ -3680,7 +3715,10 @@ if [ "${srcdir}" != '' ]; then
 	fi
 	echo 'ok'
 fi
-echo '*'
-echo '* Configuration successful. Use the "make" command to compile,'
-echo '* and complete the installation using "make install".'
-echo '*'
+echo '**'
+echo '** Configuration successful!'
+echo '**'
+echo '** Use "make depend all" to compile. When finished,'
+$ECHO_N '** run "make install" to install under '
+echo "${PREFIX}."
+echo '**'

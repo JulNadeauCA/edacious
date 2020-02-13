@@ -328,7 +328,7 @@ FindPackages(AG_Tlist *tl, AG_Object *pob, int depth)
 static void
 PollLibrary(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
+	AG_Tlist *tl = AG_TLIST_SELF();
 	AG_TlistItem *ti;
 	
 	AG_TlistClear(tl);
@@ -344,7 +344,7 @@ PollLibrary(AG_Event *event)
 static void
 RefreshLibrary(AG_Event *event)
 {
-	AG_Tlist *tl = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_PTR(1);
 
 	if (ES_PackageLibraryLoad() == -1) {
 		AG_TextMsgFromError();
@@ -356,7 +356,7 @@ RefreshLibrary(AG_Event *event)
 static void
 EditPackage(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(1);
 
 	(void)ES_OpenObject(obj);
 }
@@ -364,7 +364,7 @@ EditPackage(AG_Event *event)
 static void
 SavePackage(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(1);
 
 	if (AG_ObjectSave(obj) == -1) {
 		AG_TextMsgFromError();
@@ -378,8 +378,8 @@ SavePackage(AG_Event *event)
 static void
 SavePackageAs(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
-	char *path = AG_STRING(2);
+	AG_Object *obj = AG_OBJECT_PTR(1);
+	const char *path = AG_STRING(2);
 
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
 		AG_TextMsgFromError();
@@ -396,7 +396,7 @@ SavePackageAs(AG_Event *event)
 static void
 SavePackageAsDlg(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(1);
 	AG_Window *win;
 	AG_FileDlg *fd;
 
@@ -418,7 +418,7 @@ SavePackageAsDlg(AG_Event *event)
 static void
 PackageMenu(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
+	AG_Tlist *tl = AG_TLIST_SELF();
 	AG_Object *obj = AG_TlistSelectedItemPtr(tl);
 	AG_PopupMenu *pm;
 
@@ -460,7 +460,13 @@ ES_PackageLibraryEditorNew(void *parent, VG_View *vv, ES_Layout *lo,
 	AG_TlistSetPopupFn(tl, PackageMenu, NULL);
 
 	evSel = AG_SetEvent(tl, "tlist-dblclick", insFn, NULL);
-	AG_EVENT_GET_ARGS(evSel, fmt);
+	if (fmt) {
+		va_list ap;
+
+		va_start(ap, fmt);
+		AG_EventGetArgs(evSel, fmt, ap);
+		va_end(ap);
+	}
 
 	btn = AG_ButtonNewFn(box, AG_BUTTON_HFILL, _("Refresh list"),
 	    RefreshLibrary, "%p", tl);

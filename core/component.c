@@ -1,7 +1,7 @@
 /*
+ * Copyright (c) 2005-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
  * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
- * Copyright (c) 2005-2019 Julien Nadeau Carriere (vedge@csoft.net)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -159,6 +159,7 @@ void
 ES_DetachSchemEntity(void *pCom, VG_Node *vn)
 {
 	ES_Component *com = pCom;
+
 	vn->p = NULL;
 	TAILQ_REMOVE(&com->schemEnts, vn, user);
 }
@@ -171,10 +172,10 @@ ES_DetachSchemEntity(void *pCom, VG_Node *vn)
 static void
 OnAttach(AG_Event *event)
 {
-	ES_Component *com = AG_SELF();
-	ES_Circuit *ckt = AG_SENDER();
+	ES_Component *com = ES_COMPONENT_SELF();
+	ES_Circuit *ckt = ESCIRCUIT( OBJECT(com)->parent );
 	ES_Schem *scm;
-	
+
 	if (!AG_OfClass(ckt, "ES_Circuit:*"))
 		return;
 
@@ -218,8 +219,8 @@ OnAttach(AG_Event *event)
 static void
 OnDetach(AG_Event *event)
 {
-	ES_Component *com = AG_SELF();
-	ES_Circuit *ckt = AG_SENDER();
+	ES_Component *com = ES_COMPONENT_SELF();
+	ES_Circuit *ckt = ESCIRCUIT( OBJECT(com)->parent );
 	VG_Node *vn;
 	ES_Port *port;
 	ES_Pair *pair;
@@ -232,7 +233,7 @@ OnDetach(AG_Event *event)
 
 	/* Notify the component model. */
 	Debug(ckt, "Detach %s\n", OBJECT(com)->name);
-	AG_PostEvent(ckt, com, "circuit-disconnected", NULL);
+	AG_PostEvent(com, "circuit-disconnected", NULL);
 
 	/* Remove related entities in the circuit schematic. */
 	while ((vn = TAILQ_FIRST(&com->schemEnts)) != NULL) {

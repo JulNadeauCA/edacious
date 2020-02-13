@@ -87,7 +87,8 @@ typedef struct es_component_class {
 } ES_ComponentClass;
 
 typedef struct es_component {
-	struct es_circuit _inherit;
+	struct es_circuit _inherit;		/* ES_Circuit -> ES_Component */
+
 	struct es_circuit *ckt;			/* Back pointer to circuit */
 	Uint flags;
 #define ES_COMPONENT_SELECTED	 0x02		/* Selected for edition */
@@ -119,7 +120,15 @@ typedef struct es_component {
 	TAILQ_ENTRY(es_component) components;
 } ES_Component;
 
-#define ESCOMPONENT(p)		((ES_Component *)(p))
+#define ESCOMPONENT(p)             ((ES_Component *)(p))
+#define ESCCOMPONENT(obj)          ((const ES_Component *)(obj))
+#define ES_COMPONENT_SELF()          ESCOMPONENT( AG_OBJECT(0,"ES_Circuit:ES_Component:*") )
+#define ES_COMPONENT_PTR(n)          ESCOMPONENT( AG_OBJECT((n),"ES_Circuit:ES_Component:*") )
+#define ES_COMPONENT_NAMED(n)        ESCOMPONENT( AG_OBJECT_NAMED((n),"ES_Circuit:ES_Component:*") )
+#define ES_CONST_COMPONENT_SELF()   ESCCOMPONENT( AG_CONST_OBJECT(0,"ES_Circuit:ES_Component:*") )
+#define ES_CONST_COMPONENT_PTR(n)   ESCCOMPONENT( AG_CONST_OBJECT((n),"ES_Circuit:ES_Component:*") )
+#define ES_CONST_COMPONENT_NAMED(n) ESCCOMPONENT( AG_CONST_OBJECT_NAMED((n),"ES_Circuit:ES_Component:*") )
+
 #define ESCOMPONENT_CIRCUIT(p)	(ESCOMPONENT(p)->ckt)
 #define ESCOMPONENT_CLASS(p)	((ES_ComponentClass *)(AGOBJECT(p)->cls))
 #define ES_PORT(p,n)		(&ESCOMPONENT(p)->ports[n])

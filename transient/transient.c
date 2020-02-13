@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -84,10 +84,10 @@ PrintHeader(void)
 }
 
 static void
-Step(AG_Event *event)
+StepBegin(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_SENDER();
-	ES_SimDC *sim = AG_PTR(1);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
+	ES_SimDC *sim = AG_PTR(2);
 	M_Real v;
 	int i;
 
@@ -177,7 +177,7 @@ main(int argc, char *argv[])
 	/* Create a "monitor" object to receive notification events. */
 	mon = AG_ObjectNew(NULL, "mon", &agObjectClass);
 	ES_AddSimulationObj(ckt, "Monitor", mon);
-	AG_SetEvent(mon, "circuit-step-begin", Step, "%p", sim);
+	AG_SetEvent(mon, "circuit-step-begin", StepBegin, "%p,%p", ckt, sim);
 
 	if (showHeader)
 		PrintHeader();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2010 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,8 +33,8 @@
 static void
 CreateView(AG_Event *event)
 {
-	AG_Window *pwin = AG_PTR(1);
-	ES_Schem *scm = AG_PTR(2);
+	AG_Window *pwin = AG_WINDOW_PTR(1);
+	ES_Schem *scm = ES_SCHEM_PTR(2);
 	VG_View *vv;
 	AG_Window *win;
 
@@ -133,7 +133,7 @@ ES_SchemEdit(void *p)
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, scm);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
-			    &OBJECT(vv)->pvt.lock);
+			    &OBJECT(vv)->lock);
 			if (ops == &vgSelectTool) {
 				VG_ViewSetDefaultTool(vv, tool);
 				VG_ViewSelectTool(vv, tool, scm);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019 Julien Nadeau Carriere <vedge@csoft.net>
+ * Copyright (c) 2008-2020 Julien Nadeau Carriere <vedge@csoft.net>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -330,7 +330,7 @@ FindComponents(AG_Tlist *tl, AG_Object *pob, int depth)
 static void
 PollLibrary(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
+	AG_Tlist *tl = AG_TLIST_SELF();
 	AG_TlistItem *ti;
 	
 	AG_TlistClear(tl);
@@ -347,7 +347,7 @@ static void
 InsertComponent(AG_Event *event)
 {
 	VG_View *vv = VG_VIEW_PTR(1);
-	ES_Circuit *ckt = AG_PTR(2);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(2);
 	AG_TlistItem *ti = AG_TLIST_ITEM_PTR(3);
 	ES_Component *comModel = ti->p1;
 	VG_Tool *insTool;
@@ -439,7 +439,7 @@ SaveComponentAsDlg(AG_Event *event)
 static void
 ComponentMenu(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
+	AG_Tlist *tl = AG_TLIST_SELF();
 	AG_Object *obj = AG_TlistSelectedItemPtr(tl);
 	AG_PopupMenu *pm;
 

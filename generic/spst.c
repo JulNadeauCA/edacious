@@ -1,7 +1,7 @@
 /*
+ * Copyright (c) 2005-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
  * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
- * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -131,8 +131,8 @@ Export(void *p, enum circuit_format fmt, FILE *f)
 static void
 SwitchAll(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
-	int nstate = AG_INT(2);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
+	const int nstate = AG_INT(2);
 	ES_Spst *spst;
 
 	OBJECT_FOREACH_CLASS(spst, ckt, es_spst,
@@ -144,7 +144,7 @@ SwitchAll(AG_Event *event)
 static void
 ToggleState(AG_Event *event)
 {
-	ES_Spst *sw = AG_PTR(1);
+	ES_Spst *sw = ES_SPST_PTR(1);
 
 	sw->state = (sw->state == 1) ? 0 : 1;
 }

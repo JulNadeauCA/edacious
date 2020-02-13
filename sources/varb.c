@@ -47,14 +47,14 @@ const ES_Port esVArbPorts[] = {
 static __inline__ void 
 Stamp(ES_VArb *va, ES_SimDC *dc)
 {
-	StampVoltageSource(VSOURCE(va)->v, VSOURCE(va)->s);
+	StampVoltageSource(ESVSOURCE(va)->v, ESVSOURCE(va)->s);
 }
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VArb *va = obj;
-	ES_Vsource *vs = VSOURCE(va);
+	ES_Vsource *vs = ESVSOURCE(va);
 
 	Uint k = PNODE(va,1);
 	Uint j = PNODE(va,2);
@@ -77,10 +77,9 @@ static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VArb *va = obj;
-	ES_Vsource *vs = VSOURCE(va);
-
-	int ret;
+	ES_Vsource *vs = ESVSOURCE(va);
 	M_Real res;
+	int ret;
 
 	params[1].Value = dc->Telapsed;
 	InterpreteurReset();
@@ -144,9 +143,6 @@ UpdatePlot(AG_Event *event)
 			return;
 		}
 		M_PlotReal(pl, v);
-#ifdef AG_THREADS
-		AG_Delay(5);
-#endif
 	}
 }
 
@@ -158,10 +154,9 @@ Edit(void *p)
 	M_Plotter *ptr;
 	M_Plot *pl;
 	AG_Textbox *tb;
-	AG_Event *ev;
 
-	AG_LabelNewPolledMT(box, 0, &OBJECT(va)->pvt.lock,
-	    _("Effective voltage: %[R]v"), &VSOURCE(va)->v);
+	AG_LabelNewPolledMT(box, 0, &OBJECT(va)->lock,
+	    _("Effective voltage: %[R]v"), &ESVSOURCE(va)->v);
 	
 	tb = AG_TextboxNewS(box, 0, "v(t) = ");
 	AG_TextboxBindASCII(tb, va->exp, sizeof(va->exp));
@@ -173,10 +168,8 @@ Edit(void *p)
 	M_PlotSetLabel(pl, "v(t)");
 	M_PlotSetScale(pl, 0.0, 16.0);
 
-	ev = AG_SetEvent(tb, "textbox-return", UpdatePlot, "%p,%p", pl, va);
-	ev->flags |= AG_EVENT_ASYNC;
-	AG_PostEvent(NULL, tb, "textbox-return", NULL);
-
+	AG_SetEvent(tb, "textbox-return", UpdatePlot, "%p,%p", pl, va);
+	AG_PostEvent(tb, "textbox-return", NULL);
 	return (box);
 }
 

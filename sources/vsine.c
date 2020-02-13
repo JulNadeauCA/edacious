@@ -1,7 +1,7 @@
 /*
+ * Copyright (c) 2005-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
  * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
- * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,14 +42,14 @@ const ES_Port esVSinePorts[] = {
 static __inline__ void
 Stamp(ES_VSine *vs, ES_SimDC *dc)
 {
-	StampVoltageSource(VSOURCE(vs)->v, VSOURCE(vs)->s);
+	StampVoltageSource(ESVSOURCE(vs)->v, ESVSOURCE(vs)->s);
 }
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSine *vsine = obj;
-	ES_Vsource *vs = VSOURCE(vsine);
+	ES_Vsource *vs = ESVSOURCE(vsine);
 
 	Uint k = PNODE(vsine,1);
 	Uint j = PNODE(vsine,2);
@@ -67,7 +67,7 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSine *vs = obj;
 
-	VSOURCE(vs)->v = vs->vPeak*Sin(vs->f * dc->Telapsed);
+	ESVSOURCE(vs)->v = vs->vPeak*Sin(vs->f * dc->Telapsed);
 	
 	Stamp(vs,dc);
 }
@@ -106,8 +106,8 @@ Edit(void *p)
 	M_NumericalNewReal(box, 0, "V", _("Peak voltage: "), &vs->vPeak);
 	M_NumericalNewRealPNZ(box, 0, "Hz", _("Frequency: "), &vs->f);
 	if (COMCIRCUIT(vs) != NULL) {
-		AG_LabelNewPolledMT(box, 0, &OBJECT(vs)->pvt.lock,
-		    _("Effective voltage: %[R]"), &VSOURCE(vs)->v);
+		AG_LabelNewPolledMT(box, 0, &OBJECT(vs)->lock,
+		    _("Effective voltage: %[R]"), &ESVSOURCE(vs)->v);
 	}
 	return (box);
 }

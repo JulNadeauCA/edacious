@@ -1,7 +1,7 @@
 /*
+ * Copyright (c) 2005-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
  * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
- * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -224,8 +224,8 @@ DC_StepIter(void *obj, ES_SimDC *dc)
 static void
 Connected(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_SENDER();
-	ES_Vsource *vs = AG_SELF();
+	ES_Vsource *vs = ES_VSOURCE_SELF();
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
 
 	vs->vIdx = ES_AddVoltageSource(ckt, vs);
 }
@@ -233,8 +233,8 @@ Connected(AG_Event *event)
 static void
 Disconnected(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_SENDER();
-	ES_Vsource *vs = AG_SELF();
+	ES_Vsource *vs = ES_VSOURCE_SELF();
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
 
 	ES_DelVoltageSource(ckt, vs->vIdx);
 }
@@ -322,8 +322,8 @@ static void
 PollLoops(AG_Event *event)
 {
 	char text[AG_TLIST_LABEL_MAX];
-	ES_Vsource *vs = AG_PTR(1);
-	AG_Tlist *tl = AG_SELF();
+	ES_Vsource *vs = ES_VSOURCE_PTR(1);
+	AG_Tlist *tl = AG_TLIST_SELF();
 	AG_TlistItem *it;
 	ES_Loop *l;
 	Uint i;

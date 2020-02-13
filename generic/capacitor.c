@@ -1,7 +1,7 @@
 /*
+ * Copyright (c) 2005-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
  * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
- * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,53 +44,58 @@ const ES_Port esCapacitorPorts[] = {
 };
 
 static M_Real
-GetVoltage(ES_Capacitor *c, int n)
+GetVoltage(ES_Capacitor *cap, int n)
 {
-	return V_PREV_STEP(c,PORT_A, n)-V_PREV_STEP(c,PORT_B, n);
+	return V_PREV_STEP(cap, PORT_A, n) -
+	       V_PREV_STEP(cap, PORT_B, n);
 }
 
 static M_Real
-GetCurrent(ES_Capacitor *c, int n)
+GetCurrent(ES_Capacitor *cap, int n)
 {
-	return I_PREV_STEP(c, c->vIdx, n);
+	return I_PREV_STEP(cap, cap->vIdx, n);
 }
 
 static M_Real
 GetDeltaT(ES_SimDC *dc, int n)
 {
-	if(n == 0) return dc->deltaT;
-	else return dc->deltaTPrevSteps[n - 1];
+	if (n == 0) {
+		return dc->deltaT;
+	} else {
+		return dc->deltaTPrevSteps[n - 1];
+	}
 }
 
 static void
-UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
+UpdateModel(ES_Capacitor *cap, ES_SimDC *dc)
 {
-	M_Real v = (dc->currStep == 0) ? c->V0 : GetVoltage(c, 1);
+	const M_Real v = (dc->currStep == 0) ? cap->V0 : GetVoltage(cap, 1);
 
 	switch (dc->method) {
 	case BE:
 		/* Thevenin companion model : better suited
 		 * for small timesteps */
-		c->v = v;
-		c->r = dc->deltaT/c->C;
+		cap->v = v;
+		cap->r = dc->deltaT / cap->C;
 		break;
 	case FE:
-		c->v = v + dc->deltaT/c->C*GetCurrent(c,1);
+		cap->v = v + dc->deltaT / cap->C * GetCurrent(cap,1);
 		break;
 	case TR:
-		c->v = v + dc->deltaT/(2.0*c->C)*GetCurrent(c,1);
-		c->r = dc->deltaT/(2.0*c->C);
+		cap->v = v + dc->deltaT/(2.0 * cap->C) * GetCurrent(cap,1);
+		cap->r = dc->deltaT/(2.0 * cap->C);
 		break;
 	case G2:
 		if (dc->currStep == 0) {
 			/* Fall back to BE for first step */
 			dc->method = BE;
-			UpdateModel(c, dc);
+			UpdateModel(cap, dc);
 			dc->method = G2;
 			return;
 		}
-		c->v = 4.0/3.0*GetVoltage(c,1) - 1.0/3.0*GetVoltage(c,2);
-		c->r = 2.0/3.0*dc->deltaT/c->C;
+		cap->v = 4.0/3.0*GetVoltage(cap,1) -
+		         1.0/3.0*GetVoltage(cap,2);
+		cap->r = 2.0/3.0*dc->deltaT / cap->C;
 		break;
 	default:
 		printf("Method %d not implemented\n", dc->method);
@@ -99,65 +104,64 @@ UpdateModel(ES_Capacitor *c, ES_SimDC *dc)
 }
 
 static __inline__ void
-Stamp(ES_Capacitor *c, ES_SimDC *dc)
+Stamp(ES_Capacitor *cap, ES_SimDC *dc)
 {
 	if (ES_IMPLICIT_METHOD(dc->method)) {
-		StampThevenin(c->v, c->r, c->s);
+		StampThevenin(cap->v, cap->r, cap->s);
 	} else {
-		StampVoltageSource(c->v, c->s);
+		StampVoltageSource(cap->v, cap->s);
 	}
 }
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
-        ES_Capacitor *c = obj;
-	Uint k = PNODE(c,PORT_A);
-	Uint l = PNODE(c,PORT_B);
+        ES_Capacitor *cap = obj;
+	const Uint k = PNODE(cap,PORT_A);
+	const Uint l = PNODE(cap,PORT_B);
 
 	if (ES_IMPLICIT_METHOD(dc->method)) {
-		InitStampThevenin(k, l, c->vIdx, c->s, dc);
+		InitStampThevenin(k, l, cap->vIdx, cap->s, dc);
 	} else {
-		InitStampVoltageSource(k, l, c->vIdx, c->s, dc);
+		InitStampVoltageSource(k, l, cap->vIdx, cap->s, dc);
 	}
 
-	UpdateModel(c, dc);
-	Stamp(c, dc);
-
+	UpdateModel(cap, dc);
+	Stamp(cap, dc);
 	return (0);
 }
 
 static void
 DC_StepBegin(void *obj, ES_SimDC *dc)
 {
-	ES_Capacitor *c = obj;
+	ES_Capacitor *cap = obj;
 	
-	UpdateModel(c, dc);
-	Stamp(c, dc);
+	UpdateModel(cap, dc);
+	Stamp(cap, dc);
 }
 
 static void
 DC_StepIter(void *obj, ES_SimDC *dc)
 {
-	ES_Capacitor *c = obj;
+	ES_Capacitor *cap = obj;
 	
-	Stamp(c, dc);
+	Stamp(cap, dc);
 }
 
 /* Computes the approximation of the derivative of v of order
  * (end - start) by divided difference */
 static M_Real
-DividedDifference(ES_Capacitor *c, ES_SimDC *dc, int start, int end)
+DividedDifference(ES_Capacitor *cap, ES_SimDC *dc, int start, int end)
 {
 	M_Real num, denom;
 	int i;
 
 	if (start == end)
-		return GetVoltage(c, start);
+		return GetVoltage(cap, start);
 
-	num = (DividedDifference(c, dc, start+1, end) -
-	       DividedDifference(c, dc, start, end-1)) /
-	       (end-start);
+	num = (DividedDifference(cap, dc, start+1, end) -
+	       DividedDifference(cap, dc, start, end-1)) / (end - start);
+
 	for (i = start, denom = 0.0; i < end; i++) {
 		denom += GetDeltaT(dc, i);
 	}
@@ -165,28 +169,29 @@ DividedDifference(ES_Capacitor *c, ES_SimDC *dc, int start, int end)
 }
 
 static M_Real
-Derivative(ES_Capacitor *c, ES_SimDC *dc, int n)
+Derivative(ES_Capacitor *cap, ES_SimDC *dc, int n)
 {
-	/* the minus sign is due to the fact that we stock values from newest to oldest */
-	return - DividedDifference(c, dc, 0, n);
+	/*
+	 * The minus sign is due to the fact that we stock values
+	 * from newest to oldest.
+	 */
+	return - DividedDifference(cap, dc, 0, n);
 }
 
 /* LTE for capacitor, estimated via divided differences */
 static void
 DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 {
-	ES_Capacitor *c = obj;
+	ES_Capacitor *cap = obj;
 	M_Real localErr;
-	M_Real dtn = dc->deltaT;
-	const ES_IntegrationMethod *im;
-
-	im = &esIntegrationMethods[((dc->method == G2) && (dc->currStep == 0)) ?
-	                           BE : dc->method];
+	const M_Real dtn = dc->deltaT;
+	const ES_IntegrationMethod *im = &esIntegrationMethods[
+	    ((dc->method == G2) && (dc->currStep == 0)) ? BE : dc->method];
 
 	localErr = Fabs(
 	    Pow(dtn, im->order+1) * im->errConst *
-	    Derivative(c,dc,im->order+1) /
-	    GetVoltage(c,0));
+	    Derivative(cap, dc, im->order+1) /
+	    GetVoltage(cap, 0));
 	
 	if (localErr > *err)
 		*err = localErr;
@@ -195,58 +200,62 @@ DC_UpdateError(void *obj, ES_SimDC *dc, M_Real *err)
 static void
 Connected(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_SENDER();
-	ES_Capacitor *c = AG_SELF();
-	
-	c->vIdx = ES_AddVoltageSource(ckt, c);
+	ES_Capacitor *cap = ES_CAPACITOR_SELF();
+	ES_Circuit *ckt = ESCIRCUIT( AGOBJECT(cap)->parent );
+
+	AG_OBJECT_ISA(ckt, "ES_Circuit:*");
+
+	cap->vIdx = ES_AddVoltageSource(ckt, cap);
 }
 
 static void
 Disconnected(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_SENDER();
-	ES_Capacitor *c = AG_SELF();
+	ES_Capacitor *cap = ES_CAPACITOR_SELF();
+	ES_Circuit *ckt = ESCIRCUIT( AGOBJECT(cap)->parent );
+	
+	AG_OBJECT_ISA(ckt, "ES_Circuit:*");
 
-	ES_DelVoltageSource(ckt, c->vIdx);
+	ES_DelVoltageSource(ckt, cap->vIdx);
 }
 
 static void
 Init(void *p)
 {
-	ES_Capacitor *c = p;
+	ES_Capacitor *cap = p;
 
-	ES_InitPorts(c, esCapacitorPorts);
-	c->vIdx = -1;
+	ES_InitPorts(cap, esCapacitorPorts);
+	cap->vIdx = -1;
 
-	c->C = 1.0;
-	c->V0 = 0.0;
+	cap->C = 1.0;
+	cap->V0 = 0.0;
 
-	COMPONENT(c)->dcSimBegin = DC_SimBegin;
-	COMPONENT(c)->dcStepBegin = DC_StepBegin;
-	COMPONENT(c)->dcStepIter = DC_StepIter;
-	COMPONENT(c)->dcUpdateError = DC_UpdateError;
+	COMPONENT(cap)->dcSimBegin = DC_SimBegin;
+	COMPONENT(cap)->dcStepBegin = DC_StepBegin;
+	COMPONENT(cap)->dcStepIter = DC_StepIter;
+	COMPONENT(cap)->dcUpdateError = DC_UpdateError;
 	
-	AG_SetEvent(c, "circuit-connected", Connected, NULL);
-	AG_SetEvent(c, "circuit-disconnected", Disconnected, NULL);
+	AG_SetEvent(cap, "circuit-connected", Connected, NULL);
+	AG_SetEvent(cap, "circuit-disconnected", Disconnected, NULL);
 
-	M_BindReal(c, "C", &c->C);
-	M_BindReal(c, "V0", &c->V0);
+	M_BindReal(cap, "C", &cap->C);
+	M_BindReal(cap, "V0", &cap->V0);
 }
 
 static void *
 Edit(void *p)
 {
-	ES_Capacitor *c = p;
-	AG_Box *box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+	ES_Capacitor *cap = p;
+	AG_Box *box;
 
-	M_NumericalNewRealP(box, 0, "F", _("Capacitance: "), &c->C);
-	M_NumericalNewReal(box, 0, "V", _("Initial voltage: "), &c->V0);
+	box = AG_BoxNewVert(NULL, AG_BOX_EXPAND);
+	M_NumericalNewRealP(box, 0, "F", _("Capacitance: "), &cap->C);
+	M_NumericalNewReal(box, 0, "V", _("Initial voltage: "), &cap->V0);
 
-	if (COMCIRCUIT(c) != NULL) {
+	if (COMCIRCUIT(cap) != NULL) {
 		AG_SeparatorNewHoriz(box);
-		AG_LabelNewPolled(box, 0, _("Entry in e: %i"), &c->vIdx);
+		AG_LabelNewPolled(box, 0, _("Entry in e: %i"), &cap->vIdx);
 	}
-
 	return (box);
 }
 

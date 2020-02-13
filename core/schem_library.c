@@ -314,7 +314,7 @@ FindSchems(AG_Tlist *tl, AG_Object *pob, int depth)
 static void
 PollLibrary(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
+	AG_Tlist *tl = AG_TLIST_SELF();
 	AG_TlistItem *ti;
 
 	AG_TlistClear(tl);
@@ -330,8 +330,8 @@ PollLibrary(AG_Event *event)
 static void
 InsertSchematic(AG_Event *event)
 {
-	VG_View *vv = AG_PTR(1);
-	AG_TlistItem *ti = AG_PTR(2);
+	VG_View *vv = VG_VIEW_PTR(1);
+	AG_TlistItem *ti = AG_TLIST_ITEM_PTR(2);
 	ES_Schem *schem = ti->p1;
 	
 	if (!AG_OfClass(schem, "ES_Schem:*"))
@@ -353,7 +353,7 @@ RefreshLibrary(AG_Event *event)
 static void
 EditSchem(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(1);
 
 	(void)ES_OpenObject(obj);
 }
@@ -361,7 +361,7 @@ EditSchem(AG_Event *event)
 static void
 SaveSchem(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(1);
 	const char *name = AG_ShortFilename(AG_GetStringP(obj,"archive-path"));
 
 	if (AG_ObjectSave(obj) == -1) {
@@ -375,8 +375,8 @@ SaveSchem(AG_Event *event)
 static void
 SaveSchemAs(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
-	char *path = AG_STRING(2);
+	AG_Object *obj = AG_OBJECT_PTR(1);
+	const char *path = AG_STRING(2);
 	const char *name = AG_ShortFilename(path);
 
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
@@ -393,7 +393,7 @@ SaveSchemAs(AG_Event *event)
 static void
 SaveSchemAsDlg(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(1);
 	AG_Window *win;
 	AG_FileDlg *fd;
 
@@ -412,7 +412,7 @@ SaveSchemAsDlg(AG_Event *event)
 static void
 SchemMenu(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
+	AG_Tlist *tl = AG_TLIST_SELF();
 	AG_Object *obj = AG_TlistSelectedItemPtr(tl);
 	AG_PopupMenu *pm;
 

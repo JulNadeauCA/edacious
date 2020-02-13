@@ -34,8 +34,8 @@
 static void
 CreateView(AG_Event *event)
 {
-	AG_Window *pwin = AG_PTR(1);
-	ES_Layout *lo = AG_PTR(2);
+	AG_Window *pwin = AG_WINDOW_PTR(1);
+	ES_Layout *lo = ES_LAYOUT_PTR(2);
 	VG_View *vv;
 	AG_Window *win;
 
@@ -53,8 +53,8 @@ CreateView(AG_Event *event)
 static void
 PollDevicePkgs(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
-	ES_Layout *lo = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_SELF();
+	ES_Layout *lo = ES_LAYOUT_PTR(1);
 	ES_Circuit *ckt = lo->ckt;
 	ES_Component *com;
 	ES_ComponentPkg *pkg;
@@ -83,9 +83,9 @@ PollDevicePkgs(AG_Event *event)
 static void
 InsertDevicePkg(AG_Event *event)
 {
-	VG_View *vv = AG_PTR(1);
-	ES_Layout *lo = AG_PTR(2);
-	AG_TlistItem *ti = AG_PTR(3);
+	VG_View *vv = VG_VIEW_PTR(1);
+	ES_Layout *lo = ES_LAYOUT_PTR(2);
+	AG_TlistItem *ti = AG_TLIST_ITEM_PTR(3);
 	ES_Package *pkg = ti->p1;
 	VG_Tool *insTool;
 
@@ -106,8 +106,8 @@ InsertDevicePkg(AG_Event *event)
 static void
 PollLayers(AG_Event *event)
 {
-//	AG_Tlist *tl = AG_SELF();
-//	ES_Layout *lo = AG_PTR(1);
+//	AG_Tlist *tl = AG_TLIST_SELF();
+//	ES_Layout *lo = ES_LAYOUT_PTR(1);
 }
 
 void *
@@ -231,7 +231,7 @@ ES_LayoutEdit(void *p)
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, lo);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
-			    &OBJECT(vv)->pvt.lock);
+			    &OBJECT(vv)->lock);
 		}
 		
 		AG_MenuSeparator(m);
@@ -244,7 +244,7 @@ ES_LayoutEdit(void *p)
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, lo);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
-			    &OBJECT(vv)->pvt.lock);
+			    &OBJECT(vv)->lock);
 		}
 		
 		/* Register (but hide) the special "insert package" tool. */

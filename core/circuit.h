@@ -62,7 +62,8 @@ struct ag_console;
 
 /* The basic Circuit model object. */
 typedef struct es_circuit {
-	struct ag_object obj;
+	struct ag_object obj;			/* AG_Object -> ES_Circuit */
+
 	char descr[ESCIRCUIT_DESCR_MAX];	/* Description */
 	char authors[ESCIRCUIT_AUTHORS_MAX];	/* Authors */
 	char keywords[ESCIRCUIT_KEYWORDS_MAX];	/* Keywords */
@@ -92,7 +93,14 @@ typedef struct es_circuit {
 	TAILQ_HEAD(,es_layout) layouts;		/* Associated PCB layouts */
 } ES_Circuit;
 
-#define ESCIRCUIT(p) ((ES_Circuit *)(p))
+#define ESCIRCUIT(p)             ((ES_Circuit *)(p))
+#define ESCCIRCUIT(obj)          ((const ES_Circuit *)(obj))
+#define ES_CIRCUIT_SELF()          ESCIRCUIT( AG_OBJECT(0,"ES_Circuit:*") )
+#define ES_CIRCUIT_PTR(n)          ESCIRCUIT( AG_OBJECT((n),"ES_Circuit:*") )
+#define ES_CIRCUIT_NAMED(n)        ESCIRCUIT( AG_OBJECT_NAMED((n),"ES_Circuit:*") )
+#define ES_CONST_CIRCUIT_SELF()   ESCCIRCUIT( AG_CONST_OBJECT(0,"ES_Circuit:*") )
+#define ES_CONST_CIRCUIT_PTR(n)   ESCCIRCUIT( AG_CONST_OBJECT((n),"ES_Circuit:*") )
+#define ES_CONST_CIRCUIT_NAMED(n) ESCCIRCUIT( AG_CONST_OBJECT_NAMED((n),"ES_Circuit:*") )
 
 /* Iterate over attached Components in the Circuit. */
 #define ESCIRCUIT_FOREACH_COMPONENT(com, ckt) \

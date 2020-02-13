@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2019 Julien Nadeau Carriere <vedge@csoft.net>
+ * Copyright (c) 2008-2020 Julien Nadeau Carriere <vedge@csoft.net>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -214,7 +214,9 @@ ES_CoreInit(Uint flags)
 	feenableexcept(FE_DIVBYZERO | FE_OVERFLOW);
 #endif
 	/* Initialize our general-purpose VFS. */
-	AG_ObjectInitStatic(&esVfsRoot, NULL);
+	AG_ObjectInit(&esVfsRoot, NULL);
+	esVfsRoot.flags |= AG_OBJECT_STATIC;
+
 	AG_ObjectSetName(&esVfsRoot, "Edacious VFS");
 	AG_MutexInitRecursive(&objLock);
 
@@ -275,11 +277,11 @@ SaveAndClose(AG_Object *obj, AG_Window *win)
 static void
 SaveChangesReturn(AG_Event *event)
 {
-	AG_Window *win = AG_PTR(1);
-	AG_Object *obj = AG_PTR(2);
-	int doSave = AG_INT(3);
+	AG_Window *win = AG_WINDOW_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(2);
+	const int doSave = AG_INT(3);
 
-	AG_PostEvent(NULL, obj, "edit-close", NULL);
+	AG_PostEvent(obj, "edit-close", NULL);
 
 	if (doSave) {
 		SaveAndClose(obj, win);
@@ -291,8 +293,8 @@ SaveChangesReturn(AG_Event *event)
 static void
 SaveChangesDlg(AG_Event *event)
 {
-	AG_Window *win = AG_SELF();
-	AG_Object *obj = AG_PTR(1);
+	AG_Window *win = AG_WINDOW_SELF();
+	AG_Object *obj = AG_OBJECT_PTR(1);
 
 	if (!AG_ObjectChanged(obj)) {
 		SaveAndClose(obj, win);
@@ -320,7 +322,7 @@ SaveChangesDlg(AG_Event *event)
 static void
 WindowGainedFocus(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(1);
 	const char **s;
 
 	AG_MutexLock(&objLock);
@@ -380,7 +382,7 @@ ES_OpenObject(void *p)
 	AG_AddEvent(win, "window-lostfocus", WindowLostFocus, "%p", obj);
 	AG_AddEvent(win, "window-hidden", WindowLostFocus, "%p", obj);
 	AG_SetPointer(win, "object", obj);
-	AG_PostEvent(NULL, obj, "edit-open", NULL);
+	AG_PostEvent(obj, "edit-open", NULL);
 
 	AG_WindowShow(win);
 	return (win);
@@ -436,8 +438,8 @@ fail:
 void
 ES_GUI_CreateComponentModel(AG_Event *event)
 {
-	AG_Window *winParent = AG_PTR(1);
-	AG_Tlist *tlClasses = AG_PTR(2);
+	AG_Window *winParent = AG_WINDOW_PTR(1);
+	AG_Tlist *tlClasses = AG_TLIST_PTR(2);
 	AG_TlistItem *itClass;
 	ES_Component *com;
 
@@ -494,7 +496,7 @@ ES_GUI_NewComponentModelDlg(AG_Event *event)
 static void
 EditDevice(AG_Event *event)
 {
-	AG_Object *dev = AG_PTR(1);
+	AG_Object *dev = AG_OBJECT_PTR(1);
 
 	ES_OpenObject(dev);
 }
@@ -601,8 +603,8 @@ ES_GUI_OpenDlg(AG_Event *event)
 static void
 SaveNativeObject(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
-	char *path = AG_STRING(2);
+	AG_Object *obj = AG_OBJECT_PTR(1);
+	const char *path = AG_STRING(2);
 	AG_Window *wEdit;
 
 	if (AG_ObjectSaveToFile(obj, path) == -1) {
@@ -619,7 +621,7 @@ SaveNativeObject(AG_Event *event)
 static void
 SaveCircuitToSPICE3(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
 	const char *path = AG_STRING(2);
 	
 	if (ES_CircuitExportSPICE3(ckt, path) == -1) {
@@ -634,7 +636,7 @@ SaveCircuitToSPICE3(AG_Event *event)
 static void
 SaveCircuitToTXT(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
 	const char *path = AG_STRING(2);
 
 	if (ES_CircuitExportTXT(ckt, path) == -1) {
@@ -651,7 +653,7 @@ void
 ES_GUI_SaveAsDlg(AG_Event *event)
 {
 	char defDir[AG_PATHNAME_MAX];
-	AG_Object *obj = AG_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(1);
 	AG_Window *win;
 	AG_FileDlg *fd;
 
@@ -724,7 +726,7 @@ ES_GUI_SaveAsDlg(AG_Event *event)
 void
 ES_GUI_Save(AG_Event *event)
 {
-	AG_Object *obj = AG_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(1);
 	
 	if (obj == NULL) {
 		AG_TextError(_("No document is selected for saving."));
@@ -752,7 +754,7 @@ ConfirmQuit(AG_Event *event)
 static void
 AbortQuit(AG_Event *event)
 {
-	AG_Window *win = AG_PTR(1);
+	AG_Window *win = AG_WINDOW_PTR(1);
 
 	appTerminating = 0;
 	AG_ObjectDetach(win);
@@ -862,7 +864,7 @@ ES_GUI_EditPreferences(AG_Event *event)
 static void
 SelectedFont(AG_Event *event)
 {
-	AG_Window *win = AG_PTR(1);
+	AG_Window *win = AG_WINDOW_PTR(1);
 
 	AG_SetString(agConfig, "font.face", OBJECT(agDefaultFont)->name);
 	AG_SetInt(agConfig, "font.size", agDefaultFont->spec.size);

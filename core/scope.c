@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2010 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2006-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,7 +49,7 @@ ES_ScopeNew(ES_Circuit *ckt, const char *name)
 static void
 PostSimStep(AG_Event *event)
 {
-	ES_Scope *scope = AG_SELF();
+	ES_Scope *scope = ES_SCOPE_SELF();
 
 	if (scope->plotter != NULL)
 		M_PlotterUpdate(scope->plotter);
@@ -82,8 +82,8 @@ static void
 PollSrcs(AG_Event *event)
 {
 	char pval[64];
-	AG_Tlist *tl = AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_SELF();
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
 	AG_TlistItem *it;
 	AG_Variable *V;
 
@@ -103,8 +103,8 @@ PollSrcs(AG_Event *event)
 static void
 PollPlots(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
-	M_Plotter *ptr = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_SELF();
+	M_Plotter *ptr = M_PLOTTER_PTR(1);
 	M_Plot *pl;
 	AG_TlistItem *it;
 
@@ -121,9 +121,9 @@ static void
 AddPlotFromSrc(AG_Event *event)
 {
 	char varPath[AG_OBJECT_PATH_MAX];
-	ES_Circuit *ckt = AG_PTR(1);
-	M_Plotter *ptr = AG_PTR(2);
-	AG_TlistItem *ti = AG_PTR(3);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
+	M_Plotter *ptr = M_PLOTTER_PTR(2);
+	AG_TlistItem *ti = AG_TLIST_ITEM_PTR(3);
 	AG_Variable *V = ti->p1;
 	M_Plot *pl;
 	
@@ -139,8 +139,8 @@ AddPlotFromSrc(AG_Event *event)
 static void
 AddPlotFromDerivative(AG_Event *event)
 {
-	AG_Tlist *tl = AG_PTR(1);
-	M_Plotter *ptr = AG_PTR(2);
+	AG_Tlist *tl = AG_TLIST_PTR(1);
+	M_Plotter *ptr = M_PLOTTER_PTR(2);
 	AG_TlistItem *it = AG_TlistSelectedItem(tl);
 	M_Plot *pl;
 

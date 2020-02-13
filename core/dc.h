@@ -42,5 +42,5 @@ typedef struct es_sim_dc {
 } ES_SimDC;
 
 __BEGIN_DECLS
-const ES_SimOps esSimDcOps;
+extern const ES_SimOps esSimDcOps;
 __END_DECLS

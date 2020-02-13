@@ -1,7 +1,7 @@
 /*
+ * Copyright (c) 2008-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
  * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
- * Copyright (c) 2008-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -45,8 +45,8 @@ static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VNoise *vn = obj;
-	Uint k = PNODE(vn,1);
-	Uint j = PNODE(vn,2);
+	const Uint k = PNODE(vn,1);
+	const Uint j = PNODE(vn,2);
 
 	/* Open random source and fill buffer. */
 	if ((vn->srcFd = fopen(vn->srcPath, "rb")) == NULL) {
@@ -61,9 +61,9 @@ DC_SimBegin(void *obj, ES_SimDC *dc)
 	}
 	vn->bufPos = 0;
 	
-	VSOURCE(vn)->v = 0.0;
-	InitStampVoltageSource(k,j, VSOURCE(vn)->vIdx, VSOURCE(vn)->s, dc);
-	StampVoltageSource(VSOURCE(vn)->v, VSOURCE(vn)->s);
+	ESVSOURCE(vn)->v = 0.0;
+	InitStampVoltageSource(k,j, ESVSOURCE(vn)->vIdx, ESVSOURCE(vn)->s, dc);
+	StampVoltageSource(ESVSOURCE(vn)->v, ESVSOURCE(vn)->s);
 	return (0);
 }
 
@@ -112,18 +112,20 @@ DC_StepBegin(void *obj, ES_SimDC *dc)
 		v = (v > vn->vPrev) ? vn->vPrev+vn->deltaMax :
 		                      vn->vPrev-vn->deltaMax;
 	}
-	VSOURCE(vn)->v = v;
 
-	StampVoltageSource(VSOURCE(vn)->v, VSOURCE(vn)->s);
-	vn->vPrev = VSOURCE(vn)->v;
+	ESVSOURCE(vn)->v = v;
+	StampVoltageSource(ESVSOURCE(vn)->v, ESVSOURCE(vn)->s);
+	vn->vPrev = ESVSOURCE(vn)->v;
 }
 
 static void
 DC_StepIter(void *obj, ES_SimDC *dc)
 {
 	ES_VNoise *vn = obj;
-	StampVoltageSource(VSOURCE(vn)->v, VSOURCE(vn)->s);
+
+	StampVoltageSource(ESVSOURCE(vn)->v, ESVSOURCE(vn)->s);
 }
+
 static void
 Init(void *p)
 {

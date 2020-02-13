@@ -1,7 +1,7 @@
 /*
+ * Copyright (c) 2008-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * Copyright (c) 2008 Antoine Levitt (smeuuh@gmail.com)
  * Copyright (c) 2008 Steven Herbst (herbst@mit.edu)
- * Copyright (c) 2008-2009 Julien Nadeau (vedge@hypertriton.com)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,16 +42,16 @@ const ES_Port esVSquarePorts[] = {
 static __inline__ void
 Stamp(ES_VSquare *vsq, ES_SimDC *dc)
 {
-	StampVoltageSource(VSOURCE(vsq)->v, VSOURCE(vsq)->s);
+	StampVoltageSource(ESVSOURCE(vsq)->v, ESVSOURCE(vsq)->s);
 }
 
 static int
 DC_SimBegin(void *obj, ES_SimDC *dc)
 {
 	ES_VSquare *vsq = obj;
-	ES_Vsource *vs = VSOURCE(vsq);
-	Uint k = PNODE(vsq,1);
-	Uint j = PNODE(vsq,2);
+	ES_Vsource *vs = ESVSOURCE(vsq);
+	const Uint k = PNODE(vsq,1);
+	const Uint j = PNODE(vsq,2);
 
 	vs->v = 0.0;
 	InitStampVoltageSource(k,j, vs->vIdx, vs->s, dc);

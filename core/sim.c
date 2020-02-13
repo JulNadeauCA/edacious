@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005-2009 Julien Nadeau (vedge@hypertriton.com)
+ * Copyright (c) 2005-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,9 +42,10 @@ ES_SimInit(void *p, const ES_SimOps *ops)
 {
 	ES_Sim *sim = p;
 
+	sim->ckt = NULL;
 	sim->ops = ops;
-	sim->running = 0;
 	sim->win = NULL;
+	sim->running = 0;
 }
 
 void
@@ -64,8 +65,8 @@ ES_SimDestroy(void *p)
 void
 ES_SimEdit(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
-	AG_Window *pwin = AG_PTR(2);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
+	AG_Window *pwin = AG_WINDOW_PTR(2);
 	ES_Sim *sim = ckt->sim;
 	AG_Window *win;
 

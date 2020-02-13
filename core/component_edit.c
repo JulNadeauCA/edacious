@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2015 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2020 Julien Nadeau Carriere (vedge@csoft.net)
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -72,7 +72,7 @@ recurse:
 void
 ES_ComponentListClasses(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
+	AG_Tlist *tl = AG_TLIST_SELF();
 
 	AG_TlistClear(tl);
 	FindClasses(tl, &agObjectClass, 0);
@@ -82,8 +82,8 @@ ES_ComponentListClasses(AG_Event *event)
 static void
 Delete(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
+	ES_Component *com = ES_COMPONENT_PTR(1);
+	VG_View *vv = VG_VIEW_PTR(2);
 	ES_Circuit *ckt = com->ckt;
 	
 	VG_ClearEditAreas(vv);
@@ -103,8 +103,8 @@ Delete(AG_Event *event)
 static void
 Rotate(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
-	float theta = AG_FLOAT(2);
+	ES_Component *com = ES_COMPONENT_PTR(1);
+	const float theta = AG_FLOAT(2);
 	VG_Node *vn;
 	
 	TAILQ_FOREACH(vn, &com->schemEnts, user)
@@ -114,7 +114,7 @@ Rotate(AG_Event *event)
 static void
 FlipHoriz(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
+	ES_Component *com = ES_COMPONENT_PTR(1);
 	VG_Node *vn;
 	
 	TAILQ_FOREACH(vn, &com->schemEnts, user)
@@ -124,7 +124,7 @@ FlipHoriz(AG_Event *event)
 static void
 FlipVert(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
+	ES_Component *com = ES_COMPONENT_PTR(1);
 	VG_Node *vn;
 	
 	TAILQ_FOREACH(vn, &com->schemEnts, user)
@@ -134,12 +134,12 @@ FlipVert(AG_Event *event)
 static void
 SuppressComponent(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
+	ES_Component *com = ES_COMPONENT_PTR(1);
+	VG_View *vv = VG_VIEW_PTR(2);
 	ES_Circuit *ckt = com->ckt;
 	
 	ES_LockCircuit(ckt);
-	AG_PostEvent(ckt, com, "circuit-disconnected", NULL);
+	AG_PostEvent(com, "circuit-disconnected", NULL);
 	com->flags |= ES_COMPONENT_SUPPRESSED;
 	VG_Status(vv, _("Suppressed component %s."), OBJECT(com)->name);
 	ES_UnlockCircuit(ckt);
@@ -148,22 +148,22 @@ SuppressComponent(AG_Event *event)
 static void
 UnsuppressComponent(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
+	ES_Component *com = ES_COMPONENT_PTR(1);
+	VG_View *vv = VG_VIEW_PTR(2);
 	ES_Circuit *ckt = com->ckt;
 	
 	ES_LockCircuit(ckt);
 	VG_Status(vv, _("Unsuppressed component %s."), OBJECT(com)->name);
 	com->flags &= ~(ES_COMPONENT_SUPPRESSED);
-	AG_PostEvent(ckt, com, "circuit-connected", NULL);
+	AG_PostEvent(com, "circuit-connected", NULL);
 	ES_UnlockCircuit(ckt);
 }
 
 static void
 DeleteSelections(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
+	VG_View *vv = VG_VIEW_PTR(2);
 	ES_Component *com;
 	int changed = 0;
 
@@ -191,7 +191,7 @@ rescan:
 static void
 LoadComponent(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
+	ES_Component *com = ES_COMPONENT_PTR(1);
 
 	if (AG_ObjectLoad(com) == -1)
 		AG_TextMsgFromError();
@@ -200,7 +200,7 @@ LoadComponent(AG_Event *event)
 static void
 SaveComponent(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
+	ES_Component *com = ES_COMPONENT_PTR(1);
 
 	if (AG_ObjectSave(com) == -1)
 		AG_TextMsgFromError();
@@ -210,8 +210,8 @@ SaveComponent(AG_Event *event)
 static void
 SelectCircuitTool(AG_Event *event)
 {
-	VG_View *vv = AG_PTR(1);
-	ES_Circuit *ckt = AG_PTR(2);
+	VG_View *vv = VG_VIEW_PTR(1);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(2);
 	VG_ToolOps *ops = AG_PTR(3);
 	VG_Tool *t;
 
@@ -226,8 +226,8 @@ static void
 PollPorts(AG_Event *event)
 {
 	char text[AG_TLIST_LABEL_MAX];
-	AG_Tlist *tl = AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_SELF();
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
 	ES_Component *com;
 	ES_Port *port;
 	int i;
@@ -256,7 +256,7 @@ out:
 static void
 PortInfo(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
+	ES_Component *com = ES_COMPONENT_PTR(1);
 	AG_Window *win;
 	AG_Tlist *tl;
 
@@ -367,9 +367,9 @@ ES_ComponentMenu(ES_Component *com, VG_View *vv)
 static void
 CreateAlternateVGView(AG_Event *event)
 {
-	AG_Window *winParent = AG_PTR(1);
-	AG_Object *obj = AG_PTR(2);
-	VG_View *vvOrig = AG_PTR(3), *vvNew;
+	AG_Window *winParent = AG_WINDOW_PTR(1);
+	AG_Object *obj = AG_OBJECT_PTR(2);
+	VG_View *vvOrig = VG_VIEW_PTR(3), *vvNew;
 	AG_Window *win;
 
 	win = AG_WindowNew(0);
@@ -419,8 +419,8 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 static void
 PollObjects(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
-	AG_Object *ckt = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_SELF();
+	AG_Object *ckt = AG_OBJECT_PTR(1);
 
 	AG_TlistClear(tl);
 	AG_LockVFS(ckt);
@@ -433,8 +433,8 @@ PollObjects(AG_Event *event)
 static void
 SelectedObject(AG_Event *event)
 {
-	VG_View *vv = AG_PTR(1);
-	AG_TlistItem *it = AG_PTR(2);
+	VG_View *vv = VG_VIEW_PTR(1);
+	AG_TlistItem *it = AG_TLIST_ITEM_PTR(2);
 	int state = AG_INT(3);
 	AG_Object *obj = it->p1;
 
@@ -451,7 +451,7 @@ SelectedObject(AG_Event *event)
 static void
 CircuitMouseButtonDown(AG_Event *event)
 {
-	VG_View *vv =  AG_SELF();
+	VG_View *vv =  VG_VIEW_SELF();
 	int button = AG_INT(1);
 	float x = AG_FLOAT(2);
 	float y = AG_FLOAT(3);
@@ -477,8 +477,8 @@ CircuitMouseButtonDown(AG_Event *event)
 static void
 SelectSchem(AG_Event *event)
 {
-	VG_View *vv = AG_PTR(1);
-	AG_TlistItem *ti = AG_PTR(2);
+	VG_View *vv = VG_VIEW_PTR(1);
+	AG_TlistItem *ti = AG_TLIST_ITEM_PTR(2);
 	ES_Schem *scm = ti->p1;
 	
 	VG_ViewSetVG(vv, scm->vg);
@@ -490,9 +490,9 @@ SelectSchem(AG_Event *event)
 static void
 PollSchems(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
-	ES_Component *com = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
+	AG_Tlist *tl = AG_TLIST_SELF();
+	ES_Component *com = ES_COMPONENT_PTR(1);
+	VG_View *vv = VG_VIEW_PTR(2);
 	AG_TlistItem *ti = NULL;
 	ES_Schem *scm;
 	int i = 0;
@@ -515,8 +515,8 @@ PollSchems(AG_Event *event)
 static void
 NewSchem(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
+	ES_Component *com = ES_COMPONENT_PTR(1);
+	VG_View *vv = VG_VIEW_PTR(2);
 	ES_Schem *scm;
 
 	scm = ES_SchemNew(NULL);
@@ -529,9 +529,9 @@ NewSchem(AG_Event *event)
 static void
 DeleteSchem(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
+	ES_Component *com = ES_COMPONENT_PTR(1);
 	AG_TlistItem *it = AG_TLIST_ITEM_PTR(2);
-	VG_View *vv = AG_PTR(3);
+	VG_View *vv = VG_VIEW_PTR(3);
 	ES_Schem *scm;
 
 	if ((scm = it->p1) == NULL)
@@ -551,9 +551,9 @@ DeleteSchem(AG_Event *event)
 static void
 ImportSchem(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
-	char *path = AG_STRING(3);
+	ES_Component *com = ES_COMPONENT_PTR(1);
+	VG_View *vv = VG_VIEW_PTR(2);
+	const char *path = AG_STRING(3);
 	ES_Schem *scm;
 
 	if ((scm = AG_ObjectNew(&esVfsRoot, NULL, &esSchemClass)) == NULL) {
@@ -581,8 +581,8 @@ fail:
 static void
 ImportSchemDlg(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
-	VG_View *vv = AG_PTR(2);
+	ES_Component *com = ES_COMPONENT_PTR(1);
+	VG_View *vv = VG_VIEW_PTR(2);
 	AG_Window *win;
 	AG_FileDlg *fd;
 
@@ -601,7 +601,7 @@ ImportSchemDlg(AG_Event *event)
 static int
 EvalRemoveButtonState(AG_Event *event)
 {
-	AG_Tlist *tl = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_PTR(1);
 	AG_TlistItem *ti;
 
 	return ((ti = AG_TlistSelectedItem(tl)) != NULL && ti->p1 != NULL);
@@ -612,10 +612,10 @@ EvalRemoveButtonState(AG_Event *event)
 static void
 Menu_View_EquivalentCircuit(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
-	AG_Window *winParent = AG_PTR(2);
-	VG_View *vv = AG_PTR(3);
-	AG_MenuItem *mi = AG_PTR(4);
+	ES_Component *com = ES_COMPONENT_PTR(1);
+	AG_Window *winParent = AG_WINDOW_PTR(2);
+	VG_View *vv = VG_VIEW_PTR(3);
+	AG_MenuItem *mi = AG_MENU_ITEM_PTR(4);
 	AG_MenuItem *mSchem;
 
 	AG_MenuActionKb(mi, _("New schematics view..."), esIconCircuit.s,
@@ -647,8 +647,8 @@ Menu_View_EquivalentCircuit(AG_Event *event)
 static void
 PollPackages(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
-	ES_Component *com = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_SELF();
+	ES_Component *com = ES_COMPONENT_PTR(1);
 	ES_ComponentPkg *pkg;
 	AG_TlistItem *ti;
 
@@ -669,9 +669,9 @@ PollPackages(AG_Event *event)
 static void
 SelectPackage(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
-	AG_Table *tblPins = AG_PTR(2);
-	AG_TlistItem *ti = AG_PTR(3);
+	ES_Component *com = ES_COMPONENT_PTR(1);
+	AG_Table *tblPins = AG_TABLE_PTR(2);
+	AG_TlistItem *ti = AG_TLIST_ITEM_PTR(3);
 	ES_ComponentPkg *pkg = (ti != NULL) ? ti->p1 : AG_PTR(4);
 	AG_Numerical *num;
 	Uint i;
@@ -689,10 +689,10 @@ SelectPackage(AG_Event *event)
 static void
 AddPackage(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
-	AG_Textbox *tb = AG_PTR(2);
-	AG_Textbox *tbDev = AG_PTR(3);
-	AG_Table *tblPins = AG_PTR(4);
+	ES_Component *com = ES_COMPONENT_PTR(1);
+	AG_Textbox *tb = AG_TEXTBOX_PTR(2);
+	AG_Textbox *tbDev = AG_TEXTBOX_PTR(3);
+	AG_Table *tblPins = AG_TABLE_PTR(4);
 	ES_ComponentPkg *pkg;
 	AG_Event ev;
 	int i;
@@ -725,7 +725,7 @@ AddPackage(AG_Event *event)
 static void
 RemovePackage(AG_Event *event)
 {
-	ES_Component *com = AG_PTR(1);
+	ES_Component *com = ES_COMPONENT_PTR(1);
 	ES_ComponentPkg *pkg = AG_PTR(2);
 
 	TAILQ_REMOVE(&com->pkgs, pkg, pkgs);
@@ -736,9 +736,9 @@ RemovePackage(AG_Event *event)
 static void
 PackagePopup(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
+	AG_Tlist *tl = AG_TLIST_SELF();
 	AG_TlistItem *ti = AG_TlistSelectedItem(tl);
-	ES_Component *com = AG_PTR(1);
+	ES_Component *com = ES_COMPONENT_PTR(1);
 	AG_PopupMenu *pm;
 
 	if ((pm = AG_PopupNew(tl)) == NULL) {
@@ -850,7 +850,7 @@ ES_ComponentEdit(void *obj)
 				    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool,
 				    com);
 				AG_BindIntMp(btn, "state", &tool->selected,
-				    &OBJECT(vv)->pvt.lock);
+				    &OBJECT(vv)->lock);
 
 				if (ops == &esSchemSelectTool) {
 					VG_ViewSetDefaultTool(vv, tool);
@@ -871,7 +871,7 @@ ES_ComponentEdit(void *obj)
 				    VG_ViewSelectToolEv, "%p,%p,%p",
 				    vv, tool, com);
 				AG_BindIntMp(btn, "state", &tool->selected,
-				    &OBJECT(vv)->pvt.lock);
+				    &OBJECT(vv)->lock);
 			}
 		}
 	}
@@ -933,7 +933,7 @@ ES_ComponentEdit(void *obj)
 			    (ops->icon ? ops->icon->s : NULL), 0,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 			AG_BindIntMp(btn, "state", &tool->selected,
-			    &OBJECT(vv)->pvt.lock);
+			    &OBJECT(vv)->lock);
 
 			if (ops == &esSchemSelectTool) {
 				VG_ViewSetDefaultTool(vv, tool);
@@ -954,7 +954,7 @@ ES_ComponentEdit(void *obj)
 			    (ops->icon ? ops->icon->s : NULL), 0,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, com);
 			AG_BindIntMp(btn, "state", &tool->selected,
-			    &OBJECT(vv)->pvt.lock);
+			    &OBJECT(vv)->lock);
 		}
 		
 		/* Register (but hide) the special "insert component" tool. */

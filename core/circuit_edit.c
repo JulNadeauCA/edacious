@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2009 Hypertriton, Inc. <http://hypertriton.com/>
+ * Copyright (c) 2008-2020 Julien Nadeau Carriere <vedge@csoft.net>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -83,8 +83,8 @@ ES_CircuitCloseObject(void *obj)
 static void
 PollCircuitLoops(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_SELF();
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
 	int i;
 
 	AG_TlistClear(tl);
@@ -104,8 +104,8 @@ PollCircuitLoops(AG_Event *event)
 static void
 PollCircuitNodes(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_SELF();
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
 	Uint i;
 
 	AG_TlistClear(tl);
@@ -139,8 +139,8 @@ PollCircuitNodes(AG_Event *event)
 static void
 PollCircuitSources(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_SELF();
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
 	AG_TlistItem *it;
 	int i;
 
@@ -156,8 +156,8 @@ PollCircuitSources(AG_Event *event)
 static void
 ShowTopology(AG_Event *event)
 {
-	AG_Window *pwin = AG_PTR(1);
-	ES_Circuit *ckt = AG_PTR(2);
+	AG_Window *pwin = AG_WINDOW_PTR(1);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(2);
 	AG_Window *win;
 	AG_Notebook *nb;
 	AG_NotebookTab *nt;
@@ -172,7 +172,7 @@ ShowTopology(AG_Event *event)
 	nb = AG_NotebookNew(win, AG_NOTEBOOK_EXPAND);
 	nt = AG_NotebookAdd(nb, _("Nodes"), AG_BOX_VERT);
 	{
-		AG_LabelNewPolledMT(nt, 0, &OBJECT(ckt)->pvt.lock,
+		AG_LabelNewPolledMT(nt, 0, &OBJECT(ckt)->lock,
 		    _("%u nodes, %u vsources, %u loops"),
 		    &ckt->n, &ckt->m, &ckt->l);
 		tl = AG_TlistNew(nt, AG_TLIST_POLL|AG_TLIST_TREE|
@@ -201,8 +201,8 @@ ShowTopology(AG_Event *event)
 static void
 ShowProperties(AG_Event *event)
 {
-	AG_Window *pwin = AG_PTR(1);
-	ES_Circuit *ckt = AG_PTR(2);
+	AG_Window *pwin = AG_WINDOW_PTR(1);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(2);
 	AG_Window *win;
 	AG_Textbox *tb;
 	
@@ -236,7 +236,7 @@ ShowProperties(AG_Event *event)
 static void
 MouseButtonDown(AG_Event *event)
 {
-	VG_View *vv =  AG_SELF();
+	VG_View *vv = VG_VIEW_SELF();
 	int button = AG_INT(1);
 	float x = AG_FLOAT(2);
 	float y = AG_FLOAT(3);
@@ -262,9 +262,9 @@ MouseButtonDown(AG_Event *event)
 static void
 SelectSimulation(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
 	ES_SimOps *sops = AG_PTR(2);
-	AG_Window *pwin = AG_PTR(3);
+	AG_Window *pwin = AG_WINDOW_PTR(3);
 	ES_Sim *sim;
 
 	if (ckt->sim != NULL && ckt->sim->running) {
@@ -322,8 +322,8 @@ FindObjects(AG_Tlist *tl, AG_Object *pob, int depth, void *ckt)
 static void
 PollObjects(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
-	AG_Object *ckt = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_SELF();
+	AG_Object *ckt = AG_OBJECT_PTR(1);
 
 	AG_TlistClear(tl);
 	AG_LockVFS(ckt);
@@ -336,9 +336,9 @@ PollObjects(AG_Event *event)
 static void
 SelectedObject(AG_Event *event)
 {
-	VG_View *vv = AG_PTR(1);
-	AG_TlistItem *it = AG_PTR(2);
-	int state = AG_INT(3);
+	VG_View *vv = VG_VIEW_PTR(1);
+	AG_TlistItem *it = AG_TLIST_ITEM_PTR(2);
+	const int state = AG_INT(3);
 	AG_Object *obj = it->p1;
 
 	if (AG_OfClass(obj, "ES_Circuit:ES_Component:*")) {
@@ -354,8 +354,8 @@ SelectedObject(AG_Event *event)
 static void
 ShowConsole(AG_Event *event)
 {
-	AG_Window *pwin = AG_PTR(1);
-	ES_Circuit *ckt = AG_PTR(2);
+	AG_Window *pwin = AG_WINDOW_PTR(1);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(2);
 	AG_Window *win;
 
 	if ((win = AG_WindowNewNamed(0, "%s-console", OBJECT(ckt)->name))
@@ -375,8 +375,8 @@ ShowConsole(AG_Event *event)
 static void
 CreateView(AG_Event *event)
 {
-	AG_Window *pwin = AG_PTR(1);
-	ES_Circuit *ckt = AG_PTR(2);
+	AG_Window *pwin = AG_WINDOW_PTR(1);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(2);
 	VG_View *vv;
 	AG_Window *win;
 
@@ -395,8 +395,8 @@ static void
 NewScope(AG_Event *event)
 {
 	char name[AG_OBJECT_NAME_MAX];
-	ES_Circuit *ckt = AG_PTR(1);
-	AG_Window *winParent = AG_PTR(2);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
+	AG_Window *winParent = AG_WINDOW_PTR(2);
 	ES_Scope *scope;
 	AG_Window *win;
 
@@ -411,8 +411,8 @@ NewScope(AG_Event *event)
 static void
 PollLayouts(AG_Event *event)
 {
-	AG_Tlist *tl = AG_SELF();
-	ES_Circuit *ckt = AG_PTR(1);
+	AG_Tlist *tl = AG_TLIST_SELF();
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
 	AG_TlistItem *ti;
 	ES_Layout *lo;
 
@@ -428,8 +428,8 @@ PollLayouts(AG_Event *event)
 static void
 OpenLayout(AG_Event *event)
 {
-	AG_Window *winParent = AG_PTR(1);
-	AG_TlistItem *ti = AG_PTR(2);
+	AG_Window *winParent = AG_WINDOW_PTR(1);
+	AG_TlistItem *ti = AG_TLIST_ITEM_PTR(2);
 	ES_Layout *lo = ti->p1;
 	AG_Window *win;
 
@@ -442,9 +442,9 @@ static void
 NewLayout(AG_Event *event)
 {
 	char name[AG_OBJECT_NAME_MAX];
-	ES_Circuit *ckt = AG_PTR(1);
-	AG_Window *winParent = AG_PTR(2);
-	AG_Tlist *tlLayouts = AG_PTR(3);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
+	AG_Window *winParent = AG_WINDOW_PTR(2);
+	AG_Tlist *tlLayouts = AG_TLIST_PTR(3);
 	ES_Layout *lo;
 	AG_Window *win;
 
@@ -466,8 +466,8 @@ NewLayout(AG_Event *event)
 static void
 DeleteLayout(AG_Event *event)
 {
-	ES_Circuit *ckt = AG_PTR(1);
-	AG_Tlist *tlLayouts = AG_PTR(2);
+	ES_Circuit *ckt = ES_CIRCUIT_PTR(1);
+	AG_Tlist *tlLayouts = AG_TLIST_PTR(2);
 	AG_TlistItem *ti = AG_TlistSelectedItem(tlLayouts);
 	ES_Layout *lo;
 
@@ -559,12 +559,14 @@ ES_CircuitEdit(void *p)
 	
 	m = AG_MenuNode(menu->root, _("Simulation"), NULL);
 	{
-		extern const ES_SimOps *esSimOps[];
-		const ES_SimOps **pOps, *ops;
+		const ES_SimOps **pOps;
 
 		AG_MenuToolbar(m, tbTop);
+		Debug(NULL, "EXpand sim ops = %p\n", esSimOps);
 		for (pOps = &esSimOps[0]; *pOps != NULL; pOps++) {
-			ops = *pOps;
+			const ES_SimOps *ops = *pOps;
+
+			Debug(NULL, "Sim Ops %s\n", (*pOps)->name);
 			AG_MenuAction(m, _(ops->name),
 			    ops->icon ? ops->icon->s : NULL,
 			    SelectSimulation, "%p,%p,%p", ckt, ops, win);
@@ -649,7 +651,7 @@ ES_CircuitEdit(void *p)
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
-			    &OBJECT(vv)->pvt.lock);
+			    &OBJECT(vv)->lock);
 			if (ops == &esSchemSelectTool) {
 				VG_ViewSetDefaultTool(vv, tool);
 				VG_ViewSelectTool(vv, tool, ckt);
@@ -669,7 +671,7 @@ ES_CircuitEdit(void *p)
 			    ops->icon ? ops->icon->s : NULL,
 			    VG_ViewSelectToolEv, "%p,%p,%p", vv, tool, ckt);
 			AG_MenuSetIntBoolMp(mAction, &tool->selected, 0,
-			    &OBJECT(vv)->pvt.lock);
+			    &OBJECT(vv)->lock);
 		}
 
 		/* Register (but hide) the special "insert component" tool. */

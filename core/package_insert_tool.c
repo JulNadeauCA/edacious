@@ -174,8 +174,8 @@ static void
 Insert(AG_Event *event)
 {
 	ES_PackageInsertTool *t = AG_PTR(1);
-	ES_Layout *lo = AG_PTR(2);
-	ES_Package *pkgModel = AG_PTR(3), *pkg;
+	ES_Layout *lo = ES_LAYOUT_PTR(2);
+	ES_Package *pkgModel = ES_PACKAGE_PTR(3), *pkg;
 	char name[AG_OBJECT_NAME_MAX];
 	VG_View *vv = VGTOOL(t)->vgv;
 
